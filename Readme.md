@@ -30,6 +30,9 @@ Second, for the client, you will need [`cargo-web`] so that cargo can compile it
 
 ## From sources
 
+> **NB**: this workflow may fail because the BUI's repository is currently private. The commands
+> above will fail if git's `credential.helper` does not contain the appropriate credentials.
+
 To build memthol's BUI from the sources, clone this repository and enter it. Then, run either `cargo
 build` to compile the BUI in *debug* mode or `cargo build --release` for *release* mode. The
 resulting binary will be in `target/debug/memthol` in *debug* mode and `target/release/memthol` in
@@ -48,9 +51,6 @@ To update, run the same command with `--force`
 ```
 cargo install --force --git <memthol's BUI repository>
 ```
-
-> **NB**: this workflow may fail because the BUI's repository is currently private. The commands
-> above will fail if git's `credential.helper` does not contain the appropriate credentials.
 
 [OCaml]: https://ocaml.org/ (OCaml official page)
 [web assembly]: https://webassembly.org/ (Web Assembly official page)
