@@ -26,7 +26,14 @@ rustup update stable
 
 to make sure it's up to date.
 
-Second, for the client, you will need [`cargo-web`] so that cargo can compile it to web assembly.
+Second, for the client, you will need [cargo web] so that cargo can compile it to web assembly. With
+rust/cargo installed, simply run
+
+```
+cargo install cargo-web
+```
+
+to install it.
 
 ## From sources
 
@@ -56,4 +63,4 @@ cargo install --force --git <memthol's BUI repository>
 [web assembly]: https://webassembly.org/ (Web Assembly official page)
 [Rust]: https://www.rust-lang.org/ (Rust official page)
 [rust toolchain]: https://www.rust-lang.org/tools/install (Rust installation instructions)
-[`cargo web`]: https://crates.io/crates/cargo-web (Cargo-web on crates.io)
+[cargo web]: https://crates.io/crates/cargo-web (Cargo-web on crates.io)
