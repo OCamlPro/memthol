@@ -1,0 +1,129 @@
+$light_grey: #a0a0a0
+
+$font_stack: SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif
+$primary_color: #333
+$nice_blue: #00d8ff
+$dark_grey: #3a3a3a
+$background: white
+
+// Nav stuff.
+$nav_color: $nice_blue
+$nav_background: #000000
+$nav_block_hover_color: white
+$nav_block_hover_background: $nav_color
+
+// Code stuff.
+$code_stack: Monaco, sans-serif
+// $code_color: #33e3ff
+$code_color: $primary_color
+$code_background: $light_grey
+
+$red: #ff4633
+
+body
+    margin: 27px 200px
+    font: 100% $font_stack
+    color: $primary_color
+    background-color: $background
+
+    .red
+        color: $red
+
+    .code_style
+        font: 100% $code_stack
+
+    .inline_code_style
+        font: 100% $code_stack
+        color: $code_color
+        background-color: $code_background
+        // border: 1px solid $code_color
+        border-radius: 5px
+
+    // Header-related stuff.
+
+    .header_style
+        position: fixed
+        z-index: 600
+        width: 100%
+        height: 50px
+        left: 0
+        top: 0
+        background-color: $nav_background
+        color: $nav_color
+        box-shadow: 0 5px 6px 0 #000000
+
+        .ul
+            list-style-type: none
+            margin: 2px 200px
+            padding: 0
+            overflow: hidden
+
+        .li_left
+            float: left
+        .li_right
+            float: right
+        .li_center
+            float: center
+
+        %menu_item
+            display: block
+            border-radius: 5px
+            text-align: center
+            padding: 14px 16px
+            text-decoration: none
+            background-image: linear-gradient($dark_grey, $nav_background)
+            &:hover,
+            &:active
+                background-image: linear-gradient($nav_color, $nav_background)
+                color: $nav_block_hover_color
+                text-decoration: underline
+                cursor: pointer
+                &:visited
+                    color: $nav_block_hover_color
+            &:visited
+                color: $nav_color
+
+
+        .li_a_inactive
+            @extend %menu_item
+
+        .li_a_active
+            @extend %menu_item
+            background-image: linear-gradient($nav_color, $nav_background)
+            color: $nav_block_hover_color
+            &:visited
+                color: $nav_block_hover_color
+
+    // Heading-related stuff
+    .h1
+        color: $nice_blue
+
+    .h1_brush
+        // padding: 0px 100px
+        background: url(../pics/h1_background.png)
+        background-repeat: no-repeat
+        background-size: 990px 120px
+        margin: -5px -130px
+        padding: 5px 130px
+
+    .hili
+        background: rgba(0,0,0,0) url(../pics/hili_background.png)
+        background-repeat: no-repeat
+        // background-size: cover
+        background-size: 100% 95%
+
+    // # D3 stuff.
+
+    // ## D3 graph stuff.
+
+    .d3_path
+        stroke: steelblue
+        stroke-width: 2
+        fill: none        
+
+    .d3_axis path,
+    .d3_axis line
+        fill: none
+        stroke: grey
+        stroke-width: 1
+        shape-rendering: crispEdges

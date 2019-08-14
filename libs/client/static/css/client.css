@@ -1,0 +1,100 @@
+body {
+  margin: 27px 200px;
+  font: 100% SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
+  color: #333;
+  background-color: white;
+}
+body .red {
+  color: #ff4633;
+}
+body .code_style {
+  font: 100% Monaco, sans-serif;
+}
+body .inline_code_style {
+  font: 100% Monaco, sans-serif;
+  color: #333;
+  background-color: #a0a0a0;
+  border-radius: 5px;
+}
+body .header_style {
+  position: fixed;
+  z-index: 600;
+  width: 100%;
+  height: 50px;
+  left: 0;
+  top: 0;
+  background-color: #000000;
+  color: #00d8ff;
+  box-shadow: 0 5px 6px 0 #000000;
+}
+body .header_style .ul {
+  list-style-type: none;
+  margin: 2px 200px;
+  padding: 0;
+  overflow: hidden;
+}
+body .header_style .li_left {
+  float: left;
+}
+body .header_style .li_right {
+  float: right;
+}
+body .header_style .li_center {
+  float: center;
+}
+body .header_style .li_a_active, body .header_style .li_a_inactive {
+  display: block;
+  border-radius: 5px;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+  background-image: linear-gradient(#3a3a3a, #000000);
+}
+body .header_style .li_a_active:hover, body .header_style .li_a_inactive:hover, body .header_style .li_a_active:active, body .header_style .li_a_inactive:active {
+  background-image: linear-gradient(#00d8ff, #000000);
+  color: white;
+  text-decoration: underline;
+  cursor: pointer;
+}
+body .header_style .li_a_active:hover:visited, body .header_style .li_a_inactive:hover:visited, body .header_style .li_a_active:active:visited, body .header_style .li_a_inactive:active:visited {
+  color: white;
+}
+body .header_style .li_a_active:visited, body .header_style .li_a_inactive:visited {
+  color: #00d8ff;
+}
+body .header_style .li_a_active {
+  background-image: linear-gradient(#00d8ff, #000000);
+  color: white;
+}
+body .header_style .li_a_active:visited {
+  color: white;
+}
+body .h1 {
+  color: #00d8ff;
+}
+body .h1_brush {
+  background: url(../pics/h1_background.png);
+  background-repeat: no-repeat;
+  background-size: 990px 120px;
+  margin: -5px -130px;
+  padding: 5px 130px;
+}
+body .hili {
+  background: rgba(0, 0, 0, 0) url(../pics/hili_background.png);
+  background-repeat: no-repeat;
+  background-size: 100% 95%;
+}
+body .d3_path {
+  stroke: steelblue;
+  stroke-width: 2;
+  fill: none;
+}
+body .d3_axis path,
+body .d3_axis line {
+  fill: none;
+  stroke: grey;
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+/*# sourceMappingURL=client.css.map */

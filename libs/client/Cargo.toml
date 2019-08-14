@@ -1,0 +1,21 @@
+[package]
+name = "client"
+version = "0.1.0"
+authors = ["AdrienChampion <adrien.champion@email.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "*"
+web_logger = "*"
+typed-html = { version = "*", features = ["stdweb"] }
+yew = { git = "https://github.com/DenisKolodin/yew" }
+lazy_static = "*"
+stdweb = "*"
+stdweb-derive = "*"
+serde = "*"
+failure = "*"
+getset = "*"
+alloc_data = { path = "../data" }
+safe_index = "*"
