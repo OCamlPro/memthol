@@ -19,3 +19,11 @@ alloc_data = { path = "libs/data" }
 [build-dependencies]
 fs_extra = "*"
 lazy_static = "*"
+
+[workspace]
+members = [
+    "libs/data",
+]
+exclude = [
+    "libs/client",
+]

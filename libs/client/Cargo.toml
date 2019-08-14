@@ -10,7 +10,7 @@ edition = "2018"
 log = "*"
 web_logger = "*"
 typed-html = { version = "*", features = ["stdweb"] }
-yew = { git = "https://github.com/DenisKolodin/yew" }
+yew = "^0.8.0"
 lazy_static = "*"
 stdweb = "*"
 stdweb-derive = "*"

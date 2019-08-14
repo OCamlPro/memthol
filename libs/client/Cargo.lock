@@ -235,7 +235,7 @@ dependencies = [
  "stdweb-derive 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "typed-html 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "web_logger 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "yew 0.8.0 (git+https://github.com/DenisKolodin/yew)",
+ "yew 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1326,7 +1326,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "yew"
 version = "0.8.0"
-source = "git+https://github.com/DenisKolodin/yew#a190a94a96e1099a30e25d59d0aedbef09738aed"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "anymap 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bincode 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1341,13 +1341,13 @@ dependencies = [
  "slab 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdweb 0.4.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)",
- "yew-macro 0.8.0 (git+https://github.com/DenisKolodin/yew)",
+ "yew-macro 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "yew-macro"
 version = "0.8.0"
-source = "git+https://github.com/DenisKolodin/yew#a190a94a96e1099a30e25d59d0aedbef09738aed"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "autocfg 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "boolinator 2.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1520,5 +1520,5 @@ dependencies = [
 "checksum winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)" = "f10e386af2b13e47c89e7236a7a14a086791a2b88ebad6df9bf42040195cf770"
 "checksum winapi-i686-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
 "checksum winapi-x86_64-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
-"checksum yew 0.8.0 (git+https://github.com/DenisKolodin/yew)" = "<none>"
-"checksum yew-macro 0.8.0 (git+https://github.com/DenisKolodin/yew)" = "<none>"
+"checksum yew 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "479f32df0b06ef05893cbb3c195a0ae92b10587e2eff1969f1a7741d3fb96666"
+"checksum yew-macro 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "92d6380df5f9c5d4cfd1191bd31ed44299f302e6040126d602ee8b262252cb7e"

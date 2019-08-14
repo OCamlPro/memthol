@@ -1,5 +1,37 @@
 //! Builds memthol's client and copies the right things in the right place.
 
+/// Checks that `cargo-web` is installed.
+mod cargo_web {
+    use std::process::Command;
+
+    pub fn check() {
+        let fail = |msg, err| {
+            println!("Error: {}.", msg);
+            if let Some(e) = err {
+                println!("{}", e);
+                println!()
+            }
+            println!("`cargo-web` is mandatory for the client side of memthol's UI,");
+            println!("please install it with");
+            println!();
+            println!("```");
+            println!("cargo install cargo-web");
+            println!("```");
+            panic!("cargo-web is not installed")
+        };
+        match Command::new("cargo").arg("web").arg("help").status() {
+            Ok(status) => {
+                if status.success() {
+                    ()
+                } else {
+                    fail("`cargo-web` is not installed", None)
+                }
+            }
+            Err(e) => fail("could not check for `cargo-web`", Some(e)),
+        }
+    }
+}
+
 /// Static stuff for building the client.
 mod client {
     use lazy_static::lazy_static;
@@ -185,6 +217,7 @@ mod client {
 
 fn main() {
     println!("cargo:rerun-if-changed=\"static\"");
+    cargo_web::check();
     client::deploy();
     client::copy_assets()
 }
