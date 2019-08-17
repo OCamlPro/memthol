@@ -1,108 +1,19 @@
 //! Types and parsers for memthol's dump structures.
 
-use std::{fmt, str::FromStr, time::Duration};
+use std::{fmt, time::Duration};
 
+pub use error_chain::bail;
 pub use num_bigint::BigUint;
-
 use serde_derive::Serialize;
 
+pub mod err;
 pub mod parser;
 
+pub use err::Res;
 pub use parser::Parser;
 
-lazy_static::lazy_static! {
-    /// Span separator.
-    static ref SPAN_SEP: char = '-';
-    /// Span format.
-    static ref SPAN_FMT: String = format!("<int>{}<int>", *SPAN_SEP);
-
-    /// Location separator.
-    static ref LOC_SEP: char = ':';
-    /// Location counter separator.
-    static ref LOC_COUNT_SEP: char = '#';
-    /// Location format.
-    static ref LOC_FMT: String = format!("<file>{}<line>{}{}", *LOC_SEP, *LOC_SEP, *SPAN_FMT);
-    /// Location with count format.
-    static ref LOC_COUNT_FMT: String = format!("{}{}<int>", *LOC_FMT, *LOC_COUNT_SEP);
-
-    /// None format.
-    static ref NONE_FMT: String = format!("<none>");
-
-    /// Trace start.
-    static ref TRACE_START: char = '[';
-    /// Trace end.
-    static ref TRACE_END: char = ']';
-    /// Trace format.
-    static ref TRACE_FMT: String = format!(
-        "{} $( {} | `{}` )* {}",
-        *TRACE_START, *LOC_COUNT_FMT, *NONE_FMT, *TRACE_END
-    );
-    /// Label format.
-    static ref LABEL: String = "`<anything but `>`".into();
-    /// Labels format.
-    static ref LABELS_FMT: String = format!(
-        "{} $( {} )* {}",
-        *TRACE_START, *LABEL, *TRACE_END
-    );
-
-    /// Date format.
-    static ref DATE_FMT: String = "<int>$(`.`<int>)?".into();
-
-    /// Allocation kind format.
-    static ref ALLOC_KIND_FMT: String = "`Minor`|`Major`|`MajorPostponed`|`Serialized`".into();
-
-    /// Allocation separator.
-    static ref ALLOC_SEP: char = ',';
-    /// Allocation format.
-    static ref ALLOC_FMT: String = format!(
-        "<uid>: <kind>{} <size>{} <trace>{} <created_at> $({} <died_at>)?",
-        *ALLOC_SEP, *ALLOC_SEP, *ALLOC_SEP, *ALLOC_SEP
-    );
-
-    /// Diff separator.
-    static ref DIFF_SEP: char = ';';
-    /// Diff inner separator.
-    static ref DIFF_INNER_SEP: char = '|';
-    /// Diff format.
-    static ref DIFF_FMT: String = format!(
-        "\
-            <timestamp> {} `new` {{ \
-                $(`{}` <alloc>)* `{}` \
-            }} {} dead {{ \
-                $(`{}` <uid>: <died_at>)* `{}` \
-            }}\
-        ",
-        *DIFF_SEP, *DIFF_INNER_SEP, *DIFF_INNER_SEP, *DIFF_SEP, *DIFF_INNER_SEP, *DIFF_INNER_SEP
-    );
-}
-
-macro_rules! error {
-    (unwrap_option ( $($e:expr),* $(,)* ), $illegal:expr, msg: $msg:expr) => {{
-        #[allow(unused_parens)]
-        (
-            $(
-                match $e {
-                    Some(res) => res,
-                    None => error!($illegal, msg: $msg),
-                }
-            ),*
-        )
-    }};
-    (unwrap ( $($e:expr),* $(,)* ), $illegal:expr, msg: $msg:expr) => {{
-        #[allow(unused_parens)]
-        (
-            $(
-                match $e {
-                    Ok(res) => res,
-                    Err(e) => error!($illegal, msg: format!("{} ({})", $msg, e)),
-                }
-            ),*
-        )
-    }};
-    ($illegal:expr, msg: $msg:expr) => {
-        return Err(format!("parse error: `{}` {}", $illegal, $msg));
-    };
-}
+#[cfg(test)]
+mod test;
 
 /// A bigint UID.
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -147,12 +58,8 @@ impl Uid {
     /// # println!("uid: {}", uid);
     /// assert_eq! { format!("{}", uid), s }
     /// ```
-    pub fn of_str(s: &str) -> Result<Self, String> {
-        let uid = error!(
-            unwrap_option(BigUint::parse_bytes(s.as_bytes(), 10)),
-            s, msg: "expected UID (integer)"
-        );
-        Ok(Self { uid })
+    pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
+        Parser::parse_all(s.as_ref(), Parser::uid, "uid")
     }
 }
 
@@ -170,7 +77,7 @@ impl fmt::Display for Loc {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(
             fmt,
-            "{}:{}:{}-{}",
+            "`{}`:{}:{}-{}",
             self.file, self.line, self.span.0, self.span.1
         )
     }
@@ -192,7 +99,7 @@ impl Loc {
     ///
     /// ```rust
     /// use alloc_data::Loc;
-    /// let s = "blah/stuff/file.ml:325:7-38";
+    /// let s = "`blah/stuff/file.ml`:325:7-38";
     /// let loc = Loc::of_str(s).unwrap();
     /// # println!("loc: {}", loc);
     /// assert_eq! { format!("{}", loc), s }
@@ -200,30 +107,8 @@ impl Loc {
     /// assert_eq! { loc.line, 325 }
     /// assert_eq! { loc.span, (7, 38) }
     /// ```
-    pub fn of_str(s: &str) -> Result<Self, String> {
-        let err_msg = || format!("expected location: {}", *LOC_FMT);
-        let mut subs = s.split(*LOC_SEP);
-        let (file, line, span) = error!(
-            unwrap_option(subs.next().map(str::to_string), subs.next(), subs.next(),),
-            s,
-            msg: err_msg()
-        );
-
-        let line = error!(unwrap(usize::from_str(line)), line, msg: err_msg());
-
-        let mut subs = span.split(*SPAN_SEP);
-        let (col_start, col_end) = error!(
-            unwrap_option(subs.next(), subs.next()),
-            span,
-            msg: err_msg()
-        );
-        let span = error!(
-            unwrap(usize::from_str(col_start), usize::from_str(col_end)),
-            col_start,
-            msg: err_msg()
-        );
-
-        Ok(Self { file, line, span })
+    pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
+        Parser::parse_all(s.as_ref(), Parser::loc, "location")
     }
 
     /// Parses a location with a count.
@@ -232,7 +117,7 @@ impl Loc {
     ///
     /// ```rust
     /// use alloc_data::Loc;
-    /// let s = "blah/stuff/file.ml:325:7-38#5";
+    /// let s = "`blah/stuff/file.ml`:325:7-38#5";
     /// let (loc, count) = Loc::of_str_with_count(s).unwrap();
     /// # println!("loc_count: {}#{}", loc, count);
     /// assert_eq! { format!("{}", loc), s[0..s.len()-2] }
@@ -241,40 +126,8 @@ impl Loc {
     /// assert_eq! { loc.span, (7, 38) }
     /// assert_eq! { count, 5 }
     /// ```
-    pub fn of_str_with_count(s: &str) -> Result<(Self, usize), String> {
-        let err_msg = || format!("expected location with count: {}", *LOC_COUNT_FMT);
-        let mut subs = s.split(*LOC_COUNT_SEP);
-        let (loc, count) = error!(unwrap_option(subs.next(), subs.next()), s, msg: err_msg());
-        let loc = Self::of_str(loc)?;
-        let count = error!(unwrap(usize::from_str(count)), s, msg: err_msg());
-        Ok((loc, count))
-    }
-}
-
-/// Parses a list between `TRACE_START` and `TRACE_END`.
-pub trait TraceLike<Elm> {
-    /// Name of the actual trace-like thing.
-    const NAME: &'static str;
-    /// Format of the inner element, for error-reporting.
-    fn format<'a>() -> &'a str;
-
-    /// Parses an inner element.
-    fn parse_inner(s: &str) -> Result<Elm, String>;
-
-    /// Parses a trace-like string.
-    fn parse(s: &str) -> Result<Vec<Elm>, String> {
-        let err_msg = || format!("expected {}: {}", Self::NAME, Self::format());
-        let mut chars = s.chars();
-        if chars.next() != Some(*TRACE_START) || chars.next_back() != Some(*TRACE_END) {
-            return Err(err_msg());
-        }
-        let s = s[1..s.len() - 1].trim();
-
-        let mut vec = Vec::with_capacity(13);
-        for inner in s.split_whitespace() {
-            vec.push(Self::parse_inner(inner)?)
-        }
-        Ok(vec)
+    pub fn of_str_with_count<Str: AsRef<str>>(s: Str) -> Res<(Self, usize)> {
+        Parser::parse_all(s.as_ref(), Parser::loc_count, "location with count")
     }
 }
 
@@ -327,23 +180,6 @@ impl Labels {
         Self { labels }
     }
 }
-impl TraceLike<String> for Labels {
-    const NAME: &'static str = "labels";
-
-    fn format<'a>() -> &'a str {
-        "`<anything but `>`"
-    }
-
-    /// Parses an inner element.
-    fn parse_inner(s: &str) -> Result<String, String> {
-        let mut chars = s.chars();
-        if chars.next() != Some('`') || chars.next_back() != Some('`') {
-            error!(s, msg: format!("expected label: {}", *LABELS_FMT));
-        }
-
-        Ok(s[1..s.len() - 1].into())
-    }
-}
 
 /// A kind of allocation.
 #[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -388,18 +224,8 @@ impl AllocKind {
     ///     assert_eq! { kind, *exp }
     /// }
     /// ```
-    pub fn of_str(s: &str) -> Result<Self, String> {
-        use AllocKind::*;
-        match s {
-            "Minor" => Ok(Minor),
-            "Major" => Ok(Major),
-            "MajorPostponed" => Ok(MajorPostponed),
-            "Serialized" => Ok(Serialized),
-            s => Err(format!(
-                "found `{}` while parsing allocation kind {}",
-                s, *ALLOC_KIND_FMT
-            )),
-        }
+    pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
+        Parser::parse_all(s.as_ref(), Parser::kind, "allocation kind")
     }
 }
 
@@ -462,31 +288,15 @@ impl Date {
     ///     ("320.74", Duration::new(320, 740_000_000)),
     ///     ("703470.0074", Duration::new(703470, 7_400_000)),
     ///     ("0.2", Duration::new(0, 200_000_000)),
-    ///     ("7", Duration::new(7, 0)),
+    ///     ("7.0", Duration::new(7, 0)),
     /// ];
     /// for (s, exp) in &s_list {
     ///     let date = Date::of_str(s).unwrap();
     ///     assert_eq! { &*date, exp }
     /// }
     /// ```
-    pub fn of_str(s: &str) -> Result<Self, String> {
-        let err_msg = || format!("found `{}`, expected date {}", s, *DATE_FMT);
-        let mut subs = s.split('.');
-        let secs = error!(unwrap_option(subs.next()), s, msg: err_msg());
-        let secs = error!(unwrap(u64::from_str(secs)), s, msg: err_msg());
-        let nanos = match subs.next() {
-            None => 0,
-            Some(nanos) => {
-                let nanos = &format!("{:0<9}", nanos);
-                if nanos.len() > 9 {
-                    error!(s, msg: err_msg())
-                }
-
-                error!(unwrap(u32::from_str(nanos)), s, msg: err_msg())
-            }
-        };
-        let duration = Duration::new(secs, nanos);
-        Ok(Self { duration })
+    pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
+        Parser::parse_all(s.as_ref(), Parser::date, "date")
     }
 }
 
@@ -582,14 +392,8 @@ impl Alloc {
     }
 
     /// Parser.
-    pub fn of_str<Str: AsRef<str>>(txt: Str) -> Result<Self, String> {
-        let mut parser = Parser::new(txt.as_ref());
-        let alloc = parser.alloc()?;
-        parser.ws();
-        if !parser.is_eoi() {
-            return Err(parser.error("expected end of input"));
-        }
-        Ok(alloc)
+    pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
+        Parser::parse_all(s.as_ref(), Parser::alloc, "allocation")
     }
 }
 
@@ -626,14 +430,8 @@ impl Diff {
     }
 
     /// Parser.
-    pub fn of_str<Str: AsRef<str>>(txt: Str) -> Result<Self, String> {
-        let mut parser = Parser::new(txt.as_ref());
-        let diff = parser.diff()?;
-        parser.ws();
-        if !parser.is_eoi() {
-            return Err(parser.error("expected end of input"));
-        }
-        Ok(diff)
+    pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
+        Parser::parse_all(s.as_ref(), Parser::diff, "diff")
     }
 }
 

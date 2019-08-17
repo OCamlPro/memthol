@@ -13,3 +13,4 @@ serde = "*"
 serde_derive = "*"
 stdweb = "*"
 chrono = { version = "*", features = ["serde"] }
+error-chain = "*"
