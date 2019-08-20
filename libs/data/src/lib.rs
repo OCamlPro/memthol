@@ -311,6 +311,8 @@ pub struct Alloc {
     pub size: usize,
     /// Allocation-site callstack.
     pub trace: Trace,
+    /// User-defined labels.
+    pub labels: Vec<String>,
     /// Time of creation.
     pub toc: Date,
     /// Time of death.
@@ -318,13 +320,21 @@ pub struct Alloc {
 }
 impl fmt::Display for Alloc {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let mut labels = "[".to_string();
+        for label in &self.labels {
+            labels.push_str(" ");
+            labels.push_str(label)
+        }
+        labels.push_str(" ]");
         write!(
             fmt,
-            "{}: {}, {}, {}, {}",
-            self.uid, self.kind, self.size, self.trace, self.toc
+            "{}: {}, {}, {}, {}, {}, ",
+            self.uid, self.kind, self.size, self.trace, labels, self.toc
         )?;
         if let Some(tod) = &self.tod {
-            write!(fmt, ", {}", tod)?
+            write!(fmt, "{}", tod)?
+        } else {
+            write!(fmt, "_")?
         }
         write!(fmt, " }}")
     }
@@ -337,6 +347,7 @@ impl Alloc {
         kind: AllocKind,
         size: usize,
         trace: Trace,
+        labels: Vec<String>,
         toc: Date,
         tod: Option<Date>,
     ) -> Self {
@@ -345,6 +356,7 @@ impl Alloc {
             kind,
             size,
             trace,
+            labels,
             toc,
             tod,
         }

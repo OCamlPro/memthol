@@ -27,6 +27,8 @@ static DIFF_FMT: &str = "<timestamp> `new` {{ \
                          <dead alloc> ... \
                          }}\
                          ";
+/// Label format.
+static LABEL_FMT: &str = "`<anything but `>`";
 
 lazy_static::lazy_static! {
     /// Span format.
@@ -42,12 +44,10 @@ lazy_static::lazy_static! {
         "{} \\({} | {}\\) ... {}",
         TRACE_START, *LOC_COUNT_FMT, NONE_FMT, TRACE_END
     );
-    /// Label format.
-    static ref LABEL: String = "`<anything but `>`".into();
     /// Labels format.
     static ref LABELS_FMT: String = format!(
         "{} {} ... {}",
-        TRACE_START, *LABEL, TRACE_END
+        TRACE_START, LABEL_FMT, TRACE_END
     );
 
     /// Date format.
@@ -55,7 +55,7 @@ lazy_static::lazy_static! {
 
     /// Allocation format.
     static ref ALLOC_FMT: String = format!(
-        "<uid>: <kind> <size> <trace> <created_at: date> \\( <died_at: date> | {} \\)",
+        "<uid>: <kind> <size> <trace> <labels> <created_at: date> \\( <died_at: date> | {} \\)",
         NONE_FMT
     );
 }
@@ -254,26 +254,30 @@ impl<'a> Parser<'a> {
     ///
     /// ```rust
     /// use alloc_data::{AllocKind, Loc, Parser};
-    /// let mut parser = Parser::new(r#"523: Major 32 [ `file`:7:3-5#11 ] 5.3 _"#);
+    /// let mut parser = Parser::new(r#"523: Major 32 [ `file`:7:3-5#11 ] [ `label` ] 5.3 _"#);
     /// let alloc = parser.alloc().unwrap();
     /// assert_eq! { parser.rest(), "" }
     /// assert_eq! { alloc.uid.to_string(), "523" }
     /// assert_eq! { alloc.kind, AllocKind::Major }
     /// assert_eq! { alloc.size, 32 }
     /// assert_eq! { *alloc.trace, vec![ (Loc::new("file", 7, (3, 5)), 11) ] }
+    /// assert_eq! { alloc.labels, vec![ "label".to_string() ] }
     /// assert_eq! { alloc.toc.to_string(), "5.3" }
     /// assert! { alloc.tod.is_none() }
     /// ```
     ///
     /// ```rust
     /// use alloc_data::{AllocKind, Loc, Parser};
-    /// let mut parser = Parser::new(r#"523: Major 32 [ `file`:7:3-5#11 ] 5.3 7.3"#);
+    /// let mut parser = Parser::new(
+    ///     r#"523: Major 32 [ `file`:7:3-5#11 ] [`label_1` `label_2`] 5.3 7.3"#
+    /// );
     /// let alloc = parser.alloc().unwrap();
     /// assert_eq! { parser.rest(), "" }
     /// assert_eq! { alloc.uid.to_string(), "523" }
     /// assert_eq! { alloc.kind, AllocKind::Major }
     /// assert_eq! { alloc.size, 32 }
     /// assert_eq! { *alloc.trace, vec![ (Loc::new("file", 7, (3, 5)), 11) ] }
+    /// assert_eq! { alloc.labels, vec![ "label_1".to_string(), "label_2".to_string() ] }
     /// assert_eq! { alloc.toc.to_string(), "5.3" }
     /// assert_eq! { alloc.tod.unwrap().to_string(), "7.3" }
     /// ```
@@ -292,8 +296,8 @@ impl<'a> Parser<'a> {
         self.ws();
         let trace = self.trace()?;
 
-        // self.ws();
-        // let labels = self.labels()?;
+        self.ws();
+        let labels = self.labels()?;
 
         self.ws();
         let toc = self.date()?;
@@ -301,7 +305,7 @@ impl<'a> Parser<'a> {
         self.ws();
         let tod = self.date_opt()?;
 
-        Ok(Alloc::new(uid, kind, size, trace, toc, tod))
+        Ok(Alloc::new(uid, kind, size, trace, labels, toc, tod))
     }
 
     /// Parses an allocation kind.
@@ -517,6 +521,40 @@ impl<'a> Parser<'a> {
         let count = self.usize()?;
 
         Ok((loc, count))
+    }
+
+    /// Parses some labels.
+    pub fn labels(&mut self) -> Res<Vec<String>> {
+        self.inner_labels()
+            .chain_err(|| format!("while parsing labels `{}`", *LABELS_FMT))
+    }
+    fn inner_labels(&mut self) -> Res<Vec<String>> {
+        self.tag("[")?;
+        self.ws();
+
+        let mut vec = vec![];
+
+        while !self.try_tag("]") {
+            self.ws();
+            let label = self.label()?;
+            vec.push(label);
+            self.ws()
+        }
+
+        Ok(vec)
+    }
+
+    /// Parses a label.
+    pub fn label(&mut self) -> Res<String> {
+        self.tag("`")?;
+        let start = self.cursor;
+        while !self.try_tag("`") {
+            if self.is_eoi() {
+                bail!(self.error("expected end of label"))
+            }
+            self.cursor += 1
+        }
+        Ok(self.text[start..self.cursor - 1].into())
     }
 
     /// Parses a dead allocation info.
