@@ -86,7 +86,38 @@ fn handle_request(request: Request, dump_dir: String) -> Res<()> {
     // Path to the diff of files.
     let diff_dir = std::path::Path::new(&dump_dir);
     // Set of all the files sent so far.
-    let mut known_files = Set::new();
+    let mut known_files: Set<std::ffi::OsString> = Set::new();
+
+    // Send the init file.
+    {
+        let mut init_file = diff_dir.to_path_buf();
+        init_file.push("init.memthol");
+        let is_new = known_files.insert("init.memthol".into());
+        assert! { is_new }
+
+        use std::{fs::OpenOptions, io::Read};
+        let mut content = vec![];
+        let mut file_reader = OpenOptions::new()
+            .read(true)
+            .write(false)
+            .open(&init_file)
+            .chain_err(|| format!("while opening file `{}`", init_file.to_string_lossy()))?;
+        file_reader.read_to_end(&mut content).chain_err(|| {
+            format!(
+                "while reading the content of file `{}`",
+                init_file.to_string_lossy()
+            )
+        })?;
+        let msg = OwnedMessage::Binary(content);
+        println!("sending content of init file");
+        sender.send_message(&msg).chain_err(|| {
+            format!(
+                "while sending content of init file `{}`",
+                init_file.to_string_lossy()
+            )
+        })?;
+    }
+
     // New files discovered during one iteration of the loop below.
     let mut new_files = vec![];
 
@@ -178,7 +209,7 @@ fn handle_request(request: Request, dump_dir: String) -> Res<()> {
                     file.path().to_string_lossy()
                 )
             })?;
-            // std::thread::sleep(std::time::Duration::new(2, 000_000_000));
+            // std::thread::sleep(std::time::Duration::new(0, 500_000_000));
         }
 
         let message = OwnedMessage::Ping(ping_label.clone());

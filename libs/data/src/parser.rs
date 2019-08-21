@@ -592,6 +592,36 @@ impl<'a> Parser<'a> {
         vec.shrink_to_fit();
         Ok(vec)
     }
+
+    /// Parses memthol's init file.
+    pub fn init(txt: &'a str) -> Res<NuDate> {
+        let mut parser = Parser::new(txt);
+        parser.tag("start").chain_err(|| "starting the init file")?;
+        parser.ws();
+        parser.tag(":")?;
+        parser.ws();
+        let err_msg = || format!("expected date `{}`", *DATE_FMT);
+        let start_pos = parser.cursor;
+        let num = parser.int()?;
+        match parser.chars().next() {
+            Some('.') => parser.cursor += 1,
+            _ => bail!(parser.error_at(start_pos, err_msg())),
+        }
+        let dec = parser.int()?;
+        let dec = format!("{:0<9}", dec);
+
+        let secs = if let Ok(num) = i64::from_str(num) {
+            num
+        } else {
+            bail!(parser.error_at(start_pos, err_msg()));
+        };
+        let nanos = if let Ok(dec) = u32::from_str(&dec) {
+            dec
+        } else {
+            bail!(parser.error_at(start_pos, err_msg()));
+        };
+        Ok(NuDate::of_timestamp(secs, nanos))
+    }
 }
 
 impl<'a> Parser<'a> {

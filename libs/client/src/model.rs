@@ -71,65 +71,82 @@ impl Component for Model {
                 self.top_tabs.activate(tab)
             }
             Msg::Diff(diff) => {
-                info!("receiving diff..");
-                let diff_str = diff
+                let txt = diff
                     .destroy()
                     .expect("failed to receive new diff from server");
-                let is_last = &diff_str[0..1] == "1";
-                let diff_str = &diff_str[1..];
-                let diff = AllocDiff::of_str(diff_str).expect("could not parse ill-formed diff");
-                self.charts.add_diff(diff);
-                if is_last {
-                    self.charts.update()
-                }
-                false
-            }
-            Msg::UpdateD3(_) => {
-                let (toc_s, toc_n) = (self.count * 15, self.count * 3574 % 103);
-                let (tod_s, tod_n) = (toc_s + (self.count * 21), self.count * 2574 % 103);
-                let toc = format!("{}.{}", toc_s, toc_n);
-                let tod = format!("{}.{}", tod_s, tod_n);
-                let alloc = if self.count % 2 == 0 {
-                    let alloc = Alloc::of_str(&format!(
-                        "{}: {}, {}, {}, {}, {}",
-                        self.count * self.count * self.count * self.count % 2_000_000_000,
-                        "Major",
-                        match self.count * 11 % 4 {
-                            0 => 7,
-                            1 => 8,
-                            2 => 16,
-                            3 => 32,
-                            _ => 4,
-                        },
-                        "[ blah/stuff/file.ml:325:7-38#3 file.ml:754230:1-3#11 ]",
-                        toc,
-                        tod
-                    ))
-                    .unwrap();
-                    alloc
+                if txt.len() > "start".len() && &txt[0.."start".len()] == "start" {
+                    info!("receiving init...");
+                    let start_date = match alloc_data::Parser::init(&txt) {
+                        Ok(start_date) => start_date,
+                        Err(e) => {
+                            info!("Error:");
+                            for line in e.pretty().lines() {
+                                info!("{}", line)
+                            }
+                            panic!("could not parse ill-formed init")
+                        }
+                    };
+                    self.charts.date_init(start_date);
+                    false
                 } else {
-                    let alloc = Alloc::of_str(&format!(
-                        "{}: {}, {}, {}, {}",
-                        self.count * self.count * self.count * self.count % 2_000_000_000,
-                        "Major",
-                        match self.count * 11 % 4 {
-                            0 => 7,
-                            1 => 8,
-                            2 => 16,
-                            3 => 32,
-                            _ => 4,
-                        },
-                        "[ blah/stuff/file.ml:325:7-38#3 file.ml:754230:1-3#11 ]",
-                        toc
-                    ))
-                    .unwrap();
-                    self.memory.push(alloc.uid().clone());
-                    alloc
-                };
-                self.charts.add_alloc(alloc);
-                self.count += 1;
-                false
+                    info!("receiving diff...");
+                    let is_last = &txt[0..1] == "1";
+                    let diff_str = &txt[1..];
+                    let diff =
+                        AllocDiff::of_str(diff_str).expect("could not parse ill-formed diff");
+                    self.charts.add_diff(diff);
+                    if is_last {
+                        self.charts.update();
+                    }
+                    false
+                }
             }
+            // Msg::UpdateD3(_) => {
+            //     let (toc_s, toc_n) = (self.count * 15, self.count * 3574 % 103);
+            //     let (tod_s, tod_n) = (toc_s + (self.count * 21), self.count * 2574 % 103);
+            //     let toc = format!("{}.{}", toc_s, toc_n);
+            //     let tod = format!("{}.{}", tod_s, tod_n);
+            //     let alloc = if self.count % 2 == 0 {
+            //         let alloc = Alloc::of_str(&format!(
+            //             "{}: {}, {}, {}, {}, {}",
+            //             self.count * self.count * self.count * self.count % 2_000_000_000,
+            //             "Major",
+            //             match self.count * 11 % 4 {
+            //                 0 => 7,
+            //                 1 => 8,
+            //                 2 => 16,
+            //                 3 => 32,
+            //                 _ => 4,
+            //             },
+            //             "[ blah/stuff/file.ml:325:7-38#3 file.ml:754230:1-3#11 ]",
+            //             toc,
+            //             tod
+            //         ))
+            //         .unwrap();
+            //         alloc
+            //     } else {
+            //         let alloc = Alloc::of_str(&format!(
+            //             "{}: {}, {}, {}, {}",
+            //             self.count * self.count * self.count * self.count % 2_000_000_000,
+            //             "Major",
+            //             match self.count * 11 % 4 {
+            //                 0 => 7,
+            //                 1 => 8,
+            //                 2 => 16,
+            //                 3 => 32,
+            //                 _ => 4,
+            //             },
+            //             "[ blah/stuff/file.ml:325:7-38#3 file.ml:754230:1-3#11 ]",
+            //             toc
+            //         ))
+            //         .unwrap();
+            //         self.memory.push(alloc.uid().clone());
+            //         alloc
+            //     };
+            //     self.charts.add_alloc(alloc);
+            //     self.count += 1;
+            //     false
+            // }
             Msg::Nop => {
                 info!("received nop message");
                 false
@@ -151,14 +168,7 @@ impl Model {
     /// Renders the content.
     fn render_content(&self) -> Html {
         html! {
-            <div class="h1_brush">
-                <h1 class="h1"> {"Memthol"} </h1>
-                { self.charts.render() }
-                // <br/>
-                // <br/>
-                // <br/>
-                // { self.d3_graph.render() }
-            </div>
+            { self.charts.render() }
         }
     }
 }

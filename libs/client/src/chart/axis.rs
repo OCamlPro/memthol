@@ -172,10 +172,10 @@ impl<Val> Default for Ticks<Val> {
     }
 }
 impl<Val> Ticks<Val> {
-    /// Sets the range of the ticks.
-    pub fn set_range(&mut self, range: Range<Val>) {
-        self.range = range
-    }
+    // /// Sets the range of the ticks.
+    // pub fn set_range(&mut self, range: Range<Val>) {
+    //     self.range = range
+    // }
 
     /// Tick callback which filters out non-integer ticks.
     pub fn only_ints_callback() -> Value {
@@ -274,10 +274,10 @@ impl<Val> Axis<Val> {
         }
     }
 
-    /// Sets the range for the scale.
-    pub fn set_range(&mut self, range: Range<Val>) {
-        self.ticks.set_range(range)
-    }
+    // /// Sets the range for the scale.
+    // pub fn set_range(&mut self, range: Range<Val>) {
+    //     self.ticks.set_range(range)
+    // }
 
     /// Retrieves the range of the scale.
     pub fn range(&self) -> &Range<Val> {
@@ -297,41 +297,43 @@ impl<Val> Axis<Val> {
         self.typ = Type::Time
     }
 
-    /// JS version of the axis.
-    pub fn as_js(&self) -> Value {
-        let js = js! {
-            return {
-                type: @{self.typ.as_js()},
-                time: {
-                    unit: "millisecond",
-                    tooltipFormat: "h:mm:ss a",
-                },
-                position: @{self.pos.as_js()},
-                ticks: @{self.ticks.as_js()},
-                gridLines: {
-                    zeroLineColor: "black",
-                    zeroLineWidth: 2,
-                },
-                scaleLabel: {
-                    display: true,
-                    labelString: @{&self.label},
-                },
-            }
-        };
-        js
-    }
+    // /// JS version of the axis.
+    // fn as_js(&self) -> Value {
+    //     let js = js! {
+    //         return {
+    //             type: @{self.typ.as_js()},
+    //             time: {
+    //                 unit: "millisecond",
+    //                 tooltipFormat: "h:mm:ss a",
+    //             },
+    //             position: @{self.pos.as_js()},
+    //             ticks: @{self.ticks.as_js()},
+    //             gridLines: {
+    //                 zeroLineColor: "black",
+    //                 zeroLineWidth: 2,
+    //             },
+    //             scaleLabel: {
+    //                 display: true,
+    //                 labelString: @{&self.label},
+    //             },
+    //         }
+    //     };
+    //     js
+    // }
 }
 
 pub trait XAxis: Default + Clone + fmt::Debug {
     type Value: Ord;
     type LiveInfo;
 
+    const clear_map: bool;
+
     fn axis(&self) -> &Axis<Self::Value>;
     fn axis_mut(&mut self) -> &mut Axis<Self::Value>;
 
-    fn set_range(&mut self, range: Range<Self::Value>) {
-        self.axis_mut().set_range(range)
-    }
+    // fn set_range(&mut self, range: Range<Self::Value>) {
+    //     self.axis_mut().set_range(range)
+    // }
 
     fn value_of_alloc(alloc: &Alloc) -> Self::Value;
     fn info_of_alloc(alloc: &Alloc) -> Self::LiveInfo;
@@ -348,9 +350,9 @@ pub trait YAxis: Default + Clone + fmt::Debug {
     fn axis(&self) -> &Axis<Self::Value>;
     fn axis_mut(&mut self) -> &mut Axis<Self::Value>;
 
-    fn set_range(&mut self, range: Range<Self::Value>) {
-        self.axis_mut().set_range(range)
-    }
+    // fn set_range(&mut self, range: Range<Self::Value>) {
+    //     self.axis_mut().set_range(range)
+    // }
 
     fn init_acc() -> Self::Acc;
     fn value_of_alloc(alloc: &Alloc) -> Self::Value;
@@ -376,6 +378,8 @@ impl Default for XTime {
 impl XAxis for XTime {
     type Value = AllocDate;
     type LiveInfo = ();
+
+    const clear_map: bool = true;
 
     fn axis(&self) -> &Axis<AllocDate> {
         &self.axis
@@ -417,6 +421,8 @@ impl Default for XSize {
 impl XAxis for XSize {
     type Value = usize;
     type LiveInfo = usize;
+
+    const clear_map: bool = false;
 
     fn axis(&self) -> &Axis<usize> {
         &self.axis

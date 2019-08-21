@@ -229,6 +229,60 @@ impl AllocKind {
     }
 }
 
+/// Wrapper around a `chrono` date.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, PartialOrd, Ord)]
+pub struct NuDate {
+    /// Actual duration.
+    date: chrono::DateTime<chrono::Utc>,
+}
+impl NuDate {
+    /// Constructor from a unix UTC timestamp.
+    pub fn of_timestamp(secs: i64, nanos: u32) -> Self {
+        use chrono::prelude::*;
+        let date = Utc.timestamp(secs, nanos);
+        // info! { "utc: {}", date }
+        // let date: DateTime<Local> = date.into();
+        // info! { "local: {}", date }
+        NuDate { date }
+    }
+
+    /// Adds a duration.
+    pub fn add(&mut self, duration: Date) {
+        self.date = self.date + chrono::Duration::from_std(duration.duration).unwrap()
+    }
+
+    /// JS version of a date.
+    pub fn as_js(&self) -> Value {
+        use chrono::{Datelike, Timelike};
+        js!(
+            return new Date(Date.UTC(
+                @{self.date.year()},
+                @{self.date.month0()},
+                @{self.date.day()},
+                @{self.date.hour()},
+                @{self.date.minute()},
+                @{self.date.second()},
+                @{self.date.nanosecond() / 1_000_000},
+            ))
+        )
+    }
+
+    pub fn time_info(&self) -> (u32, u32, u32, u32) {
+        use chrono::Timelike;
+        (
+            self.date.hour(),
+            self.date.minute(),
+            self.date.second(),
+            self.date.nanosecond() / 1_000_000,
+        )
+    }
+}
+impl fmt::Display for NuDate {
+    fn fmt(&self, fmtt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmtt, "{}", self.date)
+    }
+}
+
 /// Wrapper around a duration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, PartialOrd, Ord)]
 pub struct Date {
@@ -267,6 +321,11 @@ impl From<std::time::Duration> for Date {
         Self { duration }
     }
 }
+impl Into<std::time::Duration> for Date {
+    fn into(self) -> std::time::Duration {
+        self.duration
+    }
+}
 impl std::ops::Sub for Date {
     type Output = Self;
     fn sub(self, other: Self) -> Self {
@@ -297,6 +356,16 @@ impl Date {
     /// ```
     pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
         Parser::parse_all(s.as_ref(), Parser::date, "date")
+    }
+
+    /// JS representation of a date.
+    pub fn as_js(&self, date: Value) -> Value {
+        js!(
+            var date = @{date};
+            date.setSeconds(@{self.duration.as_secs().to_string()});
+            date.setMilliseconds(@{self.duration.subsec_millis().to_string()});
+            return date;
+        )
     }
 }
 

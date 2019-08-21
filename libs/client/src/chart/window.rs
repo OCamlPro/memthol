@@ -57,7 +57,7 @@ impl Margin {
     }
 }
 
-/// A window: a width and a height.
+/// A window: a width **in percents** and a height **in pixels**.
 #[derive(Getters, Debug, Clone)]
 pub struct Window {
     /// Width.
@@ -70,8 +70,8 @@ pub struct Window {
 impl Default for Window {
     fn default() -> Self {
         Self {
-            width: 800,
-            height: 400,
+            width: 100,
+            height: 600,
             margin: Margin::default(),
         }
     }
@@ -87,6 +87,11 @@ impl Window {
     pub fn set_height(mut self, height: usize) -> Self {
         self.height = height;
         self
+    }
+
+    /// Style string of a window.
+    pub fn as_style(&self) -> String {
+        format! { "width: {}%; height:{}px;", self.width, self.height }
     }
 
     /// Width accessor.

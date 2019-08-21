@@ -10,7 +10,9 @@ pub use stdweb::Value;
 
 pub use yew::{html, services::websocket, Component, ComponentLink, Renderable, ShouldRender};
 
-pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, Uid as AllocUid};
+pub use alloc_data::{
+    Alloc, Date as AllocDate, Diff as AllocDiff, NuDate as AllocNuDate, Uid as AllocUid,
+};
 
 pub use crate::{chart, cst, data, model::Model};
 
@@ -65,8 +67,6 @@ pub enum Msg {
     ChangeTab(crate::top_tabs::Tab),
     /// Allocation info message.
     Diff(DiffMsg),
-    /// D3 update message.
-    UpdateD3(Result<usize, failure::Error>),
     /// Do nothing.
     Nop,
     /// Start message.

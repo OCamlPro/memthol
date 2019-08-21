@@ -225,6 +225,7 @@ name = "client"
 version = "0.1.0"
 dependencies = [
  "alloc_data 0.1.0",
+ "chrono 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "getset 0.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -20,7 +20,7 @@ pub trait AbstractChart {
     /// Does **not** update the actual chart.
     fn add_death(&mut self, uid: &AllocUid, tod: AllocDate);
     /// Updates the actual chart.
-    fn update(&self);
+    fn update(&mut self);
 }
 
 pub type BChart = Box<dyn AbstractChart + 'static>;
@@ -32,8 +32,17 @@ pub mod new {
         use super::*;
 
         pub fn y_size_sum(id: &str) -> BChart {
-            let mut chart: ChartData<axis::XTime, axis::YSizeSum> = ChartData::init(id);
-            chart.set_x_range(axis::Range::sliding(Duration::new(1, 0).into()));
+            let chart: ChartData<axis::XTime, axis::YSizeSum> = ChartData::init(id);
+            // chart.set_x_range(axis::Range::sliding(Duration::new(1, 0).into()));
+            Box::new(chart)
+        }
+    }
+
+    pub mod x_size {
+        use super::*;
+
+        pub fn y_size_sum(id: &str) -> BChart {
+            let chart: ChartData<axis::XSize, axis::YSizeSum> = ChartData::init(id);
             Box::new(chart)
         }
     }
@@ -46,11 +55,11 @@ where
 {
     data: Map<X::Value, Y::Acc>,
     live: Map<AllocUid, (X::LiveInfo, Y::LiveInfo)>,
-    config: Value,
     chart: Value,
     x_axis: X,
     y_axis: Y,
     filter: data::Filter,
+    y_acc: Y::Acc,
 }
 impl<X, Y> ChartData<X, Y>
 where
@@ -60,7 +69,7 @@ where
     Y::Value: axis::CloneSubOrd,
 {
     /// Constructor.
-    fn new(x_axis: X, y_axis: Y, config: Value, chart: Value) -> Self {
+    fn new(x_axis: X, y_axis: Y, chart: Value) -> Self {
         let mut data = Map::new();
         match (X::origin_value(), Y::origin_value()) {
             (Some(x), Some(y)) => {
@@ -72,98 +81,96 @@ where
         Self {
             data,
             live: Map::new(),
-            config,
             chart,
             x_axis,
             y_axis,
             filter: data::Filter::new(),
+            y_acc: Y::init_acc(),
         }
     }
 
-    /// X-axis accessor.
-    pub fn x_axis(&self) -> &X {
-        &self.x_axis
-    }
-    /// Y-axis accessor.
-    pub fn y_axis(&self) -> &Y {
-        &self.y_axis
-    }
+    // /// X-axis accessor.
+    // pub fn x_axis(&self) -> &X {
+    //     &self.x_axis
+    // }
+    // /// Y-axis accessor.
+    // pub fn y_axis(&self) -> &Y {
+    //     &self.y_axis
+    // }
 
-    /// Sets the range for the x-axis.
-    pub fn set_x_range(&mut self, range: axis::Range<X::Value>) {
-        self.x_axis.set_range(range)
-    }
+    // /// Sets the range for the x-axis.
+    // pub fn set_x_range(&mut self, range: axis::Range<X::Value>) {
+    //     self.x_axis.set_range(range)
+    // }
 
     fn get_mut(&mut self, x: X::Value) -> &mut Y::Acc {
         self.data.entry(x).or_insert_with(Y::init_acc)
     }
 
-    /// The min and max x-values.
-    fn x_min_max(&self) -> Option<(&X::Value, &X::Value)> {
-        self.data
-            .iter()
-            .next()
-            .and_then(|(min, _)| self.data.iter().next_back().map(|(max, _)| (min, max)))
-    }
+    // /// The min and max x-values.
+    // fn x_min_max(&self) -> Option<(&X::Value, &X::Value)> {
+    //     self.data
+    //         .iter()
+    //         .next()
+    //         .and_then(|(min, _)| self.data.iter().next_back().map(|(max, _)| (min, max)))
+    // }
 
-    /// Extracts the points.
-    pub fn points(&self) -> Value {
+    /// Extracts the new points.
+    pub fn points(&mut self) -> Value {
         let vec = js! { return [] };
 
-        let (x_min, x_max) = if let Some((min, max)) = self.x_min_max() {
-            (min, max)
-        } else {
-            // Returning, there's no points to draw anyways.
-            return vec;
-        };
-
-        let x_range = self.x_axis.axis().range();
-
-        let mut last_out_of_range: Option<(X::Value, Y::Value)> = None;
-
-        let mut acc = Y::init_acc();
+        let mut acc = self.y_acc.clone();
         for (x, y_acc) in self.data.iter() {
             acc = Y::combine_acc(&acc, y_acc);
             let y = Y::value_of_acc(&acc);
-            if x_range.contains(&x, &x_min, &x_max) {
-                if let Some((x, y)) = std::mem::replace(&mut last_out_of_range, None) {
-                    js! {
-                        @{&vec}.push(
-                            {
-                                x: @{X::js_of_value(&x)},
-                                y: @{Y::js_of_value(&y)},
-                            }
-                        )
+            info! { "x: {}, y: {} ({})", x, y, *x }
+            js! {
+                @{&vec}.push(
+                    {
+                        x: @{X::js_of_value(x)},
+                        y: @{Y::js_of_value(&y)},
                     }
-                }
-                info! { "x: {}, y: {} ({})", x, y, *x }
-                js! {
-                    @{&vec}.push(
-                        {
-                            x: @{X::js_of_value(x)},
-                            y: @{Y::js_of_value(&y)},
-                        }
-                    )
-                }
-            } else {
-                last_out_of_range = Some((x.clone(), y));
+                )
             }
         }
-        x_range.apply_to_axis(
-            x_min,
-            x_max,
-            &js!(return @{&self.config}.options.scales.xAxes[0]),
-        );
+        self.y_acc = acc;
+        if X::clear_map {
+            self.data.clear()
+        }
         vec
     }
 
-    /// Sets the data in a chart.
-    pub fn update(&self) {
+    // /// Adds the new points since the last call to the chart.
+    // pub fn update_new_points(&mut self) {
+    //     js! {
+    //         var chart = @{&self.chart};
+    //         let points = @{self.points()};
+    //         while (points.length > 0) {
+    //             let point = points.pop();
+
+    //         }
+    //     }
+    // }
+
+    /// Adds the new points since the last call to the chart.
+    pub fn append_new_points(&mut self) {
         js! {
-            var config = @{&self.config};
+            var chart = @{&self.chart};
             let points = @{self.points()};
-            config.data.datasets[0].data = points;
-            @{&self.chart}.update();
+            points.forEach(
+                function(point) {
+                    if (chart.data[point.x] === undefined) {
+                        console.info("adding   x: " + point.x + ", y: " + point.y);
+                        chart.addData(point)
+                    } else {
+                        console.info("updating x: " + point.x + ", y: " + point.y + "(" + chart.data[point.x] + ")");
+                        chart.data[point.x] = point.y;
+                        chart.invalidateRawData();
+                    }
+                }
+            );
+            // chart.addData(points);
+            // @{&self.chart}.update();
         }
     }
 
@@ -171,58 +178,81 @@ where
     pub fn init(id: &str) -> Self {
         let x_axis = X::default();
         let y_axis = Y::default();
-        let config = js! {
-            var data = [];
-            const x = data.map(point => point.x);
-            const y = data.map(point => point.y);
-
-            var chartOptions = {
-                showLine: true,
-                tooltips: {
-                    enabled: true,
-                    mode: "nearest",
-                    intersect: true,
-                },
-                scales: {
-                    xAxes: [ @{x_axis.axis().as_js()} ],
-                    yAxes: [ @{y_axis.axis().as_js()} ],
-                },
-                hover: {
-                    mode: "nearest",
-                    axis: "xy",
-                },
-                // animation: {
-                //     duration: 100,
-                //     easing: "easeOutExpo",
-                // },
-                elements: {
-                    point: {
-                        radius: 0
-                    }
-                }
-            };
-
-            return {
-                type: "scatter",
-                data: {
-                    datasets: [
-                        {
-                            label: "dataset label",
-                            showLine: true,
-                            fill: true,
-                            tension: 0,
-                            borderColor: "#3e95cd",
-                        }
-                    ],
-                },
-                options: chartOptions,
-            };
-        };
         let chart = js! {
-            var cxt = document.getElementById(@{id});
-            return new Chart(cxt, @{&config});
+            am4core.useTheme(am4themes_animated);
+            var chart = am4core.create(@{id}, am4charts.XYChart);
+
+            chart.data = [];
+
+            var x_axis = chart.xAxes.push(new am4charts.ValueAxis());
+            var y_axis = chart.yAxes.push(new am4charts.ValueAxis());
+
+            x_axis.renderer.inside = true;
+            x_axis.renderer.axisFills.template.disabled = true;
+            x_axis.renderer.ticks.template.disabled = true;
+
+            y_axis.renderer.axisFills.template.disabled = true;
+            y_axis.renderer.ticks.template.disabled = true;
+            // y_axis.interpolationDuration = 500;
+            // y_axis.rangeChangeDuration = 500;
+            y_axis.renderer.inside = true;
+
+            // x_axis.interpolationDuration = 200;
+            // x_axis.rangeChangeDuration = 200;
+            // y_axis.interpolationDuration = 200;
+            // y_axis.rangeChangeDuration = 200;
+
+            var series = chart.series.push(new am4charts.LineSeries());
+            series.dataFields.valueX = "x";
+            series.dataFields.valueY = "y";
+            series.tooltipText = "{y}";
+            series.strokeWidth = 2;
+            series.minBulletDistance = 15;
+
+            series.tooltip.background.cornerRadius = 20;
+            series.tooltip.background.strokeOpacity = 0;
+            series.tooltip.pointerOrientation = "vertical";
+            series.tooltip.label.minWidth = 40;
+            series.tooltip.label.minHeight = 40;
+            series.tooltip.label.textAlign = "middle";
+            series.tooltip.label.textValign = "middle";
+
+            series.interpolationDuration = 500;
+            series.defaultState.transitionDuration = 0;
+            // series.tensionX = 0.8;
+
+            // Make bullets grow on hover.
+            var bullet = series.bullets.push(new am4charts.CircleBullet());
+            bullet.circle.strokeWidth = 2;
+            bullet.circle.radius = 4;
+            bullet.circle.fill = am4core.color("#fff");
+
+            var bullethover = bullet.states.create("hover");
+            bullethover.properties.scale = 1.3;
+
+            // Make a panning cursor.
+            chart.cursor = new am4charts.XYCursor();
+            chart.cursor.behavior = "panXY";
+            chart.cursor.xAxis = x_axis;
+            chart.cursor.snapToSeries = series;
+
+            // Create vertical scrollbar and place it before the y-axis.
+            chart.scrollbarY = new am4core.Scrollbar();
+            chart.scrollbarY.parent = chart.leftAxesContainer;
+            chart.scrollbarY.toBack();
+
+            // Create a horizontal scrollbar with previe and place it underneath the x-axis.
+            chart.scrollbarX = new am4charts.XYChartScrollbar();
+            chart.scrollbarX.series.push(series);
+            chart.scrollbarX.parent = chart.bottomAxesContainer;
+
+            // chart.events.on("datavalidated", function () {
+            //     x_axis.zoom({ start: 1 / 15, end: 1.2 }, false, true);
+            // });
+
+            return chart;
         };
-        Self::new(x_axis, y_axis, config, chart)
+        Self::new(x_axis, y_axis, chart)
     }
 }
 
@@ -277,8 +307,8 @@ where
         }
     }
 
-    fn update(&self) {
-        self.update()
+    fn update(&mut self) {
+        self.append_new_points()
     }
 }
 
