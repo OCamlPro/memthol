@@ -87,6 +87,11 @@ fn handle_request(request: Request, dump_dir: String) -> Res<()> {
     let diff_dir = std::path::Path::new(&dump_dir);
     // Set of all the files sent so far.
     let mut known_files: Set<std::ffi::OsString> = Set::new();
+    // Add memthol's tmp file.
+    {
+        let is_new = known_files.insert("tmp.memthol".into());
+        assert! { is_new }
+    }
 
     // Send the init file.
     {

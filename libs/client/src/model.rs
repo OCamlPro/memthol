@@ -168,7 +168,11 @@ impl Model {
     /// Renders the content.
     fn render_content(&self) -> Html {
         html! {
-            { self.charts.render() }
+            <g>
+                <br/>
+                <br/>
+                { self.charts.render() }
+            </g>
         }
     }
 }
