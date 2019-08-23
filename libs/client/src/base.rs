@@ -1,20 +1,20 @@
 //! Basic types and stuffs.
 
-pub use std::{collections::BTreeMap as Map, fmt, sync::Mutex, time::Duration};
+pub use std::{
+    collections::BTreeMap as Map, collections::BTreeSet as Set, fmt, sync::Mutex, time::Duration,
+};
 
 use lazy_static::lazy_static;
 
 pub use log::info;
 
-pub use stdweb::Value;
+pub use stdweb::Value as JsVal;
 
 pub use yew::{html, services::websocket, Component, ComponentLink, Renderable, ShouldRender};
 
-pub use alloc_data::{
-    Alloc, Date as AllocDate, Diff as AllocDiff, NuDate as AllocNuDate, Uid as AllocUid,
-};
+pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Uid as AllocUid};
 
-pub use crate::{chart, cst, data, model::Model};
+pub use crate::{chart, chart::ChartUid, cst, data, data::Storage, model::Model};
 
 /// Retrieves the address and port of the server.
 pub fn get_server_addr() -> (String, usize) {

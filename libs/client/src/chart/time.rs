@@ -30,9 +30,9 @@ impl Update {
 }
 
 pub struct TimeTotalSizeChart {
-    start_date: Option<AllocNuDate>,
+    start_date: Option<AllocDate>,
     current_size: usize,
-    builder: Map<AllocNuDate, Update>,
+    builder: Map<AllocDate, Update>,
     live: Map<AllocUid, usize>,
     chart: Option<Value>,
     uid: chart::ChartUid,
@@ -51,7 +51,7 @@ impl TimeTotalSizeChart {
         }
     }
 
-    pub fn date_init(&mut self, date: AllocNuDate) {
+    pub fn date_init(&mut self, date: AllocDate) {
         if self.start_date.is_some() {
             panic!("trying to initializes the date, but it is already set")
         }
@@ -125,7 +125,7 @@ impl TimeTotalSizeChart {
         self.chart = Some(chart)
     }
 
-    pub fn date_of(&self, date: AllocDate) -> AllocNuDate {
+    pub fn date_of(&self, date: SinceStart) -> AllocDate {
         let mut res = if let Some(start_date) = self.start_date.clone() {
             start_date
         } else {
@@ -153,7 +153,7 @@ impl TimeTotalSizeChart {
         }
     }
 
-    pub fn add_death(&mut self, uid: &AllocUid, tod: alloc_data::Date) {
+    pub fn add_death(&mut self, uid: &AllocUid, tod: SinceStart) {
         let tod = self.date_of(tod);
         let size = if let Some(size) = self.live.remove(&uid) {
             size
@@ -170,8 +170,6 @@ impl TimeTotalSizeChart {
         for (date, update) in &self.builder {
             acc = update.update(acc);
             info!("date: {}", date);
-            let (h, m, s, mi) = date.time_info();
-            info!("      {}h{}m{}s{}mi", h, m, s, mi);
             js! {
                 let point = { "x": @{date.as_js()}, "y": @{acc.to_string()} };
                 console.log("x: " + point.x + ", y: " + point.y);

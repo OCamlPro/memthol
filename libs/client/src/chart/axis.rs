@@ -71,7 +71,7 @@ pub trait CloneSubOrd:
 {
 }
 impl CloneSubOrd for usize {}
-impl CloneSubOrd for AllocDate {}
+impl CloneSubOrd for SinceStart {}
 
 /// A range for an axis.
 #[derive(Clone, Debug)]

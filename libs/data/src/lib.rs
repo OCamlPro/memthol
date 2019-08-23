@@ -1,22 +1,43 @@
 //! Types and parsers for memthol's dump structures.
+//!
+//! These types are used by memthol's client when loading up memthol diffs.
+//!
+//! Generally speaking, all the types in this crate are parsed, not created from scratch. There is
+//! no [`Uid`] factory for instance, since we will not have to generate fresh `Uid`s. We will only
+//! parse them, the fact that they're unique must be guaranteed by whoever generated them.
+//!
+//! The entry point in terms of parsing is [`Diff`], since (currently) the only way the client can
+//! build the other types is when parsing a `Diff`.
+//!
+//! # Dealing With Time
+//!
+//! There are two types to handle time: [`Date`] and [`SinceStart`]. The former encodes an absolute
+//! date, while the latter is a only a duration. Memthol's init file specifies the `Date` at which
+//! the program we're profiling started. After that, all the allocation data relies on `SinceStart`
+//! to refer to point in times relative to the start date.
+//!
+//! [`Diff`]: struct.diff.html (The Diff struct)
+//! [`Date`]: struct.date.html (The Date struct)
+//! [`SinceStart`]: struct.sincestart.html (The SinceStart struct)
 
-use std::{fmt, time::Duration};
+use std::fmt;
 
 pub use error_chain::bail;
 pub use num_bigint::BigUint;
-use serde_derive::Serialize;
 
 pub mod err;
 pub mod parser;
+mod time;
 
 pub use err::Res;
 pub use parser::Parser;
+pub use time::{Date, Duration, SinceStart};
 
 #[cfg(test)]
 mod test;
 
 /// A bigint UID.
-#[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Uid {
     /// The actual bigint.
     uid: BigUint,
@@ -46,7 +67,7 @@ impl Uid {
     /// ```rust
     /// use alloc_data::Uid;
     /// let s = "72430";
-    /// let uid = Uid::of_str(s).unwrap();
+    /// let uid = Uid::from_str(s).unwrap();
     /// # println!("uid: {}", uid);
     /// assert_eq! { format!("{}", uid), s }
     /// ```
@@ -54,17 +75,17 @@ impl Uid {
     /// ```rust
     /// use alloc_data::Uid;
     /// let s = "643128653641564321563425361425364523164523164";
-    /// let uid = Uid::of_str(s).unwrap();
+    /// let uid = Uid::from_str(s).unwrap();
     /// # println!("uid: {}", uid);
     /// assert_eq! { format!("{}", uid), s }
     /// ```
-    pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
+    pub fn from_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
         Parser::parse_all(s.as_ref(), Parser::uid, "uid")
     }
 }
 
 /// A location.
-#[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Loc {
     /// File the location is for.
     pub file: String,
@@ -100,14 +121,14 @@ impl Loc {
     /// ```rust
     /// use alloc_data::Loc;
     /// let s = "`blah/stuff/file.ml`:325:7-38";
-    /// let loc = Loc::of_str(s).unwrap();
+    /// let loc = Loc::from_str(s).unwrap();
     /// # println!("loc: {}", loc);
     /// assert_eq! { format!("{}", loc), s }
     /// assert_eq! { loc.file, "blah/stuff/file.ml" }
     /// assert_eq! { loc.line, 325 }
     /// assert_eq! { loc.span, (7, 38) }
     /// ```
-    pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
+    pub fn from_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
         Parser::parse_all(s.as_ref(), Parser::loc, "location")
     }
 
@@ -118,7 +139,7 @@ impl Loc {
     /// ```rust
     /// use alloc_data::Loc;
     /// let s = "`blah/stuff/file.ml`:325:7-38#5";
-    /// let (loc, count) = Loc::of_str_with_count(s).unwrap();
+    /// let (loc, count) = Loc::from_str_with_count(s).unwrap();
     /// # println!("loc_count: {}#{}", loc, count);
     /// assert_eq! { format!("{}", loc), s[0..s.len()-2] }
     /// assert_eq! { loc.file, "blah/stuff/file.ml" }
@@ -126,13 +147,13 @@ impl Loc {
     /// assert_eq! { loc.span, (7, 38) }
     /// assert_eq! { count, 5 }
     /// ```
-    pub fn of_str_with_count<Str: AsRef<str>>(s: Str) -> Res<(Self, usize)> {
+    pub fn from_str_with_count<Str: AsRef<str>>(s: Str) -> Res<(Self, usize)> {
         Parser::parse_all(s.as_ref(), Parser::loc_count, "location with count")
     }
 }
 
 /// A trace of locations.
-#[derive(Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Trace {
     /// The actual trace of locations.
     trace: Vec<(Loc, usize)>,
@@ -161,7 +182,7 @@ impl Trace {
 }
 
 /// A list of labels.
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Labels {
     labels: Vec<String>,
 }
@@ -182,7 +203,7 @@ impl Labels {
 }
 
 /// A kind of allocation.
-#[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AllocKind {
     Minor,
     Major,
@@ -220,157 +241,17 @@ impl AllocKind {
     ///     ("Serialized", Serialized),
     /// ];
     /// for (s, exp) in &s_list {
-    ///     let kind = AllocKind::of_str(s).unwrap();
+    ///     let kind = AllocKind::from_str(s).unwrap();
     ///     assert_eq! { kind, *exp }
     /// }
     /// ```
-    pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
+    pub fn from_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
         Parser::parse_all(s.as_ref(), Parser::kind, "allocation kind")
     }
 }
 
-/// Wrapper around a `chrono` date.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, PartialOrd, Ord)]
-pub struct NuDate {
-    /// Actual duration.
-    date: chrono::DateTime<chrono::Utc>,
-}
-impl NuDate {
-    /// Constructor from a unix UTC timestamp.
-    pub fn of_timestamp(secs: i64, nanos: u32) -> Self {
-        use chrono::prelude::*;
-        let date = Utc.timestamp(secs, nanos);
-        // info! { "utc: {}", date }
-        // let date: DateTime<Local> = date.into();
-        // info! { "local: {}", date }
-        NuDate { date }
-    }
-
-    /// Adds a duration.
-    pub fn add(&mut self, duration: Date) {
-        self.date = self.date + chrono::Duration::from_std(duration.duration).unwrap()
-    }
-
-    /// JS version of a date.
-    pub fn as_js(&self) -> Value {
-        use chrono::{Datelike, Timelike};
-        js!(
-            return new Date(Date.UTC(
-                @{self.date.year()},
-                @{self.date.month0()},
-                @{self.date.day()},
-                @{self.date.hour()},
-                @{self.date.minute()},
-                @{self.date.second()},
-                @{self.date.nanosecond() / 1_000_000},
-            ))
-        )
-    }
-
-    pub fn time_info(&self) -> (u32, u32, u32, u32) {
-        use chrono::Timelike;
-        (
-            self.date.hour(),
-            self.date.minute(),
-            self.date.second(),
-            self.date.nanosecond() / 1_000_000,
-        )
-    }
-}
-impl fmt::Display for NuDate {
-    fn fmt(&self, fmtt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmtt, "{}", self.date)
-    }
-}
-
-/// Wrapper around a duration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, PartialOrd, Ord)]
-pub struct Date {
-    /// Actual duration.
-    duration: Duration,
-}
-impl fmt::Display for Date {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let mut nanos = format!(".{:>09}", self.duration.subsec_nanos());
-        // Remove trailing zeros.
-        loop {
-            match nanos.pop() {
-                // Remove zeros.
-                Some('0') => (),
-                // There was nothing but zeros, remove dot as well (last character).
-                Some('.') => break,
-                // Otherwise it's a number, we must keep it and stop removing stuff.
-                Some(c) => {
-                    nanos.push(c);
-                    break;
-                }
-                None => unreachable!(),
-            }
-        }
-        write!(fmt, "{}{}", self.duration.as_secs(), nanos)
-    }
-}
-impl std::ops::Deref for Date {
-    type Target = Duration;
-    fn deref(&self) -> &Duration {
-        &self.duration
-    }
-}
-impl From<std::time::Duration> for Date {
-    fn from(duration: Duration) -> Self {
-        Self { duration }
-    }
-}
-impl Into<std::time::Duration> for Date {
-    fn into(self) -> std::time::Duration {
-        self.duration
-    }
-}
-impl std::ops::Sub for Date {
-    type Output = Self;
-    fn sub(self, other: Self) -> Self {
-        Date {
-            duration: self.duration - other.duration,
-        }
-    }
-}
-
-impl Date {
-    /// Date parser.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use std::time::Duration;
-    /// use alloc_data::Date;
-    /// let s_list = [
-    ///     ("320.74", Duration::new(320, 740_000_000)),
-    ///     ("703470.0074", Duration::new(703470, 7_400_000)),
-    ///     ("0.2", Duration::new(0, 200_000_000)),
-    ///     ("7.0", Duration::new(7, 0)),
-    /// ];
-    /// for (s, exp) in &s_list {
-    ///     let date = Date::of_str(s).unwrap();
-    ///     assert_eq! { &*date, exp }
-    /// }
-    /// ```
-    pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
-        Parser::parse_all(s.as_ref(), Parser::date, "date")
-    }
-
-    /// JS representation of a date.
-    pub fn as_js(&self, date: Value) -> Value {
-        js!(
-            var date = @{date};
-            date.setSeconds(@{self.duration.as_secs().to_string()});
-            date.setMilliseconds(@{self.duration.subsec_millis().to_string()});
-            return date;
-        )
-    }
-}
-
 /// Some allocation information.
-#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Alloc {
     /// Uid of the allocation.
     pub uid: Uid,
@@ -383,9 +264,9 @@ pub struct Alloc {
     /// User-defined labels.
     pub labels: Vec<String>,
     /// Time of creation.
-    pub toc: Date,
+    pub toc: SinceStart,
     /// Time of death.
-    pub tod: Option<Date>,
+    pub tod: Option<SinceStart>,
 }
 impl fmt::Display for Alloc {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -417,8 +298,8 @@ impl Alloc {
         size: usize,
         trace: Trace,
         labels: Vec<String>,
-        toc: Date,
-        tod: Option<Date>,
+        toc: SinceStart,
+        tod: Option<SinceStart>,
     ) -> Self {
         Self {
             uid,
@@ -434,7 +315,7 @@ impl Alloc {
     /// Sets the time of death.
     ///
     /// Bails if a time of death is already registered.
-    pub fn set_tod(&mut self, tod: Date) -> Result<(), String> {
+    pub fn set_tod(&mut self, tod: SinceStart) -> Result<(), String> {
         if self.tod.is_some() {
             Err("\
                  trying to set the time of death, \
@@ -455,7 +336,7 @@ impl Alloc {
     pub fn kind(&self) -> &AllocKind {
         &self.kind
     }
-    /// Size accessor.
+    /// Size accessor (in machine words).
     pub fn size(&self) -> usize {
         self.size
     }
@@ -464,16 +345,16 @@ impl Alloc {
         &self.trace
     }
     /// Time of creation accessor.
-    pub fn toc(&self) -> Date {
+    pub fn toc(&self) -> SinceStart {
         self.toc
     }
     /// Time of death accessor.
-    pub fn tod(&self) -> Option<Date> {
+    pub fn tod(&self) -> Option<SinceStart> {
         self.tod
     }
 
     /// Parser.
-    pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
+    pub fn from_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
         Parser::parse_all(s.as_ref(), Parser::alloc, "allocation")
     }
 }
@@ -481,14 +362,14 @@ impl Alloc {
 /// A diff.
 ///
 /// **NB:** `Display` for this type is multi-line.
-#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Diff {
     /// Timestamp.
-    pub time: Date,
+    pub time: SinceStart,
     /// New allocations in this diff.
     pub new: Vec<Alloc>,
     /// Data freed in this diff.
-    pub dead: Vec<(Uid, Date)>,
+    pub dead: Vec<(Uid, SinceStart)>,
 }
 impl fmt::Display for Diff {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -506,19 +387,48 @@ impl fmt::Display for Diff {
 
 impl Diff {
     /// Constructor.
-    pub fn new(time: Date, new: Vec<Alloc>, dead: Vec<(Uid, Date)>) -> Self {
+    pub fn new(time: SinceStart, new: Vec<Alloc>, dead: Vec<(Uid, SinceStart)>) -> Self {
         Self { time, new, dead }
     }
 
     /// Parser.
-    pub fn of_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
+    pub fn from_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
         Parser::parse_all(s.as_ref(), Parser::diff, "diff")
     }
 }
 
-use stdweb::*;
+/// Data from a memthol init file.
+pub struct Init {
+    /// The start time of the run: an absolute date.
+    pub start_time: Date,
+}
+impl Init {
+    /// Constructor.
+    pub fn new(start_time: Date) -> Self {
+        Self { start_time }
+    }
 
-js_serializable! { Uid }
-js_serializable! { Date }
-js_serializable! { Alloc }
-js_serializable! { Diff }
+    /// Parses a string to construct itself.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use alloc_data::Init;
+    /// let txt = "start: 1566489242.007000572\n";
+    /// let init = Init::from_str(txt).unwrap();
+    /// assert_eq! { init.to_string(), "start: 2019-08-22 15:54:02.007000572 UTC\n" }
+    /// ```
+    pub fn from_str<Str>(txt: Str) -> Res<Self>
+    where
+        Str: AsRef<str>,
+    {
+        let txt = txt.as_ref();
+        let mut parser = Parser::new(txt);
+        parser.init()
+    }
+}
+impl fmt::Display for Init {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(fmt, "start: {}", self.start_time)
+    }
+}

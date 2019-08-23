@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use crate::{err::ResultExt, *};
+use crate::{err::ResExt, *};
 
 /// Span separator.
 static SPAN_SEP: &str = "-";
@@ -396,7 +396,7 @@ impl<'a> Parser<'a> {
     /// }
     /// assert_eq! { parser.rest(), " tail" }
     /// ```
-    pub fn date_opt(&mut self) -> Res<Option<Date>> {
+    pub fn date_opt(&mut self) -> Res<Option<SinceStart>> {
         if self.try_tag("_") {
             Ok(None)
         } else if let Ok(date) = self.date() {
@@ -414,7 +414,7 @@ impl<'a> Parser<'a> {
     /// assert_eq! { parser.date().unwrap(), std::time::Duration::new(772032, 520_000_000).into() }
     /// assert_eq! { parser.rest(), " blah" }
     /// ```
-    pub fn date(&mut self) -> Res<Date> {
+    pub fn date(&mut self) -> Res<SinceStart> {
         let err_msg = || format!("expected date `{}`", *DATE_FMT);
         let start_pos = self.cursor;
         let num = self.int()?;
@@ -558,11 +558,11 @@ impl<'a> Parser<'a> {
     }
 
     /// Parses a dead allocation info.
-    fn dead_alloc(&mut self) -> Res<(Uid, Date)> {
+    fn dead_alloc(&mut self) -> Res<(Uid, SinceStart)> {
         self.inner_dead_alloc()
             .chain_err(|| format!("while parsing dead allocation `{}`", DEAD_ALLOC_FMT))
     }
-    fn inner_dead_alloc(&mut self) -> Res<(Uid, Date)> {
+    fn inner_dead_alloc(&mut self) -> Res<(Uid, SinceStart)> {
         let uid = self.uid()?;
         self.ws();
         self.tag(":")?;
@@ -572,7 +572,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parses dead allocation info.
-    pub fn dead(&mut self) -> Res<Vec<(Uid, Date)>> {
+    pub fn dead(&mut self) -> Res<Vec<(Uid, SinceStart)>> {
         self.tag("dead")?;
         self.ws();
         self.tag("{")?;
@@ -594,33 +594,33 @@ impl<'a> Parser<'a> {
     }
 
     /// Parses memthol's init file.
-    pub fn init(txt: &'a str) -> Res<NuDate> {
-        let mut parser = Parser::new(txt);
-        parser.tag("start").chain_err(|| "starting the init file")?;
-        parser.ws();
-        parser.tag(":")?;
-        parser.ws();
+    pub fn init(&mut self) -> Res<Init> {
+        self.tag("start").chain_err(|| "starting the init file")?;
+        self.ws();
+        self.tag(":")?;
+        self.ws();
         let err_msg = || format!("expected date `{}`", *DATE_FMT);
-        let start_pos = parser.cursor;
-        let num = parser.int()?;
-        match parser.chars().next() {
-            Some('.') => parser.cursor += 1,
-            _ => bail!(parser.error_at(start_pos, err_msg())),
+        let start_pos = self.cursor;
+        let num = self.int()?;
+        match self.chars().next() {
+            Some('.') => self.cursor += 1,
+            _ => bail!(self.error_at(start_pos, err_msg())),
         }
-        let dec = parser.int()?;
+        let dec = self.int()?;
         let dec = format!("{:0<9}", dec);
 
         let secs = if let Ok(num) = i64::from_str(num) {
             num
         } else {
-            bail!(parser.error_at(start_pos, err_msg()));
+            bail!(self.error_at(start_pos, err_msg()));
         };
         let nanos = if let Ok(dec) = u32::from_str(&dec) {
             dec
         } else {
-            bail!(parser.error_at(start_pos, err_msg()));
+            bail!(self.error_at(start_pos, err_msg()));
         };
-        Ok(NuDate::of_timestamp(secs, nanos))
+        let start_time = Date::of_timestamp(secs, nanos);
+        Ok(Init::new(start_time))
     }
 }
 

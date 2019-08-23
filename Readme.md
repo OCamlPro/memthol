@@ -33,7 +33,11 @@ rust/cargo installed, simply run
 cargo install cargo-web
 ```
 
-to install it.
+to install it. Also make sure you have the web assembly target with
+
+```
+rustup target add wasm32-unknown-unknown
+```
 
 ## From sources
 

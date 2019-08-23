@@ -14,14 +14,13 @@ pub struct Model {
     // pub stream: TcpStream,
     pub socket: websocket::WebSocketService,
     pub socket_task: Option<websocket::WebSocketTask>,
-    count: usize,
-    memory: Vec<AllocUid>,
-
+    data: Option<Storage>,
     charts: chart::Charts,
 }
 
 impl Model {
-    fn activate_ws(&mut self) {
+    /// Activates the websocket to receive data from the server.
+    pub fn activate_ws(&mut self) {
         info! { "activating websocket" }
         debug_assert! { self.socket_task.is_none() }
         let (addr, port) = get_server_addr();
@@ -32,6 +31,51 @@ impl Model {
         let task = self.socket.connect(&addr, callback, notification);
         info! { "done with websocket" }
         self.socket_task = Some(task)
+    }
+
+    /// Retrieves the current data (mutable).
+    ///
+    /// Panics if `self.data` is not set.
+    pub fn data_mut(&mut self) -> &mut Storage {
+        if let Some(data) = &mut self.data {
+            data
+        } else {
+            panic!("trying to access the allocation data while none is available")
+        }
+    }
+
+    /// Retrieves the current data (immutable).
+    ///
+    /// Panics if `self.data` is not set.
+    pub fn data(&self) -> &Storage {
+        if let Some(data) = &self.data {
+            data
+        } else {
+            panic!("trying to access the allocation data while none is available")
+        }
+    }
+
+    /// Registers an initialization message.
+    pub fn init(&mut self, start_date: AllocDate) {
+        if self.data.is_some() {
+            panic!("received more than one init message from server")
+        }
+        let data = Storage::new(start_date);
+        self.charts.init(&data);
+        self.data = Some(data)
+    }
+
+    /// Registers a diff.
+    pub fn add_diff(&mut self, diff: AllocDiff) {
+        let new_stuff = self.data_mut().add_diff(diff);
+        if new_stuff {
+            let data = if let Some(data) = self.data.as_ref() {
+                data
+            } else {
+                panic!("received allocation data before init message")
+            };
+            self.charts.update(data)
+        }
     }
 }
 
@@ -45,9 +89,7 @@ impl Component for Model {
             link,
             socket: websocket::WebSocketService::new(),
             socket_task: None,
-            count: 0,
-            memory: vec![],
-
+            data: None,
             charts: chart::Charts::new(),
         };
         model.activate_ws();
@@ -63,7 +105,6 @@ impl Component for Model {
             Msg::Start => {
                 info! { "start" }
                 let _should_render = self.top_tabs.activate_default();
-                self.charts.init_setup();
                 true
             }
             Msg::ChangeTab(tab) => {
@@ -76,8 +117,8 @@ impl Component for Model {
                     .expect("failed to receive new diff from server");
                 if txt.len() > "start".len() && &txt[0.."start".len()] == "start" {
                     info!("receiving init...");
-                    let start_date = match alloc_data::Parser::init(&txt) {
-                        Ok(start_date) => start_date,
+                    let start_date = match alloc_data::Init::from_str(&txt) {
+                        Ok(alloc_data::Init { start_time }) => start_time,
                         Err(e) => {
                             info!("Error:");
                             for line in e.pretty().lines() {
@@ -86,18 +127,15 @@ impl Component for Model {
                             panic!("could not parse ill-formed init")
                         }
                     };
-                    self.charts.date_init(start_date);
-                    false
+                    self.init(start_date);
+                    true
                 } else {
                     info!("receiving diff...");
-                    let is_last = &txt[0..1] == "1";
+                    // let is_last = &txt[0..1] == "1";
                     let diff_str = &txt[1..];
                     let diff =
-                        AllocDiff::of_str(diff_str).expect("could not parse ill-formed diff");
-                    self.charts.add_diff(diff);
-                    if is_last {
-                        self.charts.update();
-                    }
+                        AllocDiff::from_str(diff_str).expect("could not parse ill-formed diff");
+                    self.add_diff(diff);
                     false
                 }
             }
