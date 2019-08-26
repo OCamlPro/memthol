@@ -345,8 +345,6 @@ impl Handler {
             .try_read_init()
             .chain_err(|| "on first read of init file")?
         {
-            println!("sending init message\n");
-            println!("```\n{}\n```", String::from_utf8_lossy(&init_content));
             let init_msg = OwnedMessage::Binary(init_content);
             self.sender
                 .send_message(&init_msg)

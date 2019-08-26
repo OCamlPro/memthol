@@ -187,6 +187,12 @@ var serverAddr = {{
                 target.push("index.html");
                 target
             };
+            /// Favicon.
+            static ref FAVICON_PATH: PathBuf = {
+                let mut target = ASSET_DIR.clone();
+                target.push("favicon.png");
+                target
+            };
             /// Memthol client's js script.
             static ref JS_PATH: PathBuf = {
                 let mut target = ASSET_DIR.clone();
@@ -207,6 +213,10 @@ var serverAddr = {{
                 /// Main HTML file.
                 pub static ref HTML: &'static [u8] = include_bytes!(
                     "../../static/index.html"
+                );
+                /// Favicon.
+                pub static ref FAVICON: &'static [u8] = include_bytes!(
+                    "../../static/favicon.png"
                 );
                 /// Memthol client's js script.
                 pub static ref JS: &'static [u8] = include_bytes!(
@@ -317,6 +327,31 @@ var serverAddr = {{
                 target.push("hili_background.png");
                 target
             };
+
+            /// Arrow up picture.
+            static ref ARROW_UP_PATH: PathBuf = {
+                let mut target = PICS_DIR.clone();
+                target.push("arrow_up.png");
+                target
+            };
+            /// Arrow down picture.
+            static ref ARROW_DOWN_PATH: PathBuf = {
+                let mut target = PICS_DIR.clone();
+                target.push("arrow_down.png");
+                target
+            };
+            /// Arrow up picture.
+            static ref EXPAND_PATH: PathBuf = {
+                let mut target = PICS_DIR.clone();
+                target.push("expand.png");
+                target
+            };
+            /// Arrow up picture.
+            static ref COLLAPSE_PATH: PathBuf = {
+                let mut target = PICS_DIR.clone();
+                target.push("collapse.png");
+                target
+            };
         }
 
         /// Content of the CSS files.
@@ -330,14 +365,35 @@ var serverAddr = {{
                 pub static ref HILI: &'static [u8] = include_bytes!(
                     "../../static/pics/hili_background.png"
                 );
+
+                /// Arrow up.
+                pub static ref ARROW_UP: &'static [u8] = include_bytes!(
+                    "../../static/pics/arrow_up.png"
+                );
+                /// Arrow down.
+                pub static ref ARROW_DOWN: &'static [u8] = include_bytes!(
+                    "../../static/pics/arrow_down.png"
+                );
+                /// Expand.
+                pub static ref EXPAND: &'static [u8] = include_bytes!(
+                    "../../static/pics/expand.png"
+                );
+                /// Collapse.
+                pub static ref COLLAPSE: &'static [u8] = include_bytes!(
+                    "../../static/pics/collapse.png"
+                );
             }
         }
 
         lazy_static::lazy_static! {
             /// All picture files.
-            static ref ALL_PICS_FILES: [(&'static PathBuf, &'static [u8]) ; 2] = [
+            static ref ALL_PICS_FILES: [(&'static PathBuf, &'static [u8]) ; 6] = [
                 (&*H1_PATH, &*content::H1),
                 (&*HILI_PATH, &*content::HILI),
+                (&*ARROW_UP_PATH, &*content::ARROW_UP),
+                (&*ARROW_DOWN_PATH, &*content::ARROW_DOWN),
+                (&*EXPAND_PATH, &*content::EXPAND),
+                (&*COLLAPSE_PATH, &*content::COLLAPSE),
             ];
         }
 
