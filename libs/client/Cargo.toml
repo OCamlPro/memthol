@@ -16,7 +16,6 @@ stdweb = "*"
 stdweb-derive = "*"
 serde = "*"
 failure = "*"
-getset = "*"
 alloc_data = { path = "../data" }
 safe_index = "*"
 chrono = "*"

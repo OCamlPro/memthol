@@ -1,17 +1,26 @@
 //! Websockets used by the server to communicate with the clients.
 
+use std::{ffi::OsString, path::Path, thread::sleep, time::SystemTime};
+
 use websocket::message::OwnedMessage;
 
 use crate::base::*;
 
 /// A websocket server.
-type Server = websocket::sync::Server<websocket::server::NoTlsAcceptor>;
+pub type Server = websocket::sync::Server<websocket::server::NoTlsAcceptor>;
 
 /// A request.
-type Request = websocket::server::upgrade::WsUpgrade<
+pub type Request = websocket::server::upgrade::WsUpgrade<
     std::net::TcpStream,
     Option<websocket::server::upgrade::sync::Buffer>,
 >;
+
+/// An IP address.
+pub type IpAddr = std::net::SocketAddr;
+/// A receiver for a request.
+pub type Receiver = websocket::receiver::Reader<std::net::TcpStream>;
+/// A sender for a request.
+pub type Sender = websocket::sender::Writer<std::net::TcpStream>;
 
 /// Creates a websocket server at some address.
 fn new_server(addr: &str, port: usize) -> Res<Server> {
@@ -20,165 +29,202 @@ fn new_server(addr: &str, port: usize) -> Res<Server> {
     Ok(server)
 }
 
-/// Handles a client's incoming messages.
-///
-/// Returns `should_stop`, `true` if the client requested to close the connection.
-fn drain_messages(
-    receiver: &mut websocket::receiver::Reader<std::net::TcpStream>,
-    sender: &mut websocket::sender::Writer<std::net::TcpStream>,
-    ping_label: Option<&[u8]>,
-) -> Res<bool> {
-    let mut should_stop = false;
-
-    println!("retrieving incoming messages");
-
-    for message in receiver.incoming_messages() {
-        let message = message.chain_err(|| "while retrieving message")?;
-        match message {
-            OwnedMessage::Close(_) => {
-                should_stop = true;
-                break;
-            }
-            OwnedMessage::Ping(label) => {
-                let message = OwnedMessage::Pong(label);
-                sender
-                    .send_message(&message)
-                    .chain_err(|| "while sending `Pong` message to client")?
-            }
-            OwnedMessage::Pong(label) => {
-                if let Some(ping_label) = ping_label {
-                    if label == ping_label {
-                        break;
-                    }
-                }
-                bail!("unexpected pong message from client")
-            }
-
-            OwnedMessage::Text(blah) => bail!("unexpected text message from client: `{}`", blah),
-            OwnedMessage::Binary(_) => bail!("unexpected binary message from client"),
-        }
+fn handle_requests(server: Server, dump_dir: String) -> Res<()> {
+    for request in server.filter_map(Result::ok) {
+        let mut handler =
+            Handler::new(request, &dump_dir).chain_err(|| "while creating request handler")?;
+        std::thread::spawn(move || handler.run().unwrap());
+        ()
     }
-
-    println!("done with incoming messages");
-
-    Ok(should_stop)
+    Ok(())
 }
 
-/// Handles a connection request.
-fn handle_request(request: Request, dump_dir: String) -> Res<()> {
-    println!("handling websocket connection request");
-    let client = request
-        .accept()
-        .map_err(|(_, e)| e)
-        .chain_err(|| "while accepting websocket connection")?;
-    let ip = client
-        .peer_addr()
-        .chain_err(|| "while retrieving client's IP address")?;
+pub fn spawn_server<Str: Into<String>>(addr: &str, port: usize, dump_dir: Str) -> Res<()> {
+    let dump_dir = dump_dir.into();
+    let server = new_server(addr, port)?;
+    std::thread::spawn(move || handle_requests(server, dump_dir));
+    Ok(())
+}
 
-    println!("accepted ip connection from `{}`", ip);
-
-    let (mut receiver, mut sender) = client
-        .split()
-        .chain_err(|| "while splitting the client into receive/send pair")?;
-
-    let ping_label = vec![6u8, 6u8, 6u8];
-
-    // Path to the diff of files.
-    let diff_dir = std::path::Path::new(&dump_dir);
-    // Set of all the files sent so far.
-    let mut known_files: Set<std::ffi::OsString> = Set::new();
-    // Add memthol's tmp file.
+pub struct Handler {
+    /// Ip address of the client.
+    _ip: IpAddr,
+    /// Receives messages from the client.
+    recver: Receiver,
+    /// Sends messages to the client.
+    sender: Sender,
+    /// Directory containing memthol files.
+    dump_dir: String,
+    /// Temporary file used by memthol to write dumps.
+    tmp_file: &'static str,
+    /// Init file.
+    init_file: &'static str,
+    /// Last date of modification of the init file.
+    ///
+    /// This is used to detect new runs by checking whether the init file has been modified.
+    init_last_modified: Option<SystemTime>,
+    /// Files that have already been sent to the client and must be ignored.
+    ///
+    /// **Always** contains `self.tmp_file` and `self.init_file`.
+    known_files: Set<OsString>,
+    /// Stores the new diff files to send to the client.
+    new_diffs: Vec<std::fs::DirEntry>,
+    /// Label sent in ping (acknowledgment) messages to the client.
+    ping_label: Vec<u8>,
+}
+impl Handler {
+    /// Constructor from a request and a dump directory.
+    pub fn new<Str>(request: Request, dump_dir: Str) -> Res<Self>
+    where
+        Str: Into<String>,
     {
-        let is_new = known_files.insert("tmp.memthol".into());
-        assert! { is_new }
+        let client = request
+            .accept()
+            .map_err(|(_, e)| e)
+            .chain_err(|| "while accepting websocket connection")?;
+        let _ip = client
+            .peer_addr()
+            .chain_err(|| "while retrieving client's IP address")?;
+
+        let (recver, sender) = client
+            .split()
+            .chain_err(|| "while splitting the client into receive/send pair")?;
+
+        let dump_dir = dump_dir.into();
+        let tmp_file = "tmp.memthol";
+        let init_file = "init.memthol";
+
+        let ping_label = vec![6u8, 6u8, 6u8];
+
+        let known_files = Set::new();
+
+        let mut handler = Self {
+            _ip,
+            recver,
+            sender,
+            dump_dir,
+            tmp_file,
+            init_file,
+            init_last_modified: None,
+            known_files,
+            new_diffs: Vec::with_capacity(103),
+            ping_label,
+        };
+        handler.reset();
+        Ok(handler)
     }
 
-    // Send the init file.
-    {
-        let mut init_file = diff_dir.to_path_buf();
-        init_file.push("init.memthol");
-        let is_new = known_files.insert("init.memthol".into());
-        assert! { is_new }
+    /// Resets the state of the handler.
+    ///
+    /// - clears `self.known_files`
+    /// - adds `self.tmp_file` and `self.init_file` to `self.known_files`
+    /// - clears `self.new_diffs`
+    fn reset(&mut self) {
+        self.known_files.clear();
+        let is_new = self.known_files.insert((&self.tmp_file).into());
+        debug_assert! { is_new }
+        let is_new = self.known_files.insert((&self.init_file).into());
+        debug_assert! { is_new }
+        self.new_diffs.clear()
+    }
 
+    /// Reads the content of a file.
+    fn read_content<P>(path: P, target: &mut Vec<u8>) -> Res<()>
+    where
+        P: AsRef<Path>,
+    {
         use std::{fs::OpenOptions, io::Read};
-        let mut content = vec![];
-        let mut file_reader = OpenOptions::new()
-            .read(true)
-            .write(false)
-            .open(&init_file)
-            .chain_err(|| format!("while opening file `{}`", init_file.to_string_lossy()))?;
-        file_reader.read_to_end(&mut content).chain_err(|| {
-            format!(
-                "while reading the content of file `{}`",
-                init_file.to_string_lossy()
-            )
-        })?;
-        let msg = OwnedMessage::Binary(content);
-        println!("sending content of init file");
-        sender.send_message(&msg).chain_err(|| {
-            format!(
-                "while sending content of init file `{}`",
-                init_file.to_string_lossy()
-            )
-        })?;
+        let path = path.as_ref();
+        let mut file_reader = OpenOptions::new().read(true).write(false).open(path)?;
+        file_reader.read_to_end(target)?;
+        Ok(())
     }
 
-    // New files discovered during one iteration of the loop below.
-    let mut new_files = vec![];
+    /// Handler's entry point.
+    pub fn run(&mut self) -> Res<()> {
+        self.send_first_init()?;
 
-    loop {
-        // The following is guaranteed by the fact that we drain `new_files` in the loop if it's not
-        // empty.
-        debug_assert! { new_files.is_empty() }
-
-        let dir = std::fs::read_dir(diff_dir).chain_err(|| {
-            format!(
-                "while reading dump directory `{}`",
-                diff_dir.to_string_lossy()
-            )
-        })?;
-
-        for file in dir {
-            let file = file.chain_err(|| {
-                format!(
-                    "while reading dump directory `{}`",
-                    diff_dir.to_string_lossy()
-                )
-            })?;
-            let file_type = file.file_type().chain_err(|| {
-                format!(
-                    "failed to retrieve file/dir information for `{}`",
-                    file.file_name().to_string_lossy()
-                )
-            })?;
-
-            if !file_type.is_file() {
-                continue;
+        // Main loop. Look for new diffs, send them, check if init file was changed, again.
+        //
+        // The loop does two thing: find *all* the new diff files, and then send all these files.
+        // Now, at any point while it's doing the profiler can be relaunched, meaning the diff files
+        // will disappear and a new init file will be created. Most of the boiling plate in this
+        // loop takes care of this "relaunch" case.
+        'send_diffs: loop {
+            if self.reset_if_init_changed()? {
+                continue 'send_diffs;
             }
 
-            let is_new = known_files.insert(file.file_name());
+            // Gather the new diff.
+            //
+            // In case of an error, check whether the init file has changed. If it has, discard the
+            // error and start sending diffs again.
+            let new_stuff = match self.gather_new_diffs() {
+                Ok(new_stuff) => new_stuff,
+                Err(e) => {
+                    if self.reset_if_init_changed()? {
+                        continue 'send_diffs;
+                    } else {
+                        bail!(e)
+                    }
+                }
+            };
 
-            // File is
-            if is_new {
-                new_files.push(file)
+            if new_stuff {
+                // Same deal as diff gathering. If `send_new_diffs` errors but the init file has
+                // changed, discard the error and start sending diffs again.
+                match self.send_new_diffs() {
+                    Ok(()) => (),
+                    Err(e) => {
+                        if self.reset_if_init_changed()? {
+                            continue 'send_diffs;
+                        } else {
+                            bail!(e)
+                        }
+                    }
+                }
+
+                // Sending ping (acknowledgment) message.
+                //
+                // This will cause the client to send a corresponding `Pong` message that will be
+                // handled by `self.drain_messages` bellow, indicating that diff-sending should
+                // resume.
+                let message = OwnedMessage::Ping(self.ping_label.clone());
+                self.sender
+                    .send_message(&message)
+                    .chain_err(|| "while sending ping message")?;
+
+                let should_stop = self.drain_messages()?;
+                if should_stop {
+                    break 'send_diffs;
+                }
+
+                if self.reset_if_init_changed()? {
+                    continue 'send_diffs;
+                }
             }
         }
 
-        // If there was no new file, sleep for a bit and continue.
-        if new_files.is_empty() {
-            std::thread::sleep(std::time::Duration::new(2, 0));
-            continue;
-        }
+        Ok(())
+    }
+
+    /// Sends the new diff files in `self.new_diffs`.
+    ///
+    /// - assumes `!self.new_diffs.is_empty()`
+    /// - guarantees `self.new_diffs.is_empty()`
+    pub fn send_new_diffs(&mut self) -> Res<()> {
+        debug_assert! { !self.new_diffs.is_empty() }
 
         // Sort files so that they're in lexicographical order.
-        new_files.sort_by(|f_1, f_2| f_1.file_name().cmp(&f_2.file_name()));
+        self.new_diffs
+            .sort_by(|f_1, f_2| f_1.file_name().cmp(&f_2.file_name()));
 
         // Number of diffs to send.
-        let len = new_files.len();
+        let len = self.new_diffs.len();
         // Counts diff sent (from `1` to `len`) so that we know when we reach the last one.
         let mut cnt = 0;
 
-        for file in new_files.drain(0..) {
+        for file in self.new_diffs.drain(0..) {
             use std::{fs::OpenOptions, io::Read};
 
             cnt += 1;
@@ -190,60 +236,226 @@ fn handle_request(request: Request, dump_dir: String) -> Res<()> {
                 "0".to_string()
             };
 
-            let mut content = content_start.into_bytes();
-            let mut file_reader = OpenOptions::new()
-                .read(true)
-                .write(false)
-                .open(file.path())
-                .chain_err(|| format!("while opening file `{}`", file.path().to_string_lossy()))?;
-            file_reader.read_to_end(&mut content).chain_err(|| {
-                format!(
-                    "while reading the content of file `{}`",
-                    file.path().to_string_lossy()
-                )
-            })?;
+            let mut content = Vec::with_capacity(500);
+            Self::read_content(file.path(), &mut content)?;
+
+            'content_might_be_empty: loop {
+                let mut content = content_start.clone().into_bytes();
+                let mut file_reader = OpenOptions::new()
+                    .read(true)
+                    .write(false)
+                    .open(file.path())
+                    .chain_err(|| {
+                        format!("while opening file `{}`", file.path().to_string_lossy())
+                    })?;
+                file_reader.read_to_end(&mut content).chain_err(|| {
+                    format!(
+                        "while reading the content of file `{}`",
+                        file.path().to_string_lossy()
+                    )
+                })?;
+                if content.is_empty() {
+                    continue 'content_might_be_empty;
+                } else {
+                    break 'content_might_be_empty;
+                }
+            }
 
             let msg = OwnedMessage::Binary(content);
-            println!(
-                "sending content of file `{}`",
-                file.file_name().to_string_lossy()
-            );
-            sender.send_message(&msg).chain_err(|| {
+            self.sender.send_message(&msg).chain_err(|| {
                 format!(
                     "while sending content of file `{}`",
                     file.path().to_string_lossy()
                 )
             })?;
-            // std::thread::sleep(std::time::Duration::new(0, 500_000_000));
         }
 
-        let message = OwnedMessage::Ping(ping_label.clone());
-        sender
-            .send_message(&message)
-            .chain_err(|| "while sending ping message")?;
+        Ok(())
+    }
 
-        let is_dead = drain_messages(&mut receiver, &mut sender, Some(&ping_label))?;
+    /// Gathers the new diff files.
+    ///
+    /// - diff files to send will be in `self.new_diffs`.
+    /// - assumes `self.new_diffs.is_empty()`.
+    /// - returns `true` if there was at list one new diff found (equivalent to
+    ///     `!self.new_diffs.is_empty()`)
+    pub fn gather_new_diffs(&mut self) -> Res<bool> {
+        debug_assert! { self.new_diffs.is_empty() }
 
-        if is_dead {
-            break;
+        let dir = std::fs::read_dir(&self.dump_dir)
+            .chain_err(|| format!("while reading dump directory `{}`", self.dump_dir))?;
+
+        for file in dir {
+            let file =
+                file.chain_err(|| format!("while reading dump directory `{}`", self.dump_dir))?;
+            let file_type = file.file_type().chain_err(|| {
+                format!(
+                    "failed to retrieve file/dir information for `{}`",
+                    file.file_name().to_string_lossy()
+                )
+            })?;
+
+            if !file_type.is_file() {
+                continue;
+            }
+
+            let is_new = self.known_files.insert(file.file_name());
+
+            // File is
+            if is_new {
+                self.new_diffs.push(file)
+            }
+        }
+        Ok(!self.new_diffs.is_empty())
+    }
+}
+
+/// Init-related functions.
+impl Handler {
+    /// Waits for an init file to exist and sends it to the client.
+    pub fn send_first_init(&mut self) -> Res<()> {
+        debug_assert_eq! { self.init_last_modified, None }
+        loop {
+            let was_sent = self
+                .try_send_init()
+                .chain_err(|| "while sending the first init message")?;
+            if was_sent {
+                return Ok(());
+            }
+            sleep(std::time::Duration::from_millis(200))
         }
     }
 
-    Ok(())
-}
-
-fn handle_requests(server: Server, dump_dir: String) -> Res<()> {
-    for request in server.filter_map(Result::ok) {
-        let dump_dir = dump_dir.clone();
-        std::thread::spawn(move || handle_request(request, dump_dir).unwrap());
-        ()
+    /// If init file was changed since first init, reset the handler.
+    pub fn reset_if_init_changed(&mut self) -> Res<bool> {
+        let init_changed = self.try_send_init()?;
+        if init_changed {
+            self.reset();
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
-    Ok(())
-}
 
-pub fn spawn_server<Str: Into<String>>(addr: &str, port: usize, dump_dir: Str) -> Res<()> {
-    let dump_dir = dump_dir.into();
-    let server = new_server(addr, port)?;
-    std::thread::spawn(move || handle_requests(server, dump_dir));
-    Ok(())
+    /// Reads the init file and sends it to the client.
+    ///
+    /// Returns `was_sent`: `true` if an init file was actually sent.
+    pub fn try_send_init(&mut self) -> Res<bool> {
+        if let Some(init_content) = self
+            .try_read_init()
+            .chain_err(|| "on first read of init file")?
+        {
+            println!("sending init message\n");
+            println!("```\n{}\n```", String::from_utf8_lossy(&init_content));
+            let init_msg = OwnedMessage::Binary(init_content);
+            self.sender
+                .send_message(&init_msg)
+                .chain_err(|| format!("while sending content of init file `{}`", self.init_file))?;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    /// Reads the init file in the dump directory.
+    ///
+    /// Returns `None` when
+    ///
+    /// - init file does not exist, **or**
+    /// - `init_last_modified = Some(t)` and the init file was modified more recently than `t`.
+    ///
+    /// This function is used *i)* during initialization to read the init file, and *ii)* to check
+    /// whether it was overwritten by a new run to relaunch everything.
+    ///
+    /// If the result isn't `None`, `self.init_last_modified` is updated to the date of last
+    /// modification of the init file.
+    pub fn try_read_init(&mut self) -> Res<Option<Vec<u8>>> {
+        use std::path::PathBuf;
+        let mut init_path = PathBuf::new();
+        init_path.push(&self.dump_dir);
+        init_path.push(&self.init_file);
+
+        if !(init_path.exists() && init_path.is_file()) {
+            return Ok(None);
+        }
+
+        // Time of last modification of init file.
+        let last_modified = init_path
+            .metadata()
+            .chain_err(|| {
+                format!(
+                    "could not retrieve metadata of init file `{}`",
+                    init_path.to_string_lossy()
+                )
+            })?
+            .modified()
+            .chain_err(|| {
+                format!(
+                    "could not retrieve time of last modification of init file`{}`",
+                    init_path.to_string_lossy()
+                )
+            })?;
+
+        // Is it our first time loading the init file?
+        if let Some(lm) = self.init_last_modified.as_mut() {
+            // Not the first time, has the init file changed?
+            if last_modified != *lm {
+                // Yes, update
+                debug_assert! { last_modified <= *lm }
+                *lm = last_modified
+            } else {
+                // No, no need to load the file.
+                return Ok(None);
+            }
+        } else {
+            // First time, update time of last modification.
+            self.init_last_modified = Some(last_modified)
+        }
+
+        let mut init_content = Vec::with_capacity(600);
+        Self::read_content(init_path, &mut init_content)
+            .chain_err(|| format!("while reading content of init file `{}`", self.init_file))?;
+
+        if init_content.is_empty() {
+            return Ok(None);
+        } else {
+            Ok(Some(init_content))
+        }
+    }
+
+    /// Handles the client's incoming messages.
+    ///
+    /// Returns `should_stop`: `true` if the client requested to close the connection.
+    fn drain_messages(&mut self) -> Res<bool> {
+        let mut should_stop = false;
+
+        for message in self.recver.incoming_messages() {
+            let message = message.chain_err(|| "while retrieving message")?;
+            match message {
+                OwnedMessage::Close(_) => {
+                    should_stop = true;
+                    break;
+                }
+                OwnedMessage::Ping(label) => {
+                    let message = OwnedMessage::Pong(label);
+                    self.sender
+                        .send_message(&message)
+                        .chain_err(|| "while sending `Pong` message to client")?
+                }
+                OwnedMessage::Pong(pong_label) => {
+                    if pong_label == self.ping_label {
+                        break;
+                    }
+                    bail!("unexpected pong message from client")
+                }
+
+                OwnedMessage::Text(blah) => {
+                    bail!("unexpected text message from client: `{}`", blah)
+                }
+                OwnedMessage::Binary(_) => bail!("unexpected binary message from client"),
+            }
+        }
+
+        Ok(should_stop)
+    }
 }

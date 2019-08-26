@@ -1,7 +1,6 @@
-#![recursion_limit = "1024"]
+//! Memthol's browser client.
 
-#[macro_use]
-extern crate getset;
+#![recursion_limit = "1024"]
 
 mod base;
 #[macro_use]

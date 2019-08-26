@@ -2,9 +2,7 @@
 
 use crate::base::*;
 
-pub mod nu_time;
 pub mod time;
-pub mod window;
 
 new_uid! {
     mod chart_uid {
@@ -31,15 +29,15 @@ static HTML_CHART_CONTAINER_ID: &str = "memthol_chart_container";
 /// Stores the collection of charts.
 pub struct Charts {
     /// Time charts.
-    charts: Vec<nu_time::TimeChart>,
+    charts: Vec<time::TimeChart>,
 }
 impl Charts {
     /// Constructor.
     pub fn new() -> Self {
         let (uid, id) = generate_chart_uid_and_id();
-        let total_size = nu_time::TimeChart::total_size(id, uid);
+        let total_size = time::TimeChart::total_size(id, uid);
         let (uid, id) = generate_chart_uid_and_id();
-        let highest_lifetime = nu_time::TimeChart::highest_lifetime(id, uid);
+        let highest_lifetime = time::TimeChart::highest_lifetime(id, uid);
         Self {
             charts: vec![total_size, highest_lifetime],
         }
@@ -57,7 +55,7 @@ impl Charts {
         info! { "rendering charts" }
         html! {
             <g id={HTML_CHART_CONTAINER_ID}>
-                { for self.charts.iter().map(nu_time::TimeChart::render) }
+                { for self.charts.iter().map(time::TimeChart::render) }
             </g>
         }
     }

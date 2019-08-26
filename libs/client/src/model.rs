@@ -57,9 +57,6 @@ impl Model {
 
     /// Registers an initialization message.
     pub fn init(&mut self, start_date: AllocDate) {
-        if self.data.is_some() {
-            panic!("received more than one init message from server")
-        }
         let data = Storage::new(start_date);
         self.charts.init(&data);
         self.data = Some(data)

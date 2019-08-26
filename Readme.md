@@ -63,8 +63,13 @@ To update, run the same command with `--force`
 cargo install --force --git <memthol's BUI repository>
 ```
 
+# Other Resources
+
+- [todo list]
+
 [OCaml]: https://ocaml.org/ (OCaml official page)
 [web assembly]: https://webassembly.org/ (Web Assembly official page)
 [Rust]: https://www.rust-lang.org/ (Rust official page)
 [rust toolchain]: https://www.rust-lang.org/tools/install (Rust installation instructions)
 [cargo web]: https://crates.io/crates/cargo-web (Cargo-web on crates.io)
+[todo list]: ./todo.md
