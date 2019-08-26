@@ -128,6 +128,7 @@ impl Component for Model {
                     true
                 } else {
                     info!("receiving diff...");
+                    info!("first line: `{}`", txt.lines().next().unwrap());
                     // let is_last = &txt[0..1] == "1";
                     let diff_str = &txt[1..];
                     let diff =

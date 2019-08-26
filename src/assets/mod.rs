@@ -231,8 +231,9 @@ var serverAddr = {{
 
         lazy_static::lazy_static! {
             /// All top files.
-            static ref ALL_TOP_FILES: [(&'static PathBuf, &'static [u8]) ; 3] = [
+            static ref ALL_TOP_FILES: [(&'static PathBuf, &'static [u8]) ; 4] = [
                 (&*HTML_PATH, &*content::HTML),
+                (&*FAVICON_PATH, &*content::FAVICON),
                 (&*JS_PATH, &*content::JS),
                 (&*WASM_PATH, &*content::WASM)
             ];

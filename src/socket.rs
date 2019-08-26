@@ -225,8 +225,6 @@ impl Handler {
         let mut cnt = 0;
 
         for file in self.new_diffs.drain(0..) {
-            use std::{fs::OpenOptions, io::Read};
-
             cnt += 1;
 
             let is_last = cnt == len;
@@ -237,24 +235,12 @@ impl Handler {
             };
 
             let mut content = Vec::with_capacity(500);
-            Self::read_content(file.path(), &mut content)?;
 
             'content_might_be_empty: loop {
-                let mut content = content_start.clone().into_bytes();
-                let mut file_reader = OpenOptions::new()
-                    .read(true)
-                    .write(false)
-                    .open(file.path())
-                    .chain_err(|| {
-                        format!("while opening file `{}`", file.path().to_string_lossy())
-                    })?;
-                file_reader.read_to_end(&mut content).chain_err(|| {
-                    format!(
-                        "while reading the content of file `{}`",
-                        file.path().to_string_lossy()
-                    )
-                })?;
-                if content.is_empty() {
+                content.extend(content_start.clone().into_bytes());
+                Self::read_content(file.path(), &mut content)?;
+                if content == content_start.as_bytes() {
+                    content.clear();
                     continue 'content_might_be_empty;
                 } else {
                     break 'content_might_be_empty;
