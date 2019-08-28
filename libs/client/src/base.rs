@@ -65,6 +65,17 @@ pub enum Msg {
     ChangeTab(crate::top_tabs::Tab),
     /// Allocation info message.
     Diff(DiffMsg),
+    /// Collapse a specific chart.
+    Collapse(ChartUid),
+    /// Expands a specific chart.
+    Expand(ChartUid),
+    /// Moves a chart.
+    MoveChart {
+        /// Uid of the chart to move.
+        uid: ChartUid,
+        /// True if moving up.
+        up: bool,
+    },
     /// Do nothing.
     Nop,
     /// Start message.

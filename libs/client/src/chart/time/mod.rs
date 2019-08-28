@@ -16,6 +16,8 @@ pub struct TimeChart {
     value: Value,
     /// Actual chart.
     chart: Option<JsVal>,
+    /// True if the chart is visible.
+    visible: bool,
 }
 impl TimeChart {
     /// Constructor.
@@ -25,6 +27,7 @@ impl TimeChart {
             uid,
             value,
             chart: None,
+            visible: true,
         }
     }
 
@@ -89,13 +92,49 @@ impl TimeChart {
         })
     }
 
+    /// Creates a collapse button for this chart.
+    fn collapse_button(&self) -> Html {
+        let uid = self.uid;
+        html! {
+            <img
+                class="collapse_button"
+                onclick=|_| Msg::Collapse(uid)
+            />
+        }
+    }
+    /// Creates an expand button for this chart.
+    fn expand_button(&self) -> Html {
+        let uid = self.uid;
+        html! {
+            <img
+                class="expand_button"
+                onclick=|_| Msg::Expand(uid)
+            />
+        }
+    }
+
     /// Renders itself.
     pub fn render(&self) -> Html {
+        let expand_or_collapse_button = if self.visible {
+            self.collapse_button()
+        } else {
+            self.expand_button()
+        };
+        let uid = self.uid;
         html! {
             <center>
+                {expand_or_collapse_button}
+                <img
+                    class="move_up_button"
+                    onclick=|_| Msg::MoveChart { uid, up: true }
+                />
+                <img
+                    class="move_down_button"
+                    onclick=|_| Msg::MoveChart { uid, up: false }
+                />
                 <h2> { format!("{} over time", self.value.desc()) } </h2>
                 <div id={&self.html_id}
-                    style="width: 100%; height: 500px;"
+                    class={if self.visible { "chart_style" } else { "hidden_chart_style" }}
                 />
             </center>
         }
@@ -160,5 +199,35 @@ impl TimeChart {
             self.chart = Some(chart);
         }
         self.update_history(data)
+    }
+}
+
+/// # Cosmetic stuff.
+impl TimeChart {
+    /// Collapses the chart and changes the collapse button to an expand button.
+    pub fn collapse(&mut self) -> ShouldRender {
+        if self.visible {
+            self.visible = false;
+            true
+        } else {
+            info!(
+                "asked to collapse chart #{}, but it is already collapsed",
+                self.uid
+            );
+            false
+        }
+    }
+    /// Expands the chart and changes the expand button to a collapse button.
+    pub fn expand(&mut self) -> ShouldRender {
+        if !self.visible {
+            self.visible = true;
+            true
+        } else {
+            info!(
+                "asked to expand chart #{}, but it is already expanded",
+                self.uid
+            );
+            false
+        }
     }
 }

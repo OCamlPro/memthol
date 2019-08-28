@@ -68,3 +68,57 @@ impl Charts {
         }
     }
 }
+
+/// # Cosmetic stuff.
+impl Charts {
+    /// Collapses a chart.
+    pub fn collapse(&mut self, uid: ChartUid) -> ShouldRender {
+        for chart in &mut self.charts {
+            if chart.uid() == &uid {
+                let should_render = chart.collapse();
+                return should_render;
+            }
+        }
+        info!("asked to collapse chart #{} which does not exist", uid);
+        false
+    }
+    /// Expands a chart.
+    pub fn expand(&mut self, uid: ChartUid) -> ShouldRender {
+        for chart in &mut self.charts {
+            if chart.uid() == &uid {
+                let should_render = chart.expand();
+                return should_render;
+            }
+        }
+        info!("asked to expand chart #{} which does not exist", uid);
+        false
+    }
+
+    /// Move a chart.
+    pub fn move_chart(&mut self, uid: ChartUid, up: bool) -> ShouldRender {
+        let mut index = None;
+        for (idx, chart) in self.charts.iter().enumerate() {
+            if chart.uid() == &uid {
+                index = Some(idx)
+            }
+        }
+
+        if let Some(index) = index {
+            if up && 0 < index {
+                self.charts.swap(index - 1, index);
+                return true;
+            } else if !up && index + 1 < self.charts.len() {
+                self.charts.swap(index, index + 1);
+                return true;
+            }
+        } else {
+            info!(
+                "asked to move chart #{} {}, but there is no such chart",
+                uid,
+                if up { "up" } else { "down" }
+            )
+        }
+
+        false
+    }
+}

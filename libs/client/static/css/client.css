@@ -84,6 +84,49 @@ body .hili {
   background-repeat: no-repeat;
   background-size: 100% 95%;
 }
+body .chart_style {
+  width: 100%;
+  height: 500px;
+}
+body .hidden_chart_style {
+  width: 100%;
+  height: 500px;
+  display: none;
+}
+body .expand_button {
+  content: url("../pics/expand.png");
+  max-width: 2%;
+  float: left;
+}
+body .expand_button:hover {
+  cursor: pointer;
+}
+body .collapse_button {
+  content: url("../pics/collapse.png");
+  max-width: 2%;
+  float: left;
+}
+body .collapse_button:hover {
+  cursor: pointer;
+}
+body .move_up_button {
+  content: url("../pics/arrow_up.png");
+  max-width: 2%;
+  float: left;
+  padding-left: 10px;
+}
+body .move_up_button:hover {
+  cursor: pointer;
+}
+body .move_down_button {
+  content: url("../pics/arrow_down.png");
+  max-width: 2%;
+  float: left;
+  padding-left: 10px;
+}
+body .move_down_button:hover {
+  cursor: pointer;
+}
 body .d3_path {
   stroke: steelblue;
   stroke-width: 2;

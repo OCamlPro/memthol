@@ -108,6 +108,18 @@ impl Component for Model {
                 info!("changing to tab {:?}", tab);
                 self.top_tabs.activate(tab)
             }
+            Msg::Collapse(chart_uid) => {
+                info!("collapsing chart #{}", chart_uid);
+                self.charts.collapse(chart_uid)
+            }
+            Msg::Expand(chart_uid) => {
+                info!("expanding chart #{}", chart_uid);
+                self.charts.expand(chart_uid)
+            }
+            Msg::MoveChart { uid, up } => {
+                info!("moving chart #{} {}", uid, if up { "up" } else { "down" });
+                self.charts.move_chart(uid, up)
+            }
             Msg::Diff(diff) => {
                 let txt = diff
                     .destroy()
