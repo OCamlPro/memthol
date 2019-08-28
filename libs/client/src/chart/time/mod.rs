@@ -27,7 +27,7 @@ impl TimeChart {
             uid,
             value,
             chart: None,
-            visible: true,
+            visible: false,
         }
     }
 
@@ -198,7 +198,8 @@ impl TimeChart {
             };
             self.chart = Some(chart);
         }
-        self.update_history(data)
+        self.update_history(data);
+        self.visible = true
     }
 }
 
