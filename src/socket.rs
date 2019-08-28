@@ -48,7 +48,7 @@ pub fn spawn_server<Str: Into<String>>(addr: &str, port: usize, dump_dir: Str) -
 
 pub struct Handler {
     /// Ip address of the client.
-    _ip: IpAddr,
+    ip: IpAddr,
     /// Receives messages from the client.
     recver: Receiver,
     /// Sends messages to the client.
@@ -82,7 +82,7 @@ impl Handler {
             .accept()
             .map_err(|(_, e)| e)
             .chain_err(|| "while accepting websocket connection")?;
-        let _ip = client
+        let ip = client
             .peer_addr()
             .chain_err(|| "while retrieving client's IP address")?;
 
@@ -99,7 +99,7 @@ impl Handler {
         let known_files = Set::new();
 
         let mut handler = Self {
-            _ip,
+            ip,
             recver,
             sender,
             dump_dir,
@@ -120,6 +120,7 @@ impl Handler {
     /// - adds `self.tmp_file` and `self.init_file` to `self.known_files`
     /// - clears `self.new_diffs`
     fn reset(&mut self) {
+        log!(self.ip => "resetting request handler");
         self.known_files.clear();
         let is_new = self.known_files.insert((&self.tmp_file).into());
         debug_assert! { is_new }
@@ -143,6 +144,8 @@ impl Handler {
     /// Handler's entry point.
     pub fn run(&mut self) -> Res<()> {
         self.send_first_init()?;
+
+        log!(self.ip => "starting sending diffs");
 
         // Main loop. Look for new diffs, send them, check if init file was changed, again.
         //
@@ -224,6 +227,8 @@ impl Handler {
         // Counts diff sent (from `1` to `len`) so that we know when we reach the last one.
         let mut cnt = 0;
 
+        log!(self.ip => "sending {} diffs", self.new_diffs.len());
+
         for file in self.new_diffs.drain(0..) {
             cnt += 1;
 
@@ -246,6 +251,8 @@ impl Handler {
                     break 'content_might_be_empty;
                 }
             }
+
+            log!(self.ip => "sending content of diff file `{}`", file.path().to_string_lossy());
 
             let msg = OwnedMessage::Binary(content);
             self.sender.send_message(&msg).chain_err(|| {
@@ -300,6 +307,7 @@ impl Handler {
 impl Handler {
     /// Waits for an init file to exist and sends it to the client.
     pub fn send_first_init(&mut self) -> Res<()> {
+        log!(self.ip => "sending first init file");
         debug_assert_eq! { self.init_last_modified, None }
         loop {
             let was_sent = self
@@ -316,6 +324,7 @@ impl Handler {
     pub fn reset_if_init_changed(&mut self) -> Res<bool> {
         let init_changed = self.try_send_init()?;
         if init_changed {
+            log!(self.ip => "init file was modified recently");
             self.reset();
             Ok(true)
         } else {

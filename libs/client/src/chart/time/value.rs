@@ -110,6 +110,10 @@ pub mod diff {
         }
 
         for (time, (to_add, to_sub)) in map {
+            info!(
+                "current: {}, to_add: {}, to_sub: {}",
+                *current, to_add, to_sub
+            );
             *current = *current + to_add - to_sub;
             let js_size = js!(return @{current.to_string()});
             js!(@(no_return)
@@ -140,7 +144,14 @@ pub mod diff {
         }
 
         let curr_time = diff.time.clone();
-        let get_lifetime = |uid| curr_time - data.get_alloc(uid).toc();
+        let get_lifetime = |uid| {
+            let toc = data.get_alloc(uid).toc();
+            if curr_time < toc {
+                SinceStart::zero()
+            } else {
+                curr_time - data.get_alloc(uid).toc()
+            }
+        };
 
         let mut highest = None;
         macro_rules! update {

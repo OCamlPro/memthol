@@ -56,8 +56,8 @@ impl Model {
     }
 
     /// Registers an initialization message.
-    pub fn init(&mut self, start_date: AllocDate) {
-        let data = Storage::new(start_date);
+    pub fn init(&mut self, init: alloc_data::Init) {
+        let data = Storage::new(init);
         self.charts.init(&data);
         self.data = Some(data)
     }
@@ -114,8 +114,8 @@ impl Component for Model {
                     .expect("failed to receive new diff from server");
                 if txt.len() > "start".len() && &txt[0.."start".len()] == "start" {
                     info!("receiving init...");
-                    let start_date = match alloc_data::Init::from_str(&txt) {
-                        Ok(alloc_data::Init { start_time }) => start_time,
+                    let init = match alloc_data::Init::from_str(&txt) {
+                        Ok(init) => init,
                         Err(e) => {
                             info!("Error:");
                             for line in e.pretty().lines() {
@@ -124,11 +124,10 @@ impl Component for Model {
                             panic!("could not parse ill-formed init")
                         }
                     };
-                    self.init(start_date);
+                    self.init(init);
                     true
                 } else {
                     info!("receiving diff...");
-                    info!("first line: `{}`", txt.lines().next().unwrap());
                     // let is_last = &txt[0..1] == "1";
                     let diff_str = &txt[1..];
                     let diff =

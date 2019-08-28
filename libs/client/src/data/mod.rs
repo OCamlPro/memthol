@@ -8,8 +8,8 @@ pub use filter::Filter;
 
 /// Aggregates all data and the global filters.
 pub struct Storage {
-    /// Start date.
-    start: AllocDate,
+    /// Init information.
+    init: alloc_data::Init,
     /// Current date.
     current: AllocDate,
     /// History of all the diffs.
@@ -32,10 +32,11 @@ pub struct Storage {
 
 impl Storage {
     /// Constructor.
-    pub fn new(start: AllocDate) -> Self {
+    pub fn new(init: alloc_data::Init) -> Self {
+        let current = init.start_time;
         Self {
-            start: start.clone(),
-            current: start,
+            init,
+            current,
             history: Vec::with_capacity(103),
             dead: Map::new(),
             live: Map::new(),
@@ -44,8 +45,8 @@ impl Storage {
     }
 
     /// Start time.
-    pub fn start_time(&self) -> &AllocDate {
-        &self.start
+    pub fn start_time(&self) -> AllocDate {
+        self.init.start_time
     }
 
     /// Current time.
@@ -125,7 +126,7 @@ impl Storage {
     /// filter(s).
     pub fn add_diff(&mut self, diff: AllocDiff) -> bool {
         let mut changed = false;
-        self.current = self.start.clone();
+        self.current = self.start_time();
         self.current.add(diff.time.clone());
         for alloc in &diff.new {
             let new_stuff = self.add_alloc(alloc.clone());

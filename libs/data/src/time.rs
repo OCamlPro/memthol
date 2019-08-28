@@ -71,6 +71,13 @@ impl std::ops::Sub for SinceStart {
 }
 
 impl SinceStart {
+    /// A duration of 0 nanoseconds.
+    pub fn zero() -> Self {
+        SinceStart {
+            duration: std::time::Duration::new(0, 0),
+        }
+    }
+
     /// Duration parser.
     ///
     /// # Examples

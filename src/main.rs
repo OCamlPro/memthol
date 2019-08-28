@@ -5,6 +5,8 @@ extern crate clap;
 
 mod assets;
 mod base;
+#[macro_use]
+pub mod conf;
 mod err;
 mod router;
 mod socket;
@@ -34,6 +36,10 @@ pub fn main() {
             (author: crate_authors!("\n"))
             (version: crate_version!())
             (about: "Memthol's UI.")
+            (@arg VERB:
+                -v --verbose
+                "activates verbose output"
+            )
             (@arg ADDR:
                 -a --addr +takes_value !required
                 default_value(default::ADDR)
@@ -59,6 +65,9 @@ pub fn main() {
         let port = matches.value_of("PORT").expect("argument with default");
         usize::from_str(port).expect("argument with validator")
     };
+
+    let verb = matches.occurrences_of("VERB") > 0;
+    conf::set_verb(verb);
 
     let dump_dir = matches.value_of("DIR").expect("argument with default");
 

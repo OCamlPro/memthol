@@ -620,7 +620,17 @@ impl<'a> Parser<'a> {
             bail!(self.error_at(start_pos, err_msg()));
         };
         let start_time = Date::of_timestamp(secs, nanos);
-        Ok(Init::new(start_time))
+
+        self.ws();
+        self.tag("word_size")?;
+        self.ws();
+        self.tag(":")?;
+        self.ws();
+        let word_size = self
+            .usize()
+            .chain_err(|| "specifying the size of machine words (in bytes)")?;
+
+        Ok(Init::new(start_time, word_size))
     }
 }
 

@@ -401,11 +401,16 @@ impl Diff {
 pub struct Init {
     /// The start time of the run: an absolute date.
     pub start_time: Date,
+    /// Size of machine words in bytes.
+    pub word_size: usize,
 }
 impl Init {
     /// Constructor.
-    pub fn new(start_time: Date) -> Self {
-        Self { start_time }
+    pub fn new(start_time: Date, word_size: usize) -> Self {
+        Self {
+            start_time,
+            word_size,
+        }
     }
 
     /// Parses a string to construct itself.
@@ -414,9 +419,9 @@ impl Init {
     ///
     /// ```rust
     /// use alloc_data::Init;
-    /// let txt = "start: 1566489242.007000572\n";
+    /// let txt = "start: 1566489242.007000572\nword_size: 4\n";
     /// let init = Init::from_str(txt).unwrap();
-    /// assert_eq! { init.to_string(), "start: 2019-08-22 15:54:02.007000572 UTC\n" }
+    /// assert_eq! { init.to_string(), "start: 2019-08-22 15:54:02.007000572 UTC\nword_size: 4\n" }
     /// ```
     pub fn from_str<Str>(txt: Str) -> Res<Self>
     where
@@ -429,6 +434,8 @@ impl Init {
 }
 impl fmt::Display for Init {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(fmt, "start: {}", self.start_time)
+        writeln!(fmt, "start: {}", self.start_time)?;
+        writeln!(fmt, "word_size: {}", self.word_size)?;
+        Ok(())
     }
 }
