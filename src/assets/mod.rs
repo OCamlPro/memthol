@@ -329,6 +329,12 @@ var serverAddr = {{
                 target
             };
 
+            /// Cross picture.
+            static ref CLOSE_PATH: PathBuf = {
+                let mut target = PICS_DIR.clone();
+                target.push("close.png");
+                target
+            };
             /// Arrow up picture.
             static ref ARROW_UP_PATH: PathBuf = {
                 let mut target = PICS_DIR.clone();
@@ -367,6 +373,10 @@ var serverAddr = {{
                     "../../static/pics/hili_background.png"
                 );
 
+                /// Cross.
+                pub static ref CLOSE: &'static [u8] = include_bytes!(
+                    "../../static/pics/close.png"
+                );
                 /// Arrow up.
                 pub static ref ARROW_UP: &'static [u8] = include_bytes!(
                     "../../static/pics/arrow_up.png"
@@ -388,9 +398,10 @@ var serverAddr = {{
 
         lazy_static::lazy_static! {
             /// All picture files.
-            static ref ALL_PICS_FILES: [(&'static PathBuf, &'static [u8]) ; 6] = [
+            static ref ALL_PICS_FILES: [(&'static PathBuf, &'static [u8]) ; 7] = [
                 (&*H1_PATH, &*content::H1),
                 (&*HILI_PATH, &*content::HILI),
+                (&*CLOSE_PATH, &*content::CLOSE),
                 (&*ARROW_UP_PATH, &*content::ARROW_UP),
                 (&*ARROW_DOWN_PATH, &*content::ARROW_DOWN),
                 (&*EXPAND_PATH, &*content::EXPAND),

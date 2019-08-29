@@ -21,15 +21,12 @@ pub struct Model {
 impl Model {
     /// Activates the websocket to receive data from the server.
     pub fn activate_ws(&mut self) {
-        info! { "activating websocket" }
         debug_assert! { self.socket_task.is_none() }
         let (addr, port) = get_server_addr();
         let addr = format!("ws://{}:{}", addr, port + 1);
         let callback = self.link.send_back(|diff| Msg::Diff(diff));
         let notification = self.link.send_back(|_| Msg::Nop);
-        info! { "creating websocket" }
         let task = self.socket.connect(&addr, callback, notification);
-        info! { "done with websocket" }
         self.socket_task = Some(task)
     }
 
@@ -71,7 +68,7 @@ impl Model {
             } else {
                 panic!("received allocation data before init message")
             };
-            self.charts.update(data)
+            self.charts.update_data(data)
         }
     }
 }
@@ -95,30 +92,21 @@ impl Component for Model {
 
     fn update(&mut self, msg: Msg) -> ShouldRender {
         match msg {
-            Msg::JsInit => {
-                info! { "js init" }
-                false
-            }
+            Msg::JsInit => false,
             Msg::Start => {
-                info! { "start" }
                 let _should_render = self.top_tabs.activate_default();
                 true
             }
+            Msg::ChartsAction(msg) => {
+                let render = self.charts.update(msg);
+                if render {
+                    self.link.send_self(msg::ChartsMsg::refresh())
+                }
+                render
+            }
             Msg::ChangeTab(tab) => {
-                info!("changing to tab {:?}", tab);
+                warn!("[unimplemented] changing to tab {:?}", tab);
                 self.top_tabs.activate(tab)
-            }
-            Msg::Collapse(chart_uid) => {
-                info!("collapsing chart #{}", chart_uid);
-                self.charts.collapse(chart_uid)
-            }
-            Msg::Expand(chart_uid) => {
-                info!("expanding chart #{}", chart_uid);
-                self.charts.expand(chart_uid)
-            }
-            Msg::MoveChart { uid, up } => {
-                info!("moving chart #{} {}", uid, if up { "up" } else { "down" });
-                self.charts.move_chart(uid, up)
             }
             Msg::Diff(diff) => {
                 let txt = diff
@@ -129,9 +117,9 @@ impl Component for Model {
                     let init = match alloc_data::Init::from_str(&txt) {
                         Ok(init) => init,
                         Err(e) => {
-                            info!("Error:");
+                            error!("Error:");
                             for line in e.pretty().lines() {
-                                info!("{}", line)
+                                error!("{}", line)
                             }
                             panic!("could not parse ill-formed init")
                         }
@@ -194,10 +182,7 @@ impl Component for Model {
             //     self.count += 1;
             //     false
             // }
-            Msg::Nop => {
-                info!("received nop message");
-                false
-            }
+            Msg::Nop => false,
         }
     }
 }

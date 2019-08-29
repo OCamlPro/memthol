@@ -14,3 +14,4 @@ serde_derive = "*"
 stdweb = "*"
 chrono = { version = "*", features = ["serde"] }
 error-chain = "*"
+swarkn = { git = "https://github.com/AdrienChampion/swarkn" }

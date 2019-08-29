@@ -16,7 +16,7 @@ macro_rules! unwrap {
 
 #[test]
 fn position_details() {
-    let parser = Parser::new(
+    let mut parser = Parser::new(
         "\
 first line with some text
 second line problem is >H<ere
@@ -24,7 +24,9 @@ third line
     ",
     );
 
-    let err = parser.position_details(50);
+    use swarkn::parse::ParserExt;
+    parser.chars_until_including(|char| char == '>');
+    let err = parser.position_details(parser.pos());
 
     let mut expected = "".to_string();
     expected.push_str("   |\n");

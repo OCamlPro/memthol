@@ -4,19 +4,19 @@ pub use std::{collections::BTreeMap as Map, collections::BTreeSet as Set, fmt};
 
 use lazy_static::lazy_static;
 
-pub use log::info;
+pub use log::{error, info, warn};
 
-pub use stdweb::Value as JsVal;
+pub use stdweb::{js, Value as JsVal};
 
 pub use yew::{html, services::websocket, Component, ComponentLink, Renderable, ShouldRender};
 
 pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Uid as AllocUid};
 
-pub use crate::{chart, chart::ChartUid, cst, data::Storage, model::Model};
+pub use crate::{chart, chart::ChartUid, cst, data::Storage, model::Model, msg, msg::Msg};
 
 /// Retrieves the address and port of the server.
 pub fn get_server_addr() -> (String, usize) {
-    use stdweb::{js, unstable::TryInto};
+    use stdweb::unstable::TryInto;
     let addr: String = js! {
         return serverAddr.get_addr();
     }
@@ -55,31 +55,6 @@ impl From<yew::format::Text> for DiffMsg {
     fn from(inner: yew::format::Text) -> Self {
         Self { inner }
     }
-}
-
-/// Type of messages in the client.
-#[derive(Debug)]
-pub enum Msg {
-    JsInit,
-    /// Order to change tab.
-    ChangeTab(crate::top_tabs::Tab),
-    /// Allocation info message.
-    Diff(DiffMsg),
-    /// Collapse a specific chart.
-    Collapse(ChartUid),
-    /// Expands a specific chart.
-    Expand(ChartUid),
-    /// Moves a chart.
-    MoveChart {
-        /// Uid of the chart to move.
-        uid: ChartUid,
-        /// True if moving up.
-        up: bool,
-    },
-    /// Do nothing.
-    Nop,
-    /// Start message.
-    Start,
 }
 
 lazy_static! {

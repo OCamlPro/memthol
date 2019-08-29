@@ -44,8 +44,6 @@
 //! [`Err`]: struct.Err.html (The Err struct)
 //! [`pretty`]: struct.Err.html#method.pretty (Err's pretty function)
 
-use std::fmt;
-
 pub use error_chain::bail;
 
 /// Parse error information.
@@ -92,12 +90,14 @@ impl Position {
         Self { row, col, line }
     }
 }
-impl fmt::Display for Position {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let line_idx = (self.row + 1).to_string();
-        writeln!(fmt, " {0: <1$} |", "", line_idx.len())?;
-        writeln!(fmt, " {} | {}", line_idx, self.line)?;
-        write!(fmt, " {0: <1$} | {0: >2$}^", "", line_idx.len(), self.col)
+swarkn::display! {
+    impl for Position {
+        self, fmt => {
+            let line_idx = (self.row + 1).to_string();
+            writeln!(fmt, " {0: <1$} |", "", line_idx.len())?;
+            writeln!(fmt, " {} | {}", line_idx, self.line)?;
+            write!(fmt, " {0: <1$} | {0: >2$}^", "", line_idx.len(), self.col)
+        }
     }
 }
 

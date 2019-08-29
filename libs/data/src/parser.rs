@@ -2,7 +2,15 @@
 
 use std::str::FromStr;
 
-use crate::{err::ResExt, *};
+use swarkn::parse;
+use swarkn::parse::err::*;
+pub use swarkn::parse::{ParserErrorExt, ParserExt};
+
+pub mod err {
+    pub use swarkn::parse::err::*;
+}
+
+use crate::*;
 
 /// Span separator.
 static SPAN_SEP: &str = "-";
@@ -61,28 +69,25 @@ lazy_static::lazy_static! {
 }
 
 /// Zero-copy parser.
-pub struct Parser<'a> {
-    /// Text we're parsing.
-    text: &'a str,
-    /// Position in the text.
-    cursor: usize,
+pub struct Parser<'txt> {
+    /// Underlying parser.
+    parser: parse::Parser<'txt>,
+}
+impl<'txt> ParserExt<'txt> for Parser<'txt> {
+    fn parser(&self) -> &parse::Parser<'txt> {
+        &self.parser
+    }
+    fn parser_mut(&mut self) -> &mut parse::Parser<'txt> {
+        &mut self.parser
+    }
 }
 
-impl<'a> Parser<'a> {
+impl<'txt> Parser<'txt> {
     /// Constructor.
-    pub fn new(text: &'a str) -> Self {
-        Self { text, cursor: 0 }
-    }
-
-    /// True if there is no more text to parse.
-    ///
-    /// ```rust
-    /// use alloc_data::Parser;
-    /// let parser = Parser::new("");
-    /// assert! { parser.is_eoi() }
-    /// ```
-    pub fn is_eoi(&self) -> bool {
-        self.cursor >= self.text.len()
+    pub fn new(text: &'txt str) -> Self {
+        Self {
+            parser: parse::Parser::new(text),
+        }
     }
 
     /// Applies a parser and fails if there are tokens left.
@@ -99,115 +104,6 @@ impl<'a> Parser<'a> {
             bail!(parser.error(format!("unexpected tokens after {}", desc.as_ref())))
         }
         Ok(res)
-    }
-
-    /// Returns the text from the cursor to the end.
-    ///
-    /// ```rust
-    /// use alloc_data::Parser;
-    /// let mut parser = Parser::new(" \tblah");
-    /// assert_eq! { parser.rest(), " \tblah" }
-    /// parser.ws();
-    /// assert_eq! { parser.rest(), "blah" }
-    /// ```
-    pub fn rest(&self) -> &'a str {
-        &self.text[self.cursor..]
-    }
-
-    /// Iterator over characters from the current position.
-    ///
-    /// ```rust
-    /// use alloc_data::Parser;
-    /// let mut parser = Parser::new(" \t blah");
-    /// let mut chars = parser.chars();
-    /// assert_eq! { chars.next(), Some(' ') }
-    /// assert_eq! { chars.next(), Some('\t') }
-    /// assert_eq! { chars.next(), Some(' ') }
-    /// assert_eq! { chars.next(), Some('b') }
-    /// assert_eq! { chars.next(), Some('l') }
-    /// assert_eq! { chars.next(), Some('a') }
-    /// assert_eq! { chars.next(), Some('h') }
-    /// parser.ws();
-    /// let mut chars = parser.chars();
-    /// assert_eq! { chars.next(), Some('b') }
-    /// assert_eq! { chars.next(), Some('l') }
-    /// assert_eq! { chars.next(), Some('a') }
-    /// assert_eq! { chars.next(), Some('h') }
-    /// ```
-    pub fn chars(&self) -> std::str::Chars<'a> {
-        self.rest().chars()
-    }
-
-    /// Parses whispaces.
-    ///
-    /// ```rust
-    /// use alloc_data::Parser;
-    /// let mut parser = Parser::new(" \n\t     blah");
-    /// parser.ws();
-    /// assert_eq! { parser.rest(), "blah" }
-    /// ```
-    pub fn ws(&mut self) {
-        let mut chars = self.chars();
-        while let Some(char) = chars.next() {
-            if char.is_whitespace() {
-                self.cursor += 1
-            } else {
-                break;
-            }
-        }
-    }
-
-    /// Minimal error reporting at the current position.
-    pub fn error<S: Into<String>>(&self, blah: S) -> err::Err {
-        self.error_at(self.cursor, blah)
-    }
-
-    /// Minimal error reporting.
-    pub fn error_at<S: Into<String>>(&self, pos: usize, blah: S) -> err::Err {
-        let position = self.position_details(pos);
-        err::ErrorKind::ParseErr(position, blah.into()).into()
-    }
-
-    /// Tries to parse a tag.
-    ///
-    /// ```rust
-    /// use alloc_data::Parser;
-    /// let mut parser = Parser::new("blah42");
-    /// assert! { !parser.try_tag("doesn't match") }
-    /// assert_eq! { parser.rest(), "blah42" }
-    /// assert! { parser.try_tag("blah") }
-    /// assert_eq! { parser.rest(), "42" }
-    /// ```
-    pub fn try_tag(&mut self, tag: &str) -> bool {
-        let end = self.cursor + tag.len();
-        if end <= self.text.len() {
-            if &self.text[self.cursor..end] == tag {
-                self.cursor += tag.len();
-                return true;
-            }
-        }
-        false
-    }
-
-    /// Parses a tag.
-    ///
-    /// ```rust
-    /// use alloc_data::Parser;
-    /// let mut parser = Parser::new("blah42_");
-    /// assert! { parser.tag("doesn't match").is_err() }
-    /// assert_eq! { parser.rest(), "blah42_" }
-    /// assert! { parser.tag("blah").is_ok() }
-    /// assert_eq! { parser.rest(), "42_" }
-    /// assert! { parser.tag("42").is_ok() }
-    /// assert! { parser.tag("_").is_ok() }
-    /// assert_eq! { parser.rest(), "" }
-    /// ```
-    pub fn tag(&mut self, tag: &str) -> Res<()> {
-        if self.try_tag(tag) {
-            Ok(())
-        } else {
-            bail!(self.error(format!("expected `{}`", tag)))
-        }
     }
 
     /// Top-level parser.
@@ -253,7 +149,7 @@ impl<'a> Parser<'a> {
     /// Parses a single allocation.
     ///
     /// ```rust
-    /// use alloc_data::{AllocKind, Loc, Parser};
+    /// use alloc_data::{AllocKind, Loc, parser::*};
     /// let mut parser = Parser::new(r#"523: Major 32 [ `file`:7:3-5#11 ] [ `label` ] 5.3 _"#);
     /// let alloc = parser.alloc().unwrap();
     /// assert_eq! { parser.rest(), "" }
@@ -267,7 +163,7 @@ impl<'a> Parser<'a> {
     /// ```
     ///
     /// ```rust
-    /// use alloc_data::{AllocKind, Loc, Parser};
+    /// use alloc_data::{AllocKind, Loc, parser::*};
     /// let mut parser = Parser::new(
     ///     r#"523: Major 32 [ `file`:7:3-5#11 ] [`label_1` `label_2`] 5.3 7.3"#
     /// );
@@ -326,8 +222,8 @@ impl<'a> Parser<'a> {
 
     /// Parses a uid.
     pub fn uid(&mut self) -> Res<Uid> {
-        let start_pos = self.cursor;
-        if let Ok(int) = self.int() {
+        let start_pos = self.pos();
+        if let Ok(int) = self.digits() {
             if let Some(uid) = BigUint::parse_bytes(int.as_bytes(), 10) {
                 return Ok(uid.into());
             }
@@ -335,57 +231,10 @@ impl<'a> Parser<'a> {
         bail!(self.error_at(start_pos, "expected UID (big int)"))
     }
 
-    /// Parses a usize.
-    ///
-    /// ```rust
-    /// use alloc_data::Parser;
-    /// let mut parser = Parser::new("772032 blah");
-    /// assert_eq! { parser.usize().unwrap(), 772032 }
-    /// assert_eq! { parser.rest(), " blah" }
-    /// ```
-    pub fn usize(&mut self) -> Res<usize> {
-        let size_pos = self.cursor;
-        if let Ok(int) = self.int() {
-            if let Ok(usize) = usize::from_str(int) {
-                return Ok(usize);
-            }
-        }
-        bail!(self.error_at(size_pos, "expected integer (usize)"))
-    }
-
-    /// Parses an integer.
-    ///
-    /// ```rust
-    /// use alloc_data::Parser;
-    /// let mut parser = Parser::new("772032 blah");
-    /// assert_eq! { parser.int().unwrap(), "772032" }
-    /// assert_eq! { parser.rest(), " blah" }
-    /// ```
-    pub fn int(&mut self) -> Res<&'a str> {
-        let mut chars = self.chars();
-        let mut end = self.cursor;
-
-        while let Some(char) = chars.next() {
-            if char.is_numeric() {
-                end += 1
-            } else {
-                break;
-            }
-        }
-
-        if end == self.cursor {
-            bail!(self.error("expected integer"))
-        } else {
-            let res = &self.text[self.cursor..end];
-            self.cursor = end;
-            Ok(res)
-        }
-    }
-
     /// Parses an optional date.
     ///
     /// ```rust
-    /// use alloc_data::{Parser};
+    /// use alloc_data::parser::*;
     /// let mut parser = Parser::new("_ 520.530 tail");
     /// assert_eq! { parser.date_opt().unwrap(), None }
     /// assert_eq! { parser.rest(), " 520.530 tail" }
@@ -409,20 +258,18 @@ impl<'a> Parser<'a> {
     /// Parses a date in seconds.
     ///
     /// ```rust
-    /// use alloc_data::Parser;
+    /// use alloc_data::parser::*;
     /// let mut parser = Parser::new("772032.52 blah");
     /// assert_eq! { parser.date().unwrap(), std::time::Duration::new(772032, 520_000_000).into() }
     /// assert_eq! { parser.rest(), " blah" }
     /// ```
     pub fn date(&mut self) -> Res<SinceStart> {
         let err_msg = || format!("expected date `{}`", *DATE_FMT);
-        let start_pos = self.cursor;
-        let num = self.int()?;
-        match self.chars().next() {
-            Some('.') => self.cursor += 1,
-            _ => bail!(self.error_at(start_pos, err_msg())),
-        }
-        let dec = self.int()?;
+        let start_pos = self.pos();
+        let num = self.digits()?;
+        self.tag(".")
+            .chain_err(|| self.error_at(start_pos, err_msg()))?;
+        let dec = self.digits()?;
         let dec = format!("{:0<9}", dec);
 
         let num = if let Ok(num) = u64::from_str(num) {
@@ -459,16 +306,7 @@ impl<'a> Parser<'a> {
     }
     fn inner_loc(&mut self) -> Res<Loc> {
         self.tag("`")?;
-        let mut end = self.cursor;
-        for char in self.chars() {
-            if char == '`' {
-                break;
-            } else {
-                end += 1
-            }
-        }
-        let file = self.text[self.cursor..end].to_string();
-        self.cursor = end;
+        let file = self.chars_until(|char| char == '`').to_string();
         self.tag("`")?;
 
         self.ws();
@@ -497,7 +335,7 @@ impl<'a> Parser<'a> {
     /// Parses an optional location/count pair.
     ///
     /// ```rust
-    /// use alloc_data::{Parser, Loc};
+    /// use alloc_data::{Loc, parser::*};
     /// let mut parser = Parser::new(r#"`my_file`:7:3-5#13"#);
     /// parser.ws();
     /// assert_eq! {
@@ -546,15 +384,10 @@ impl<'a> Parser<'a> {
 
     /// Parses a label.
     pub fn label(&mut self) -> Res<String> {
-        self.tag("`")?;
-        let start = self.cursor;
-        while !self.try_tag("`") {
-            if self.is_eoi() {
-                bail!(self.error("expected end of label"))
-            }
-            self.cursor += 1
-        }
-        Ok(self.text[start..self.cursor - 1].into())
+        self.tag("`").chain_err(|| "starting label")?;
+        let label = self.chars_until(|char| char == '`').to_string();
+        self.tag("`").chain_err(|| "ending label")?;
+        Ok(label)
     }
 
     /// Parses a dead allocation info.
@@ -600,13 +433,10 @@ impl<'a> Parser<'a> {
         self.tag(":")?;
         self.ws();
         let err_msg = || format!("expected date `{}`", *DATE_FMT);
-        let start_pos = self.cursor;
-        let num = self.int()?;
-        match self.chars().next() {
-            Some('.') => self.cursor += 1,
-            _ => bail!(self.error_at(start_pos, err_msg())),
-        }
-        let dec = self.int()?;
+        let start_pos = self.pos();
+        let num = self.digits()?;
+        self.tag(".").chain_err(err_msg)?;
+        let dec = self.digits()?;
         let dec = format!("{:0<9}", dec);
 
         let secs = if let Ok(num) = i64::from_str(num) {
@@ -631,32 +461,5 @@ impl<'a> Parser<'a> {
             .chain_err(|| "specifying the size of machine words (in bytes)")?;
 
         Ok(Init::new(start_time, word_size))
-    }
-}
-
-impl<'a> Parser<'a> {
-    /// Retrieves the row, column, and line of a position.
-    pub fn position_details(&self, pos: usize) -> err::Position {
-        let (mut row, mut count, mut col_line) = (0, 0, None);
-
-        for line in self.text.lines() {
-            debug_assert! { pos >= count }
-
-            // Is the position in the current line, or at the end of the current line?
-            if pos <= count + line.len() + 1 {
-                col_line = Some((pos - count, line.to_string()));
-                break;
-            } else {
-                // Position is not in the current line, move on.
-                row += 1;
-                count += line.len() + 1
-            }
-        }
-
-        if let Some((col, line)) = col_line {
-            err::Position::new(row, col, line)
-        } else {
-            panic!("could not find position `{}` in input text, while retrieving position details")
-        }
     }
 }

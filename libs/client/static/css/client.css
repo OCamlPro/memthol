@@ -101,6 +101,14 @@ body .expand_button {
 body .expand_button:hover {
   cursor: pointer;
 }
+body .close_button {
+  content: url("../pics/close.png");
+  max-width: 2%;
+  float: right;
+}
+body .close_button:hover {
+  cursor: pointer;
+}
 body .collapse_button {
   content: url("../pics/collapse.png");
   max-width: 2%;

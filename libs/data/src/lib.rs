@@ -20,16 +20,13 @@
 //! [`Date`]: struct.date.html (The Date struct)
 //! [`SinceStart`]: struct.sincestart.html (The SinceStart struct)
 
-use std::fmt;
-
 pub use error_chain::bail;
 pub use num_bigint::BigUint;
 
-pub mod err;
 pub mod parser;
 mod time;
 
-pub use err::Res;
+pub use parser::err::ParseRes as Res;
 pub use parser::Parser;
 pub use time::{Date, Duration, SinceStart};
 
@@ -42,9 +39,9 @@ pub struct Uid {
     /// The actual bigint.
     uid: BigUint,
 }
-impl fmt::Display for Uid {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        self.uid.fmt(fmt)
+swarkn::display! {
+    impl for Uid {
+        self, fmt => self.uid.fmt(fmt)
     }
 }
 impl std::ops::Deref for Uid {
@@ -94,9 +91,9 @@ pub struct Loc {
     /// Column span at that line in the file.
     pub span: (usize, usize),
 }
-impl fmt::Display for Loc {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(
+swarkn::display! {
+    impl for Loc {
+        self, fmt => write!(
             fmt,
             "`{}`:{}:{}-{}",
             self.file, self.line, self.span.0, self.span.1
@@ -158,13 +155,15 @@ pub struct Trace {
     /// The actual trace of locations.
     trace: Vec<(Loc, usize)>,
 }
-impl fmt::Display for Trace {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "[")?;
-        for (loc, count) in &self.trace {
-            write!(fmt, " {}#{}", loc, count)?
+swarkn::display! {
+    impl for Trace {
+        self, fmt => {
+            write!(fmt, "[")?;
+            for (loc, count) in &self.trace {
+                write!(fmt, " {}#{}", loc, count)?
+            }
+            write!(fmt, " ]")
         }
-        write!(fmt, " ]")
     }
 }
 impl std::ops::Deref for Trace {
@@ -186,13 +185,15 @@ impl Trace {
 pub struct Labels {
     labels: Vec<String>,
 }
-impl fmt::Display for Labels {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "[")?;
-        for label in &self.labels {
-            write!(fmt, " `{}`", label)?
+swarkn::display! {
+    impl for Labels {
+        self, fmt => {
+            write!(fmt, "[")?;
+            for label in &self.labels {
+                write!(fmt, " `{}`", label)?
+            }
+            write!(fmt, " ]")
         }
-        write!(fmt, " ]")
     }
 }
 impl Labels {
@@ -210,9 +211,9 @@ pub enum AllocKind {
     MajorPostponed,
     Serialized,
 }
-impl fmt::Display for AllocKind {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{}", self.as_str())
+swarkn::display! {
+    impl for AllocKind {
+        self, fmt => write!(fmt, "{}", self.as_str())
     }
 }
 
@@ -268,25 +269,27 @@ pub struct Alloc {
     /// Time of death.
     pub tod: Option<SinceStart>,
 }
-impl fmt::Display for Alloc {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let mut labels = "[".to_string();
-        for label in &self.labels {
-            labels.push_str(" ");
-            labels.push_str(label)
+swarkn::display! {
+    impl for Alloc {
+        self, fmt => {
+            let mut labels = "[".to_string();
+            for label in &self.labels {
+                labels.push_str(" ");
+                labels.push_str(label)
+            }
+            labels.push_str(" ]");
+            write!(
+                fmt,
+                "{}: {}, {}, {}, {}, {}, ",
+                self.uid, self.kind, self.size, self.trace, labels, self.toc
+            )?;
+            if let Some(tod) = &self.tod {
+                write!(fmt, "{}", tod)?
+            } else {
+                write!(fmt, "_")?
+            }
+            write!(fmt, " }}")
         }
-        labels.push_str(" ]");
-        write!(
-            fmt,
-            "{}: {}, {}, {}, {}, {}, ",
-            self.uid, self.kind, self.size, self.trace, labels, self.toc
-        )?;
-        if let Some(tod) = &self.tod {
-            write!(fmt, "{}", tod)?
-        } else {
-            write!(fmt, "_")?
-        }
-        write!(fmt, " }}")
     }
 }
 
@@ -371,17 +374,19 @@ pub struct Diff {
     /// Data freed in this diff.
     pub dead: Vec<(Uid, SinceStart)>,
 }
-impl fmt::Display for Diff {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{}; new: {{\n", self.time)?;
-        for alloc in &self.new {
-            write!(fmt, "    {},\n", alloc)?
+swarkn::display! {
+    impl for Diff {
+        self, fmt => {
+            write!(fmt, "{}; new: {{\n", self.time)?;
+            for alloc in &self.new {
+                write!(fmt, "    {},\n", alloc)?
+            }
+            write!(fmt, "}};\ndead {{\n")?;
+            for (uid, date) in &self.dead {
+                write!(fmt, "    #{}: {},\n", uid, date)?
+            }
+            write!(fmt, "}}\n")
         }
-        write!(fmt, "}};\ndead {{\n")?;
-        for (uid, date) in &self.dead {
-            write!(fmt, "    #{}: {},\n", uid, date)?
-        }
-        write!(fmt, "}}\n")
     }
 }
 
@@ -432,10 +437,12 @@ impl Init {
         parser.init()
     }
 }
-impl fmt::Display for Init {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(fmt, "start: {}", self.start_time)?;
-        writeln!(fmt, "word_size: {}", self.word_size)?;
-        Ok(())
+swarkn::display! {
+    impl for Init {
+        self, fmt => {
+            writeln!(fmt, "start: {}", self.start_time)?;
+            writeln!(fmt, "word_size: {}", self.word_size)?;
+            Ok(())
+        }
     }
 }

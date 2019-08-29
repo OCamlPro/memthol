@@ -10,8 +10,9 @@ pub mod chart;
 pub mod cst;
 pub mod data;
 mod model;
+pub mod msg;
 mod tmp;
 pub mod top_tabs;
 
-pub use base::Msg;
 pub use model::Model;
+pub use msg::Msg;

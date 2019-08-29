@@ -3,11 +3,9 @@
 //! - `SinceStart`: indicates a date since the start of the profiling run. Essentially a wrapper
 //!     around a `std::time::Duration`.
 
-use std::fmt;
-
 use stdweb::{js, Value};
 
-use crate::{err::Res, Parser};
+use crate::{Parser, Res};
 
 pub use std::time::Duration;
 
@@ -23,27 +21,6 @@ pub type DateTime = chrono::DateTime<chrono::Utc>;
 pub struct SinceStart {
     /// Actual duration.
     duration: Duration,
-}
-impl fmt::Display for SinceStart {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let mut nanos = format!(".{:>09}", self.duration.subsec_nanos());
-        // Remove trailing zeros.
-        loop {
-            match nanos.pop() {
-                // Remove zeros.
-                Some('0') => (),
-                // There was nothing but zeros, remove dot as well (last character).
-                Some('.') => break,
-                // Otherwise it's a number, we must keep it and stop removing stuff.
-                Some(c) => {
-                    nanos.push(c);
-                    break;
-                }
-                None => unreachable!(),
-            }
-        }
-        write!(fmt, "{}{}", self.duration.as_secs(), nanos)
-    }
 }
 impl std::ops::Deref for SinceStart {
     type Target = Duration;
@@ -205,8 +182,32 @@ impl Date {
         )
     }
 }
-impl fmt::Display for Date {
-    fn fmt(&self, fmtt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmtt, "{}", self.date)
+
+swarkn::display! {
+    impl for SinceStart {
+        self, fmt => {
+            let mut nanos = format!(".{:>09}", self.duration.subsec_nanos());
+            // Remove trailing zeros.
+            loop {
+                match nanos.pop() {
+                    // Remove zeros.
+                    Some('0') => (),
+                    // There was nothing but zeros, remove dot as well (last character).
+                    Some('.') => break,
+                    // Otherwise it's a number, we must keep it and stop removing stuff.
+                    Some(c) => {
+                        nanos.push(c);
+                        break;
+                    }
+                    None => unreachable!(),
+                }
+            }
+            write!(fmt, "{}{}", self.duration.as_secs(), nanos)
+        }
+    }
+}
+swarkn::display! {
+    impl for Date {
+        self, fmt => write!(fmt, "{}", self.date)
     }
 }

@@ -44,7 +44,7 @@ impl Charts {
     }
 
     /// Updates the actual charts.
-    pub fn update(&mut self, data: &Storage) {
+    pub fn update_data(&mut self, data: &Storage) {
         for time_chart in &mut self.charts {
             time_chart.update(data)
         }
@@ -52,7 +52,6 @@ impl Charts {
 
     /// Renders itself as HTML.
     pub fn render(&self) -> Html {
-        info! { "rendering charts" }
         html! {
             <g id={HTML_CHART_CONTAINER_ID}>
                 { for self.charts.iter().map(time::TimeChart::render) }
@@ -62,36 +61,90 @@ impl Charts {
 
     /// Initial JS setup.
     pub fn init(&mut self, data: &Storage) {
-        info! { "init update" }
         for time_chart in &mut self.charts {
             time_chart.init(data)
         }
     }
 }
 
-/// # Cosmetic stuff.
+/// # Actions.
 impl Charts {
+    /// Handles a chart message.
+    pub fn update(&mut self, msg: msg::ChartsMsg) -> ShouldRender {
+        use msg::ChartsMsg::*;
+        match msg {
+            // Refresh-s happen when the layout has changed.
+            //
+            // When this happens, all charts must be deactivated before we can refresh their
+            // respective targets.
+            RefreshAll => {
+                let charts_and_data: Vec<_> = self
+                    .charts
+                    .iter_mut()
+                    .map(|chart| {
+                        let data = chart.chart_dispose();
+                        (chart, data)
+                    })
+                    .collect();
+                for (chart, data) in charts_and_data {
+                    chart.refresh_target(data)
+                }
+                false
+            }
+            Close { uid } => self.close_chart(uid),
+            Move { uid, up } => self.move_chart(uid, up),
+            Visibility { uid, show } => {
+                if show {
+                    self.expand_chart(uid)
+                } else {
+                    self.collapse_chart(uid)
+                }
+            }
+        }
+    }
+
     /// Collapses a chart.
-    pub fn collapse(&mut self, uid: ChartUid) -> ShouldRender {
+    pub fn collapse_chart(&mut self, uid: ChartUid) -> ShouldRender {
         for chart in &mut self.charts {
             if chart.uid() == &uid {
                 let should_render = chart.collapse();
                 return should_render;
             }
         }
-        info!("asked to collapse chart #{} which does not exist", uid);
+        warn!("asked to collapse chart #{} which does not exist", uid);
         false
     }
     /// Expands a chart.
-    pub fn expand(&mut self, uid: ChartUid) -> ShouldRender {
+    pub fn expand_chart(&mut self, uid: ChartUid) -> ShouldRender {
         for chart in &mut self.charts {
             if chart.uid() == &uid {
                 let should_render = chart.expand();
                 return should_render;
             }
         }
-        info!("asked to expand chart #{} which does not exist", uid);
+        warn!("asked to expand chart #{} which does not exist", uid);
         false
+    }
+
+    /// Closes a chart.
+    pub fn close_chart(&mut self, uid: ChartUid) -> ShouldRender {
+        let mut index = None;
+        for (idx, chart) in self.charts.iter().enumerate() {
+            if chart.uid() == &uid {
+                index = Some(idx)
+            }
+        }
+        if let Some(idx) = index {
+            let chart = self.charts.remove(idx);
+            chart.destroy();
+            true
+        } else {
+            warn!(
+                "asked to destroy chart #{}, but there is no such chart",
+                uid
+            );
+            false
+        }
     }
 
     /// Move a chart.
@@ -112,7 +165,7 @@ impl Charts {
                 return true;
             }
         } else {
-            info!(
+            warn!(
                 "asked to move chart #{} {}, but there is no such chart",
                 uid,
                 if up { "up" } else { "down" }

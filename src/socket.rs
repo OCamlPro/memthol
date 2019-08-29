@@ -307,13 +307,14 @@ impl Handler {
 impl Handler {
     /// Waits for an init file to exist and sends it to the client.
     pub fn send_first_init(&mut self) -> Res<()> {
-        log!(self.ip => "sending first init file");
+        log!(self.ip => "watching for first init file");
         debug_assert_eq! { self.init_last_modified, None }
         loop {
             let was_sent = self
                 .try_send_init()
                 .chain_err(|| "while sending the first init message")?;
             if was_sent {
+                log!(self.ip => "first init file sent");
                 return Ok(());
             }
             sleep(std::time::Duration::from_millis(200))
