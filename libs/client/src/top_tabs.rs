@@ -175,11 +175,30 @@ impl TopTabs {
         self.tabs.activate(tab)
     }
 
+    /// True if the active tab is `View`.
+    pub fn is_view_active(&self) -> bool {
+        for tab in self.tabs.iter() {
+            if tab.active {
+                return tab.kind == Tab::View;
+            }
+            if tab.kind == Tab::View {
+                return tab.active;
+            }
+        }
+        false
+    }
+
     /// Renders all the tabs.
-    pub fn render(&self) -> Html {
+    pub fn render(&self, charts: &Charts) -> Html {
+        let center = if self.is_view_active() {
+            charts.control().render()
+        } else {
+            html!(<div/>)
+        };
         html! {
             <ul class="ul">
                 { for self.tabs.iter().map(TabDesc::render) }
+                { center }
             </ul>
         }
     }

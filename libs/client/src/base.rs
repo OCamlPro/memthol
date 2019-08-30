@@ -12,7 +12,15 @@ pub use yew::{html, services::websocket, Component, ComponentLink, Renderable, S
 
 pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Uid as AllocUid};
 
-pub use crate::{chart, chart::ChartUid, cst, data::Storage, model::Model, msg, msg::Msg};
+pub use crate::{
+    chart,
+    chart::{ChartUid, Charts},
+    cst,
+    data::Storage,
+    model::Model,
+    msg,
+    msg::Msg,
+};
 
 /// Retrieves the address and port of the server.
 pub fn get_server_addr() -> (String, usize) {

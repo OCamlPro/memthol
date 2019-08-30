@@ -95,7 +95,7 @@ body .hidden_chart_style {
 }
 body .expand_button {
   content: url("../pics/expand.png");
-  max-width: 2%;
+  max-width: 20px;
   float: left;
 }
 body .expand_button:hover {
@@ -103,7 +103,7 @@ body .expand_button:hover {
 }
 body .close_button {
   content: url("../pics/close.png");
-  max-width: 2%;
+  max-width: 20px;
   float: right;
 }
 body .close_button:hover {
@@ -111,7 +111,7 @@ body .close_button:hover {
 }
 body .collapse_button {
   content: url("../pics/collapse.png");
-  max-width: 2%;
+  max-width: 20px;
   float: left;
 }
 body .collapse_button:hover {
@@ -119,7 +119,7 @@ body .collapse_button:hover {
 }
 body .move_up_button {
   content: url("../pics/arrow_up.png");
-  max-width: 2%;
+  max-width: 20px;
   float: left;
   padding-left: 10px;
 }
@@ -128,11 +128,19 @@ body .move_up_button:hover {
 }
 body .move_down_button {
   content: url("../pics/arrow_down.png");
-  max-width: 2%;
+  max-width: 20px;
   float: left;
   padding-left: 10px;
 }
 body .move_down_button:hover {
+  cursor: pointer;
+}
+body .control_title {
+  max-width: 20%;
+  text-align: center;
+}
+body .control_title:hover {
+  text-decoration: underline;
   cursor: pointer;
 }
 body .d3_path {

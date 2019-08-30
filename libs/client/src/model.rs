@@ -104,6 +104,7 @@ impl Component for Model {
                 }
                 render
             }
+            Msg::ControlAction(msg) => self.charts.control_update(msg),
             Msg::ChangeTab(tab) => {
                 warn!("[unimplemented] changing to tab {:?}", tab);
                 self.top_tabs.activate(tab)
@@ -192,7 +193,7 @@ impl Model {
     pub fn render_header(&self) -> Html {
         html! {
             <header class="header_style">
-                {self.top_tabs.render()}
+                {self.top_tabs.render(&self.charts)}
             </header>
         }
     }
