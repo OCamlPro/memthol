@@ -1,5 +1,4 @@
 body {
-  margin: 27px 200px;
   font: 100% SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
   color: #333;
   background-color: white;
@@ -27,7 +26,7 @@ body .header_style {
   color: #00d8ff;
   box-shadow: 0 5px 6px 0 #000000;
 }
-body .header_style .ul {
+body .header_style .tab_list {
   list-style-type: none;
   margin: 2px 200px;
   padding: 0;
@@ -68,6 +67,29 @@ body .header_style .li_a_active {
 }
 body .header_style .li_a_active:visited {
   color: white;
+}
+body .header_style .control_title {
+  max-width: 20%;
+  text-align: center;
+}
+body .header_style .control_title:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+body .control_row {
+  background-color: #000000;
+  color: #00d8ff;
+  position: fixed;
+  display: flex;
+  box-shadow: 0 5px 6px 0 #000000;
+  width: 100%;
+}
+body .control_row .control_col {
+  flex: 50%;
+  margin: 0px 5px 5px 0px;
+  padding: 0px 0px 5px 0px;
+  border-radius: 15px;
+  border: 5px solid #8DEDFF;
 }
 body .h1 {
   color: #00d8ff;
@@ -133,14 +155,6 @@ body .move_down_button {
   padding-left: 10px;
 }
 body .move_down_button:hover {
-  cursor: pointer;
-}
-body .control_title {
-  max-width: 20%;
-  text-align: center;
-}
-body .control_title:hover {
-  text-decoration: underline;
   cursor: pointer;
 }
 body .d3_path {

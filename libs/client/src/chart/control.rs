@@ -35,6 +35,26 @@ impl Control {
         }
     }
 
+    /// Renders the content of the menu.
+    pub fn render_content(&self) -> Html {
+        if self.visible {
+            html!(
+                <div class="control_row">
+                    <div class="control_col"><center>
+                        <h2> { "Statistics" } </h2>
+                        { "Blah blah blah" }
+                    </center></div>
+                    <div class="control_col"><center>
+                        <h2> { "Filters" } </h2>
+                        { "Blah blah blah" }
+                    </center></div>
+                </div>
+            )
+        } else {
+            html!(<div/>)
+        }
+    }
+
     /// Renders a default title when the control menu should not be displayed.
     pub fn render_default(&self) -> Html {
         html! {

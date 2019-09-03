@@ -134,6 +134,7 @@ impl TimeChart {
         };
         let uid = self.uid;
         html! {
+            <g>
             <center>
                 {expand_or_collapse_button}
                 <img
@@ -149,10 +150,11 @@ impl TimeChart {
                     onclick=|_| ChartsMsg::close(uid)
                 />
                 <h2> { format!("{} over time", self.value.desc()) } </h2>
+            </center>
                 <div id={&self.html_id}
                     class={if self.visible { "chart_style" } else { "hidden_chart_style" }}
                 />
-            </center>
+            </g>
         }
     }
 
@@ -200,7 +202,7 @@ impl TimeChart {
             chart.data = [];
             chart.id = @{chart_id};
 
-            chart.padding(0, 0, 0, 0);
+            // chart.padding(0, 0, 0, 0);
 
             var dateAxis = chart.xAxes.push(new am4charts.DateAxis());
             dateAxis.dateFormats.setKey("second", "ss");
@@ -208,6 +210,7 @@ impl TimeChart {
             dateAxis.periodChangeDateFormats.setKey("second", "[bold]h:mm a");
             dateAxis.periodChangeDateFormats.setKey("minute", "[bold]h:mm a");
             dateAxis.periodChangeDateFormats.setKey("hour", "[bold]h:mm a");
+            dateAxis.extraMax = 0.2;
 
             var valueAxis = chart.yAxes.push(new am4charts.ValueAxis());
 
@@ -215,7 +218,7 @@ impl TimeChart {
             series.dataFields.dateX = "x";
             series.dataFields.valueY = "y";
             series.tooltipText = "{y}";
-            series.interpolationDuration = 100;
+            series.interpolationDuration = 10;
             series.defaultState.transitionDuration = 0;
             series.strokeWidth = 2;
             series.minBulletDistance = 15;

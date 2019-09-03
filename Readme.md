@@ -65,6 +65,7 @@ cargo install --force --git <memthol's BUI repository>
 
 # Other Resources
 
+- [browser compatibility]
 - [todo list]
 
 [OCaml]: https://ocaml.org/ (OCaml official page)
@@ -72,4 +73,5 @@ cargo install --force --git <memthol's BUI repository>
 [Rust]: https://www.rust-lang.org/ (Rust official page)
 [rust toolchain]: https://www.rust-lang.org/tools/install (Rust installation instructions)
 [cargo web]: https://crates.io/crates/cargo-web (Cargo-web on crates.io)
-[todo list]: ./todo.md
+[browser compatibility]: ./docs/compatibility.md (Browser compatibility discussion)
+[todo list]: ./todo.md (Todo list)

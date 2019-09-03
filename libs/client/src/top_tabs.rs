@@ -196,10 +196,13 @@ impl TopTabs {
             html!(<div/>)
         };
         html! {
-            <ul class="ul">
-                { for self.tabs.iter().map(TabDesc::render) }
-                { center }
-            </ul>
+            <a>
+                <ul class="tab_list">
+                    { for self.tabs.iter().map(TabDesc::render) }
+                    { center }
+                </ul>
+                { charts.control().render_content() }
+            </a>
         }
     }
 }

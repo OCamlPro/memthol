@@ -1,8 +1,11 @@
+$left_right_margin: 200px
+
 $light_grey: #a0a0a0
 
 $font_stack: SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif
 $primary_color: #333
 $nice_blue: #00d8ff
+$nice_light_blue: #8DEDFF
 $dark_grey: #3a3a3a
 $background: white
 
@@ -18,10 +21,13 @@ $code_stack: Monaco, sans-serif
 $code_color: $primary_color
 $code_background: $light_grey
 
+// Control menu stuff.
+$control_background: #555555
+$control_color: $nav_color
+
 $red: #ff4633
 
 body
-    margin: 27px 200px
     font: 100% $font_stack
     color: $primary_color
     background-color: $background
@@ -52,7 +58,7 @@ body
         color: $nav_color
         box-shadow: 0 5px 6px 0 #000000
 
-        .ul
+        .tab_list
             list-style-type: none
             margin: 2px 200px
             padding: 0
@@ -93,6 +99,32 @@ body
             color: $nav_block_hover_color
             &:visited
                 color: $nav_block_hover_color
+
+
+        // Control menu title.
+        .control_title
+            max-width: 20%
+            text-align: center
+            &:hover
+                text-decoration: underline
+                cursor: pointer
+
+    // Control menu multi-column content.
+    .control_row
+        background-color: $nav_background
+        color: $nav_color
+        position: fixed
+        display: flex
+        box-shadow: 0 5px 6px 0 #000000
+        width: 100%
+
+        // Control menu column content.
+        .control_col
+            flex: 50%
+            margin: 0px 5px 5px 0px
+            padding: 0px 0px 5px 0px
+            border-radius: 15px
+            border: 5px solid $nice_light_blue
 
     // Heading-related stuff
     .h1
@@ -162,14 +194,6 @@ body
         float: left
         padding-left: 10px
         &:hover
-            cursor: pointer
-
-    // Control menu title.
-    .control_title
-        max-width: 20%
-        text-align: center
-        &:hover
-            text-decoration: underline
             cursor: pointer
 
     // # D3 stuff.
