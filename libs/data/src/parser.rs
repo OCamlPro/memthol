@@ -25,7 +25,7 @@ static TRACE_START: &str = "[";
 /// Trace end.
 static TRACE_END: &str = "]";
 /// Allocation kind format.
-static ALLOC_KIND_FMT: &str = "\\( Minor | Major | MajorPostponed | Serialized \\)";
+static ALLOC_KIND_FMT: &str = "\\( Minor | Major | MajorPostponed | Serialized | _ \\)";
 /// Dead allocation format.
 static DEAD_ALLOC_FMT: &str = "<uid>: <died_at: date>";
 /// Diff format.
@@ -214,6 +214,8 @@ impl<'txt> Parser<'txt> {
             Ok(AllocKind::Major)
         } else if self.try_tag("Serialized") {
             Ok(AllocKind::Serialized)
+        } else if self.try_tag("_") {
+            Ok(AllocKind::Unknown)
         } else {
             let msg = format!("expected allocation kind `{}`", ALLOC_KIND_FMT);
             bail!(self.error(msg))

@@ -210,6 +210,7 @@ pub enum AllocKind {
     Major,
     MajorPostponed,
     Serialized,
+    Unknown,
 }
 swarkn::display! {
     impl for AllocKind {
@@ -226,6 +227,7 @@ impl AllocKind {
             Major => "Major",
             MajorPostponed => "MajorPostponed",
             Serialized => "Serialized",
+            Unknown => "_",
         }
     }
 
