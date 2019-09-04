@@ -205,6 +205,9 @@ impl Handler {
                 if self.reset_if_init_changed()? {
                     continue 'send_diffs;
                 }
+            } else {
+                // Nothing new, sleep a bit to avoid burning CPU.
+                sleep(std::time::Duration::from_millis(100))
             }
         }
 
