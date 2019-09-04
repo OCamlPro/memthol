@@ -110,10 +110,6 @@ pub mod diff {
         }
 
         for (time, (to_add, to_sub)) in map {
-            info!(
-                "current: {}, to_add: {}, to_sub: {}",
-                *current, to_add, to_sub
-            );
             *current = *current + to_add - to_sub;
             let js_size = js!(return @{current.to_string()});
             js!(@(no_return)
@@ -137,7 +133,6 @@ pub mod diff {
 
         for alloc in &diff.new {
             if alloc.tod().is_none() {
-                info! { "adding #{}", alloc.uid() }
                 let is_new = live.insert(alloc.uid().clone());
                 assert! { is_new }
             }
@@ -167,15 +162,12 @@ pub mod diff {
             };
         }
 
-        info! { "working on {} allocation(s)", live.len() }
-
         for uid in live.iter() {
             let lifetime = get_lifetime(uid);
             update!(uid.clone(), lifetime)
         }
 
         let (uid, js_value) = if let Some((uid, lifetime)) = highest {
-            info! { "highest lifetime: {}", lifetime }
             let lifetime = format!("{}.{}", lifetime.as_secs(), lifetime.subsec_millis());
             (Some(uid), js!(return @{lifetime}))
         } else {
