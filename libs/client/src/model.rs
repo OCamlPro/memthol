@@ -61,15 +61,15 @@ impl Model {
 
     /// Registers a diff.
     pub fn add_diff(&mut self, diff: AllocDiff) {
-        let new_stuff = self.data_mut().add_diff(diff);
-        if new_stuff {
-            let data = if let Some(data) = self.data.as_ref() {
-                data
-            } else {
-                panic!("received allocation data before init message")
-            };
-            self.charts.update_data(data)
-        }
+        let _new_stuff = self.data_mut().add_diff(diff);
+        // if new_stuff {
+        let data = if let Some(data) = self.data.as_ref() {
+            data
+        } else {
+            panic!("received allocation data before init message")
+        };
+        self.charts.update_data(data)
+        // }
     }
 }
 
