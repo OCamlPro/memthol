@@ -9,6 +9,9 @@ $nice_light_blue: #8DEDFF
 $dark_grey: #3a3a3a
 $background: white
 
+$shadow_blur: 20px
+$shadow_spread: 8px
+
 // Nav stuff.
 $nav_color: $nice_blue
 $nav_background: #000000
@@ -56,7 +59,7 @@ body
         top: 0
         background-color: $nav_background
         color: $nav_color
-        box-shadow: 0 5px 6px 0 #000000
+        box-shadow: 0 5px $shadow_blur $shadow_spread #000000
 
         .tab_list
             list-style-type: none
@@ -68,10 +71,8 @@ body
             float: left
         .li_right
             float: right
-        .li_center
-            float: center
 
-        %menu_item
+        %header_menu_item
             display: block
             border-radius: 5px
             text-align: center
@@ -91,23 +92,64 @@ body
 
 
         .li_a_inactive
-            @extend %menu_item
+            @extend %header_menu_item
 
         .li_a_active
-            @extend %menu_item
+            @extend %header_menu_item
             background-image: linear-gradient($nav_color, $nav_background)
             color: $nav_block_hover_color
             &:visited
                 color: $nav_block_hover_color
 
+    // Footer-related stuff.
 
-        // Control menu title.
-        .control_title
-            max-width: 20%
+    .footer_style
+        position: fixed
+        left: 0
+        bottom: 0
+        width: 100%
+        height: 50px
+        z-index: 600
+        background-color: $nav_background
+        color: $nav_color
+        box-shadow: 0 -5px $shadow_blur $shadow_spread #000000
+
+        .tab_list
+            list-style-type: none
+            margin: 2px 200px
+            padding: 0
+            overflow: hidden
+
+        %footer_menu_item
+            float: left
+            display: block
+            border-radius: 5px
             text-align: center
-            &:hover
+            padding: 14px 16px
+            text-decoration: none
+            background-image: linear-gradient($dark_grey, $nav_background)
+            &:hover,
+            &:active
+                background-image: linear-gradient($nav_color, $nav_background)
+                color: $nav_block_hover_color
                 text-decoration: underline
                 cursor: pointer
+                &:visited
+                    color: $nav_block_hover_color
+            &:visited
+                color: $nav_color
+
+
+        .li_a_inactive
+            @extend %footer_menu_item
+
+        .li_a_active
+            @extend %footer_menu_item
+            background-image: linear-gradient($nav_color, $nav_background)
+            color: $nav_block_hover_color
+            &:visited
+                color: $nav_block_hover_color
+
 
     // Control menu multi-column content.
     .control_row
@@ -115,7 +157,7 @@ body
         color: $nav_color
         position: fixed
         display: flex
-        box-shadow: 0 5px 6px 0 #000000
+        box-shadow: 0 5px $shadow_blur 0 #000000
         width: 100%
 
         // Control menu column content.

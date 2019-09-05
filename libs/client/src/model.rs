@@ -2,12 +2,14 @@
 
 use yew::{services::websocket, Component, ComponentLink, Renderable, ShouldRender};
 
-use crate::{base::*, top_tabs::TopTabs};
+use crate::{base::*, footer::Footer, top_tabs::TopTabs};
 
 /// Model of the client.
 pub struct Model {
     /// The top tabs.
     pub top_tabs: TopTabs,
+    /// The footer.
+    pub footer: Footer,
     /// Component link.
     pub link: ComponentLink<Self>,
     // /// TCP stream.
@@ -80,6 +82,7 @@ impl Component for Model {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         let mut model = Model {
             top_tabs: TopTabs::new(),
+            footer: Footer::new(),
             link,
             socket: websocket::WebSocketService::new(),
             socket_task: None,
@@ -104,7 +107,7 @@ impl Component for Model {
                 }
                 render
             }
-            Msg::ControlAction(msg) => self.charts.control_update(msg),
+            Msg::FooterAction(msg) => self.footer.update(msg),
             Msg::ChangeTab(tab) => {
                 warn!("[unimplemented] changing to tab {:?}", tab);
                 self.top_tabs.activate(tab)
@@ -193,7 +196,7 @@ impl Model {
     pub fn render_header(&self) -> Html {
         html! {
             <header class="header_style">
-                {self.top_tabs.render(&self.charts)}
+                { self.top_tabs.render() }
             </header>
         }
     }
@@ -208,6 +211,15 @@ impl Model {
             </g>
         }
     }
+
+    /// Renders the footer.
+    fn render_footer(&self) -> Html {
+        html! {
+            <div class="footer_style">
+                { self.footer.render() }
+            </div>
+        }
+    }
 }
 
 impl Renderable<Model> for Model {
@@ -216,6 +228,7 @@ impl Renderable<Model> for Model {
             <div>
                 { self.render_header() }
                 { self.render_content() }
+                { self.render_footer() }
             </div>
         }
     }

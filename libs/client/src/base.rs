@@ -17,6 +17,7 @@ pub use crate::{
     chart::{ChartUid, Charts},
     cst,
     data::Storage,
+    footer,
     model::Model,
     msg,
     msg::Msg,

@@ -2,7 +2,6 @@
 
 use crate::base::*;
 
-mod control;
 pub mod time;
 
 new_uid! {
@@ -12,8 +11,8 @@ new_uid! {
         map: ChartUidMap,
     }
 }
+
 pub use chart_uid::*;
-pub use control::Control;
 
 /// Prefix for the HTML identifier of all the charts.
 pub static CHART_HTML_PREFIX: &str = "memthol_chart_html_id";
@@ -32,8 +31,6 @@ static HTML_CHART_CONTAINER_ID: &str = "memthol_chart_container";
 pub struct Charts {
     /// Time charts.
     charts: Vec<time::TimeChart>,
-    /// Control menu.
-    control: Control,
 }
 impl Charts {
     /// Constructor.
@@ -42,14 +39,17 @@ impl Charts {
         let total_size = time::TimeChart::total_size(id, uid);
         let (uid, id) = generate_chart_uid_and_id();
         let highest_lifetime = time::TimeChart::highest_lifetime(id, uid);
-        let charts = vec![total_size, highest_lifetime];
-        let control = Control::new();
-        Self { charts, control }
-    }
-
-    /// Control menu accessor.
-    pub fn control(&self) -> &Control {
-        &self.control
+        let (uid, id) = generate_chart_uid_and_id();
+        let total_size_2 = time::TimeChart::total_size(id, uid);
+        let (uid, id) = generate_chart_uid_and_id();
+        let highest_lifetime_2 = time::TimeChart::highest_lifetime(id, uid);
+        let charts = vec![
+            total_size,
+            highest_lifetime,
+            total_size_2,
+            highest_lifetime_2,
+        ];
+        Self { charts }
     }
 
     /// Updates the actual charts.
@@ -182,10 +182,5 @@ impl Charts {
         }
 
         false
-    }
-
-    /// Handles control messages.
-    pub fn control_update(&mut self, msg: msg::ControlMsg) -> ShouldRender {
-        self.control.update(msg)
     }
 }

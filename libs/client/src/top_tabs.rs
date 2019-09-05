@@ -189,20 +189,11 @@ impl TopTabs {
     }
 
     /// Renders all the tabs.
-    pub fn render(&self, charts: &Charts) -> Html {
-        let center = if self.is_view_active() {
-            charts.control().render()
-        } else {
-            html!(<div/>)
-        };
+    pub fn render(&self) -> Html {
         html! {
-            <a>
-                <ul class="tab_list">
-                    { for self.tabs.iter().map(TabDesc::render) }
-                    { center }
-                </ul>
-                { charts.control().render_content() }
-            </a>
+            <ul class="tab_list">
+                { for self.tabs.iter().map(TabDesc::render) }
+            </ul>
         }
     }
 }

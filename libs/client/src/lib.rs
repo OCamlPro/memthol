@@ -9,6 +9,7 @@ mod uid;
 pub mod chart;
 pub mod cst;
 pub mod data;
+pub mod footer;
 mod model;
 pub mod msg;
 mod tmp;

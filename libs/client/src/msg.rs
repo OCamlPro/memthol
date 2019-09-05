@@ -13,7 +13,7 @@ pub enum Msg {
     /// An action over the charts.
     ChartsAction(ChartsMsg),
     /// An action over the control menu.
-    ControlAction(ControlMsg),
+    FooterAction(footer::FooterMsg),
     /// Do nothing.
     Nop,
     /// Start message.
@@ -75,18 +75,5 @@ impl ChartsMsg {
     /// Collapse chart message constructor.
     pub fn collapse(uid: ChartUid) -> Msg {
         Msg::ChartsAction(Self::Visibility { uid, show: false })
-    }
-}
-
-/// A message for the control menu.
-#[derive(Debug)]
-pub enum ControlMsg {
-    /// Expands or collapses the control menu.
-    ToggleVisible,
-}
-impl ControlMsg {
-    /// Expands or collapses the control menu.
-    pub fn toggle_visible() -> Msg {
-        Msg::ControlAction(ControlMsg::ToggleVisible)
     }
 }
