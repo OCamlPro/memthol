@@ -1,5 +1,5 @@
 header {
-  font: 120% SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
+  font: 16px SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
   color: #8dedff;
   background-color: black;
   width: 100%;
@@ -15,19 +15,23 @@ header .h1 {
 header code {
   color: #ff8b00;
   background-color: #3a3a3a;
-  background-radius: 3px;
+  border-radius: 4px;
 }
 header .tab_list {
   list-style-type: none;
   overflow: hidden;
+  font-size: 0;
   padding: 0;
-  margin: 0 20%;
+  font-size: 16px;
+  margin: 0;
+  padding: 0 20%;
 }
 header .tab_list .li_left {
   float: left;
 }
 header .tab_list .li_left .tab_active {
   display: block;
+  font-size: 16px;
   text-align: center;
   border-radius: 5px;
   padding: 14px 16px;
@@ -41,6 +45,7 @@ header .tab_list .li_left .tab_active:hover, header .tab_list .li_left .tab_acti
 }
 header .tab_list .li_left .tab_inactive {
   display: block;
+  font-size: 16px;
   text-align: center;
   border-radius: 5px;
   padding: 14px 16px;
@@ -61,6 +66,7 @@ header .tab_list .li_right {
 }
 header .tab_list .li_right .tab_active {
   display: block;
+  font-size: 16px;
   text-align: center;
   border-radius: 5px;
   padding: 14px 16px;
@@ -74,6 +80,7 @@ header .tab_list .li_right .tab_active:hover, header .tab_list .li_right .tab_ac
 }
 header .tab_list .li_right .tab_inactive {
   display: block;
+  font-size: 16px;
   text-align: center;
   border-radius: 5px;
   padding: 14px 16px;

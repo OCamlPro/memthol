@@ -9,6 +9,17 @@
     display: none
 @mixin centered
     text-align: center
+@mixin buttons
+    .expand_button
+        @include button_expand(left)
+    .collapse_button
+        @include button_collapse(left)
+    .move_up_button
+        @include button_move_up(left)
+    .move_down_button
+        @include button_move_down(left)
+    .close_button
+        @include button_close(right)
 
 /// Body mixins.
 
@@ -29,6 +40,7 @@
         color: $dark_blue
 
     .memthol_chart_container
+        @include buttons
 
         .chart_style
             @include chart_style
@@ -37,28 +49,19 @@
             @include chart_style
             @include hidden
 
-        .expand_button
-            @include button_expand(left)
-        .collapse_button
-            @include button_collapse(left)
-        .move_up_button
-            @include button_move_up(left)
-        .move_down_button
-            @include button_move_down(left)
-        .close_button
-            @include button_close(right)
-
 /// Tab mixins (for menus).
 
 /// Horizontal blocks (`<ul>`), mostly for tabs.
 @mixin hblock_container
     list-style-type: none
     overflow: hidden
+    font-size: 0
     padding: 0
 
 /// An horizontal block.
 @mixin hblock
     display: block
+    font-size: $font-size
 
 @mixin inactive_tab_style
     color: $menu_inactive_tab_fg
@@ -103,7 +106,7 @@
 
 /// Complete menu style with tabs.
 @mixin menu_style
-    font: 120% $font_stack
+    font: $font_size $font_stack
     color: $menu_fg
     background-color: $menu_bg
     width: 100%
@@ -117,12 +120,14 @@
     code
         color: $menu_code_fg
         background-color: $menu_code_bg
-        background-radius: 3px
+        border-radius: 4px
 
     .tab_list
         @include hblock_container
 
-        margin: 0 $layout_left_right_margin
+        font-size: $font_size
+        margin: 0
+        padding: 0 $layout_left_right_margin
 
         .li_left
             @include menu_tabs

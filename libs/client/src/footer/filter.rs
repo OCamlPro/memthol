@@ -21,9 +21,12 @@ impl FilterFooter {
         use filter::label::LabelSpec;
         let test_filter_1: LabelSpec = "label 1".into();
         let test_filter_2: LabelSpec = Regex::new("^set.*").unwrap().into();
-        let label_filter = LabelFilter::contains(vec![test_filter_1, test_filter_2]);
+        let label_filter_1 = LabelFilter::contains(vec![test_filter_1, test_filter_2]);
+        let test_filter_1: LabelSpec = Regex::new("^list.*").unwrap().into();
+        let test_filter_2: LabelSpec = "label 7".into();
+        let label_filter_2 = LabelFilter::contains(vec![test_filter_1, test_filter_2]);
         Self {
-            filters: vec![label_filter.into()],
+            filters: vec![label_filter_1.into(), label_filter_2.into()],
         }
     }
 

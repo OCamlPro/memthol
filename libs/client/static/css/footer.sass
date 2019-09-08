@@ -8,6 +8,71 @@
 footer
     @include menu_style
 
+    background-color: $body_bg
     bottom: 0
-
     box-shadow: $layout_shadow_hoff -$layout_shadow_voff $layout_shadow_blur $layout_shadow_spread $menu_bg
+
+    #footer_title
+        box-shadow: inset 0px -20px 10px -10px #000000
+
+    .footer_display
+        background-color: $menu_bg
+        width: 100%
+        height: 200px
+
+        .filter_ul
+            @include hblock_container
+
+            li
+                @include hblock
+
+            .filter_buttons
+                @include hblock
+                @include buttons
+                width: $layout_left_right_margin
+                text-align: right
+                float: left
+
+            $prop_width: 15%
+            $cmp_width: 15%
+            $val_width: 100% - 2 * $layout_left_right_margin - $prop_width - $cmp_width
+
+            .filter_prop
+                @include hblock
+                @include centered
+                width: $prop_width
+                line-height: 25px
+                height: 25px
+                float: left
+                border-right-width: 1px
+                border-right-color: $white
+                border-right-style: solid
+                border-bottom-width: 1px
+                border-bottom-color: $white
+                border-bottom-style: solid
+            .filter_cmp
+                @include hblock
+                @include centered
+                width: $cmp_width
+                line-height: 25px
+                height: 25px
+                float: left
+                border-right-width: 1px
+                border-right-color: $white
+                border-right-style: solid
+                border-bottom-width: 1px
+                border-bottom-color: $white
+                border-bottom-style: solid
+            .filter_val
+                @include hblock
+                @include centered
+                min-width: $val_width
+                line-height: 25px
+                height: 25px
+                float: left
+                border-bottom-width: 1px
+                border-bottom-color: $white
+                border-bottom-style: solid
+
+                code
+                    margin: 0 5px

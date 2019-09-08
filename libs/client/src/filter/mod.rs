@@ -61,6 +61,11 @@ impl Filter {
         match self {
             Filter::Size(filter) => html! {
                 <ul class="filter_ul">
+                    <li class="filter_buttons">
+                        <img
+                            class="close_button"
+                        />
+                    </li>
                     <li class="filter_li">
                         <a class="filter_prop">{ "size" }</a>
                     </li>
@@ -69,6 +74,11 @@ impl Filter {
             },
             Filter::Lifetime(filter) => html! {
                 <ul class="filter_ul">
+                    <li class="filter_buttons">
+                        <img
+                            class="close_button"
+                        />
+                    </li>
                     <li class="filter_li">
                         <input type="checkbox" class="filter_tick"/>
                     </li>
@@ -80,7 +90,11 @@ impl Filter {
             },
             Filter::Label(filter) => html! {
                 <ul class="filter_ul">
-                    // { actions }
+                    <li class="filter_buttons">
+                        <img
+                            class="close_button"
+                        />
+                    </li>
                     <li class="filter_li">
                         <a class="filter_prop">
                             { "labels" }

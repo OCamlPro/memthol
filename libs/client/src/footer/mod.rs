@@ -37,7 +37,8 @@ impl Footer {
     pub fn new() -> Self {
         let mut tabs = TabMap::new();
         FooterTab::map_all(|tab| {
-            let prev = tabs.insert(tab, false);
+            let active = tab == FooterTab::Filters;
+            let prev = tabs.insert(tab, active);
             debug_assert!(prev.is_none())
         });
         let filters = filter::FilterFooter::new();
