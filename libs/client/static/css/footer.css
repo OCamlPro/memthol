@@ -10,13 +10,17 @@ footer {
   bottom: 0;
   box-shadow: -5px 20px 8px black;
 }
-footer .h1 {
-  color: #8dedff;
-}
 footer code {
   color: #ff8b00;
   background-color: #3a3a3a;
   border-radius: 4px;
+  margin: 0 5px;
+}
+footer code.filter_label {
+  color: #23ec19;
+}
+footer .h1 {
+  color: #8dedff;
 }
 footer .tab_list {
   list-style-type: none;
@@ -97,7 +101,7 @@ footer .tab_list .li_right .tab_inactive:hover, footer .tab_list .li_right .tab_
   color: white;
   background-image: linear-gradient(#8dedff, black);
 }
-footer #footer_title {
+footer #footer_tabs {
   box-shadow: inset 0px -20px 10px -10px #000000;
 }
 footer .footer_display {
@@ -203,9 +207,6 @@ footer .footer_display .filter_ul .filter_val {
   border-bottom-width: 1px;
   border-bottom-color: white;
   border-bottom-style: solid;
-}
-footer .footer_display .filter_ul .filter_val code {
-  margin: 0 5px;
 }
 
 /*# sourceMappingURL=footer.css.map */

@@ -2,8 +2,14 @@
 
 /// Style classes.
 pub mod class {
+
     /// Tab-related classes.
+    ///
+    /// Tabs are implemented as a `<ul>` with `block` display.
     pub mod tabs {
+        /// Class for the `<ul>` around the tabs.
+        pub static UL: &str = "tab_list";
+
         /// Classes for `<li>` tab containers.
         pub mod li {
             /// Left tab.
@@ -35,6 +41,56 @@ pub mod class {
             }
         }
     }
+
+    /// Button-related classes.
+    pub mod button {
+        /// Close button.
+        pub static CLOSE: &str = "close_button";
+        /// Move down button.
+        pub static MOVE_DOWN: &str = "move_down_button";
+        /// Move up button.
+        pub static MOVE_UP: &str = "move_up_button";
+        /// Expand button.
+        pub static EXPAND: &str = "expand_button";
+        /// Collapse button.
+        pub static COLLAPSE: &str = "collapse_button";
+    }
+
+    /// Chart-related classes.
+    pub mod chart {
+        /// Header class.
+        pub static HEADER: &str = "chart_header";
+    }
+
+    /// Filter-related classes.
+    pub mod filter {
+        /// Filter buttons class.
+        pub static BUTTONS: &str = "filter_buttons";
+        /// Filter line class.
+        pub static LINE: &str = "filter_ul";
+
+        /// Class for labels.
+        pub static LABEL: &str = "filter_label";
+
+        /// Filter line classes.
+        pub mod line {
+            /// Class of a filter line cell.
+            pub static CELL: &str = "filter_li";
+            /// Class of a (allocation) property cell.
+            pub static PROP_CELL: &str = "filter_prop";
+            /// Class of a comparator cell.
+            pub static CMP_CELL: &str = "filter_cmp";
+            /// Class of a value cell.
+            pub static VAL_CELL: &str = "filter_val";
+        }
+    }
+
+    /// Footer-related classes.
+    pub mod footer {
+        /// Display window.
+        pub static DISPLAY: &str = "footer_display";
+    }
+
 }
 
 /// Style IDs.
@@ -43,4 +99,7 @@ pub mod id {
     pub static HEADER: &str = "header";
     /// Footer id.
     pub static FOOTER: &str = "footer";
+
+    /// Footer tab container.
+    pub static FOOTER_TABS: &str = "footer_tabs";
 }

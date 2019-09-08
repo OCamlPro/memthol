@@ -28,12 +28,12 @@ impl FilterSpec<[String]> for LabelFilter {
 
         html! {
             <>
-                <li class="filter_li">
-                    <a class="filter_cmp"> { op } </a>
+                <li class=style::class::filter::line::CELL>
+                    <a class=style::class::filter::line::CMP_CELL> { op } </a>
                 </li>
-                <li class="filter_li">
-                    <a class="filter_val">
-                        <code class="label_sep"> { "[" } </code>
+                <li class=style::class::filter::line::CELL>
+                    <a class=style::class::filter::line::VAL_CELL>
+                        <code> { "[" } </code>
                         {
                             for specs.iter().enumerate().map(
                                 |(index, spec)| html! {
@@ -52,7 +52,7 @@ impl FilterSpec<[String]> for LabelFilter {
                             )
                         }
                         {"..."}
-                        <code class="label_sep"> { "]" } </code>
+                        <code> { "]" } </code>
                     </a>
                 </li>
             </>
@@ -115,7 +115,7 @@ impl FilterSpec<str> for LabelSpec {
 
     fn render(&self) -> Html {
         html! {
-            <code class="label_spec"> {
+            <code class=style::class::filter::LABEL> {
                 match self {
                     LabelSpec::Value(value) => format!("\"{}\"", value),
                     LabelSpec::Regex(regex) => format!("re(\"{}\")", regex),

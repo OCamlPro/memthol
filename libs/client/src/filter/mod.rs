@@ -53,56 +53,46 @@ impl Filter {
     }
 
     pub fn render(&self) -> Html {
-        // let actions = html! {
-        //     <li class="filter_li">
-        //         <input type="checkbox" class="filter_actions"/>
-        //     </li>
-        // };
-        match self {
-            Filter::Size(filter) => html! {
-                <ul class="filter_ul">
-                    <li class="filter_buttons">
-                        <img
-                            class="close_button"
-                        />
-                    </li>
-                    <li class="filter_li">
-                        <a class="filter_prop">{ "size" }</a>
-                    </li>
-                    { filter.render() }
-                </ul>
-            },
-            Filter::Lifetime(filter) => html! {
-                <ul class="filter_ul">
-                    <li class="filter_buttons">
-                        <img
-                            class="close_button"
-                        />
-                    </li>
-                    <li class="filter_li">
-                        <input type="checkbox" class="filter_tick"/>
-                    </li>
-                    <li class="filter_li">
-                        <a class="filter_prop">{ "lifetime" }</a>
-                    </li>
-                    { filter.render() }
-                </ul>
-            },
-            Filter::Label(filter) => html! {
-                <ul class="filter_ul">
-                    <li class="filter_buttons">
-                        <img
-                            class="close_button"
-                        />
-                    </li>
-                    <li class="filter_li">
-                        <a class="filter_prop">
-                            { "labels" }
-                        </a>
-                    </li>
-                    { filter.render() }
-                </ul>
-            },
+        html! {
+            <ul class=style::class::filter::LINE>
+                <li class=style::class::filter::BUTTONS>
+                    { buttons::dummy_close() }
+                </li>
+                {
+                    match self {
+                        Filter::Size(filter) => html! {
+                            <>
+                                <li class=style::class::filter::line::CELL>
+                                    <a class=style::class::filter::line::PROP_CELL>
+                                        { "size" }
+                                    </a>
+                                </li>
+                                { filter.render() }
+                            </>
+                        },
+                        Filter::Lifetime(filter) => html! {
+                            <>
+                                <li class=style::class::filter::line::CELL>
+                                    <a class=style::class::filter::line::PROP_CELL>
+                                        { "lifetime" }
+                                    </a>
+                                </li>
+                                { filter.render() }
+                            </>
+                        },
+                        Filter::Label(filter) => html! {
+                            <>
+                                <li class=style::class::filter::line::CELL>
+                                    <a class=style::class::filter::line::PROP_CELL>
+                                        { "labels" }
+                                    </a>
+                                </li>
+                                { filter.render() }
+                            </>
+                        },
+                    }
+                }
+            </ul>
         }
     }
 }

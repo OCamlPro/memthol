@@ -5,7 +5,12 @@ body {
 }
 body code {
   color: #d77500;
-  background-color: #3a3a3a;
+  background-color: #a0a0a0;
+  border-radius: 4px;
+  margin: 0 5px;
+}
+body code.filter_label {
+  color: #1bad14;
 }
 body .h1 {
   color: #00d8ff;
@@ -49,6 +54,9 @@ body .memthol_chart_container .close_button {
 }
 body .memthol_chart_container .close_button:hover {
   cursor: pointer;
+}
+body .memthol_chart_container .chart_header {
+  margin: 0 20%;
 }
 body .memthol_chart_container .chart_style {
   width: 100%;

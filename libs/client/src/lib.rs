@@ -6,6 +6,7 @@ mod base;
 #[macro_use]
 mod uid;
 
+pub mod buttons;
 pub mod chart;
 pub mod data;
 pub mod filter;

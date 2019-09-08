@@ -1,0 +1,75 @@
+//! Helpers for memthol's UI buttons.
+
+use crate::base::*;
+
+/// Creates a close button with no onclick action.
+pub fn dummy_close() -> Html {
+    html! {
+        <img class=style::class::button::CLOSE/>
+    }
+}
+
+/// Creates a close button.
+pub fn close<Action>(action: Action) -> Html
+where
+    Action: OnClick,
+{
+    html! {
+        <img
+            class=style::class::button::CLOSE
+            onclick=|e| action(e)
+        />
+    }
+}
+
+/// Creates an expand button.
+pub fn expand<Action>(action: Action) -> Html
+where
+    Action: OnClick,
+{
+    html! {
+        <img
+            class=style::class::button::EXPAND
+            onclick=|e| action(e)
+        />
+    }
+}
+
+/// Creates a collapse button.
+pub fn collapse<Action>(action: Action) -> Html
+where
+    Action: OnClick,
+{
+    html! {
+        <img
+            class=style::class::button::COLLAPSE
+            onclick=|e| action(e)
+        />
+    }
+}
+
+/// Creates a move down button.
+pub fn move_down<Action>(action: Action) -> Html
+where
+    Action: OnClick,
+{
+    html! {
+        <img
+            class=style::class::button::MOVE_DOWN
+            onclick=|e| action(e)
+        />
+    }
+}
+
+/// Creates a move up button.
+pub fn move_up<Action>(action: Action) -> Html
+where
+    Action: OnClick,
+{
+    html! {
+        <img
+            class=style::class::button::MOVE_UP
+            onclick=|e| action(e)
+        />
+    }
+}

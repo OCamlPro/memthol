@@ -183,7 +183,7 @@ impl TopTabs {
     /// Renders all the tabs.
     pub fn render(&self) -> Html {
         html! {
-            <ul class="tab_list">
+            <ul class=style::class::tabs::UL>
                 { for self.tabs.iter().map(TabDesc::render) }
             </ul>
         }

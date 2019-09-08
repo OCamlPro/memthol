@@ -15,7 +15,7 @@ pub use yew::{html, services::websocket, Component, ComponentLink, Renderable, S
 pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Uid as AllocUid};
 
 pub use crate::{
-    chart,
+    buttons, chart,
     chart::{ChartUid, Charts},
     data::Storage,
     filter, footer,
@@ -24,6 +24,10 @@ pub use crate::{
     msg::Msg,
     style,
 };
+
+/// Type of `onclick` actions.
+pub trait OnClick: Fn(yew::events::ClickEvent) -> Msg + 'static {}
+impl<Action> OnClick for Action where Action: Fn(yew::events::ClickEvent) -> Msg + 'static {}
 
 /// Retrieves the address and port of the server.
 pub fn get_server_addr() -> (String, usize) {

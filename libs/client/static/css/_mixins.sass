@@ -21,6 +21,28 @@
     .close_button
         @include button_close(right)
 
+/// Code mixins.
+
+@mixin body_code
+    code
+        color: $body_code_fg
+        background-color: $body_code_bg
+        border-radius: 4px
+        margin: 0 5px
+
+    code.filter_label
+        color: $dark_green
+
+@mixin menu_code
+    code
+        color: $menu_code_fg
+        background-color: $menu_code_bg
+        border-radius: 4px
+        margin: 0 5px
+
+    code.filter_label
+        color: $light_green
+
 /// Body mixins.
 
 @mixin chart_style
@@ -28,19 +50,19 @@
     height: $layout_chart_height
 
 @mixin body_style
+    @include body_code
     font: 120% $font_stack
     color: $body_fg
     background-color: $body_bg
-
-    code
-        color: $body_code_fg
-        background-color: $menu_code_bg
 
     .h1
         color: $dark_blue
 
     .memthol_chart_container
         @include buttons
+
+        .chart_header
+            margin: 0 $layout_left_right_margin
 
         .chart_style
             @include chart_style
@@ -106,6 +128,7 @@
 
 /// Complete menu style with tabs.
 @mixin menu_style
+    @include menu_code
     font: $font_size $font_stack
     color: $menu_fg
     background-color: $menu_bg
@@ -116,11 +139,6 @@
 
     .h1
         color: $light_blue
-
-    code
-        color: $menu_code_fg
-        background-color: $menu_code_bg
-        border-radius: 4px
 
     .tab_list
         @include hblock_container

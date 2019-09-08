@@ -107,22 +107,12 @@ impl TimeChart {
     /// Creates a collapse button for this chart.
     fn collapse_button(&self) -> Html {
         let uid = self.uid;
-        html! {
-            <img
-                class="collapse_button"
-                onclick=|_| ChartsMsg::collapse(uid)
-            />
-        }
+        buttons::collapse(move |_| ChartsMsg::collapse(uid))
     }
     /// Creates an expand button for this chart.
     fn expand_button(&self) -> Html {
         let uid = self.uid;
-        html! {
-            <img
-                class="expand_button"
-                onclick=|_| ChartsMsg::expand(uid)
-            />
-        }
+        buttons::expand(move |_| ChartsMsg::expand(uid))
     }
 
     /// Renders itself.
@@ -135,20 +125,12 @@ impl TimeChart {
         let uid = self.uid;
         html! {
             <g>
-            <center>
+            <center class=style::class::chart::HEADER>
                 {expand_or_collapse_button}
-                <img
-                    class="move_up_button"
-                    onclick=|_| ChartsMsg::move_up(uid)
-                />
-                <img
-                    class="move_down_button"
-                    onclick=|_| ChartsMsg::move_down(uid)
-                />
-                <img
-                    class="close_button"
-                    onclick=|_| ChartsMsg::close(uid)
-                />
+                { buttons::move_up(move |_| ChartsMsg::move_up(uid)) }
+                { buttons::move_down(move |_| ChartsMsg::move_down(uid)) }
+                { buttons::close(move |_| ChartsMsg::close(uid)) }
+
                 <h2> { format!("{} over time", self.value.desc()) } </h2>
             </center>
                 <div id={&self.html_id}

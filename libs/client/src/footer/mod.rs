@@ -37,8 +37,7 @@ impl Footer {
     pub fn new() -> Self {
         let mut tabs = TabMap::new();
         FooterTab::map_all(|tab| {
-            let active = tab == FooterTab::Filters;
-            let prev = tabs.insert(tab, active);
+            let prev = tabs.insert(tab, false);
             debug_assert!(prev.is_none())
         });
         let filters = filter::FilterFooter::new();
@@ -58,8 +57,8 @@ impl Footer {
     /// Renders itself.
     pub fn render(&self) -> Html {
         html! {
-            <div id="footer">
-                <ul id="footer_title" class="tab_list">
+            <div id=style::id::FOOTER>
+                <ul id=style::id::FOOTER_TABS class=style::class::tabs::UL>
                     { for self.tabs.iter().map(|(tab, active)| tab.render(*active)) }
                 </ul>
                 {
@@ -67,7 +66,9 @@ impl Footer {
                         None => html!(<a/>),
                         Some(FooterTab::Filters) => {
                             html! {
-                                <div class="footer_display"> { self.filters.render() } </div>
+                                <div class=style::class::footer::DISPLAY>
+                                    { self.filters.render() }
+                                </div>
                             }
                         }
                         Some(FooterTab::Stats) => {
