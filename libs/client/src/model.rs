@@ -195,7 +195,7 @@ impl Model {
     /// Renders the header (tabs).
     pub fn render_header(&self) -> Html {
         html! {
-            <header class="header_style">
+            <header>
                 { self.top_tabs.render() }
             </header>
         }
@@ -215,9 +215,9 @@ impl Model {
     /// Renders the footer.
     fn render_footer(&self) -> Html {
         html! {
-            <div class="footer_style">
+            <footer>
                 { self.footer.render() }
-            </div>
+            </footer>
         }
     }
 }

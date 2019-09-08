@@ -1,0 +1,133 @@
+//! Mixins that describe generic styles.
+
+@import "colors"
+@import "fonts"
+@import "buttons"
+
+/// Basic helpers.
+@mixin hidden
+    display: none
+@mixin centered
+    text-align: center
+
+/// Body mixins.
+
+@mixin chart_style
+    width: $layout_chart_width
+    height: $layout_chart_height
+
+@mixin body_style
+    font: 120% $font_stack
+    color: $body_fg
+    background-color: $body_bg
+
+    code
+        color: $body_code_fg
+        background-color: $menu_code_bg
+
+    .h1
+        color: $dark_blue
+
+    .memthol_chart_container
+
+        .chart_style
+            @include chart_style
+
+        .hidden_chart_style
+            @include chart_style
+            @include hidden
+
+        .expand_button
+            @include button_expand(left)
+        .collapse_button
+            @include button_collapse(left)
+        .move_up_button
+            @include button_move_up(left)
+        .move_down_button
+            @include button_move_down(left)
+        .close_button
+            @include button_close(right)
+
+/// Tab mixins (for menus).
+
+/// Horizontal blocks (`<ul>`), mostly for tabs.
+@mixin hblock_container
+    list-style-type: none
+    overflow: hidden
+    padding: 0
+
+/// An horizontal block.
+@mixin hblock
+    display: block
+
+@mixin inactive_tab_style
+    color: $menu_inactive_tab_fg
+    background-image: linear-gradient($menu_inactive_tab_bg, $menu_bg)
+@mixin active_tab_style
+    color: $menu_active_tab_fg
+    background-image: linear-gradient($menu_active_tab_bg, $menu_bg)
+
+/// Menu tabs (footer/header)
+@mixin menu_tab
+    @include hblock
+    @include centered
+
+    border-radius: 5px
+    padding: 14px 16px
+    text-decoration: none
+
+    &:hover,
+    &:active
+        text-decoration: underline
+        cursor: pointer
+
+/// Inactive menu tab.
+@mixin menu_inactive_tab
+    @include menu_tab
+    @include inactive_tab_style
+
+    &:hover,
+    &:active
+        @include active_tab_style
+
+/// Active menu tab.
+@mixin menu_active_tab
+    @include menu_tab
+    @include active_tab_style
+
+@mixin menu_tabs
+    .tab_active
+        @include menu_active_tab
+    .tab_inactive
+        @include menu_inactive_tab
+
+/// Complete menu style with tabs.
+@mixin menu_style
+    font: 120% $font_stack
+    color: $menu_fg
+    background-color: $menu_bg
+    width: 100%
+    position: fixed
+    z-index: 600
+    left: 0
+
+    .h1
+        color: $light_blue
+
+    code
+        color: $menu_code_fg
+        background-color: $menu_code_bg
+        background-radius: 3px
+
+    .tab_list
+        @include hblock_container
+
+        margin: 0 $layout_left_right_margin
+
+        .li_left
+            @include menu_tabs
+            float: left
+        .li_right
+            @include menu_tabs
+            float: right
+

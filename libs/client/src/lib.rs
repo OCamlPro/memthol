@@ -7,11 +7,12 @@ mod base;
 mod uid;
 
 pub mod chart;
-pub mod cst;
 pub mod data;
+pub mod filter;
 pub mod footer;
 mod model;
 pub mod msg;
+pub mod style;
 mod tmp;
 pub mod top_tabs;
 

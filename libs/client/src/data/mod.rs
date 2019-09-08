@@ -11,7 +11,7 @@ pub struct Storage {
     /// Init information.
     init: alloc_data::Init,
     /// Current date.
-    current: AllocDate,
+    current: SinceStart,
     /// History of all the diffs.
     history: Vec<AllocDiff>,
     /// All dead data seen so far.
@@ -33,10 +33,9 @@ pub struct Storage {
 impl Storage {
     /// Constructor.
     pub fn new(init: alloc_data::Init) -> Self {
-        let current = init.start_time;
         Self {
             init,
-            current,
+            current: Duration::new(0, 0).into(),
             history: Vec::with_capacity(103),
             dead: Map::new(),
             live: Map::new(),
@@ -50,7 +49,14 @@ impl Storage {
     }
 
     /// Current time.
-    pub fn current_time(&self) -> &AllocDate {
+    pub fn current_time(&self) -> AllocDate {
+        let mut current_time = self.init.start_time.clone();
+        current_time.add(self.current);
+        current_time
+    }
+
+    /// Current time since start.
+    pub fn current_time_since_start(&self) -> &SinceStart {
         &self.current
     }
 
@@ -126,8 +132,7 @@ impl Storage {
     /// filter(s).
     pub fn add_diff(&mut self, diff: AllocDiff) -> bool {
         let mut changed = false;
-        self.current = self.start_time();
-        self.current.add(diff.time.clone());
+        self.current = diff.time;
         for alloc in &diff.new {
             let new_stuff = self.add_alloc(alloc.clone());
             changed = changed || new_stuff
@@ -188,7 +193,4 @@ impl Storage {
             f(diff)
         }
     }
-
-    // /// Adds a filter.
-    // pub fn add_filter(&mut self, filter: )
 }

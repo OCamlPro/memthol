@@ -75,19 +75,11 @@ impl TabDesc {
 
     /// Renders a tab.
     pub fn render(&self) -> Html {
-        use cst::class::top_tab::*;
         let kind = self.kind;
-        let left = if self.left { LEFT } else { RIGHT };
         html! {
-            <li class={left}>
+            <li class={ style::class::tabs::li::get(self.left) }>
                 <a
-                    class={
-                        if self.active {
-                            ACTIVE
-                        } else {
-                            INACTIVE
-                        }
-                    }
+                    class={ style::class::tabs::get(self.active) }
                     onclick=|_| Msg::ChangeTab(kind)
                 >
                     { self.kind.to_str() }

@@ -3,13 +3,13 @@
 #[macro_use]
 extern crate clap;
 
-mod assets;
+pub mod assets;
 mod base;
 #[macro_use]
 pub mod conf;
-mod err;
-mod router;
-mod socket;
+pub mod err;
+pub mod router;
+pub mod socket;
 
 /// Default clap values.
 mod default {

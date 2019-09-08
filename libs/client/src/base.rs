@@ -1,12 +1,14 @@
 //! Basic types and stuffs.
 
-pub use std::{collections::BTreeMap as Map, collections::BTreeSet as Set, fmt};
+pub use std::{collections::BTreeMap as Map, collections::BTreeSet as Set, fmt, time::Duration};
 
 use lazy_static::lazy_static;
 
 pub use log::{error, info, warn};
 
 pub use stdweb::{js, Value as JsVal};
+
+pub use regex::Regex;
 
 pub use yew::{html, services::websocket, Component, ComponentLink, Renderable, ShouldRender};
 
@@ -15,12 +17,12 @@ pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Ui
 pub use crate::{
     chart,
     chart::{ChartUid, Charts},
-    cst,
     data::Storage,
-    footer,
+    filter, footer,
     model::Model,
     msg,
     msg::Msg,
+    style,
 };
 
 /// Retrieves the address and port of the server.

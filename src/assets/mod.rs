@@ -20,6 +20,8 @@
 //! Hence, assets are not embedded and the binary will use the crate's directory's `static`
 //! directory.
 
+use std::path::PathBuf;
+
 use crate::base::*;
 
 /// Initializes memthol's assets.
@@ -27,30 +29,39 @@ pub fn init(addr: &str, port: usize) -> Res<()> {
     content::setup(addr, port)
 }
 
-mod content {
-    use std::io::Write;
-    use std::{fs, path::PathBuf};
+/// String version of the path to the main asset directories.
+macro_rules! asset_dir {
+    (root) => {
+        "static"
+    };
+    (css) => {
+        concat!(asset_dir!(root), "/css")
+    };
+    (pics) => {
+        concat!(asset_dir!(root), "/pics")
+    };
+}
 
-    use lazy_static::lazy_static;
+/// String version of the path to a file in a main asset directory.
+macro_rules! asset_file {
+    ($key:tt / $path:expr) => {
+        concat!(asset_dir!($key), "/", $path)
+    };
+}
 
-    use crate::base::*;
+lazy_static::lazy_static! {
+    /// Path to the asset directory.
+    static ref ASSET_DIR: PathBuf = asset_dir!(root).into();
+    /// Path to the css directory.
+    static ref CSS_DIR: PathBuf = asset_dir!(css).into();
+    /// Path to the picture directory.
+    static ref PICS_DIR: PathBuf = asset_dir!(pics).into();
+}
 
-    lazy_static! {
-        /// Path to the asset directory.
-        static ref ASSET_DIR: PathBuf = "static".into();
-        /// Path to the css directory.
-        static ref CSS_DIR: PathBuf = {
-            let mut path = ASSET_DIR.clone();
-            path.push("css");
-            path
-        };
-        /// Path to the picture directory.
-        static ref PICS_DIR: PathBuf = {
-            let mut path = ASSET_DIR.clone();
-            path.push("pics");
-            path
-        };
-    }
+pub mod content {
+    use std::{fs, io::Write};
+
+    use super::*;
 
     /// Sets up the assets for the UI.
     pub fn setup(addr: &str, port: usize) -> Res<()> {
@@ -123,7 +134,7 @@ mod content {
     }
 
     /// Writes a file somewhere.
-    fn write_file(path: &PathBuf, content: &[u8]) -> Res<()> {
+    pub fn write_file(path: &PathBuf, content: &[u8]) -> Res<()> {
         let mut writer = writer_of_file(path)?;
         write_writer(&mut writer, content).chain_err(|| {
             format!(
@@ -174,246 +185,96 @@ var serverAddr = {{
         }
     }
 
+    /// Builds a `generate` function that generates asset files.
+    ///
+    /// All asset file paths are relative from the client's crate directory.
+    ///
+    /// # Examples
+    ///
+    /// ```rust, ignore
+    /// mod content {
+    ///     make_generator_for! {
+    ///         /// Main HTML file.
+    ///         HTML: "static/path/to/index.html",
+    ///         /// Main CSS file.
+    ///         CSS: "static/path/to/style.css",
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// This only works if the client's static directory contains both files at the path passed
+    /// above. The result is a `content::generate` function that dumps the content of the files from
+    /// the client's static directory to `"static/path/to/<file>"`.
+    macro_rules! make_generator_for {
+        (
+            $($(#[$doc:meta])*$id:ident : $path:expr),* $(,)*
+        ) => {
+            /// Paths to the assets.
+            pub mod path {
+                lazy_static::lazy_static! {$(
+                    $(#[$doc])*
+                    pub static ref $id: std::path::PathBuf = $path.into();
+                )*}
+            }
+
+            // Actual assets.
+            lazy_static::lazy_static! {$(
+                $(#[$doc])*
+                pub static ref $id: &'static [u8] = {
+                    include_bytes!(
+                        concat!(
+                            "../../",
+                            $path,
+                        )
+                    )
+                };
+            )*}
+
+            /// Dumps some static assets to where they belong.
+            pub fn generate() -> crate::base::Res<()> {
+                $(crate::assets::content::write_file(&*path::$id, &*$id)?;)*
+                Ok(())
+            }
+        };
+    }
+
     /// Generates CSS-related files.
-    mod top {
-        use std::path::PathBuf;
-
-        use super::*;
-
-        lazy_static::lazy_static! {
+    pub mod top {
+        make_generator_for! {
             /// Main HTML file.
-            static ref HTML_PATH: PathBuf = {
-                let mut target = ASSET_DIR.clone();
-                target.push("index.html");
-                target
-            };
+            HTML: asset_file!(root / "index.html"),
             /// Favicon.
-            static ref FAVICON_PATH: PathBuf = {
-                let mut target = ASSET_DIR.clone();
-                target.push("favicon.png");
-                target
-            };
+            FAVICON: asset_file!(root / "favicon.png"),
             /// Memthol client's js script.
-            static ref JS_PATH: PathBuf = {
-                let mut target = ASSET_DIR.clone();
-                target.push("client.js");
-                target
-            };
+            MEMTHOL_JS: asset_file!(root / "client.js"),
             /// Memthol client's wasm code.
-            static ref WASM_PATH: PathBuf = {
-                let mut target = ASSET_DIR.clone();
-                target.push("client.wasm");
-                target
-            };
-        }
-
-        /// Content of the CSS files.
-        mod content {
-            lazy_static::lazy_static! {
-                /// Main HTML file.
-                pub static ref HTML: &'static [u8] = include_bytes!(
-                    "../../static/index.html"
-                );
-                /// Favicon.
-                pub static ref FAVICON: &'static [u8] = include_bytes!(
-                    "../../static/favicon.png"
-                );
-                /// Memthol client's js script.
-                pub static ref JS: &'static [u8] = include_bytes!(
-                    "../../static/client.js"
-                );
-                /// Memthol client's wasm code.
-                pub static ref WASM: &'static [u8] = include_bytes!(
-                    "../../static/client.wasm"
-                );
-            }
-        }
-
-        lazy_static::lazy_static! {
-            /// All top files.
-            static ref ALL_TOP_FILES: [(&'static PathBuf, &'static [u8]) ; 4] = [
-                (&*HTML_PATH, &*content::HTML),
-                (&*FAVICON_PATH, &*content::FAVICON),
-                (&*JS_PATH, &*content::JS),
-                (&*WASM_PATH, &*content::WASM)
-            ];
-        }
-
-        pub fn generate() -> Res<()> {
-            for (path, content) in ALL_TOP_FILES.iter() {
-                write_file(path, content)?
-            }
-            Ok(())
+            MEMTHOL_WASM: asset_file!(root / "client.wasm"),
         }
     }
 
     /// Generates CSS-related files.
-    mod css {
-        use std::path::PathBuf;
-
-        use super::*;
-
-        lazy_static::lazy_static! {
+    pub mod css {
+        make_generator_for! {
             /// Main CSS file.
-            static ref CSS_PATH: PathBuf = {
-                let mut target = CSS_DIR.clone();
-                target.push("client.css");
-                target
-            };
-            /// CSS file map.
-            static ref CSS_MAP_PATH: PathBuf = {
-                let mut target = CSS_DIR.clone();
-                target.push("client.css.map");
-                target
-            };
-            /// SASS file.
-            static ref SASS_PATH: PathBuf = {
-                let mut target = CSS_DIR.clone();
-                target.push("client.sass");
-                target
-            };
-        }
-
-        /// Content of the CSS files.
-        mod content {
-            lazy_static::lazy_static! {
-                /// Main CSS file.
-                pub static ref CSS: &'static [u8] = include_bytes!(
-                    "../../static/css/client.css"
-                );
-                /// CSS file map.
-                pub static ref CSS_MAP: &'static [u8] = include_bytes!(
-                    "../../static/css/client.css.map"
-                );
-                /// SASS file.
-                pub static ref SASS: &'static [u8] = include_bytes!(
-                    "../../static/css/client.sass"
-                );
-            }
-        }
-
-        lazy_static::lazy_static! {
-            /// All CSS-related files.
-            static ref ALL_CSS_FILES: [(&'static PathBuf, &'static [u8]) ; 3] = [
-                (&*CSS_PATH, &*content::CSS),
-                (&*CSS_MAP_PATH, &*content::CSS_MAP),
-                (&*SASS_PATH, &*content::SASS)
-            ];
-        }
-
-        pub fn generate() -> Res<()> {
-            for (path, content) in ALL_CSS_FILES.iter() {
-                write_file(path, content)?
-            }
-            Ok(())
+            MAIN_CSS: asset_file!(css / "style.css"),
+            /// Main CSS file map.
+            MAIN_CSS_MAP: asset_file!(css / "style.css.map"),
         }
     }
 
     /// Generates pictures.
-    mod pics {
-        use std::path::PathBuf;
-
-        use super::*;
-
-        lazy_static::lazy_static! {
-            /// Header `h1` picture.
-            static ref H1_PATH: PathBuf = {
-                let mut target = PICS_DIR.clone();
-                target.push("h1_background.png");
-                target
-            };
-            /// Highlighting picture.
-            static ref HILI_PATH: PathBuf = {
-                let mut target = PICS_DIR.clone();
-                target.push("hili_background.png");
-                target
-            };
-
-            /// Cross picture.
-            static ref CLOSE_PATH: PathBuf = {
-                let mut target = PICS_DIR.clone();
-                target.push("close.png");
-                target
-            };
-            /// Arrow up picture.
-            static ref ARROW_UP_PATH: PathBuf = {
-                let mut target = PICS_DIR.clone();
-                target.push("arrow_up.png");
-                target
-            };
-            /// Arrow down picture.
-            static ref ARROW_DOWN_PATH: PathBuf = {
-                let mut target = PICS_DIR.clone();
-                target.push("arrow_down.png");
-                target
-            };
-            /// Arrow up picture.
-            static ref EXPAND_PATH: PathBuf = {
-                let mut target = PICS_DIR.clone();
-                target.push("expand.png");
-                target
-            };
-            /// Arrow up picture.
-            static ref COLLAPSE_PATH: PathBuf = {
-                let mut target = PICS_DIR.clone();
-                target.push("collapse.png");
-                target
-            };
-        }
-
-        /// Content of the CSS files.
-        mod content {
-            lazy_static::lazy_static! {
-                /// Header `h1` picture.
-                pub static ref H1: &'static [u8] = include_bytes!(
-                    "../../static/pics/h1_background.png"
-                );
-                /// Highlighting picture.
-                pub static ref HILI: &'static [u8] = include_bytes!(
-                    "../../static/pics/hili_background.png"
-                );
-
-                /// Cross.
-                pub static ref CLOSE: &'static [u8] = include_bytes!(
-                    "../../static/pics/close.png"
-                );
-                /// Arrow up.
-                pub static ref ARROW_UP: &'static [u8] = include_bytes!(
-                    "../../static/pics/arrow_up.png"
-                );
-                /// Arrow down.
-                pub static ref ARROW_DOWN: &'static [u8] = include_bytes!(
-                    "../../static/pics/arrow_down.png"
-                );
-                /// Expand.
-                pub static ref EXPAND: &'static [u8] = include_bytes!(
-                    "../../static/pics/expand.png"
-                );
-                /// Collapse.
-                pub static ref COLLAPSE: &'static [u8] = include_bytes!(
-                    "../../static/pics/collapse.png"
-                );
-            }
-        }
-
-        lazy_static::lazy_static! {
-            /// All picture files.
-            static ref ALL_PICS_FILES: [(&'static PathBuf, &'static [u8]) ; 7] = [
-                (&*H1_PATH, &*content::H1),
-                (&*HILI_PATH, &*content::HILI),
-                (&*CLOSE_PATH, &*content::CLOSE),
-                (&*ARROW_UP_PATH, &*content::ARROW_UP),
-                (&*ARROW_DOWN_PATH, &*content::ARROW_DOWN),
-                (&*EXPAND_PATH, &*content::EXPAND),
-                (&*COLLAPSE_PATH, &*content::COLLAPSE),
-            ];
-        }
-
-        pub fn generate() -> Res<()> {
-            for (path, content) in ALL_PICS_FILES.iter() {
-                write_file(path, content)?
-            }
-            Ok(())
+    pub mod pics {
+        make_generator_for! {
+            /// Cross.
+            CLOSE: asset_file!(pics / "close.png"),
+            /// Arrow up.
+            ARROW_UP: asset_file!(pics / "arrow_up.png"),
+            /// Arrow down.
+            ARROW_DOWN: asset_file!(pics / "arrow_down.png"),
+            /// Expand.
+            EXPAND: asset_file!(pics / "expand.png"),
+            /// Collapse.
+            COLLAPSE: asset_file!(pics / "collapse.png"),
         }
     }
 }

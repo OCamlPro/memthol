@@ -62,7 +62,7 @@ impl Charts {
     /// Renders itself as HTML.
     pub fn render(&self) -> Html {
         html! {
-            <g id={HTML_CHART_CONTAINER_ID}>
+            <g class={HTML_CHART_CONTAINER_ID}>
                 { for self.charts.iter().map(time::TimeChart::render) }
             </g>
         }

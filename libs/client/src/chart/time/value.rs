@@ -93,7 +93,7 @@ pub mod diff {
             };
         }
         // Add the current time.
-        map!(add *data.current_time() => 0);
+        map!(add data.current_time() => 0);
 
         for alloc in &diff.new {
             let toc = date_of(alloc.toc());

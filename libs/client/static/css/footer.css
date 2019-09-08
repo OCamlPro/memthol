@@ -1,0 +1,93 @@
+footer {
+  font: 120% SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
+  color: #8dedff;
+  background-color: black;
+  width: 100%;
+  position: fixed;
+  z-index: 600;
+  left: 0;
+  bottom: 0;
+  box-shadow: -5px 20px 8px black;
+}
+footer .h1 {
+  color: #8dedff;
+}
+footer code {
+  color: #ff8b00;
+  background-color: #3a3a3a;
+  background-radius: 3px;
+}
+footer .tab_list {
+  list-style-type: none;
+  overflow: hidden;
+  padding: 0;
+  margin: 0 20%;
+}
+footer .tab_list .li_left {
+  float: left;
+}
+footer .tab_list .li_left .tab_active {
+  display: block;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .tab_list .li_left .tab_active:hover, footer .tab_list .li_left .tab_active:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .tab_list .li_left .tab_inactive {
+  display: block;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: #8dedff;
+  background-image: linear-gradient(#3a3a3a, black);
+}
+footer .tab_list .li_left .tab_inactive:hover, footer .tab_list .li_left .tab_inactive:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .tab_list .li_left .tab_inactive:hover, footer .tab_list .li_left .tab_inactive:active {
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .tab_list .li_right {
+  float: right;
+}
+footer .tab_list .li_right .tab_active {
+  display: block;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .tab_list .li_right .tab_active:hover, footer .tab_list .li_right .tab_active:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .tab_list .li_right .tab_inactive {
+  display: block;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: #8dedff;
+  background-image: linear-gradient(#3a3a3a, black);
+}
+footer .tab_list .li_right .tab_inactive:hover, footer .tab_list .li_right .tab_inactive:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .tab_list .li_right .tab_inactive:hover, footer .tab_list .li_right .tab_inactive:active {
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+
+/*# sourceMappingURL=footer.css.map */
