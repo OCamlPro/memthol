@@ -49,28 +49,6 @@
     width: $layout_chart_width
     height: $layout_chart_height
 
-@mixin body_style
-    @include body_code
-    font: 120% $font_stack
-    color: $body_fg
-    background-color: $body_bg
-
-    .h1
-        color: $dark_blue
-
-    .memthol_chart_container
-        @include buttons
-
-        .chart_header
-            margin: 0 $layout_left_right_margin
-
-        .chart_style
-            @include chart_style
-
-        .hidden_chart_style
-            @include chart_style
-            @include hidden
-
 /// Tab mixins (for menus).
 
 /// Horizontal blocks (`<ul>`), mostly for tabs.
@@ -146,6 +124,7 @@
         font-size: $font_size
         margin: 0
         padding: 0 $layout_left_right_margin
+        height: $layout_tab_height
 
         .li_left
             @include menu_tabs

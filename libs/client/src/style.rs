@@ -3,6 +3,11 @@
 /// Style classes.
 pub mod class {
 
+    /// Class of the body of the UI.
+    pub static BODY: &str = "body";
+    /// Class of the `<div>` of the UI containing the header, the body, and the footer.
+    pub static FULL_BODY: &str = "body_header_footer";
+
     /// Tab-related classes.
     ///
     /// Tabs are implemented as a `<ul>` with `block` display.

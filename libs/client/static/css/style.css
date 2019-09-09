@@ -1,7 +1,6 @@
 body {
   font: 120% SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
-  color: #3a3a3a;
-  background-color: white;
+  background-color: black;
 }
 body code {
   color: #d77500;
@@ -11,6 +10,14 @@ body code {
 }
 body code.filter_label {
   color: #1bad14;
+}
+body .body_header_footer {
+  padding: 45px 0px 245px 0px;
+  background-color: white;
+  color: #3a3a3a;
+}
+body .body {
+  min-height: 100vh;
 }
 body .h1 {
   color: #00d8ff;
@@ -99,6 +106,7 @@ header .tab_list {
   font-size: 16px;
   margin: 0;
   padding: 0 20%;
+  height: 45px;
 }
 header .tab_list .li_left {
   float: left;
@@ -179,9 +187,8 @@ footer {
   position: fixed;
   z-index: 600;
   left: 0;
-  background-color: white;
   bottom: 0;
-  box-shadow: -5px 20px 8px black;
+  box-shadow: 0px 0px 10px 10px black;
 }
 footer code {
   color: #ff8b00;
@@ -203,6 +210,7 @@ footer .tab_list {
   font-size: 16px;
   margin: 0;
   padding: 0 20%;
+  height: 45px;
 }
 footer .tab_list .li_left {
   float: left;
@@ -273,9 +281,6 @@ footer .tab_list .li_right .tab_inactive:hover, footer .tab_list .li_right .tab_
 footer .tab_list .li_right .tab_inactive:hover, footer .tab_list .li_right .tab_inactive:active {
   color: white;
   background-image: linear-gradient(#8dedff, black);
-}
-footer #footer_tabs {
-  box-shadow: inset 0px -20px 10px -10px #000000;
 }
 footer .footer_display {
   background-color: black;

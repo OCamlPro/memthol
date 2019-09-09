@@ -6,4 +6,30 @@
 @import "mixins"
 
 body
-    @include body_style
+    @include body_code
+    font: 120% $font_stack
+    background-color: black
+
+    .body_header_footer
+        padding: $layout_tab_height 0px ($layout_tab_height + $layout_footer_display_height) 0px
+        background-color: $body_bg
+        color: $body_fg
+
+    .body
+        min-height: 100vh
+
+    .h1
+        color: $dark_blue
+
+    .memthol_chart_container
+        @include buttons
+
+        .chart_header
+            margin: 0 $layout_left_right_margin
+
+        .chart_style
+            @include chart_style
+
+        .hidden_chart_style
+            @include chart_style
+            @include hidden

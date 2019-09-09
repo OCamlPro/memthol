@@ -1,7 +1,6 @@
 body {
   font: 120% SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
-  color: #3a3a3a;
-  background-color: white;
+  background-color: black;
 }
 body code {
   color: #d77500;
@@ -11,6 +10,14 @@ body code {
 }
 body code.filter_label {
   color: #1bad14;
+}
+body .body_header_footer {
+  padding: 45px 0px 245px 0px;
+  background-color: white;
+  color: #3a3a3a;
+}
+body .body {
+  min-height: 100vh;
 }
 body .h1 {
   color: #00d8ff;

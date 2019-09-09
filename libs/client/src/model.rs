@@ -202,18 +202,16 @@ impl Model {
     }
 
     /// Renders the content.
-    fn render_content(&self) -> Html {
+    pub fn render_content(&self) -> Html {
         html! {
-            <g>
-                <br/>
-                <br/>
+            <div class=style::class::BODY>
                 { self.charts.render() }
-            </g>
+            </div>
         }
     }
 
     /// Renders the footer.
-    fn render_footer(&self) -> Html {
+    pub fn render_footer(&self) -> Html {
         html! {
             <footer>
                 { self.footer.render() }
@@ -225,7 +223,7 @@ impl Model {
 impl Renderable<Model> for Model {
     fn view(&self) -> Html {
         html! {
-            <div>
+            <div class=style::class::FULL_BODY>
                 { self.render_header() }
                 { self.render_content() }
                 { self.render_footer() }
