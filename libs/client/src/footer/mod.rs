@@ -64,16 +64,16 @@ impl Footer {
                 {
                     match self.get_active() {
                         None => html!(<a/>),
-                        Some(FooterTab::Filters) => {
-                            html! {
-                                <div class=style::class::footer::DISPLAY>
-                                    { self.filters.render() }
-                                </div>
-                            }
-                        }
-                        Some(FooterTab::Stats) => {
-                            panic!("stats rendering is unimplemented")
-                        }
+                        Some(FooterTab::Filters) => html! {
+                            <div class=style::class::footer::DISPLAY>
+                                { self.filters.render() }
+                            </div>
+                        },
+                        Some(FooterTab::Stats) => html! {
+                            <div class=style::class::footer::DISPLAY>
+                                { self.filters.render() }
+                            </div>
+                        },
                     }
                 }
             </div>
