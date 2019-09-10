@@ -14,6 +14,8 @@ pub enum Msg {
     ChartsAction(ChartsMsg),
     /// An action over the control menu.
     FooterAction(footer::FooterMsg),
+    ///
+    Blah(String),
     /// Do nothing.
     Nop,
     /// Start message.

@@ -6,13 +6,13 @@ pub mod label;
 pub mod ord;
 
 pub use label::LabelFilter;
-use ord::NumFilter;
+use ord::OrdFilter;
 
 /// A filter over allocation sizes.
-pub type SizeFilter = NumFilter<usize>;
+pub type SizeFilter = OrdFilter<usize>;
 
 /// A filter over lifetimes.
-pub type LifetimeFilter = NumFilter<Duration>;
+pub type LifetimeFilter = OrdFilter<SinceStart>;
 
 /// Function(s) a filter must implement.
 pub trait FilterSpec<Data>
@@ -23,20 +23,64 @@ where
     fn apply(&self, data: &Storage, alloc_data: &Data) -> bool;
 
     /// Renders the filter.
-    fn render(&self) -> Html;
+    fn render<Update>(&self, update: Update) -> Html
+    where
+        Update: Fn(Option<Filter>) -> Msg + Copy + 'static;
+}
+
+/// Filter kind.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum FilterKind {
+    Size,
+    Lifetime,
+    Label,
+}
+impl fmt::Display for FilterKind {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Size => write!(fmt, "size"),
+            Self::Lifetime => write!(fmt, "lifetime"),
+            Self::Label => write!(fmt, "label"),
+        }
+    }
+}
+
+impl FilterKind {
+    pub fn all() -> Vec<FilterKind> {
+        vec![FilterKind::Size, FilterKind::Lifetime, FilterKind::Label]
+    }
 }
 
 /// An allocation filter.
 #[derive(Debug, Clone)]
 pub enum Filter {
     /// Filter over allocation sizes.
-    Size(NumFilter<usize>),
+    Size(SizeFilter),
     /// Filter over allocation lifetimes.
-    Lifetime(NumFilter<Duration>),
+    Lifetime(LifetimeFilter),
     /// Filter over labels.
     Label(LabelFilter),
 }
 impl Filter {
+    /// Default filter for some filter kind.
+    pub fn of_kind(kind: FilterKind) -> Self {
+        match kind {
+            FilterKind::Size => SizeFilter::default().into(),
+            FilterKind::Lifetime => LifetimeFilter::default().into(),
+            FilterKind::Label => LabelFilter::default().into(),
+        }
+    }
+
+    /// Filter kind of a filter.
+    pub fn kind(&self) -> FilterKind {
+        match self {
+            Self::Size(_) => FilterKind::Size,
+            Self::Lifetime(_) => FilterKind::Lifetime,
+            Self::Label(_) => FilterKind::Label,
+        }
+    }
+
+    /// Applies the filter to an allocation.
     pub fn apply(&self, data: &Storage, alloc: &Alloc) -> bool {
         match self {
             Filter::Size(filter) => filter.apply(data, &alloc.size),
@@ -52,7 +96,25 @@ impl Filter {
         }
     }
 
-    pub fn render(&self) -> Html {
+    fn prop_selector<Update>(&self, update: Update) -> Html
+    where
+        Update: Fn(Option<Filter>) -> Msg + 'static,
+    {
+        let selected = self.kind();
+        html! {
+            <Select<FilterKind>
+                selected=Some(selected)
+                options=FilterKind::all()
+                onchange=move |kind| update(Some(Self::of_kind(kind)))
+            />
+        }
+    }
+
+    /// Renders the filter.
+    pub fn render<Update>(&self, update: Update) -> Html
+    where
+        Update: Fn(Option<Filter>) -> Msg + Copy + 'static,
+    {
         html! {
             <ul class=style::class::filter::LINE>
                 <li class=style::class::filter::BUTTONS>
@@ -64,36 +126,47 @@ impl Filter {
                             <>
                                 <li class=style::class::filter::line::CELL>
                                     <a class=style::class::filter::line::PROP_CELL>
-                                        { "size" }
+                                    //     { "size" }
+                                        { self.prop_selector(update) }
                                     </a>
                                 </li>
-                                { filter.render() }
+                                { filter.render(update) }
                             </>
                         },
                         Filter::Lifetime(filter) => html! {
                             <>
                                 <li class=style::class::filter::line::CELL>
                                     <a class=style::class::filter::line::PROP_CELL>
-                                        { "lifetime" }
+                                    //     { "lifetime" }
+                                        { self.prop_selector(update) }
                                     </a>
                                 </li>
-                                { filter.render() }
+                                { filter.render(update) }
                             </>
                         },
                         Filter::Label(filter) => html! {
                             <>
                                 <li class=style::class::filter::line::CELL>
                                     <a class=style::class::filter::line::PROP_CELL>
-                                        { "labels" }
+                                    //     { "labels" }
+                                        { self.prop_selector(update) }
                                     </a>
                                 </li>
-                                { filter.render() }
+                                { filter.render(update) }
                             </>
                         },
                     }
                 }
             </ul>
         }
+    }
+
+    /// Renders the filter in edition mode.
+    pub fn edit_render<F>(&self) -> Html
+    where
+        F: Fn(Filter) -> Msg + 'static,
+    {
+        unimplemented!()
     }
 }
 
@@ -112,23 +185,8 @@ impl From<LabelFilter> for Filter {
         Self::Label(filter)
     }
 }
-impl From<FilterKind> for Filter {
-    fn from(kind: FilterKind) -> Self {
-        match kind {
-            FilterKind::Size => SizeFilter::default().into(),
-            FilterKind::Lifetime => LifetimeFilter::default().into(),
-            FilterKind::Label => LabelFilter::default().into(),
-        }
+impl Default for Filter {
+    fn default() -> Self {
+        SizeFilter::default().into()
     }
-}
-
-/// Filter kind.
-#[derive(Debug, Clone)]
-pub enum FilterKind {
-    /// Size filter.
-    Size,
-    /// Lifetime filter.
-    Lifetime,
-    /// Label filter.
-    Label,
 }

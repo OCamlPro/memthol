@@ -10,7 +10,10 @@ pub use stdweb::{js, Value as JsVal};
 
 pub use regex::Regex;
 
-pub use yew::{html, services::websocket, Component, ComponentLink, Renderable, ShouldRender};
+pub use yew::{
+    components::Select, html, html::ChangeData, services::websocket, Component, ComponentLink,
+    Renderable, ShouldRender,
+};
 
 pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Uid as AllocUid};
 

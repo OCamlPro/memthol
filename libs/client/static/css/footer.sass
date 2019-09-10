@@ -24,23 +24,30 @@ footer
             li
                 @include hblock
 
+            $cell_height: 35px
+            $prop_width: 5%
+            $cmp_width: 5%
+            $val_width: 100% - 2 * $layout_left_right_margin - $prop_width - $cmp_width
+            $value_width: 5%
+
             .filter_buttons
                 @include hblock
                 @include buttons
                 width: $layout_left_right_margin
+                // line-height: $cell_height
+                height: $cell_height
                 text-align: right
                 float: left
-
-            $prop_width: 15%
-            $cmp_width: 15%
-            $val_width: 100% - 2 * $layout_left_right_margin - $prop_width - $cmp_width
+                border-bottom-width: 1px
+                border-bottom-color: $white
+                border-bottom-style: solid
 
             .filter_prop
                 @include hblock
                 @include centered
                 width: $prop_width
-                line-height: 25px
-                height: 25px
+                line-height: $cell_height
+                height: $cell_height
                 float: left
                 border-right-width: 1px
                 border-right-color: $white
@@ -48,12 +55,22 @@ footer
                 border-bottom-width: 1px
                 border-bottom-color: $white
                 border-bottom-style: solid
+
+                select
+                    color: $menu_fg
+                    font: $font_size $font_stack
+                    // height: 80 * $cell_height / 100
+                    background-color: $dark_grey
+                    border-radius: 5px
+                    border-style: hidden
+                    text-align: center
+
             .filter_cmp
                 @include hblock
                 @include centered
                 width: $cmp_width
-                line-height: 25px
-                height: 25px
+                line-height: $cell_height
+                height: $cell_height
                 float: left
                 border-right-width: 1px
                 border-right-color: $white
@@ -61,14 +78,37 @@ footer
                 border-bottom-width: 1px
                 border-bottom-color: $white
                 border-bottom-style: solid
+
+                select
+                    color: $menu_fg
+                    font: $font_size $font_stack
+                    // height: 80 * $cell_height / 100
+                    background-color: $dark_grey
+                    border-radius: 5px
+                    border-style: hidden
+                    text-align: center
+
             .filter_val
                 @include hblock
                 @include centered
                 min-width: $val_width
-                line-height: 25px
-                height: 25px
+                line-height: $cell_height
+                height: $cell_height
                 float: left
                 border-bottom-width: 1px
                 border-bottom-color: $white
                 border-bottom-style: solid
+                text-align: left
+
+                .filter_value
+                    color: $menu_fg
+                    font: $font_size $font_code_stack
+                    min-width: $value_width
+                    height: 80 * $cell_height / 100
+                    background-color: $dark_grey
+                    border-radius: 5px
+                    border-style: hidden
+                    text-align: center
+                    margin: 0 5px
+                    padding: 0 5px
 

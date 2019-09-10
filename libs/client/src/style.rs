@@ -75,7 +75,7 @@ pub mod class {
         pub static LINE: &str = "filter_ul";
 
         /// Class for labels.
-        pub static LABEL: &str = "filter_label";
+        pub static VALUE: &str = "filter_value";
 
         /// Filter line classes.
         pub mod line {

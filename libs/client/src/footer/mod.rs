@@ -20,7 +20,11 @@ pub enum FooterMsg {
 impl FooterMsg {
     /// Expands or collapses the control menu.
     pub fn toggle(tab: footer::FooterTab) -> Msg {
-        Msg::FooterAction(FooterMsg::Toggle(tab))
+        Msg::FooterAction(Self::Toggle(tab))
+    }
+    /// Filter message.
+    pub fn filter(msg: filter::FooterFilterMsg) -> Msg {
+        Msg::FooterAction(Self::Filter(msg))
     }
 }
 

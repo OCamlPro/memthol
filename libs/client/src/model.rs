@@ -112,6 +112,10 @@ impl Component for Model {
                 warn!("[unimplemented] changing to tab {:?}", tab);
                 self.top_tabs.activate(tab)
             }
+            Msg::Blah(blah) => {
+                info!("[message] {}", blah);
+                false
+            }
             Msg::Diff(diff) => {
                 let txt = diff
                     .destroy()

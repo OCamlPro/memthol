@@ -22,6 +22,13 @@ pub struct SinceStart {
     /// Actual duration.
     duration: Duration,
 }
+impl Default for SinceStart {
+    fn default() -> Self {
+        Self {
+            duration: Duration::default(),
+        }
+    }
+}
 impl std::ops::Deref for SinceStart {
     type Target = Duration;
     fn deref(&self) -> &Duration {

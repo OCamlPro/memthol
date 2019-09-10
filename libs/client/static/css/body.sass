@@ -7,8 +7,11 @@
 
 body
     @include body_code
-    font: 120% $font_stack
+    font: $font_size $font_stack
     background-color: black
+
+    code
+        font: $font_size $font_code_stack
 
     .body_header_footer
         padding: $layout_tab_height 0px ($layout_tab_height + $layout_footer_display_height) 0px

@@ -1,5 +1,5 @@
 body {
-  font: 120% SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
+  font: 16px SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
   background-color: black;
 }
 body code {
@@ -10,6 +10,9 @@ body code {
 }
 body code.filter_label {
   color: #1bad14;
+}
+body code {
+  font: 16px Monaco, Consola, sans-serif;
 }
 body .body_header_footer {
   padding: 45px 0px 245px 0px;
@@ -63,7 +66,7 @@ body .memthol_chart_container .close_button:hover {
   cursor: pointer;
 }
 body .memthol_chart_container .chart_header {
-  margin: 0 20%;
+  margin: 0 10%;
 }
 body .memthol_chart_container .chart_style {
   width: 100%;

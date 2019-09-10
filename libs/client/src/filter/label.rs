@@ -4,32 +4,98 @@ use regex::Regex;
 
 use crate::{base::*, filter::FilterSpec};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Kind {
+    Contain,
+    Exclude,
+}
+impl fmt::Display for Kind {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Contain => write!(fmt, "contain"),
+            Self::Exclude => write!(fmt, "exclude"),
+        }
+    }
+}
+impl Kind {
+    pub fn all() -> Vec<Kind> {
+        vec![Self::Contain, Self::Exclude]
+    }
+}
+
 /// Label filter.
 #[derive(Debug, Clone)]
 pub enum LabelFilter {
     /// Retains label lists that contain a label verifying this spec.
-    Contains(Vec<LabelSpec>),
+    Contain(Vec<LabelSpec>),
     /// Retains label lists that do not contain a label verifying this spec.
-    Excludes(Vec<LabelSpec>),
+    Exclude(Vec<LabelSpec>),
 }
-impl FilterSpec<[String]> for LabelFilter {
-    fn apply(&self, data: &Storage, alloc_data: &[String]) -> bool {
+
+/// Constructors.
+impl LabelFilter {
+    /// `Contain` constructor.
+    pub fn contain(specs: Vec<LabelSpec>) -> Self {
+        Self::Contain(specs)
+    }
+    /// `Exclude` constructor.
+    pub fn exclude(specs: Vec<LabelSpec>) -> Self {
+        Self::Exclude(specs)
+    }
+
+    fn kind(&self) -> (Kind, &Vec<LabelSpec>) {
         match self {
-            Self::Contains(specs) => Self::check_contains(specs, data, alloc_data),
-            Self::Excludes(specs) => !Self::check_contains(specs, data, alloc_data),
+            Self::Contain(specs) => (Kind::Contain, specs),
+            Self::Exclude(specs) => (Kind::Exclude, specs),
         }
     }
 
-    fn render(&self) -> Html {
-        let (op, specs) = match self {
-            Self::Contains(specs) => ("contain", specs),
-            Self::Excludes(specs) => ("exclude", specs),
+    fn of_kind(kind: Kind, labels: Vec<LabelSpec>) -> Self {
+        match kind {
+            Kind::Contain => Self::contain(labels),
+            Kind::Exclude => Self::exclude(labels),
+        }
+    }
+
+    fn kind_selector<Update>(&self, update: Update) -> Html
+    where
+        Update: Fn(Option<filter::Filter>) -> Msg + 'static,
+    {
+        let (selected, specs) = self.kind();
+        let specs = specs.clone();
+        html! {
+            <Select<Kind>
+                selected=Some(selected)
+                options=Kind::all()
+                onchange=move |kind| update(Some(Self::of_kind(kind, specs.clone()).into()))
+            />
+        }
+    }
+}
+
+impl FilterSpec<[String]> for LabelFilter {
+    fn apply(&self, data: &Storage, alloc_data: &[String]) -> bool {
+        match self {
+            Self::Contain(specs) => Self::check_contain(specs, data, alloc_data),
+            Self::Exclude(specs) => !Self::check_contain(specs, data, alloc_data),
+        }
+    }
+
+    fn render<Update>(&self, update: Update) -> Html
+    where
+        Update: Fn(Option<filter::Filter>) -> Msg + Copy + 'static,
+    {
+        let specs = match self {
+            Self::Contain(specs) => specs,
+            Self::Exclude(specs) => specs,
         };
 
         html! {
             <>
                 <li class=style::class::filter::line::CELL>
-                    <a class=style::class::filter::line::CMP_CELL> { op } </a>
+                    <a class=style::class::filter::line::CMP_CELL>
+                        { self.kind_selector(update) }
+                    </a>
                 </li>
                 <li class=style::class::filter::line::CELL>
                     <a class=style::class::filter::line::VAL_CELL>
@@ -41,17 +107,17 @@ impl FilterSpec<[String]> for LabelFilter {
                                     <>
                                         {
                                             if index > 0 {
-                                                html!({"..."})
+                                                html!(<code>{"..."}</code>)
                                             } else {
-                                                html!({"..."})
+                                                html!(<code>{"..."}</code>)
                                             }
                                         }
-                                        { spec.render() }
+                                        { spec.render(update) }
                                     </>
                                 }
                             )
                         }
-                        {"..."}
+                        <code> {"..."} </code>
                         <code> { "]" } </code>
                     </a>
                 </li>
@@ -61,25 +127,13 @@ impl FilterSpec<[String]> for LabelFilter {
 }
 impl Default for LabelFilter {
     fn default() -> Self {
-        Self::Contains(vec![])
-    }
-}
-
-/// Constructors.
-impl LabelFilter {
-    /// `Contains` constructor.
-    pub fn contains(specs: Vec<LabelSpec>) -> Self {
-        Self::Contains(specs)
-    }
-    /// `Excludes` constructor.
-    pub fn excludes(specs: Vec<LabelSpec>) -> Self {
-        Self::Excludes(specs)
+        Self::Contain(vec![])
     }
 }
 
 impl LabelFilter {
     /// Helper that returns true if some labels verify the input specs.
-    fn check_contains(specs: &[LabelSpec], data: &Storage, labels: &[String]) -> bool {
+    fn check_contain(specs: &[LabelSpec], data: &Storage, labels: &[String]) -> bool {
         let mut labels = labels.iter();
         'next_spec: for spec in specs.iter() {
             'find_match: while let Some(label) = labels.next() {
@@ -113,14 +167,20 @@ impl FilterSpec<str> for LabelSpec {
         }
     }
 
-    fn render(&self) -> Html {
+    fn render<Update>(&self, _update: Update) -> Html
+    where
+        Update: Fn(Option<filter::Filter>) -> Msg,
+    {
+        let value = match self {
+            LabelSpec::Value(value) => format!("\"{}\"", value),
+            LabelSpec::Regex(regex) => format!("#\"{}\"#", regex),
+        };
         html! {
-            <code class=style::class::filter::LABEL> {
-                match self {
-                    LabelSpec::Value(value) => format!("\"{}\"", value),
-                    LabelSpec::Regex(regex) => format!("re(\"{}\")", regex),
-                }
-            } </code>
+            <input
+                type="text"
+                class=style::class::filter::VALUE
+                value=value
+            />
         }
     }
 }
