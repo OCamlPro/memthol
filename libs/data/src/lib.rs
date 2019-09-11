@@ -448,3 +448,29 @@ swarkn::display! {
         }
     }
 }
+
+/// Trait for types that can be parsed.
+pub trait Parseable: Sized {
+    /// Parses something.
+    fn parse<Str>(text: Str) -> Res<Self>
+    where
+        Str: AsRef<str>;
+}
+impl Parseable for usize {
+    fn parse<Str>(text: Str) -> Res<Self>
+    where
+        Str: AsRef<str>,
+    {
+        use swarkn::parse::ParserExt;
+        Parser::parse_all(text.as_ref(), Parser::usize, "usize")
+    }
+}
+
+impl Parseable for SinceStart {
+    fn parse<Str>(text: Str) -> Res<Self>
+    where
+        Str: AsRef<str>,
+    {
+        Self::from_str(text)
+    }
+}

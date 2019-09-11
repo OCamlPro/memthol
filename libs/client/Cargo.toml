@@ -20,3 +20,4 @@ alloc_data = { path = "../data" }
 safe_index = "*"
 chrono = "*"
 regex = "*"
+error-chain = "*"

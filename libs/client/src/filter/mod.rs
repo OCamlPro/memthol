@@ -15,7 +15,7 @@ pub type SizeFilter = OrdFilter<usize>;
 pub type LifetimeFilter = OrdFilter<SinceStart>;
 
 /// Function(s) a filter must implement.
-pub trait FilterSpec<Data>
+pub trait FilterSpec<Data>: Sized
 where
     Data: ?Sized,
 {
@@ -25,7 +25,7 @@ where
     /// Renders the filter.
     fn render<Update>(&self, update: Update) -> Html
     where
-        Update: Fn(Option<Filter>) -> Msg + Copy + 'static;
+        Update: Fn(Res<Self>) -> Msg + Clone + 'static;
 }
 
 /// Filter kind.
@@ -40,7 +40,7 @@ impl fmt::Display for FilterKind {
         match self {
             Self::Size => write!(fmt, "size"),
             Self::Lifetime => write!(fmt, "lifetime"),
-            Self::Label => write!(fmt, "label"),
+            Self::Label => write!(fmt, "labels"),
         }
     }
 }
@@ -98,14 +98,14 @@ impl Filter {
 
     fn prop_selector<Update>(&self, update: Update) -> Html
     where
-        Update: Fn(Option<Filter>) -> Msg + 'static,
+        Update: Fn(Res<Filter>) -> Msg + 'static,
     {
         let selected = self.kind();
         html! {
             <Select<FilterKind>
                 selected=Some(selected)
                 options=FilterKind::all()
-                onchange=move |kind| update(Some(Self::of_kind(kind)))
+                onchange=move |kind| update(Ok(Self::of_kind(kind)))
             />
         }
     }
@@ -113,7 +113,7 @@ impl Filter {
     /// Renders the filter.
     pub fn render<Update>(&self, update: Update) -> Html
     where
-        Update: Fn(Option<Filter>) -> Msg + Copy + 'static,
+        Update: Fn(Res<Filter>) -> Msg + Clone + 'static,
     {
         html! {
             <ul class=style::class::filter::LINE>
@@ -127,10 +127,16 @@ impl Filter {
                                 <li class=style::class::filter::line::CELL>
                                     <a class=style::class::filter::line::PROP_CELL>
                                     //     { "size" }
-                                        { self.prop_selector(update) }
+                                        { self.prop_selector(update.clone()) }
                                     </a>
                                 </li>
-                                { filter.render(update) }
+                                {
+                                    filter.render(
+                                        move |filter| update(
+                                            filter.map(|filter| filter.into())
+                                        )
+                                    )
+                                }
                             </>
                         },
                         Filter::Lifetime(filter) => html! {
@@ -138,10 +144,16 @@ impl Filter {
                                 <li class=style::class::filter::line::CELL>
                                     <a class=style::class::filter::line::PROP_CELL>
                                     //     { "lifetime" }
-                                        { self.prop_selector(update) }
+                                        { self.prop_selector(update.clone()) }
                                     </a>
                                 </li>
-                                { filter.render(update) }
+                                {
+                                    filter.render(
+                                        move |filter| update(
+                                            filter.map(|filter| filter.into())
+                                        )
+                                    )
+                                }
                             </>
                         },
                         Filter::Label(filter) => html! {
@@ -149,10 +161,16 @@ impl Filter {
                                 <li class=style::class::filter::line::CELL>
                                     <a class=style::class::filter::line::PROP_CELL>
                                     //     { "labels" }
-                                        { self.prop_selector(update) }
+                                        { self.prop_selector(update.clone()) }
                                     </a>
                                 </li>
-                                { filter.render(update) }
+                                {
+                                    filter.render(
+                                        move |filter| update(
+                                            filter.map(|filter| filter.into())
+                                        )
+                                    )
+                                }
                             </>
                         },
                     }

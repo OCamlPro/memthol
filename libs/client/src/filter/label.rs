@@ -43,6 +43,7 @@ impl LabelFilter {
         Self::Exclude(specs)
     }
 
+    /// Filter's kind.
     fn kind(&self) -> (Kind, &Vec<LabelSpec>) {
         match self {
             Self::Contain(specs) => (Kind::Contain, specs),
@@ -50,6 +51,7 @@ impl LabelFilter {
         }
     }
 
+    /// Constructor from a kind.
     fn of_kind(kind: Kind, labels: Vec<LabelSpec>) -> Self {
         match kind {
             Kind::Contain => Self::contain(labels),
@@ -59,7 +61,7 @@ impl LabelFilter {
 
     fn kind_selector<Update>(&self, update: Update) -> Html
     where
-        Update: Fn(Option<filter::Filter>) -> Msg + 'static,
+        Update: Fn(Res<Self>) -> Msg + 'static,
     {
         let (selected, specs) = self.kind();
         let specs = specs.clone();
@@ -67,8 +69,57 @@ impl LabelFilter {
             <Select<Kind>
                 selected=Some(selected)
                 options=Kind::all()
-                onchange=move |kind| update(Some(Self::of_kind(kind, specs.clone()).into()))
+                onchange=move |kind| update(Ok(Self::of_kind(kind, specs.clone())))
             />
+        }
+    }
+
+    ///
+    pub fn dots<Update>(&self, update: Update, index: usize) -> Html
+    where
+        Update: Fn(Res<Self>) -> Msg + Clone + 'static,
+    {
+        let slf = self.clone();
+        html! {
+            <code
+                class=style::class::filter::line::ADD_LABEL
+                onclick=move |_| {
+                    let mut filter = slf.clone();
+                    let specs = filter.specs_mut();
+                    specs.insert(
+                        index, LabelSpec::default()
+                    );
+                    update(Ok(filter))
+                }
+            >{"..."}</code>
+        }
+    }
+
+    /// Label specifications.
+    pub fn specs(&self) -> &Vec<LabelSpec> {
+        match self {
+            Self::Contain(specs) => specs,
+            Self::Exclude(specs) => specs,
+        }
+    }
+    /// Label specifications (mutable).
+    pub fn specs_mut(&mut self) -> &mut Vec<LabelSpec> {
+        match self {
+            Self::Contain(specs) => specs,
+            Self::Exclude(specs) => specs,
+        }
+    }
+
+    /// Inserts a specification.
+    ///
+    /// If the specification is empty, removes the spec at that index.
+    pub fn insert(&mut self, index: usize, spec: LabelSpec) {
+        let specs = self.specs_mut();
+        if spec.is_empty() {
+            specs.remove(index);
+            ()
+        } else {
+            specs[index] = spec
         }
     }
 }
@@ -83,7 +134,7 @@ impl FilterSpec<[String]> for LabelFilter {
 
     fn render<Update>(&self, update: Update) -> Html
     where
-        Update: Fn(Option<filter::Filter>) -> Msg + Copy + 'static,
+        Update: Fn(Res<Self>) -> Msg + Clone + 'static,
     {
         let specs = match self {
             Self::Contain(specs) => specs,
@@ -94,7 +145,7 @@ impl FilterSpec<[String]> for LabelFilter {
             <>
                 <li class=style::class::filter::line::CELL>
                     <a class=style::class::filter::line::CMP_CELL>
-                        { self.kind_selector(update) }
+                        { self.kind_selector(update.clone()) }
                     </a>
                 </li>
                 <li class=style::class::filter::line::CELL>
@@ -102,22 +153,32 @@ impl FilterSpec<[String]> for LabelFilter {
                         <code> { "[" } </code>
                         {
                             for specs.iter().enumerate().map(
-                                |(index, spec)| html! {
-                                    // Attach to nothing, will become kid of the `<div>` above.
-                                    <>
-                                        {
-                                            if index > 0 {
-                                                html!(<code>{"..."}</code>)
-                                            } else {
-                                                html!(<code>{"..."}</code>)
+                                |(index, spec)| {
+                                    html! {
+                                        // Attach to nothing, will become kid of the `<div>` above.
+                                        <>
+                                            { self.dots(update.clone(), index) }
+                                            {
+                                                let slf = self.clone();
+                                                let update = update.clone();
+                                                spec.render(
+                                                    move |spec| update(
+                                                        spec.map(
+                                                            |spec| {
+                                                                let mut filter = slf.clone();
+                                                                filter.insert(index, spec);
+                                                                filter
+                                                            }
+                                                        )
+                                                    )
+                                                )
                                             }
-                                        }
-                                        { spec.render(update) }
-                                    </>
+                                        </>
+                                    }
                                 }
                             )
                         }
-                        <code> {"..."} </code>
+                        { self.dots(update.clone(), specs.len()) }
                         <code> { "]" } </code>
                     </a>
                 </li>
@@ -167,12 +228,12 @@ impl FilterSpec<str> for LabelSpec {
         }
     }
 
-    fn render<Update>(&self, _update: Update) -> Html
+    fn render<Update>(&self, update: Update) -> Html
     where
-        Update: Fn(Option<filter::Filter>) -> Msg,
+        Update: Fn(Res<Self>) -> Msg + 'static,
     {
         let value = match self {
-            LabelSpec::Value(value) => format!("\"{}\"", value),
+            LabelSpec::Value(value) => format!("{}", value),
             LabelSpec::Regex(regex) => format!("#\"{}\"#", regex),
         };
         html! {
@@ -180,7 +241,52 @@ impl FilterSpec<str> for LabelSpec {
                 type="text"
                 class=style::class::filter::VALUE
                 value=value
+                onchange=|data| update(
+                    data.text_value()
+                        .and_then(LabelSpec::new)
+                        .chain_err(|| "while parsing label")
+                )
             />
+        }
+    }
+}
+impl Default for LabelSpec {
+    fn default() -> LabelSpec {
+        LabelSpec::Value("my label".into())
+    }
+}
+
+impl LabelSpec {
+    /// Constructor.
+    pub fn new<S>(label: S) -> Res<Self>
+    where
+        S: Into<String>,
+    {
+        let label = label.into();
+        macro_rules! illegal {
+            () => {{
+                let err: err::Err = format!("illegal regex `{}`", label).into();
+                err
+            }};
+        }
+        if label.len() > 2 && &label[0..2] == "#\"" {
+            if &label[label.len() - 2..label.len()] != "\"#" {
+                bail!(illegal!().chain_err(|| "a regex must end with `\"#`"))
+            }
+
+            let regex = Regex::new(&label[2..label.len() - 2])
+                .map_err(|e| illegal!().chain_err(|| format!("{}", e)))?;
+            Ok(regex.into())
+        } else {
+            Ok(label.into())
+        }
+    }
+
+    /// True if the spec is an empty label.
+    pub fn is_empty(&self) -> bool {
+        match self {
+            LabelSpec::Value(s) => s == "",
+            LabelSpec::Regex(_) => false,
         }
     }
 }

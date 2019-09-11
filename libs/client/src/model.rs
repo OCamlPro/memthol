@@ -116,6 +116,17 @@ impl Component for Model {
                 info!("[message] {}", blah);
                 false
             }
+
+            Msg::Error(err) => {
+                alert!("{}", err.pretty());
+                true
+            }
+
+            Msg::Alarm(blah) => {
+                alert!("{}", blah);
+                true
+            }
+
             Msg::Diff(diff) => {
                 let txt = diff
                     .destroy()

@@ -33,7 +33,7 @@ impl FilterFooter {
         let test_filter_2: LabelSpec = "label 7".into();
         filters.push(LabelFilter::contain(vec![test_filter_1, test_filter_2]).into());
 
-        filters.push(SizeFilter::between(17, 42).into());
+        filters.push(SizeFilter::between(17, 42).unwrap().into());
 
         Self {
             // filter_edit: FilterEdit::of(Filter::default()),
@@ -46,6 +46,7 @@ impl FilterFooter {
         use FooterFilterMsg::*;
         match msg {
             Update { index, filter } => {
+                info!("updating filter #{} to {:?}", index, filter);
                 self.filters[index] = filter;
                 true
             }
@@ -60,8 +61,8 @@ impl FilterFooter {
                 { for self.filters.iter().enumerate().map(
                     |(index, filter)| filter.render(
                         move |filter_opt| match filter_opt {
-                            None => Msg::Nop,
-                            Some(filter) => FooterFilterMsg::update(index, filter),
+                            Ok(filter) => FooterFilterMsg::update(index, filter),
+                            Err(e) => Msg::err(e),
                         }
                     )
                 ) }

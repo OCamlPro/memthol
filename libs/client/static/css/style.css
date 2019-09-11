@@ -404,7 +404,6 @@ footer .footer_display .filter_ul .filter_val {
   font-size: 16px;
   text-align: center;
   min-width: 70%;
-  line-height: 35px;
   height: 35px;
   float: left;
   border-bottom-width: 1px;
@@ -423,6 +422,10 @@ footer .footer_display .filter_ul .filter_val .filter_value {
   text-align: center;
   margin: 0 5px;
   padding: 0 5px;
+}
+footer .footer_display .filter_ul .filter_val .filter_add_label:hover {
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 /*# sourceMappingURL=style.css.map */

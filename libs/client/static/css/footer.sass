@@ -92,7 +92,7 @@ footer
                 @include hblock
                 @include centered
                 min-width: $val_width
-                line-height: $cell_height
+                // line-height: $cell_height
                 height: $cell_height
                 float: left
                 border-bottom-width: 1px
@@ -111,4 +111,9 @@ footer
                     text-align: center
                     margin: 0 5px
                     padding: 0 5px
+
+                .filter_add_label
+                    &:hover
+                        text-decoration: underline
+                        cursor: pointer
 

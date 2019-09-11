@@ -2,6 +2,7 @@
 
 #![recursion_limit = "1024"]
 
+#[macro_use]
 mod base;
 #[macro_use]
 mod uid;
@@ -9,6 +10,7 @@ mod uid;
 pub mod buttons;
 pub mod chart;
 pub mod data;
+pub mod err;
 pub mod filter;
 pub mod footer;
 mod model;

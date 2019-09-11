@@ -1,6 +1,8 @@
 //! Basic types and stuffs.
 
-pub use std::{collections::BTreeMap as Map, collections::BTreeSet as Set, fmt, time::Duration};
+pub use std::{
+    collections::BTreeMap as Map, collections::BTreeSet as Set, fmt, str::FromStr, time::Duration,
+};
 
 use lazy_static::lazy_static;
 
@@ -21,12 +23,25 @@ pub use crate::{
     buttons, chart,
     chart::{ChartUid, Charts},
     data::Storage,
+    err,
+    err::{bail, Res, ResExt},
     filter, footer,
     model::Model,
     msg,
     msg::Msg,
     style,
 };
+
+/// Issues an alert.
+#[macro_export]
+macro_rules! alert {
+    ($msg:expr) => (
+        js!(@(no_return) alert(@{$msg});)
+    );
+    ($($stuff:tt)*) => (
+        alert!(format!($($stuff)*))
+    );
+}
 
 /// Type of `onclick` actions.
 pub trait OnClick: Fn(yew::events::ClickEvent) -> Msg + 'static {}
@@ -72,6 +87,20 @@ impl From<yew::format::Binary> for DiffMsg {
 impl From<yew::format::Text> for DiffMsg {
     fn from(inner: yew::format::Text) -> Self {
         Self { inner }
+    }
+}
+
+/// Extends yew's `ChangeData` with some helpers.
+pub trait ChangeDataExt {
+    /// Retrieves a text input value or produces an error message.
+    fn text_value(self) -> Res<String>;
+}
+impl ChangeDataExt for ChangeData {
+    fn text_value(self) -> Res<String> {
+        match self {
+            ChangeData::Value(res) => Ok(res),
+            data => bail!("expected text input value, found {:?}", data),
+        }
     }
 }
 

@@ -87,6 +87,8 @@ pub mod class {
             pub static CMP_CELL: &str = "filter_cmp";
             /// Class of a value cell.
             pub static VAL_CELL: &str = "filter_val";
+            /// Class of a label insertion element.
+            pub static ADD_LABEL: &str = "filter_add_label";
         }
     }
 

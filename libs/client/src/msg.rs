@@ -16,6 +16,10 @@ pub enum Msg {
     FooterAction(footer::FooterMsg),
     ///
     Blah(String),
+    /// An error.
+    Error(err::Err),
+    /// An alarm message.
+    Alarm(String),
     /// Do nothing.
     Nop,
     /// Start message.
@@ -25,6 +29,11 @@ impl Msg {
     /// Start message constructor.
     pub fn start() -> Msg {
         Msg::Start
+    }
+
+    /// Error message.
+    pub fn err(e: err::Err) -> Msg {
+        Msg::Error(e)
     }
 }
 
