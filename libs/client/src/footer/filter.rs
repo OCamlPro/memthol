@@ -6,10 +6,18 @@ use crate::{base::*, filter::*};
 #[derive(Clone, Debug)]
 pub enum FooterFilterMsg {
     Update { index: usize, filter: Filter },
+    Add { filter: Filter },
+    Rm { index: usize },
 }
 impl FooterFilterMsg {
     pub fn update(index: usize, filter: Filter) -> Msg {
         footer::FooterMsg::filter(Self::Update { index, filter })
+    }
+    pub fn add(filter: Filter) -> Msg {
+        footer::FooterMsg::filter(Self::Add { filter })
+    }
+    pub fn rm(index: usize) -> Msg {
+        footer::FooterMsg::filter(Self::Rm { index })
     }
 }
 
@@ -50,6 +58,14 @@ impl FilterFooter {
                 self.filters[index] = filter;
                 true
             }
+            Add { filter } => {
+                self.filters.push(filter);
+                true
+            }
+            Rm { index } => {
+                self.filters.remove(index);
+                true
+            }
         }
     }
 
@@ -59,13 +75,29 @@ impl FilterFooter {
             <>
                 // { self.filter_edit.render() }
                 { for self.filters.iter().enumerate().map(
-                    |(index, filter)| filter.render(
-                        move |filter_opt| match filter_opt {
-                            Ok(filter) => FooterFilterMsg::update(index, filter),
-                            Err(e) => Msg::err(e),
-                        }
-                    )
+                    |(index, filter)| html! {
+                        <ul class=style::class::filter::LINE>
+                            <li class=style::class::filter::BUTTONS>
+                                { buttons::close(move |_|
+                                    FooterFilterMsg::rm(index)
+                                ) }
+                            </li>
+                            { filter.render(
+                                move |filter_opt| match filter_opt {
+                                    Ok(filter) => FooterFilterMsg::update(index, filter),
+                                    Err(e) => Msg::err(e),
+                                }
+                            ) }
+                        </ul>
+                    }
                 ) }
+                <ul class=style::class::filter::LINE>
+                    <li class=style::class::filter::BUTTONS>
+                        { buttons::add(|_|
+                            FooterFilterMsg::add(Filter::default())
+                        ) }
+                    </li>
+                </ul>
             </>
         }
     }

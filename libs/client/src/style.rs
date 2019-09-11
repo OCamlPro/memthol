@@ -51,6 +51,8 @@ pub mod class {
     pub mod button {
         /// Close button.
         pub static CLOSE: &str = "close_button";
+        /// Add button.
+        pub static ADD: &str = "add_button";
         /// Move down button.
         pub static MOVE_DOWN: &str = "move_down_button";
         /// Move up button.

@@ -129,7 +129,7 @@ footer .footer_display .filter_ul .filter_buttons {
   border-bottom-style: solid;
 }
 footer .footer_display .filter_ul .filter_buttons .expand_button {
-  max-width: 20px;
+  max-width: 25px;
   float: left;
   content: url("../pics/expand.png");
 }
@@ -137,7 +137,7 @@ footer .footer_display .filter_ul .filter_buttons .expand_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_buttons .collapse_button {
-  max-width: 20px;
+  max-width: 25px;
   float: left;
   content: url("../pics/collapse.png");
 }
@@ -145,7 +145,7 @@ footer .footer_display .filter_ul .filter_buttons .collapse_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_buttons .move_up_button {
-  max-width: 20px;
+  max-width: 25px;
   float: left;
   content: url("../pics/arrow_up.png");
 }
@@ -153,7 +153,7 @@ footer .footer_display .filter_ul .filter_buttons .move_up_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_buttons .move_down_button {
-  max-width: 20px;
+  max-width: 25px;
   float: left;
   content: url("../pics/arrow_down.png");
 }
@@ -161,11 +161,19 @@ footer .footer_display .filter_ul .filter_buttons .move_down_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_buttons .close_button {
-  max-width: 20px;
+  max-width: 25px;
   float: right;
   content: url("../pics/close.png");
 }
 footer .footer_display .filter_ul .filter_buttons .close_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons .add_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/add.png");
+}
+footer .footer_display .filter_ul .filter_buttons .add_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_prop {

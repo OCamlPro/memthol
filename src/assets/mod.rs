@@ -265,8 +265,10 @@ var serverAddr = {{
     /// Generates pictures.
     pub mod pics {
         make_generator_for! {
-            /// Cross.
+            /// Close.
             CLOSE: asset_file!(pics / "close.png"),
+            /// Add.
+            ADD: asset_file!(pics / "add.png"),
             /// Arrow up.
             ARROW_UP: asset_file!(pics / "arrow_up.png"),
             /// Arrow down.

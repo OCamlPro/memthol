@@ -9,6 +9,13 @@ pub fn dummy_close() -> Html {
     }
 }
 
+/// Creates a add button with no onclick action.
+pub fn dummy_add() -> Html {
+    html! {
+        <img class=style::class::button::ADD/>
+    }
+}
+
 /// Creates a close button.
 pub fn close<Action>(action: Action) -> Html
 where
@@ -17,6 +24,19 @@ where
     html! {
         <img
             class=style::class::button::CLOSE
+            onclick=|e| action(e)
+        />
+    }
+}
+
+/// Creates an add button.
+pub fn add<Action>(action: Action) -> Html
+where
+    Action: OnClick,
+{
+    html! {
+        <img
+            class=style::class::button::ADD
             onclick=|e| action(e)
         />
     }

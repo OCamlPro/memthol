@@ -1,7 +1,7 @@
 //! Buttons.
 
 @mixin button_conf($float)
-    max-width: 20px
+    max-width: 25px
     float: $float
     &:hover
         cursor: pointer
@@ -13,6 +13,10 @@
 @mixin button_close($float)
     @include button_conf($float)
     content: url("../pics/close.png")
+
+@mixin button_add($float)
+    @include button_conf($float)
+    content: url("../pics/add.png")
 
 @mixin button_collapse($float)
     @include button_conf($float)

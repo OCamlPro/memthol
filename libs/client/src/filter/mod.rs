@@ -116,10 +116,7 @@ impl Filter {
         Update: Fn(Res<Filter>) -> Msg + Clone + 'static,
     {
         html! {
-            <ul class=style::class::filter::LINE>
-                <li class=style::class::filter::BUTTONS>
-                    { buttons::dummy_close() }
-                </li>
+            <>
                 {
                     match self {
                         Filter::Size(filter) => html! {
@@ -175,7 +172,7 @@ impl Filter {
                         },
                     }
                 }
-            </ul>
+            </>
         }
     }
 
