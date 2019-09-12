@@ -32,7 +32,8 @@ macro_rules! new_uid {
                 /// Yields a fresh UID.
                 pub fn fresh() -> $uid_type_name {
                     let mut factory = COUNTER.lock().unwrap_or_else(|e| {
-                        panic!(
+                        use crate::base::*;
+                        fail!(
                             "[sync] unable to access UID factory for `{}`: {}",
                             stringify!($uid_type_name),
                             e

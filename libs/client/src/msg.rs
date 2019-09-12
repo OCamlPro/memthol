@@ -42,6 +42,8 @@ impl Msg {
 pub enum ChartsMsg {
     /// Refresh all charts.
     RefreshAll,
+    /// Reloads the whole history for all charts.
+    ReloadData,
     /// Close a chart.
     Close {
         /// The chart to close.
@@ -66,6 +68,10 @@ impl ChartsMsg {
     /// Refresh message constructor.
     pub fn refresh() -> Msg {
         Msg::ChartsAction(Self::RefreshAll)
+    }
+    /// Reload message constructor.
+    pub fn reload() -> Msg {
+        Msg::ChartsAction(Self::ReloadData)
     }
     /// Close chart message constructor.
     pub fn close(uid: ChartUid) -> Msg {

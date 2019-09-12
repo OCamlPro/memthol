@@ -13,8 +13,8 @@ pub use stdweb::{js, Value as JsVal};
 pub use regex::Regex;
 
 pub use yew::{
-    components::Select, html, html::ChangeData, services::websocket, Component, ComponentLink,
-    Renderable, ShouldRender,
+    components::Select, html, html::ChangeData, services::websocket, Callback, Component,
+    ComponentLink, Renderable, ShouldRender,
 };
 
 pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Uid as AllocUid};
@@ -41,6 +41,20 @@ macro_rules! alert {
     ($($stuff:tt)*) => (
         alert!(format!($($stuff)*))
     );
+}
+
+/// Issues an alert and then panics.
+#[macro_export]
+macro_rules! fail {
+    ($msg:expr) => ({
+        let blah = format!("{}\nin {} line {}", $msg, file!(), line!());
+        alert!(blah);
+        panic!("fatal error")
+    });
+    ($($stuff:tt)*) => ({
+        let blah = format!($($stuff)*);
+        fail!(blah)
+    });
 }
 
 /// Type of `onclick` actions.

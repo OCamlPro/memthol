@@ -32,6 +32,70 @@ header .tab_list {
   padding: 0 10%;
   height: 45px;
 }
+header .tab_list .expand_button {
+  max-width: 25px;
+  float: left;
+  content: url("../pics/expand.png");
+}
+header .tab_list .expand_button:hover {
+  cursor: pointer;
+}
+header .tab_list .collapse_button {
+  max-width: 25px;
+  float: left;
+  content: url("../pics/collapse.png");
+}
+header .tab_list .collapse_button:hover {
+  cursor: pointer;
+}
+header .tab_list .move_up_button {
+  max-width: 25px;
+  float: left;
+  content: url("../pics/arrow_up.png");
+}
+header .tab_list .move_up_button:hover {
+  cursor: pointer;
+}
+header .tab_list .move_down_button {
+  max-width: 25px;
+  float: left;
+  content: url("../pics/arrow_down.png");
+}
+header .tab_list .move_down_button:hover {
+  cursor: pointer;
+}
+header .tab_list .close_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/close.png");
+}
+header .tab_list .close_button:hover {
+  cursor: pointer;
+}
+header .tab_list .add_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/add.png");
+}
+header .tab_list .add_button:hover {
+  cursor: pointer;
+}
+header .tab_list .inactive_tick_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/tick_inactive.png");
+}
+header .tab_list .inactive_tick_button:hover {
+  cursor: pointer;
+}
+header .tab_list .active_tick_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/tick_active.png");
+}
+header .tab_list .active_tick_button:hover {
+  cursor: pointer;
+}
 header .tab_list .li_left {
   float: left;
 }

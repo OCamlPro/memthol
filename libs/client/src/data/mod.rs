@@ -2,7 +2,7 @@
 
 use crate::base::*;
 
-pub mod filter;
+// pub mod filter;
 
 pub use filter::Filter;
 
@@ -14,6 +14,8 @@ pub struct Storage {
     current: SinceStart,
     /// History of all the diffs.
     history: Vec<AllocDiff>,
+    /// All allocations.
+    all_allocs: Map<AllocUid, Alloc>,
     /// All dead data seen so far.
     ///
     /// # Invariants
@@ -27,19 +29,20 @@ pub struct Storage {
     /// - all allocs are such that `alloc.tod().is_none()`.
     live: Map<AllocUid, Alloc>,
     /// The global filter.
-    filter: Filter,
+    filters: Vec<Filter>,
 }
 
 impl Storage {
     /// Constructor.
-    pub fn new(init: alloc_data::Init) -> Self {
+    pub fn new(init: alloc_data::Init, filters: Vec<Filter>) -> Self {
         Self {
             init,
             current: Duration::new(0, 0).into(),
             history: Vec::with_capacity(103),
+            all_allocs: Map::new(),
             dead: Map::new(),
             live: Map::new(),
-            filter: Filter::new(),
+            filters,
         }
     }
 
@@ -61,8 +64,8 @@ impl Storage {
     }
 
     /// The most recent diff.
-    pub fn last_diff(&self) -> Option<&AllocDiff> {
-        self.history.last()
+    pub fn last_diff(&self) -> Option<AllocDiff> {
+        self.history.last().map(|diff| self.filter_diff(diff))
     }
 
     /// Allocation data of an allocation UID.
@@ -72,8 +75,50 @@ impl Storage {
         } else if let Some(alloc) = self.live.get(uid) {
             alloc
         } else {
-            panic!("unknown allocation uid #{}", uid)
+            fail!("unknown allocation uid #{}", uid)
         }
+    }
+
+    /// Filter accessor.
+    pub fn filters(&self) -> &Vec<Filter> {
+        &self.filters
+    }
+
+    /// Sets the filters.
+    pub fn set_filters(&mut self, filters: Vec<Filter>) {
+        self.filters = filters
+    }
+
+    /// Applies the filters to some allocation.
+    pub fn filter(&self, alloc: &Alloc) -> bool {
+        for filter in &self.filters {
+            if !filter.apply(self, alloc) {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Splits a diff based on the filters.
+    pub fn filter_diff(&self, diff: &AllocDiff) -> AllocDiff {
+        let (start_time, mut new, mut dead) = (diff.time, diff.new.clone(), diff.dead.clone());
+        new.retain(|alloc| self.filter(alloc));
+        dead.retain(|(uid, tod)| {
+            let mut alloc = match self.all_allocs.get(&uid) {
+                Some(alloc) => alloc.clone(),
+                None => fail!("unknown allocation UID #{}", uid),
+            };
+            std::mem::replace(&mut alloc.tod, Some(tod.clone()));
+            self.filter(&alloc)
+        });
+        info!(
+            "filter_diff:\n- new: {}/{}\n- dead: {}/{}",
+            diff.new.len(),
+            new.len(),
+            diff.dead.len(),
+            dead.len()
+        );
+        AllocDiff::new(start_time, new, dead)
     }
 
     /// Invariant.
@@ -96,13 +141,17 @@ impl Storage {
     pub fn add_alloc(&mut self, alloc: Alloc) -> bool {
         let uid = alloc.uid().clone();
         let is_dead = alloc.tod().is_some();
-        let active = self.filter.apply(&alloc);
+        let active = self.filter(&alloc);
         if is_dead {
-            let prev = self.dead.insert(uid.clone(), alloc);
+            let prev = self.dead.insert(uid.clone(), alloc.clone());
             assert_eq! { prev, None }
         } else {
-            let prev = self.live.insert(uid.clone(), alloc);
+            let prev = self.live.insert(uid.clone(), alloc.clone());
             assert_eq! { prev, None }
+        }
+        let prev = self.all_allocs.insert(uid.clone(), alloc);
+        if prev.is_some() {
+            fail!("found multiple allocations for UID #{}", uid)
         }
         self.check_invariants();
         active
@@ -116,13 +165,17 @@ impl Storage {
             alloc
                 .set_tod(tod)
                 .expect("received inconsistent alloc/alloc death information");
-            let active = self.filter.apply(&alloc);
+            let prev = self.all_allocs.insert(uid.clone(), alloc.clone());
+            if prev.is_none() {
+                fail!("allocation #{} died but was not registered as living")
+            }
+            let active = self.filter(&alloc);
             let prev = self.dead.insert(uid.clone(), alloc);
             assert_eq! { prev, None }
             self.check_invariants();
             active
         } else {
-            panic!("unknown live allocation #{}", uid)
+            fail!("unknown live allocation #{}", uid)
         }
     }
 
@@ -153,7 +206,7 @@ impl Storage {
         for<'a> F: FnMut(&'a Alloc),
     {
         for (_, alloc) in &self.dead {
-            if self.filter.apply(alloc) {
+            if self.filter(alloc) {
                 f(alloc)
             }
         }
@@ -167,7 +220,7 @@ impl Storage {
         for<'a> F: FnMut(&'a Alloc),
     {
         for (_, alloc) in &self.live {
-            if self.filter.apply(alloc) {
+            if self.filter(alloc) {
                 f(alloc)
             }
         }
@@ -190,7 +243,8 @@ impl Storage {
         for<'a> F: FnMut(&'a AllocDiff),
     {
         for diff in &self.history {
-            f(diff)
+            let diff = self.filter_diff(diff);
+            f(&diff)
         }
     }
 }

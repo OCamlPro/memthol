@@ -71,13 +71,13 @@ impl TimeChart {
     /// Fails if there are no diffs in `data`.
     pub fn update(&mut self, data: &Storage) {
         if let Some(diff) = data.last_diff() {
-            let points = self.value.points_of_diff(data, diff);
+            let points = self.value.points_of_diff(data, &diff);
             js! {
                 let chart = @{&self.chart};
                 chart.addData(@{points})
             }
         } else {
-            panic!("asked to update for the most recent diff, but there's no diff at all")
+            fail!("asked to update for the most recent diff, but there's no diff at all")
         }
     }
 

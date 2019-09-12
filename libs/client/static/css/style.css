@@ -73,6 +73,22 @@ body .memthol_chart_container .add_button {
 body .memthol_chart_container .add_button:hover {
   cursor: pointer;
 }
+body .memthol_chart_container .inactive_tick_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/tick_inactive.png");
+}
+body .memthol_chart_container .inactive_tick_button:hover {
+  cursor: pointer;
+}
+body .memthol_chart_container .active_tick_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/tick_active.png");
+}
+body .memthol_chart_container .active_tick_button:hover {
+  cursor: pointer;
+}
 body .memthol_chart_container .chart_header {
   margin: 0 10%;
 }
@@ -119,6 +135,70 @@ header .tab_list {
   margin: 0;
   padding: 0 10%;
   height: 45px;
+}
+header .tab_list .expand_button {
+  max-width: 25px;
+  float: left;
+  content: url("../pics/expand.png");
+}
+header .tab_list .expand_button:hover {
+  cursor: pointer;
+}
+header .tab_list .collapse_button {
+  max-width: 25px;
+  float: left;
+  content: url("../pics/collapse.png");
+}
+header .tab_list .collapse_button:hover {
+  cursor: pointer;
+}
+header .tab_list .move_up_button {
+  max-width: 25px;
+  float: left;
+  content: url("../pics/arrow_up.png");
+}
+header .tab_list .move_up_button:hover {
+  cursor: pointer;
+}
+header .tab_list .move_down_button {
+  max-width: 25px;
+  float: left;
+  content: url("../pics/arrow_down.png");
+}
+header .tab_list .move_down_button:hover {
+  cursor: pointer;
+}
+header .tab_list .close_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/close.png");
+}
+header .tab_list .close_button:hover {
+  cursor: pointer;
+}
+header .tab_list .add_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/add.png");
+}
+header .tab_list .add_button:hover {
+  cursor: pointer;
+}
+header .tab_list .inactive_tick_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/tick_inactive.png");
+}
+header .tab_list .inactive_tick_button:hover {
+  cursor: pointer;
+}
+header .tab_list .active_tick_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/tick_active.png");
+}
+header .tab_list .active_tick_button:hover {
+  cursor: pointer;
 }
 header .tab_list .li_left {
   float: left;
@@ -225,6 +305,70 @@ footer .tab_list {
   padding: 0 10%;
   height: 45px;
 }
+footer .tab_list .expand_button {
+  max-width: 25px;
+  float: left;
+  content: url("../pics/expand.png");
+}
+footer .tab_list .expand_button:hover {
+  cursor: pointer;
+}
+footer .tab_list .collapse_button {
+  max-width: 25px;
+  float: left;
+  content: url("../pics/collapse.png");
+}
+footer .tab_list .collapse_button:hover {
+  cursor: pointer;
+}
+footer .tab_list .move_up_button {
+  max-width: 25px;
+  float: left;
+  content: url("../pics/arrow_up.png");
+}
+footer .tab_list .move_up_button:hover {
+  cursor: pointer;
+}
+footer .tab_list .move_down_button {
+  max-width: 25px;
+  float: left;
+  content: url("../pics/arrow_down.png");
+}
+footer .tab_list .move_down_button:hover {
+  cursor: pointer;
+}
+footer .tab_list .close_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/close.png");
+}
+footer .tab_list .close_button:hover {
+  cursor: pointer;
+}
+footer .tab_list .add_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/add.png");
+}
+footer .tab_list .add_button:hover {
+  cursor: pointer;
+}
+footer .tab_list .inactive_tick_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/tick_inactive.png");
+}
+footer .tab_list .inactive_tick_button:hover {
+  cursor: pointer;
+}
+footer .tab_list .active_tick_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/tick_active.png");
+}
+footer .tab_list .active_tick_button:hover {
+  cursor: pointer;
+}
 footer .tab_list .li_left {
   float: left;
 }
@@ -317,9 +461,6 @@ footer .footer_display .filter_ul .filter_buttons {
   height: 35px;
   text-align: right;
   float: left;
-  border-bottom-width: 1px;
-  border-bottom-color: white;
-  border-bottom-style: solid;
 }
 footer .footer_display .filter_ul .filter_buttons .expand_button {
   max-width: 25px;
@@ -367,6 +508,22 @@ footer .footer_display .filter_ul .filter_buttons .add_button {
   content: url("../pics/add.png");
 }
 footer .footer_display .filter_ul .filter_buttons .add_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons .inactive_tick_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/tick_inactive.png");
+}
+footer .footer_display .filter_ul .filter_buttons .inactive_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons .active_tick_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/tick_active.png");
+}
+footer .footer_display .filter_ul .filter_buttons .active_tick_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_prop {

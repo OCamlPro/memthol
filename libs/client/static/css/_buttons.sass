@@ -29,3 +29,11 @@
 @mixin button_move_down($float)
     @include button_conf($float)
     content: url("../pics/arrow_down.png")
+
+@mixin button_tick_inactive($float)
+    @include button_conf($float)
+    content: url("../pics/tick_inactive.png")
+
+@mixin button_tick_active($float)
+    @include button_conf($float)
+    content: url("../pics/tick_active.png")

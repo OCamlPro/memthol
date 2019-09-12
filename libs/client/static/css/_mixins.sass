@@ -22,6 +22,10 @@
         @include button_close(right)
     .add_button
         @include button_add(right)
+    .inactive_tick_button
+        @include button_tick_inactive(right)
+    .active_tick_button
+        @include button_tick_active(right)
 
 /// Code mixins.
 
@@ -123,6 +127,7 @@
 
     .tab_list
         @include hblock_container
+        @include buttons
 
         font-size: $font_size
         margin: 0

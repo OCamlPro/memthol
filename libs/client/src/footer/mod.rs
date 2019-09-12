@@ -38,13 +38,13 @@ pub struct Footer {
 
 impl Footer {
     /// Constructor.
-    pub fn new() -> Self {
+    pub fn new(model_callback: Callback<Msg>) -> Self {
         let mut tabs = TabMap::new();
         FooterTab::map_all(|tab| {
             let prev = tabs.insert(tab, false);
             debug_assert!(prev.is_none())
         });
-        let filters = filter::FilterFooter::new();
+        let filters = filter::FilterFooter::new(model_callback);
         Footer { tabs, filters }
     }
 
@@ -58,24 +58,36 @@ impl Footer {
         None
     }
 
+    /// Filter accessor.
+    pub fn get_filters_and_set_unedited(&mut self) -> Vec<crate::filter::Filter> {
+        self.filters.get_and_set_unedited()
+    }
+
     /// Renders itself.
-    pub fn render(&self) -> Html {
+    pub fn render(&self, data: Option<&Storage>) -> Html {
         html! {
             <div id=style::id::FOOTER>
                 <ul id=style::id::FOOTER_TABS class=style::class::tabs::UL>
                     { for self.tabs.iter().map(|(tab, active)| tab.render(*active)) }
+                    {
+                        if self.tabs.get(&FooterTab::Filters).cloned().unwrap_or(false) {
+                            self.filters.render_top_buttons()
+                        } else {
+                            html!(<a/>)
+                        }
+                    }
                 </ul>
                 {
                     match self.get_active() {
                         None => html!(<a/>),
                         Some(FooterTab::Filters) => html! {
                             <div class=style::class::footer::DISPLAY>
-                                { self.filters.render() }
+                                { self.filters.render(data) }
                             </div>
                         },
-                        Some(FooterTab::Stats) => html! {
+                        Some(FooterTab::Info) => html! {
                             <div class=style::class::footer::DISPLAY>
-                                { self.filters.render() }
+                                { "Info footer tab is not implemented." }
                             </div>
                         },
                     }
@@ -85,7 +97,7 @@ impl Footer {
     }
 
     /// Handles a message.
-    pub fn update(&mut self, msg: FooterMsg) -> ShouldRender {
+    pub fn update(&mut self, data: Option<&mut Storage>, msg: FooterMsg) -> ShouldRender {
         match msg {
             FooterMsg::Toggle(tab) => {
                 let is_active_now = !*self
@@ -109,7 +121,7 @@ impl Footer {
                 true
             }
 
-            FooterMsg::Filter(msg) => self.filters.update(msg),
+            FooterMsg::Filter(msg) => self.filters.update(data, msg),
         }
     }
 }
@@ -118,7 +130,7 @@ impl Footer {
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub enum FooterTab {
     /// Statistics tab.
-    Stats,
+    Info,
     /// Filters tab.
     Filters,
 }
@@ -128,7 +140,7 @@ impl FooterTab {
     where
         F: FnMut(FooterTab),
     {
-        f(Self::Stats);
+        f(Self::Info);
         f(Self::Filters);
     }
 
@@ -150,7 +162,7 @@ impl FooterTab {
 impl fmt::Display for FooterTab {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            FooterTab::Stats => write!(fmt, "Stats"),
+            FooterTab::Info => write!(fmt, "Info"),
             FooterTab::Filters => write!(fmt, "Filters"),
         }
     }

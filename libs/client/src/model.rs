@@ -39,7 +39,7 @@ impl Model {
         if let Some(data) = &mut self.data {
             data
         } else {
-            panic!("trying to access the allocation data while none is available")
+            fail!("trying to access the allocation data while none is available")
         }
     }
 
@@ -50,13 +50,13 @@ impl Model {
         if let Some(data) = &self.data {
             data
         } else {
-            panic!("trying to access the allocation data while none is available")
+            fail!("trying to access the allocation data while none is available")
         }
     }
 
     /// Registers an initialization message.
     pub fn init(&mut self, init: alloc_data::Init) {
-        let data = Storage::new(init);
+        let data = Storage::new(init, self.footer.get_filters_and_set_unedited());
         self.charts.init(&data);
         self.data = Some(data)
     }
@@ -68,7 +68,7 @@ impl Model {
         let data = if let Some(data) = self.data.as_ref() {
             data
         } else {
-            panic!("received allocation data before init message")
+            fail!("received allocation data before init message")
         };
         self.charts.update_data(data)
         // }
@@ -79,10 +79,11 @@ impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(_: Self::Properties, mut link: ComponentLink<Self>) -> Self {
+        let callback = link.send_back(|msg: Msg| msg);
         let mut model = Model {
             top_tabs: TopTabs::new(),
-            footer: Footer::new(),
+            footer: Footer::new(callback),
             link,
             socket: websocket::WebSocketService::new(),
             socket_task: None,
@@ -101,13 +102,13 @@ impl Component for Model {
                 true
             }
             Msg::ChartsAction(msg) => {
-                let render = self.charts.update(msg);
+                let render = self.charts.update(self.data.as_ref(), msg);
                 if render {
                     self.link.send_self(msg::ChartsMsg::refresh())
                 }
                 render
             }
-            Msg::FooterAction(msg) => self.footer.update(msg),
+            Msg::FooterAction(msg) => self.footer.update(self.data.as_mut(), msg),
             Msg::ChangeTab(tab) => {
                 warn!("[unimplemented] changing to tab {:?}", tab);
                 self.top_tabs.activate(tab)
@@ -140,7 +141,7 @@ impl Component for Model {
                             for line in e.pretty().lines() {
                                 error!("{}", line)
                             }
-                            panic!("could not parse ill-formed init")
+                            fail!("could not parse ill-formed init")
                         }
                     };
                     self.init(init);
@@ -229,7 +230,7 @@ impl Model {
     pub fn render_footer(&self) -> Html {
         html! {
             <footer>
-                { self.footer.render() }
+                { self.footer.render(self.data.as_ref()) }
             </footer>
         }
     }

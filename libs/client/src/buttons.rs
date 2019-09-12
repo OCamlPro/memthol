@@ -68,6 +68,32 @@ where
     }
 }
 
+/// Creates an inactive tickbox button.
+pub fn inactive_tickbox<Action>(action: Action) -> Html
+where
+    Action: OnClick,
+{
+    html! {
+        <img
+            class=style::class::button::INACTIVE_TICK
+            onclick=|e| action(e)
+        />
+    }
+}
+
+/// Creates an active tickbox button.
+pub fn active_tickbox<Action>(action: Action) -> Html
+where
+    Action: OnClick,
+{
+    html! {
+        <img
+            class=style::class::button::ACTIVE_TICK
+            onclick=|e| action(e)
+        />
+    }
+}
+
 /// Creates a move down button.
 pub fn move_down<Action>(action: Action) -> Html
 where

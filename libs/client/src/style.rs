@@ -61,6 +61,10 @@ pub mod class {
         pub static EXPAND: &str = "expand_button";
         /// Collapse button.
         pub static COLLAPSE: &str = "collapse_button";
+        /// Inactive tickbox button.
+        pub static INACTIVE_TICK: &str = "inactive_tick_button";
+        /// Active tickbox button.
+        pub static ACTIVE_TICK: &str = "active_tick_button";
     }
 
     /// Chart-related classes.

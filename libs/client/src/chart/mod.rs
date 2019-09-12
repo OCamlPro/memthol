@@ -79,7 +79,7 @@ impl Charts {
 /// # Actions.
 impl Charts {
     /// Handles a chart message.
-    pub fn update(&mut self, msg: msg::ChartsMsg) -> ShouldRender {
+    pub fn update(&mut self, data: Option<&Storage>, msg: msg::ChartsMsg) -> ShouldRender {
         use msg::ChartsMsg::*;
         match msg {
             // Refresh-s happen when the layout has changed.
@@ -100,6 +100,13 @@ impl Charts {
                 }
                 false
             }
+            ReloadData => match data {
+                None => false,
+                Some(data) => {
+                    self.init(data);
+                    true
+                }
+            },
             Close { uid } => self.close_chart(uid),
             Move { uid, up } => self.move_chart(uid, up),
             Visibility { uid, show } => {

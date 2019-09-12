@@ -277,6 +277,11 @@ var serverAddr = {{
             EXPAND: asset_file!(pics / "expand.png"),
             /// Collapse.
             COLLAPSE: asset_file!(pics / "collapse.png"),
+
+            /// Tick, inactive.
+            TICK_INACTIVE: asset_file!(pics / "tick_inactive.png"),
+            /// Tick, active.
+            TICK_ACTIVE: asset_file!(pics / "tick_active.png"),
         }
     }
 }
