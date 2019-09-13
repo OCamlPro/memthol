@@ -4,7 +4,7 @@
 extern crate clap;
 
 pub mod assets;
-mod base;
+pub mod base;
 #[macro_use]
 pub mod conf;
 pub mod err;
@@ -89,6 +89,9 @@ pub fn main() {
     unwrap! {
         socket::spawn_server(addr, port + 1, dump_dir)
     }
+
+    println!("starting data monitoring...");
+    charts::data::start(dump_dir);
 
     gotham::start(path, router)
 }

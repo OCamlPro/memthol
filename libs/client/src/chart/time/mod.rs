@@ -203,10 +203,21 @@ impl TimeChart {
             series.dataFields.dateX = "x";
             series.dataFields.valueY = "y";
             series.tooltipText = "{y}";
+            series.interpolationDuration = 0;
+            series.defaultState.transitionDuration = 0;
+            series.strokeWidth = 2;
+            series.minBulletDistance = 15;
+            series.title = "fuck";
+
+            var series = chart.series.push(new am4charts.LineSeries());
+            series.dataFields.dateX = "x";
+            series.dataFields.valueY = "y";
+            series.tooltipText = "{y}";
             series.interpolationDuration = 10;
             series.defaultState.transitionDuration = 0;
             series.strokeWidth = 2;
             series.minBulletDistance = 15;
+            series.title = "ass";
 
             // Create vertical scrollbar and place it before the value axis
             // chart.scrollbarY = new am4core.Scrollbar();

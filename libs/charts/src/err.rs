@@ -2,7 +2,7 @@
 
 error_chain::error_chain! {
     types {
-        Err, ErrorKind, ResultExt, Res;
+        Err, ErrorKind, ResExt, Res;
     }
 
     foreign_links {

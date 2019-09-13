@@ -15,6 +15,7 @@ lazy_static = "*"
 websocket = "*"
 clap = "*"
 alloc_data = { path = "libs/data" }
+charts = { path = "libs/charts" }
 
 [build-dependencies]
 fs_extra = "*"
@@ -23,6 +24,7 @@ lazy_static = "*"
 [workspace]
 members = [
     "libs/data",
+    "libs/charts",
 ]
 exclude = [
     "libs/client",

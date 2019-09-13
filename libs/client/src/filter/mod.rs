@@ -47,7 +47,11 @@ impl fmt::Display for FilterKind {
 
 impl FilterKind {
     pub fn all() -> Vec<FilterKind> {
-        vec![FilterKind::Size, FilterKind::Lifetime, FilterKind::Label]
+        vec![
+            FilterKind::Size,
+            // FilterKind::Lifetime,
+            FilterKind::Label,
+        ]
     }
 }
 
