@@ -111,13 +111,6 @@ impl Storage {
             std::mem::replace(&mut alloc.tod, Some(tod.clone()));
             self.filter(&alloc)
         });
-        info!(
-            "filter_diff:\n- new: {}/{}\n- dead: {}/{}",
-            diff.new.len(),
-            new.len(),
-            diff.dead.len(),
-            dead.len()
-        );
         AllocDiff::new(start_time, new, dead)
     }
 

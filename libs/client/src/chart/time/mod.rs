@@ -98,9 +98,12 @@ impl TimeChart {
         self.update_origin(data);
         data.diff_iter(|diff| {
             let points = self.value.points_of_diff(data, diff);
-            js! {
-                @{&self.chart}.addData(@{points})
-            }
+            js!( @(no_return)
+                @{&self.chart}.addData(@{points});
+                @{&self.chart}.data.sort(
+                    function(a, b) { return a.x - b.x }
+                );
+            )
         })
     }
 

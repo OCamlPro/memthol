@@ -90,7 +90,6 @@ impl FilterFooter {
         use FooterFilterMsg::*;
         match msg {
             Update { index, filter } => {
-                info!("updating filter #{} to {:?}", index, filter);
                 self.filters[index] = (filter, true);
                 true
             }
