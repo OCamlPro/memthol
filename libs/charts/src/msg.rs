@@ -61,6 +61,23 @@ pub mod to_server {
             filter: SubFilter,
         },
     }
+
+    impl Into<yew::format::Text> for Msg {
+        fn into(self) -> yew::format::Text {
+            match self.as_json() {
+                Ok(res) => Ok(res),
+                Err(e) => failure::bail!("{}", e.pretty()),
+            }
+        }
+    }
+    impl Into<yew::format::Binary> for Msg {
+        fn into(self) -> yew::format::Binary {
+            match self.as_json() {
+                Ok(res) => Ok(res.into_bytes()),
+                Err(e) => failure::bail!("{}", e.pretty()),
+            }
+        }
+    }
 }
 
 /// Messages from the server to the client.

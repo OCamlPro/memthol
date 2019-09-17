@@ -67,7 +67,7 @@ impl Charts {
     }
 
     /// Handles a message from the client.
-    pub fn handle_from_client(&mut self, msg: msg::to_server::Msg) -> Res<()> {
+    pub fn handle_msg(&mut self, msg: msg::to_server::Msg) -> Res<()> {
         use msg::to_server::Msg::*;
 
         match msg {

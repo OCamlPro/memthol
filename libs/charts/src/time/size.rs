@@ -31,7 +31,7 @@ impl Default for TimeSize {
 impl ChartExt for TimeSize {
     fn new_points(&mut self, filters: &Filters, init: bool) -> Res<Points> {
         self.get_allocs(filters, init)?;
-        Ok(self.generate_points().into())
+        Ok(self.generate_points()?.into())
     }
 }
 
@@ -63,7 +63,7 @@ impl TimeSize {
     /// This function should only be called right after `get_allocs`.
     ///
     /// - clears `self.map`.
-    fn generate_points(&mut self) -> TimeSizePoints {
+    fn generate_points(&mut self) -> Res<TimeSizePoints> {
         let map = std::mem::replace(&mut self.map, Map::new());
 
         let mut points = Vec::with_capacity(self.map.len());
@@ -77,7 +77,7 @@ impl TimeSize {
             points.push(Point::new(time, point_val))
         }
 
-        points
+        Ok(points)
     }
 
     /// Retrieves all allocations since its internal timestamp.

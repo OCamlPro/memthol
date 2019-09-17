@@ -12,8 +12,7 @@ pub struct Model {
     pub footer: Footer,
     /// Component link.
     pub link: ComponentLink<Self>,
-    // /// TCP stream.
-    // pub stream: TcpStream,
+
     pub socket: websocket::WebSocketService,
     pub socket_task: Option<websocket::WebSocketTask>,
     data: Option<Storage>,
@@ -64,14 +63,12 @@ impl Model {
     /// Registers a diff.
     pub fn add_diff(&mut self, diff: AllocDiff) {
         let _new_stuff = self.data_mut().add_diff(diff);
-        // if new_stuff {
         let data = if let Some(data) = self.data.as_ref() {
             data
         } else {
             fail!("received allocation data before init message")
         };
         self.charts.update_data(data)
-        // }
     }
 
     /// Handles a message from the server.
@@ -82,6 +79,16 @@ impl Model {
             msg.as_json().unwrap()
         );
         unimplemented!()
+    }
+
+    /// Sends a message to the server.
+    pub fn server_send(&mut self, msg: msg::to_server::Msg) -> Res<()> {
+        let socket = self
+            .socket_task
+            .as_mut()
+            .ok_or("failed to retrieve socket task, cannot send message to server")?;
+        socket.send(msg);
+        Ok(())
     }
 }
 
@@ -106,6 +113,18 @@ impl Component for Model {
 
     fn update(&mut self, msg: Msg) -> ShouldRender {
         match msg {
+            Msg::FromServer(msg) => {
+                let msg: Res<charts::msg::to_client::Msg> = msg.into();
+                self.handle_server_msg(msg)
+            }
+
+            Msg::ToServer(msg) => {
+                if let Err(e) = self.server_send(msg) {
+                    self.link.send_self(Msg::err(e))
+                }
+                false
+            }
+
             Msg::Start => {
                 let _should_render = self.top_tabs.activate_default();
                 true
@@ -135,11 +154,6 @@ impl Component for Model {
             Msg::Alarm(blah) => {
                 alert!("{}", blah);
                 true
-            }
-
-            Msg::FromServer(msg) => {
-                let msg: Res<charts::msg::to_client::Msg> = msg.into();
-                self.handle_server_msg(msg)
             }
 
             // Msg::Diff(diff) => {

@@ -11,7 +11,7 @@ pub mod conf;
 pub mod err;
 
 pub mod assets;
-pub mod nu_socket;
+pub mod msg;
 pub mod router;
 pub mod socket;
 
@@ -94,7 +94,7 @@ pub fn main() {
 
     println!("starting socket listeners...");
     unwrap! {
-        nu_socket::spawn_server(addr, port + 1)
+        socket::spawn_server(addr, port + 1)
     }
 
     gotham::start(path, router)

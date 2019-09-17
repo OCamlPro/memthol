@@ -32,6 +32,8 @@ static HTML_CHART_CONTAINER_ID: &str = "memthol_chart_container";
 pub struct Charts {
     /// Time charts.
     charts: Vec<time::TimeChart>,
+    /// Charts.
+    nu_charts: Vec<nu_chart::Chart>,
 }
 impl Charts {
     /// Constructor.
@@ -50,7 +52,10 @@ impl Charts {
             total_size_2,
             highest_lifetime_2,
         ];
-        Self { charts }
+        Self {
+            charts,
+            nu_charts: vec![],
+        }
     }
 
     /// Updates the actual charts.
@@ -110,11 +115,22 @@ impl Charts {
             },
             Close { uid } => self.close_chart(uid),
             Move { uid, up } => self.move_chart(uid, up),
+
             Visibility { uid, show } => {
                 if show {
                     self.expand_chart(uid)
                 } else {
                     self.collapse_chart(uid)
+                }
+            }
+
+            NuClose { index } => self.nu_close_chart(index),
+            NuMove { index, up } => self.nu_move_chart(index, up),
+            NuVisibility { index, show } => {
+                if show {
+                    self.nu_expand_chart(index)
+                } else {
+                    self.nu_collapse_chart(index)
                 }
             }
         }
@@ -141,6 +157,54 @@ impl Charts {
         }
         warn!("asked to expand chart #{} which does not exist", uid);
         false
+    }
+
+    /// Collapses a chart.
+    pub fn nu_collapse_chart(&mut self, index: index::Chart) -> ShouldRender {
+        self.nu_charts[*index.deref()].collapse()
+    }
+    /// Expands a chart.
+    pub fn nu_expand_chart(&mut self, index: index::Chart) -> ShouldRender {
+        self.nu_charts[*index.deref()].expand()
+    }
+    /// Closes a chart.
+    pub fn nu_close_chart(&mut self, index: index::Chart) -> ShouldRender {
+        // Remove chart.
+        self.nu_charts.remove(*index.deref());
+        if *index.deref() < self.nu_charts.len() {
+            // Update the indices of the charts after the one we removed.
+            for chart in &mut self.nu_charts[*index.deref()..] {
+                chart.prev_index()
+            }
+        }
+        true
+    }
+    /// Swaps two charts.
+    pub fn nu_move_chart(&mut self, index: index::Chart, up: bool) -> ShouldRender {
+        let index_2 = if up {
+            // Moving up.
+            if let Some(prev) = index.prev() {
+                prev
+            } else {
+                return false;
+            }
+        } else {
+            // Moving down.
+            if let Some(next) = index.next(&self.charts) {
+                next
+            } else {
+                return false;
+            }
+        };
+        self.nu_swap_chart(index, index_2)
+    }
+    /// Swaps two charts.
+    pub fn nu_swap_chart(&mut self, index_1: index::Chart, index_2: index::Chart) -> ShouldRender {
+        self.nu_charts.swap(*index_1.deref(), *index_2.deref());
+        // Update the actual indices.
+        self.nu_charts[*index_1.deref()].set_index(index_1);
+        self.nu_charts[*index_2.deref()].set_index(index_2);
+        true
     }
 
     /// Closes a chart.

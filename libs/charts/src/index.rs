@@ -23,11 +23,40 @@ macro_rules! new {
             pub fn new(index: usize) -> Self {
                 Self { index }
             }
+
+            /// Index following this one in a vector.
+            pub fn next<T>(&self, vec: &Vec<T>) -> Option<Self> {
+                let next = self.index + 1;
+                if next < vec.len() {
+                    Some(Self::new(next))
+                } else {
+                    None
+                }
+            }
+
+            /// Index preceding this one.
+            pub fn prev(&self) -> Option<Self> {
+                if self.index == 0 {
+                    None
+                } else {
+                    Some( Self::new(self.index - 1) )
+                }
+            }
+
+            /// Index of the element after the last one in a vector.
+            pub fn next_of<T>(vec: Vec<T>) -> Self {
+                Self::new(vec.len())
+            }
         }
         impl Deref for $ident {
             type Target = usize;
             fn deref(&self) -> &usize {
                 &self.index
+            }
+        }
+        impl std::fmt::Display for $ident {
+            fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(fmt, "{}", self.index)
             }
         }
     )*};

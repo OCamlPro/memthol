@@ -71,6 +71,21 @@ pub mod class {
     pub mod chart {
         /// Header class.
         pub static HEADER: &str = "chart_header";
+        /// Chart container class.
+        pub static CONTAINER: &str = "memthol_chart_container";
+        /// Class of a visible chart.
+        pub static VISIBLE: &str = "chart_style";
+        /// Class of a hidden chart.
+        pub static HIDDEN: &str = "hidden_chart_style";
+
+        /// Class of an amchart depending on its visibility.
+        pub fn style(visible: bool) -> &'static str {
+            if visible {
+                VISIBLE
+            } else {
+                HIDDEN
+            }
+        }
     }
 
     /// Filter-related classes.

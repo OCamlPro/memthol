@@ -84,6 +84,11 @@ impl SinceStart {
     pub fn from_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
         Parser::parse_all(s.as_ref(), Parser::date, "date")
     }
+
+    /// JS representation of a duration.
+    pub fn as_js(&self) -> Value {
+        js!(return @{format!("{}.{}", self.as_secs(), self.subsec_millis())})
+    }
 }
 
 /// An actual, absolute date.
@@ -99,6 +104,11 @@ impl SinceStart {
 pub struct Date {
     /// Actual date.
     date: DateTime,
+}
+impl Default for Date {
+    fn default() -> Self {
+        Self::of_timestamp(0, 0)
+    }
 }
 impl Date {
     /// Constructor from a unix UTC timestamp.
@@ -146,6 +156,12 @@ impl Date {
     /// ```
     pub fn add(&mut self, duration: SinceStart) {
         self.date = self.date + chrono::Duration::from_std(duration.duration).unwrap()
+    }
+
+    pub fn copy_add(&self, duration: SinceStart) -> Date {
+        let mut date = self.clone();
+        date.add(duration);
+        date
     }
 
     /// JS version of a date.

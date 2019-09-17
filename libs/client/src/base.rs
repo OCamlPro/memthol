@@ -1,8 +1,13 @@
 //! Basic types and stuffs.
 
+// Import from stdlib.
+
 pub use std::{
-    collections::BTreeMap as Map, collections::BTreeSet as Set, fmt, str::FromStr, time::Duration,
+    collections::BTreeMap as Map, collections::BTreeSet as Set, fmt, ops::Deref, str::FromStr,
+    time::Duration,
 };
+
+// External dependencies.
 
 use lazy_static::lazy_static;
 
@@ -12,13 +17,18 @@ pub use stdweb::{js, Value as JsVal};
 
 pub use regex::Regex;
 
-pub use charts::base::Json;
 pub use yew::{
     components::Select, html, html::ChangeData, services::websocket, Callback, Component,
     ComponentLink, Renderable, ShouldRender,
 };
 
+// Sub-crates.
+
 pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Uid as AllocUid};
+
+pub use charts::{base::Json, index, point::Point};
+
+// Re-exports.
 
 pub use crate::{
     buttons, chart,
@@ -30,7 +40,7 @@ pub use crate::{
     model::Model,
     msg,
     msg::Msg,
-    style,
+    nu_chart, point, style,
 };
 
 /// Issues an alert.

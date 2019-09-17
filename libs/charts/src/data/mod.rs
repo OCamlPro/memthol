@@ -76,6 +76,15 @@ impl Data {
         &self.current_time
     }
 
+    /// Time at which the profiling run started.
+    pub fn start_time(&self) -> Res<Date> {
+        if let Some(init) = self.init.as_ref() {
+            Ok(init.start_time.clone())
+        } else {
+            bail!("cannot access start time")
+        }
+    }
+
     /// Alloc accessor.
     ///
     /// Fails if the UID is unknown.

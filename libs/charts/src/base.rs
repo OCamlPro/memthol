@@ -25,9 +25,6 @@ pub use crate::{
 /// A set of allocation UIDs.
 pub type AllocUidSet = Set<AllocUid>;
 
-/// Alias for booleans. If true then all the graphs should be refreshed.
-pub type ShouldRefresh = bool;
-
 /// Trait for types that can be (de)serialized in JSON format.
 pub trait Json: Sized {
     /// Json serialization.
