@@ -6,9 +6,13 @@ error_chain::error_chain! {
     }
 
     foreign_links {
-        Io(::std::io::Error)
+        Io(std::io::Error)
         /// I/O error.
         ;
+        DeJson(serde_json::error::Error)
+        /// Json (de)serialization error.
+        ;
+
     }
 
     links {

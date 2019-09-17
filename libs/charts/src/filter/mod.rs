@@ -1,12 +1,16 @@
 //! Data filtering.
+//!
+//! All types in this module implement `serde`'s `Serialize` and `Deserialize` traits.
 
 use crate::base::*;
 
 pub mod label;
 pub mod ord;
+mod sub;
 
 pub use label::LabelFilter;
 use ord::OrdFilter;
+pub use sub::SubFilter;
 
 /// A filter over allocation sizes.
 pub type SizeFilter = OrdFilter<usize>;
@@ -21,9 +25,11 @@ where
 }
 
 /// Filter kind.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum FilterKind {
+    /// Size filter.
     Size,
+    /// Label filter.
     Label,
 }
 impl fmt::Display for FilterKind {
@@ -42,54 +48,80 @@ impl FilterKind {
 }
 
 /// A list of filters.
-pub type Filters = Vec<Filter>;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Filters {
+    /// The actual list.
+    filters: Vec<Filter>,
+}
 
-/// An allocation filter.
-#[derive(Debug, Clone)]
-pub enum Filter {
-    /// Filter over allocation sizes.
-    Size(SizeFilter),
-    /// Filter over labels.
-    Label(LabelFilter),
+impl Filters {
+    /// Constructor.
+    pub fn new() -> Self {
+        Filters { filters: vec![] }
+    }
+
+    /// Length of the list of filters.
+    pub fn len(&self) -> usize {
+        self.filters.len()
+    }
+
+    /// Searches for a filter that matches on the input allocation.
+    pub fn find_match(&self, alloc: &Alloc) -> Option<index::Filter> {
+        for (index, filter) in self.filters.iter().enumerate() {
+            if filter.apply(alloc) {
+                return Some(index::Filter::new(index));
+            }
+        }
+        None
+    }
+
+    /// Applies a filter message.
+    pub fn update(&mut self, msg: msg::to_server::FiltersMsg) {
+        use msg::to_server::FiltersMsg::*;
+        match msg {
+            Add { filter } => self.filters.push(filter),
+            Rm { index } => {
+                self.filters.remove(*index);
+                ()
+            }
+            Filter { index, msg } => self.filters[*index].update(msg),
+        }
+    }
+}
+
+/// A filter that combines `SubFilter`s.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Filter {
+    /// Actual list of filters.
+    filters: Vec<SubFilter>,
 }
 impl Filter {
-    /// Default filter for some filter kind.
-    pub fn of_kind(kind: FilterKind) -> Self {
-        match kind {
-            FilterKind::Size => SizeFilter::default().into(),
-            FilterKind::Label => LabelFilter::default().into(),
-        }
+    /// Constructor.
+    pub fn new() -> Filter {
+        Self { filters: vec![] }
     }
 
-    /// Filter kind of a filter.
-    pub fn kind(&self) -> FilterKind {
-        match self {
-            Self::Size(_) => FilterKind::Size,
-            Self::Label(_) => FilterKind::Label,
-        }
-    }
-
-    /// Applies the filter to an allocation.
+    /// Applies the filters to an allocation.
     pub fn apply(&self, alloc: &Alloc) -> bool {
-        match self {
-            Filter::Size(filter) => filter.apply(&alloc.size),
-            Filter::Label(filter) => filter.apply(&alloc.labels),
+        for filter in &self.filters {
+            if filter.apply(alloc) {
+                return true;
+            }
         }
+        false
     }
-}
 
-impl From<SizeFilter> for Filter {
-    fn from(filter: SizeFilter) -> Self {
-        Self::Size(filter)
-    }
-}
-impl From<LabelFilter> for Filter {
-    fn from(filter: LabelFilter) -> Self {
-        Self::Label(filter)
-    }
-}
-impl Default for Filter {
-    fn default() -> Self {
-        SizeFilter::default().into()
+    /// Applies a filter message.
+    pub fn update(&mut self, msg: msg::to_server::FilterMsg) {
+        use msg::to_server::FilterMsg::*;
+
+        match msg {
+            Add { filter } => self.filters.push(filter),
+            Rm { index } => {
+                self.filters.remove(*index);
+                ()
+            }
+            Update { index, filter } => self.filters[*index] = filter,
+        }
     }
 }

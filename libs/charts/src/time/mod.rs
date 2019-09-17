@@ -4,15 +4,46 @@ use crate::base::*;
 
 pub mod size;
 
-/// A time chart.
-pub struct TimeChart {
-    /// Time of the latest allocation.
-    timestamp: SinceStart,
+pub use size::{TimeSize, TimeSizePoint, TimeSizePoints};
+
+/// A point for a time chart.
+pub type TimePoint<Val> = Point<SinceStart, Val>;
+
+/// Some points for a time chart.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TimePoints {
+    Size(size::TimeSizePoints),
 }
+impl From<size::TimeSizePoints> for TimePoints {
+    fn from(points: size::TimeSizePoints) -> Self {
+        Self::Size(points)
+    }
+}
+
+/// A time chart.
+#[derive(Debug, Serialize, Deserialize)]
+pub enum TimeChart {
+    /// Total size over time chart.
+    Size(TimeSize),
+}
+
+impl Default for TimeChart {
+    fn default() -> Self {
+        Self::Size(TimeSize::default())
+    }
+}
+
+impl ChartExt for TimeChart {
+    fn new_points(&mut self, filters: &Filters, init: bool) -> Res<Points> {
+        match self {
+            Self::Size(time_size_chart) => time_size_chart.new_points(filters, init),
+        }
+    }
+}
+
 impl TimeChart {
     /// Constructor.
     pub fn new() -> Self {
-        let timestamp = SinceStart::zero();
-        Self { timestamp }
+        Self::Size(TimeSize::new())
     }
 }

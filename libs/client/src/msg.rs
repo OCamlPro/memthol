@@ -2,14 +2,15 @@
 
 use crate::base::*;
 
+pub use charts::msg::to_client as from_server;
+
 /// A message for the model.
 #[derive(Debug)]
 pub enum Msg {
-    JsInit,
+    /// A message from a server.
+    FromServer(charts::msg::to_client::RawMsg),
     /// Order to change tab.
     ChangeTab(crate::top_tabs::Tab),
-    /// Allocation info message.
-    Diff(DiffMsg),
     /// An action over the charts.
     ChartsAction(ChartsMsg),
     /// An action over the control menu.

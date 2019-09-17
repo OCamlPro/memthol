@@ -22,6 +22,7 @@
 
 pub use error_chain::bail;
 pub use num_bigint::BigUint;
+pub use serde_derive::{Deserialize, Serialize};
 
 pub mod parser;
 mod time;
@@ -34,7 +35,7 @@ pub use time::{Date, Duration, SinceStart};
 mod test;
 
 /// A bigint UID.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Uid {
     /// The actual bigint.
     uid: BigUint,
@@ -82,7 +83,7 @@ impl Uid {
 }
 
 /// A location.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Loc {
     /// File the location is for.
     pub file: String,
@@ -150,7 +151,7 @@ impl Loc {
 }
 
 /// A trace of locations.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Trace {
     /// The actual trace of locations.
     trace: Vec<(Loc, usize)>,
@@ -181,7 +182,7 @@ impl Trace {
 }
 
 /// A list of labels.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Labels {
     labels: Vec<String>,
 }
@@ -204,7 +205,7 @@ impl Labels {
 }
 
 /// A kind of allocation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AllocKind {
     Minor,
     Major,
@@ -254,7 +255,7 @@ impl AllocKind {
 }
 
 /// Some allocation information.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Alloc {
     /// Uid of the allocation.
     pub uid: Uid,
@@ -367,7 +368,7 @@ impl Alloc {
 /// A diff.
 ///
 /// **NB:** `Display` for this type is multi-line.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Diff {
     /// Timestamp.
     pub time: SinceStart,
@@ -405,6 +406,7 @@ impl Diff {
 }
 
 /// Data from a memthol init file.
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Init {
     /// The start time of the run: an absolute date.
     pub start_time: Date,

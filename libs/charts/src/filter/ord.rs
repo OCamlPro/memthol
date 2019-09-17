@@ -2,7 +2,7 @@
 
 use crate::base::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Kind {
     Eq,
     Ge,
@@ -25,7 +25,7 @@ impl Kind {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Cmp {
     Eq,
     Ge,
@@ -54,7 +54,7 @@ impl fmt::Display for Cmp {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OrdFilter<Num> {
     Cmp { cmp: Cmp, val: Num },
     In { lb: Num, ub: Num },
@@ -108,7 +108,7 @@ where
 impl<Num> crate::filter::FilterSpec<Num> for OrdFilter<Num>
 where
     Num: PartialOrd + PartialEq + fmt::Display + Default + alloc_data::Parseable + Clone + 'static,
-    Self: Into<filter::Filter>,
+    Self: Into<filter::SubFilter>,
 {
     fn apply(&self, data: &Num) -> bool {
         match self {

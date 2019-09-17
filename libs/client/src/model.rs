@@ -26,7 +26,7 @@ impl Model {
         debug_assert! { self.socket_task.is_none() }
         let (addr, port) = get_server_addr();
         let addr = format!("ws://{}:{}", addr, port + 1);
-        let callback = self.link.send_back(|diff| Msg::Diff(diff));
+        let callback = self.link.send_back(|msg| Msg::FromServer(msg));
         let notification = self.link.send_back(|_| Msg::Nop);
         let task = self.socket.connect(&addr, callback, notification);
         self.socket_task = Some(task)
@@ -73,6 +73,16 @@ impl Model {
         self.charts.update_data(data)
         // }
     }
+
+    /// Handles a message from the server.
+    pub fn handle_server_msg(&mut self, msg: Res<msg::from_server::Msg>) -> ShouldRender {
+        let msg = msg.unwrap();
+        info!(
+            "received a message from the server:\n{}",
+            msg.as_json().unwrap()
+        );
+        unimplemented!()
+    }
 }
 
 impl Component for Model {
@@ -96,7 +106,6 @@ impl Component for Model {
 
     fn update(&mut self, msg: Msg) -> ShouldRender {
         match msg {
-            Msg::JsInit => false,
             Msg::Start => {
                 let _should_render = self.top_tabs.activate_default();
                 true
@@ -128,79 +137,38 @@ impl Component for Model {
                 true
             }
 
-            Msg::Diff(diff) => {
-                let txt = diff
-                    .destroy()
-                    .expect("failed to receive new diff from server");
-                if txt.len() > "start".len() && &txt[0.."start".len()] == "start" {
-                    info!("receiving init...");
-                    let init = match alloc_data::Init::from_str(&txt) {
-                        Ok(init) => init,
-                        Err(e) => {
-                            error!("Error:");
-                            for line in e.pretty().lines() {
-                                error!("{}", line)
-                            }
-                            fail!("could not parse ill-formed init")
-                        }
-                    };
-                    self.init(init);
-                    true
-                } else {
-                    info!("receiving diff...");
-                    // let is_last = &txt[0..1] == "1";
-                    let diff_str = &txt[1..];
-                    let diff =
-                        AllocDiff::from_str(diff_str).expect("could not parse ill-formed diff");
-                    self.add_diff(diff);
-                    false
-                }
+            Msg::FromServer(msg) => {
+                let msg: Res<charts::msg::to_client::Msg> = msg.into();
+                self.handle_server_msg(msg)
             }
-            // Msg::UpdateD3(_) => {
-            //     let (toc_s, toc_n) = (self.count * 15, self.count * 3574 % 103);
-            //     let (tod_s, tod_n) = (toc_s + (self.count * 21), self.count * 2574 % 103);
-            //     let toc = format!("{}.{}", toc_s, toc_n);
-            //     let tod = format!("{}.{}", tod_s, tod_n);
-            //     let alloc = if self.count % 2 == 0 {
-            //         let alloc = Alloc::of_str(&format!(
-            //             "{}: {}, {}, {}, {}, {}",
-            //             self.count * self.count * self.count * self.count % 2_000_000_000,
-            //             "Major",
-            //             match self.count * 11 % 4 {
-            //                 0 => 7,
-            //                 1 => 8,
-            //                 2 => 16,
-            //                 3 => 32,
-            //                 _ => 4,
-            //             },
-            //             "[ blah/stuff/file.ml:325:7-38#3 file.ml:754230:1-3#11 ]",
-            //             toc,
-            //             tod
-            //         ))
-            //         .unwrap();
-            //         alloc
+
+            // Msg::Diff(diff) => {
+            //     let txt = diff
+            //         .destroy()
+            //         .expect("failed to receive new diff from server");
+            //     if txt.len() > "start".len() && &txt[0.."start".len()] == "start" {
+            //         info!("receiving init...");
+            //         let init = match alloc_data::Init::from_str(&txt) {
+            //             Ok(init) => init,
+            //             Err(e) => {
+            //                 error!("Error:");
+            //                 for line in e.pretty().lines() {
+            //                     error!("{}", line)
+            //                 }
+            //                 fail!("could not parse ill-formed init")
+            //             }
+            //         };
+            //         self.init(init);
+            //         true
             //     } else {
-            //         let alloc = Alloc::of_str(&format!(
-            //             "{}: {}, {}, {}, {}",
-            //             self.count * self.count * self.count * self.count % 2_000_000_000,
-            //             "Major",
-            //             match self.count * 11 % 4 {
-            //                 0 => 7,
-            //                 1 => 8,
-            //                 2 => 16,
-            //                 3 => 32,
-            //                 _ => 4,
-            //             },
-            //             "[ blah/stuff/file.ml:325:7-38#3 file.ml:754230:1-3#11 ]",
-            //             toc
-            //         ))
-            //         .unwrap();
-            //         self.memory.push(alloc.uid().clone());
-            //         alloc
-            //     };
-            //     self.charts.add_alloc(alloc);
-            //     self.count += 1;
-            //     false
+            //         info!("receiving diff...");
+            //         // let is_last = &txt[0..1] == "1";
+            //         let diff_str = &txt[1..];
+            //         let diff =
+            //             AllocDiff::from_str(diff_str).expect("could not parse ill-formed diff");
+            //         self.add_diff(diff);
+            //         false
+            //     }
             // }
             Msg::Nop => false,
         }

@@ -6,22 +6,6 @@ use websocket::message::OwnedMessage;
 
 use crate::base::*;
 
-/// A websocket server.
-pub type Server = websocket::sync::Server<websocket::server::NoTlsAcceptor>;
-
-/// A request.
-pub type Request = websocket::server::upgrade::WsUpgrade<
-    std::net::TcpStream,
-    Option<websocket::server::upgrade::sync::Buffer>,
->;
-
-/// An IP address.
-pub type IpAddr = std::net::SocketAddr;
-/// A receiver for a request.
-pub type Receiver = websocket::receiver::Reader<std::net::TcpStream>;
-/// A sender for a request.
-pub type Sender = websocket::sender::Writer<std::net::TcpStream>;
-
 /// Creates a websocket server at some address.
 fn new_server(addr: &str, port: usize) -> Res<Server> {
     let server = Server::bind(&format!("{}:{}", addr, port))

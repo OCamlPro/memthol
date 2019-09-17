@@ -12,6 +12,7 @@ pub use stdweb::{js, Value as JsVal};
 
 pub use regex::Regex;
 
+pub use charts::base::Json;
 pub use yew::{
     components::Select, html, html::ChangeData, services::websocket, Callback, Component,
     ComponentLink, Renderable, ShouldRender,
@@ -79,30 +80,6 @@ pub fn get_server_addr() -> (String, usize) {
 
 /// Type of HTML elements in the client.
 pub type Html = yew::Html<Model>;
-
-#[derive(Debug)]
-pub struct DiffMsg {
-    inner: yew::format::Text,
-}
-impl DiffMsg {
-    pub fn destroy(self) -> yew::format::Text {
-        self.inner
-    }
-}
-impl From<yew::format::Binary> for DiffMsg {
-    fn from(bin: yew::format::Binary) -> Self {
-        let inner = match bin {
-            Ok(bin) => String::from_utf8(bin).map_err(|e| e.into()),
-            Err(e) => Err(e),
-        };
-        Self { inner }
-    }
-}
-impl From<yew::format::Text> for DiffMsg {
-    fn from(inner: yew::format::Text) -> Self {
-        Self { inner }
-    }
-}
 
 /// Extends yew's `ChangeData` with some helpers.
 pub trait ChangeDataExt {

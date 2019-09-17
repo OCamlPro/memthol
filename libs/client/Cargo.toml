@@ -16,8 +16,9 @@ stdweb = "*"
 stdweb-derive = "*"
 serde = "*"
 failure = "*"
-alloc_data = { path = "../data" }
 safe_index = "*"
 chrono = "*"
 regex = "*"
 error-chain = "*"
+alloc_data = { path = "../data" }
+charts = { path = "../charts" }

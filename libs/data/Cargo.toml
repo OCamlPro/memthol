@@ -9,6 +9,7 @@ num-bigint = { version = "*", features = ["serde"] }
 num-traits = "*"
 lazy_static = "*"
 rand = "*"
+toml = "*"
 serde = "*"
 serde_derive = "*"
 stdweb = "*"

@@ -3,6 +3,7 @@
 //! - `SinceStart`: indicates a date since the start of the profiling run. Essentially a wrapper
 //!     around a `std::time::Duration`.
 
+use serde_derive::{Deserialize, Serialize};
 use stdweb::{js, Value};
 
 use crate::{Parser, Res};
@@ -17,7 +18,7 @@ pub type DateTime = chrono::DateTime<chrono::Utc>;
 /// being profiled, which is a [`Date`] (an absolute point in time).
 ///
 /// [`Date`]: struct.date.html (The Date struct)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct SinceStart {
     /// Actual duration.
     duration: Duration,
@@ -94,7 +95,7 @@ impl SinceStart {
 ///
 /// [`chrono`]: https://crates.io/crates/chrono (The chrono crate on crates.io)
 /// [`SinceStart`]: struct.sincestart.html (The SincStart struct)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Date {
     /// Actual date.
     date: DateTime,

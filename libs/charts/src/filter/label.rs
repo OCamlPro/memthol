@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::{base::*, filter::FilterSpec};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Kind {
     Contain,
     Exclude,
@@ -24,7 +24,7 @@ impl Kind {
 }
 
 /// Label filter.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LabelFilter {
     /// Retains label lists that contain a label verifying this spec.
     Contain(Vec<LabelSpec>),
@@ -123,11 +123,12 @@ impl LabelFilter {
 }
 
 /// Label specification.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LabelSpec {
     /// An actualy label value.
     Value(String),
     /// A regular expression.
+    #[serde(with = "serde_regex")]
     Regex(Regex),
 }
 impl FilterSpec<str> for LabelSpec {

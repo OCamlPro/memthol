@@ -48,13 +48,15 @@ fn get_mut<'a>() -> Res<RwLockWriteGuard<'a, Data>> {
 /// Structures that aggregates all the information about the allocations so far.
 pub struct Data {
     /// Init state.
-    pub init: Option<AllocInit>,
+    init: Option<AllocInit>,
     /// Map from allocation UIDs to allocation data.
-    pub uid_map: Map<AllocUid, Alloc>,
+    uid_map: Map<AllocUid, Alloc>,
+    /// Map from time-of-death to allocation UIDs.
+    tod_map: Map<SinceStart, AllocUidSet>,
     /// Errors encountered so far.
-    pub errors: Vec<String>,
+    errors: Vec<String>,
     /// Time of the latest diff.
-    pub current_time: SinceStart,
+    current_time: SinceStart,
 }
 
 impl Data {
@@ -63,9 +65,72 @@ impl Data {
         Self {
             init: None,
             uid_map: Map::new(),
+            tod_map: Map::new(),
             errors: vec![],
             current_time: SinceStart::zero(),
         }
+    }
+
+    /// Current time accessor.
+    pub fn current_time(&self) -> &SinceStart {
+        &self.current_time
+    }
+
+    /// Alloc accessor.
+    ///
+    /// Fails if the UID is unknown.
+    pub fn get_alloc(&self, uid: &AllocUid) -> Res<&Alloc> {
+        self.uid_map
+            .get(uid)
+            .ok_or_else(|| format!("unknown allocation UID #{}", uid).into())
+    }
+
+    /// Runs some functions on new allocations and allocation deaths since some time in history.
+    ///
+    /// - new allocations that have a time-of-death **will also be** in `iter_dead_since`;
+    /// - allocations will appear in reverse time-of-creation chronological order.
+    pub fn iter_new_since<AllocDo>(&self, time: &SinceStart, mut new_alloc: AllocDo) -> Res<()>
+    where
+        AllocDo: for<'a> FnMut(&'a Alloc) -> Res<()>,
+    {
+        // Reverse iter allocations.
+        for (_, alloc) in self.uid_map.iter().rev() {
+            if &alloc.toc <= time {
+                break;
+            } else {
+                new_alloc(alloc)?
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Runs some functions on new allocations and allocation deaths since some time in history.
+    ///
+    /// - new allocations that have a time-of-death **will also appear** in `iter_new_since`;
+    /// - allocation deaths will appear in reverse time-of-death chronological order.
+    pub fn iter_dead_since<DeathDo>(&self, time: &SinceStart, mut new_death: DeathDo) -> Res<()>
+    where
+        DeathDo: for<'a> FnMut(&'a AllocUidSet, &'a SinceStart) -> Res<()>,
+    {
+        // Reverse iter death.
+        for (tod, uid) in self.tod_map.iter().rev() {
+            if tod <= time {
+                break;
+            } else {
+                new_death(uid, tod)?
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// # Mutable Functions
+impl Data {
+    /// Mutable reference to `self.tod_map[tod]`.
+    fn tod_map_get_mut(&mut self, time: SinceStart) -> &mut AllocUidSet {
+        self.tod_map.entry(time).or_insert_with(AllocUidSet::new)
     }
 
     /// Registers a diff.
@@ -75,15 +140,33 @@ impl Data {
         for alloc in diff.new {
             let uid = alloc.uid.clone();
 
+            if let Some(tod) = alloc.tod.clone() {
+                let is_new = self.tod_map_get_mut(tod).insert(uid.clone());
+                if !is_new {
+                    bail!(
+                        "allocation UID collision (1): two allocations have UID #{}",
+                        uid
+                    )
+                }
+            }
+
             let prev = self.uid_map.insert(uid.clone(), alloc);
             if prev.is_some() {
                 bail!(
-                    "allocation UID collision: two allocations have UID #{}",
+                    "allocation UID collision (2): two allocations have UID #{}",
                     uid
                 )
             }
         }
         for (uid, tod) in diff.dead {
+            let is_new = self.tod_map_get_mut(tod).insert(uid.clone());
+            if !is_new {
+                bail!(
+                    "allocation UID collision (3): two allocations have UID #{}",
+                    uid
+                )
+            }
+
             match self.uid_map.get_mut(&uid) {
                 Some(alloc) => alloc.set_tod(tod).map_err(|e| {
                     let e: err::Err = e.into();

@@ -3,11 +3,15 @@
 #[macro_use]
 extern crate clap;
 
-pub mod assets;
+#[macro_use]
 pub mod base;
 #[macro_use]
 pub mod conf;
+#[macro_use]
 pub mod err;
+
+pub mod assets;
+pub mod nu_socket;
 pub mod router;
 pub mod socket;
 
@@ -85,13 +89,13 @@ pub fn main() {
         assets::init(&addr, port)
     }
 
-    println!("starting server...");
-    unwrap! {
-        socket::spawn_server(addr, port + 1, dump_dir)
-    }
-
     println!("starting data monitoring...");
     charts::data::start(dump_dir);
+
+    println!("starting socket listeners...");
+    unwrap! {
+        nu_socket::spawn_server(addr, port + 1)
+    }
 
     gotham::start(path, router)
 }
