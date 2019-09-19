@@ -15,7 +15,7 @@ macro_rules! unwrap {
                     }
                 }
                 println!("|===|");
-                std::process::exit(2)
+                std::process::exit(0)
             }
         }
     };

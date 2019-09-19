@@ -25,7 +25,7 @@ impl Kind {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Cmp {
     Eq,
     Ge,
@@ -105,6 +105,15 @@ where
     }
 }
 
+impl<Num: fmt::Display> fmt::Display for OrdFilter<Num> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Cmp { cmp, val } => write!(fmt, "{} {}", cmp, val),
+            Self::In { lb, ub } => write!(fmt, "⋲ [{}, {}]", lb, ub),
+        }
+    }
+}
+
 impl<Num> crate::filter::FilterSpec<Num> for OrdFilter<Num>
 where
     Num: PartialOrd + PartialEq + fmt::Display + Default + alloc_data::Parseable + Clone + 'static,
@@ -115,5 +124,81 @@ where
             Self::Cmp { cmp, val } => cmp.apply(data, val),
             Self::In { lb, ub } => Cmp::Ge.apply(data, lb) && Cmp::Le.apply(data, ub),
         }
+    }
+}
+
+/// An update for a size filter.
+pub type SizeUpdate = Update<usize>;
+
+/// An update for an ordered filter.
+pub enum Update<Val> {
+    /// Change the comparator of a `Cmp` filter.
+    Cmp(Cmp),
+    /// Change the value of a `Cmp` filter.
+    Value(Val),
+    /// Change the lower-bound of an interval filter.
+    InLb(Val),
+    /// Change the upper-bound of an interval filter.
+    InUb(Val),
+}
+impl<Val: fmt::Display> fmt::Display for Update<Val> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Cmp(cmp) => write!(fmt, "comparator <- {}", cmp),
+            Self::Value(val) => write!(fmt, "comparator value <- {}", val),
+            Self::InLb(val) => write!(fmt, "interval lbound <- {}", val),
+            Self::InUb(val) => write!(fmt, "interval ubound <- {}", val),
+        }
+    }
+}
+
+impl<Num: fmt::Display + PartialEq + Eq> OrdFilter<Num> {
+    /// Updates the filter.
+    pub fn update(&mut self, update: Update<Num>) -> Res<bool> {
+        let has_changed = match self {
+            Self::Cmp { cmp, val } => match update {
+                Update::Cmp(nu_cmp) => {
+                    if nu_cmp != *cmp {
+                        *cmp = nu_cmp;
+                        true
+                    } else {
+                        false
+                    }
+                }
+                Update::Value(nu_val) => {
+                    if nu_val != *val {
+                        *val = nu_val;
+                        true
+                    } else {
+                        false
+                    }
+                }
+
+                update => bail!("cannot update filter `_ {}` with `{}`", self, update),
+            },
+
+            Self::In { lb, ub } => match update {
+                Update::InLb(val) => {
+                    if val != *lb {
+                        *lb = val;
+                        true
+                    } else {
+                        false
+                    }
+                }
+                Update::InUb(val) => {
+                    if val != *ub {
+                        *ub = val;
+                        true
+                    } else {
+                        false
+                    }
+                }
+
+                update => bail!("cannot update filter `_ {}` with `{}`", self, update),
+            },
+        };
+
+        Ok(has_changed)
     }
 }

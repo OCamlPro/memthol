@@ -2,7 +2,7 @@
 
 use crate::base::*;
 
-pub use time::TimePoint;
+pub use chart::time::TimePoints;
 
 /// A point value.
 ///
@@ -71,19 +71,61 @@ impl<Key, Val> Point<Key, Val> {
         Self { key, vals }
     }
 }
+impl<Key, Val> fmt::Display for Point<Key, Val>
+where
+    Key: fmt::Display,
+    Val: fmt::Display,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let Point {
+            key,
+            vals: PointVal { filtered, rest },
+        } = self;
+        write!(fmt, "{{ x: {}, y: {}", key, rest)?;
+        for (index, val) in filtered.iter().enumerate() {
+            write!(fmt, ", y_{}: {}", index, val)?
+        }
+        write!(fmt, "}}")
+    }
+}
 
 /// Some points for a particular chart type.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Points {
-    /// Points for time chart.
-    Time(time::TimePoints),
+    /// Points for a time chart.
+    Time(TimePoints),
 }
 
 impl<T> From<T> for Points
 where
-    T: Into<time::TimePoints>,
+    T: Into<TimePoints>,
 {
     fn from(points: T) -> Self {
         Self::Time(points.into())
+    }
+}
+
+/// Some points for all the charts.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChartPoints {
+    /// The actual points.
+    points: Map<uid::ChartUid, Points>,
+}
+impl ChartPoints {
+    /// Constructor.
+    pub fn new() -> Self {
+        Self { points: Map::new() }
+    }
+}
+
+impl Deref for ChartPoints {
+    type Target = Map<uid::ChartUid, Points>;
+    fn deref(&self) -> &Self::Target {
+        &self.points
+    }
+}
+impl DerefMut for ChartPoints {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.points
     }
 }

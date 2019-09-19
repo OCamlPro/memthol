@@ -1,95 +1,62 @@
 //! Model of the client.
 
-use yew::{services::websocket, Component, ComponentLink, Renderable, ShouldRender};
-
-use crate::{base::*, footer::Footer, top_tabs::TopTabs};
+use crate::base::*;
 
 /// Model of the client.
 pub struct Model {
-    /// The top tabs.
-    pub top_tabs: TopTabs,
-    /// The footer.
-    pub footer: Footer,
     /// Component link.
     pub link: ComponentLink<Self>,
-
-    pub socket: websocket::WebSocketService,
-    pub socket_task: Option<websocket::WebSocketTask>,
-    data: Option<Storage>,
-    charts: chart::Charts,
+    /// Socket service with the server.
+    pub socket: WebSocketService,
+    /// Socket task for receiving/sending messages from/to the server.
+    pub socket_task: WebSocketTask,
+    /// Collection of charts.
+    pub charts: Charts,
 }
 
 impl Model {
     /// Activates the websocket to receive data from the server.
-    pub fn activate_ws(&mut self) {
-        debug_assert! { self.socket_task.is_none() }
+    fn activate_ws(link: &mut ComponentLink<Self>, socket: &mut WebSocketService) -> WebSocketTask {
         let (addr, port) = get_server_addr();
         let addr = format!("ws://{}:{}", addr, port + 1);
-        let callback = self.link.send_back(|msg| Msg::FromServer(msg));
-        let notification = self.link.send_back(|_| Msg::Nop);
-        let task = self.socket.connect(&addr, callback, notification);
-        self.socket_task = Some(task)
+        let callback = link.send_back(|msg| Msg::FromServer(msg));
+        let notification = link.send_back(|status| Msg::ConnectionStatus(status));
+        socket.connect(&addr, callback, notification)
     }
+}
 
-    /// Retrieves the current data (mutable).
-    ///
-    /// Panics if `self.data` is not set.
-    pub fn data_mut(&mut self) -> &mut Storage {
-        if let Some(data) = &mut self.data {
-            data
-        } else {
-            fail!("trying to access the allocation data while none is available")
-        }
-    }
-
-    /// Retrieves the current data (immutable).
-    ///
-    /// Panics if `self.data` is not set.
-    pub fn data(&self) -> &Storage {
-        if let Some(data) = &self.data {
-            data
-        } else {
-            fail!("trying to access the allocation data while none is available")
-        }
-    }
-
-    /// Registers an initialization message.
-    pub fn init(&mut self, init: alloc_data::Init) {
-        let data = Storage::new(init, self.footer.get_filters_and_set_unedited());
-        self.charts.init(&data);
-        self.data = Some(data)
-    }
-
-    /// Registers a diff.
-    pub fn add_diff(&mut self, diff: AllocDiff) {
-        let _new_stuff = self.data_mut().add_diff(diff);
-        let data = if let Some(data) = self.data.as_ref() {
-            data
-        } else {
-            fail!("received allocation data before init message")
-        };
-        self.charts.update_data(data)
+/// # Communication with the server
+impl Model {
+    /// Sends a message to the server.
+    pub fn server_send(&mut self, msg: msg::to_server::Msg) {
+        self.socket_task.send(msg)
     }
 
     /// Handles a message from the server.
-    pub fn handle_server_msg(&mut self, msg: Res<msg::from_server::Msg>) -> ShouldRender {
-        let msg = msg.unwrap();
-        info!(
-            "received a message from the server:\n{}",
-            msg.as_json().unwrap()
-        );
-        unimplemented!()
+    pub fn handle_server_msg(&mut self, msg: Res<msg::from_server::Msg>) -> Res<ShouldRender> {
+        use msg::from_server::*;
+        let msg = msg?;
+        match msg {
+            Msg::Info => Ok(false),
+            Msg::Alert { msg } => {
+                alert!("{}", msg);
+                Ok(false)
+            }
+            Msg::Charts { msg } => self.charts.server_update(msg),
+        }
     }
+}
 
-    /// Sends a message to the server.
-    pub fn server_send(&mut self, msg: msg::to_server::Msg) -> Res<()> {
-        let socket = self
-            .socket_task
-            .as_mut()
-            .ok_or("failed to retrieve socket task, cannot send message to server")?;
-        socket.send(msg);
-        Ok(())
-    }
+macro_rules! unwrap_or_send_err {
+    ($e:expr => $slf:ident default $default:expr ) => {
+        match $e {
+            Ok(res) => res,
+            Err(e) => {
+                $slf.link.send_self(e.into());
+                $default
+            }
+        }
+    };
 }
 
 impl Component for Model {
@@ -97,123 +64,52 @@ impl Component for Model {
     type Properties = ();
 
     fn create(_: Self::Properties, mut link: ComponentLink<Self>) -> Self {
-        let callback = link.send_back(|msg: Msg| msg);
-        let mut model = Model {
-            top_tabs: TopTabs::new(),
-            footer: Footer::new(callback),
+        let mut socket = WebSocketService::new();
+        let socket_task = Self::activate_ws(&mut link, &mut socket);
+        let charts = Charts::new(link.send_back(|msg: Msg| msg));
+        Model {
             link,
-            socket: websocket::WebSocketService::new(),
-            socket_task: None,
-            data: None,
-            charts: chart::Charts::new(),
-        };
-        model.activate_ws();
-        model
+            socket,
+            socket_task,
+            charts,
+        }
     }
 
     fn update(&mut self, msg: Msg) -> ShouldRender {
         match msg {
             Msg::FromServer(msg) => {
                 let msg: Res<charts::msg::to_client::Msg> = msg.into();
-                self.handle_server_msg(msg)
+                unwrap_or_send_err!(self.handle_server_msg(msg) => self default false)
             }
 
             Msg::ToServer(msg) => {
-                if let Err(e) = self.server_send(msg) {
-                    self.link.send_self(Msg::err(e))
+                self.server_send(msg);
+                false
+            }
+
+            Msg::ConnectionStatus(status) => {
+                use WebSocketStatus::*;
+                match status {
+                    Opened => info!("successfully established connection with the server"),
+                    Closed => warn!("connection with the server was closed"),
+                    Error => alert!("failed to connect with the server"),
                 }
                 false
             }
 
-            Msg::Start => {
-                let _should_render = self.top_tabs.activate_default();
-                true
-            }
-            Msg::ChartsAction(msg) => {
-                let render = self.charts.update(self.data.as_ref(), msg);
-                if render {
-                    self.link.send_self(msg::ChartsMsg::refresh())
-                }
-                render
-            }
-            Msg::FooterAction(msg) => self.footer.update(self.data.as_mut(), msg),
-            Msg::ChangeTab(tab) => {
-                warn!("[unimplemented] changing to tab {:?}", tab);
-                self.top_tabs.activate(tab)
-            }
-            Msg::Blah(blah) => {
-                info!("[message] {}", blah);
+            Msg::Charts(msg) => unwrap_or_send_err!(
+                self.charts.update(msg) => self default false
+            ),
+
+            Msg::Msg(s) => {
+                info!("{}", s);
                 false
             }
 
-            Msg::Error(err) => {
-                alert!("{}", err.pretty());
+            Msg::Err(e) => {
+                alert!("{}", e.pretty());
                 true
             }
-
-            Msg::Alarm(blah) => {
-                alert!("{}", blah);
-                true
-            }
-
-            // Msg::Diff(diff) => {
-            //     let txt = diff
-            //         .destroy()
-            //         .expect("failed to receive new diff from server");
-            //     if txt.len() > "start".len() && &txt[0.."start".len()] == "start" {
-            //         info!("receiving init...");
-            //         let init = match alloc_data::Init::from_str(&txt) {
-            //             Ok(init) => init,
-            //             Err(e) => {
-            //                 error!("Error:");
-            //                 for line in e.pretty().lines() {
-            //                     error!("{}", line)
-            //                 }
-            //                 fail!("could not parse ill-formed init")
-            //             }
-            //         };
-            //         self.init(init);
-            //         true
-            //     } else {
-            //         info!("receiving diff...");
-            //         // let is_last = &txt[0..1] == "1";
-            //         let diff_str = &txt[1..];
-            //         let diff =
-            //             AllocDiff::from_str(diff_str).expect("could not parse ill-formed diff");
-            //         self.add_diff(diff);
-            //         false
-            //     }
-            // }
-            Msg::Nop => false,
-        }
-    }
-}
-
-impl Model {
-    /// Renders the header (tabs).
-    pub fn render_header(&self) -> Html {
-        html! {
-            <header>
-                { self.top_tabs.render() }
-            </header>
-        }
-    }
-
-    /// Renders the content.
-    pub fn render_content(&self) -> Html {
-        html! {
-            <div class=style::class::BODY>
-                { self.charts.render() }
-            </div>
-        }
-    }
-
-    /// Renders the footer.
-    pub fn render_footer(&self) -> Html {
-        html! {
-            <footer>
-                { self.footer.render(self.data.as_ref()) }
-            </footer>
         }
     }
 }
@@ -222,9 +118,7 @@ impl Renderable<Model> for Model {
     fn view(&self) -> Html {
         html! {
             <div class=style::class::FULL_BODY>
-                { self.render_header() }
-                { self.render_content() }
-                { self.render_footer() }
+                { self.charts.render() }
             </div>
         }
     }

@@ -10,11 +10,18 @@ pub mod to_server {
     /// Messages from the client to the server.
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum Msg {
+        /// Operations over charts.
+        Charts(ChartsMsg),
+
         /// Operation over filters.
-        Filters {
-            /// The operation.
-            msg: FiltersMsg,
-        },
+        Filters(FiltersMsg),
+    }
+
+    /// Operations over charts.
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub enum ChartsMsg {
+        /// Creates a new chart.
+        New(chart::axis::XAxis, chart::axis::YAxis),
     }
 
     /// Operations over filters.
@@ -78,6 +85,17 @@ pub mod to_server {
             }
         }
     }
+
+    impl From<FiltersMsg> for Msg {
+        fn from(msg: FiltersMsg) -> Self {
+            Self::Filters(msg)
+        }
+    }
+    impl From<ChartsMsg> for Msg {
+        fn from(msg: ChartsMsg) -> Self {
+            Self::Charts(msg)
+        }
+    }
 }
 
 /// Messages from the server to the client.
@@ -121,29 +139,36 @@ pub mod to_client {
     /// Messages for the charts of the client.
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum ChartsMsg {
-        /// Messages for each of the charts.
-        Chart(Vec<ChartMsg>),
+        /// Creates a new chart.
+        NewChart(chart::ChartSpec),
+        /// Message for a specific chart.
+        Chart { uid: uid::ChartUid, msg: ChartMsg },
         /// A new collection of points, overwrites existing points.
-        NewPoints {
-            /// New points for each chart.
-            points: Vec<Points>,
-        },
+        NewPoints(point::ChartPoints),
         /// Some points to append to existing points.
-        AddPoints {
-            /// New points to append.
-            points: Vec<Points>,
-        },
+        AddPoints(point::ChartPoints),
     }
     impl ChartsMsg {
+        /// Constructor for `NewChart`.
+        pub fn new_chart(spec: chart::ChartSpec) -> Msg {
+            Msg::charts(Self::NewChart(spec))
+        }
         /// Constructor for `NewPoints`.
-        pub fn new_points(points: Vec<Points>) -> Msg {
-            Msg::Charts {
-                msg: ChartsMsg::NewPoints { points },
-            }
+        pub fn new_points(points: point::ChartPoints) -> Msg {
+            Msg::charts(Self::NewPoints(points))
         }
         /// Constructor for `AddPoints`.
-        pub fn add_points(points: Vec<Points>) -> Msg {
-            Msg::charts(ChartsMsg::AddPoints { points })
+        pub fn add_points(points: point::ChartPoints) -> Msg {
+            Msg::charts(Self::AddPoints(points))
+        }
+
+        /// Constructs a `NewPoints` if `overwrite`, and a `AddPoints` otherwise.
+        pub fn points(points: point::ChartPoints, overwrite: bool) -> Msg {
+            if overwrite {
+                Self::new_points(points)
+            } else {
+                Self::add_points(points)
+            }
         }
     }
 
@@ -153,9 +178,9 @@ pub mod to_client {
         /// A brand new list of points.
         ///
         /// Replaces all the points in a chart.
-        NewPoints(Points),
+        NewPoints(point::ChartPoints),
         /// Some points to append.
-        Points(Points),
+        Points(point::ChartPoints),
     }
 
     impl Into<Res<Msg>> for RawMsg {

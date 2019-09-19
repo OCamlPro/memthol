@@ -16,8 +16,40 @@ macro_rules! new_uid {
 
             safe_index::new! {
                 $(#[$uid_meta])*
-                #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
                 $uid_type_name,
+            }
+
+            impl serde::Serialize for $uid_type_name {
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where
+                    S: serde::Serializer,
+                {
+                    serializer.serialize_str(&self.to_string())
+                }
+            }
+            struct UidVisitor;
+            impl<'de> serde::de::Visitor<'de> for UidVisitor {
+                type Value = $uid_type_name;
+
+                fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                    formatter.write_str("a UID (usize)")
+                }
+
+                fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                where E: serde::de::Error {
+                    use std::str::FromStr;
+                    usize::from_str(value).map(|index| $uid_type_name::from(index)).map_err(
+                        |e| E::custom(e.to_string())
+                    )
+                }
+            }
+            impl<'de> serde::Deserialize<'de> for $uid_type_name {
+                fn deserialize<D>(deserializer: D) -> Result<$uid_type_name, D::Error>
+                where
+                    D: serde::Deserializer<'de>,
+                {
+                    deserializer.deserialize_str(UidVisitor)
+                }
             }
 
             /// Private module for the factory.
@@ -79,6 +111,6 @@ new_uid! {
         ///
         /// [`Chart`]: ../chart/struct.Chart.html (The Chart struct)
         /// [`Charts`]: ../struct.Charts.html (The Charts struct)
-        Chart
+        ChartUid
     }
 }

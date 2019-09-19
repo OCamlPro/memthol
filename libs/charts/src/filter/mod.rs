@@ -6,7 +6,7 @@ use crate::base::*;
 
 pub mod label;
 pub mod ord;
-mod sub;
+pub mod sub;
 
 pub use label::LabelFilter;
 use ord::OrdFilter;
@@ -22,6 +22,33 @@ where
 {
     /// Applies the filter to some allocation data.
     fn apply(&self, alloc_data: &Data) -> bool;
+}
+
+/// Filter comparison kind.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub enum CmpKind {
+    /// Ordered comparison.
+    Ord(ord::Kind),
+    /// Label comparison.
+    Label(label::Kind),
+}
+impl CmpKind {
+    /// Ordered comparison constructor.
+    pub fn new_ord(kind: ord::Kind) -> Self {
+        Self::Ord(kind)
+    }
+    /// Label comparison constructor.
+    pub fn new_label(kind: label::Kind) -> Self {
+        Self::Label(kind)
+    }
+}
+impl fmt::Display for CmpKind {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Ord(kind) => write!(fmt, "{}", kind),
+            Self::Label(kind) => write!(fmt, "{}", kind),
+        }
+    }
 }
 
 /// Filter kind.
@@ -87,6 +114,39 @@ impl Filters {
             Filter { index, msg } => self.filters[*index].update(msg),
         }
     }
+
+    /// Iterator over the filters.
+    pub fn iter(&self) -> impl Iterator<Item = (index::Filter, &Filter)> {
+        self.filters
+            .iter()
+            .enumerate()
+            .map(|(index, filter)| (index::Filter::new(index), filter))
+    }
+
+    /// Mutable iterator over the filters.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (index::Filter, &mut Filter)> {
+        self.filters
+            .iter_mut()
+            .enumerate()
+            .map(|(index, filter)| (index::Filter::new(index), filter))
+    }
+
+    /// Overwrites a filter.
+    pub fn set(&mut self, index: index::Filter, filter: Filter) {
+        self.filters[*index.deref()] = filter
+    }
+}
+
+impl std::ops::Index<index::Filter> for Filters {
+    type Output = Filter;
+    fn index(&self, index: index::Filter) -> &Filter {
+        &self.filters[*index.deref()]
+    }
+}
+impl std::ops::IndexMut<index::Filter> for Filters {
+    fn index_mut(&mut self, index: index::Filter) -> &mut Filter {
+        &mut self.filters[*index.deref()]
+    }
 }
 
 /// A filter that combines `SubFilter`s.
@@ -94,11 +154,16 @@ impl Filters {
 pub struct Filter {
     /// Actual list of filters.
     filters: Vec<SubFilter>,
+    /// Name of the filter.
+    name: String,
 }
 impl Filter {
     /// Constructor.
-    pub fn new() -> Filter {
-        Self { filters: vec![] }
+    pub fn new<S: Into<String>>(name: S) -> Filter {
+        Self {
+            filters: vec![],
+            name: name.into(),
+        }
     }
 
     /// Applies the filters to an allocation.
@@ -123,5 +188,38 @@ impl Filter {
             }
             Update { index, filter } => self.filters[*index] = filter,
         }
+    }
+
+    /// Iterator over the sub-filters.
+    pub fn iter(&self) -> impl Iterator<Item = (index::SubFilter, &SubFilter)> {
+        self.filters
+            .iter()
+            .enumerate()
+            .map(|(index, filter)| (index::SubFilter::new(index), filter))
+    }
+
+    /// Mutable iterator over the sub-filters.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (index::SubFilter, &mut SubFilter)> {
+        self.filters
+            .iter_mut()
+            .enumerate()
+            .map(|(index, filter)| (index::SubFilter::new(index), filter))
+    }
+
+    /// Overwrites a sub-filter.
+    pub fn set(&mut self, index: index::SubFilter, sub_filter: SubFilter) {
+        self.filters[*index.deref()] = sub_filter
+    }
+}
+
+impl std::ops::Index<index::SubFilter> for Filter {
+    type Output = SubFilter;
+    fn index(&self, index: index::SubFilter) -> &SubFilter {
+        &self.filters[*index.deref()]
+    }
+}
+impl std::ops::IndexMut<index::SubFilter> for Filter {
+    fn index_mut(&mut self, index: index::SubFilter) -> &mut SubFilter {
+        &mut self.filters[*index.deref()]
     }
 }

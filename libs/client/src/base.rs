@@ -18,8 +18,11 @@ pub use stdweb::{js, Value as JsVal};
 pub use regex::Regex;
 
 pub use yew::{
-    components::Select, html, html::ChangeData, services::websocket, Callback, Component,
-    ComponentLink, Renderable, ShouldRender,
+    components::Select,
+    html,
+    html::ChangeData,
+    services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask},
+    Callback, Component, ComponentLink, Renderable, ShouldRender,
 };
 
 // Sub-crates.
@@ -32,15 +35,13 @@ pub use charts::{base::Json, index, point::Point};
 
 pub use crate::{
     buttons, chart,
-    chart::{ChartUid, Charts},
-    data::Storage,
+    chart::Charts,
     err,
     err::{bail, Res, ResExt},
-    filter, footer,
     model::Model,
     msg,
     msg::Msg,
-    nu_chart, point, style,
+    point, style,
 };
 
 /// Issues an alert.
@@ -103,6 +104,12 @@ impl ChangeDataExt for ChangeData {
             data => bail!("expected text input value, found {:?}", data),
         }
     }
+}
+
+/// Trait for conversion to JS.
+pub trait JsExt {
+    /// Conversion to JS.
+    fn as_js(self) -> JsVal;
 }
 
 lazy_static! {

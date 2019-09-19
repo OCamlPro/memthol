@@ -12,6 +12,6 @@ pub use charts::err::*;
 pub fn msg_of_res(res: Res<Msg>) -> Msg {
     match res {
         Ok(msg) => msg,
-        Result::Err(e) => Msg::err(e),
+        Result::Err(e) => e.into(),
     }
 }

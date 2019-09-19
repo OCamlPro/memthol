@@ -142,6 +142,16 @@ impl Data {
         self.tod_map.entry(time).or_insert_with(AllocUidSet::new)
     }
 
+    /// Resets the data.
+    ///
+    /// Called when the init file of a run has changed.
+    pub fn reset(&mut self, init: AllocInit) {
+        self.init = Some(init);
+        self.uid_map.clear();
+        self.tod_map.clear();
+        self.current_time = SinceStart::zero()
+    }
+
     /// Registers a diff.
     pub fn add_diff(&mut self, diff: Diff) -> Res<()> {
         self.current_time = diff.time;

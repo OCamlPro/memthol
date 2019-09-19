@@ -7,7 +7,7 @@ pub mod size;
 pub use size::{TimeSize, TimeSizePoint, TimeSizePoints};
 
 /// A point for a time chart.
-pub type TimePoint<Val> = Point<SinceStart, Val>;
+pub type TimePoint<Val> = Point<Date, Val>;
 
 /// Some points for a time chart.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,11 +39,17 @@ impl ChartExt for TimeChart {
             Self::Size(time_size_chart) => time_size_chart.new_points(filters, init),
         }
     }
+
+    fn reset(&mut self) {
+        match self {
+            Self::Size(chart) => chart.reset(),
+        }
+    }
 }
 
 impl TimeChart {
-    /// Constructor.
-    pub fn new() -> Self {
+    /// Total size over time constructor.
+    pub fn new_total_size() -> Self {
         Self::Size(TimeSize::new())
     }
 }

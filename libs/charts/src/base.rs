@@ -3,6 +3,7 @@
 pub use std::{
     collections::{BTreeMap as Map, BTreeSet as Set},
     fmt,
+    ops::{Deref, DerefMut},
 };
 
 pub use error_chain::bail;
@@ -19,7 +20,7 @@ pub use crate::{
     filter::{Filter, Filters},
     index, msg, point,
     point::{Point, PointVal, Points},
-    time, ChartExt,
+    uid, ChartExt,
 };
 
 /// A set of allocation UIDs.

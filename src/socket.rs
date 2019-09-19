@@ -39,6 +39,10 @@ pub struct Handler {
     last_frame: Instant,
     /// Minimum time between two rendering steps.
     frame_span: Duration,
+    /// Label for ping messages.
+    ping_label: Vec<u8>,
+    /// Ping message use for acknowledgments.
+    ping_msg: websocket::message::OwnedMessage,
 }
 
 impl Handler {
@@ -56,6 +60,9 @@ impl Handler {
             .split()
             .chain_err(|| "while splitting the client into receive/send pair")?;
 
+        let ping_label = vec![6u8, 6u8, 6u8];
+        let ping_msg = websocket::message::OwnedMessage::Ping(ping_label.clone());
+
         let slf = Handler {
             ip,
             recver,
@@ -64,7 +71,11 @@ impl Handler {
             from_client: FromClient::new(),
             last_frame: Instant::now(),
             frame_span: Duration::from_millis(1_000),
+            ping_label,
+            ping_msg,
         };
+
+        log!(slf.ip => "connection successful");
 
         Ok(slf)
     }
@@ -81,11 +92,14 @@ impl Handler {
 
     /// Runs the handler, can fail.
     fn internal_run(&mut self) -> Res<()> {
-        self.set_last_frame();
+        log!(self.ip => "init...");
         self.init()?;
 
         // Let's do this.
         loop {
+            self.set_last_frame();
+            self.send_ping()?;
+
             // Receive new messages.
             self.receive_messages()?;
 
@@ -99,7 +113,12 @@ impl Handler {
                              status_code,
                              reason,
                          }| {
-                            format!("status code `{}`: {}", status_code, reason)
+                            let mut blah = format!("status code `{}`", status_code);
+                            if !reason.is_empty() {
+                                blah.push_str(": ");
+                                blah.push_str(&reason)
+                            }
+                            blah
                         },
                     )
                     .unwrap_or_else(|| "no information".into());
@@ -119,11 +138,12 @@ impl Handler {
             }
 
             // Render.
-            let points = self
+            let (points, overwrite) = self
                 .charts
                 .new_points(false)
                 .chain_err(|| "while constructing points for the client")?;
-            self.send(msg::to_client::ChartsMsg::new_points(points))
+            let msg = msg::to_client::ChartsMsg::points(points, overwrite);
+            self.send(msg)
                 .chain_err(|| "while sending points to the client")?;
         }
 
@@ -132,14 +152,30 @@ impl Handler {
 
     /// Initializes a client.
     pub fn init(&mut self) -> Res<()> {
-        let points = self
+        use charts::chart::{
+            axis::{XAxis, YAxis},
+            Chart,
+        };
+        let chart = Chart::new(XAxis::Time, YAxis::TotalSize)?;
+        let create_graph = msg::to_client::ChartsMsg::new_chart(chart.spec().clone());
+        self.charts.push(chart);
+        self.send(create_graph)
+            .chain_err(|| "while sending initial chart to client")?;
+        let (points, overwrite) = self
             .charts
             .new_points(true)
             .chain_err(|| "while constructing points for client init")?;
-        log!(self.ip => "sending points to client");
-        self.send(msg::to_client::ChartsMsg::new_points(points))
+        let msg = msg::to_client::ChartsMsg::points(points, overwrite);
+        self.send(msg)
             .chain_err(|| "while sending points for client init")?;
         Ok(())
+    }
+
+    /// Sends a ping message to the client.
+    pub fn send_ping(&mut self) -> Res<()> {
+        self.sender
+            .send_message(&self.ping_msg)
+            .chain_err(|| format!("while sending ping message to client {}", self.ip))
     }
 
     /// Sends a message to the client.
@@ -152,7 +188,7 @@ impl Handler {
         let content = msg
             .into()
             .as_json()
-            .chain_err(|| "while encoding message as toml")?
+            .chain_err(|| "while encoding message as json")?
             .into_bytes();
         let msg = OwnedMessage::Binary(content);
         self.sender
@@ -186,7 +222,17 @@ impl Handler {
                 }
 
                 // The client is telling us to stop listening for messages and render.
-                Pong(_) => break,
+                Pong(label) => {
+                    if self.ping_label == label {
+                        break;
+                    } else {
+                        bail!(
+                            "unexpected `Pong` label: expected {:?}, got {:?}",
+                            self.ping_label,
+                            label
+                        )
+                    }
+                }
 
                 // Client is closing the connection.
                 Close(close_data) => {

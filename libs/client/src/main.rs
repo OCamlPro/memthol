@@ -1,12 +1,10 @@
 use yew::App;
 
-use client::{Model, Msg};
+use client::Model;
 
 fn main() {
     web_logger::init();
     yew::initialize();
-    App::<Model>::new()
-        .mount_to_body()
-        .send_message(Msg::start());
+    App::<Model>::new().mount_to_body();
     yew::run_loop();
 }

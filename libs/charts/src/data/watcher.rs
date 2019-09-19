@@ -51,29 +51,53 @@ impl Watcher {
     pub fn run(&mut self) -> Res<()> {
         // First init read.
         'first_init: loop {
-            match self.try_read_init()? {
-                Some(init) => {
-                    let mut data =
-                        super::get_mut().chain_err(|| "while registering the initial state")?;
+            if let Some(init) = self.try_read_init()? {
+                let mut data =
+                    super::get_mut().chain_err(|| "while registering the initial state")?;
 
-                    if data.init.is_some() {
-                        bail!("live profiling restart is not supported yet")
-                    } else {
-                        data.init = Some(init)
-                    }
+                if data.init.is_some() {
+                    bail!("live profiling restart is not supported yet")
+                } else {
+                    data.init = Some(init)
+                }
 
-                    break 'first_init;
-                }
-                None => {
-                    sleep(Duration::from_millis(200));
-                    continue 'first_init;
-                }
+                break 'first_init;
+            } else {
+                sleep(Duration::from_millis(200));
+                continue 'first_init;
             }
         }
 
+        // The call to `register_new_diffs` below can fail if the profiling run is restarted. If it
+        // does, the error will be put here. Then, we try to read a new init file, and we drop the
+        // error if that's successful. Otherwise, we return the error.
+        let mut diff_error: Option<err::Err> = None;
+
         // Diff-reading loop.
         loop {
-            self.register_new_diffs()?
+            if let Some(init) = self
+                .try_read_init()
+                .chain_err(|| "while checking whether the init file of the run has changed")?
+            {
+                // Discard any error that might have happen in previous calls to
+                // `register_new_diffs` below.
+                diff_error = None;
+                self.reset_run(init)
+                    .chain_err(|| "while resetting the run after init file was changed")?
+            }
+
+            // If `diff_error.is_some()`, then there was an error that was not cause by a restart of
+            // the profiling run.
+            if let Some(e) = std::mem::replace(&mut diff_error, None) {
+                bail!(e)
+            }
+
+            let diff_res = self.register_new_diffs();
+            // If there was a problem, remember it in `diff_error` and loop to check whether a
+            // restart happened.
+            if let Err(e) = diff_res {
+                diff_error = Some(e)
+            }
         }
     }
 }
@@ -113,9 +137,19 @@ impl Watcher {
         self.known_files.clear();
         self.new_diffs.clear();
         let is_new = self.known_files.insert((&self.tmp_file).into());
-        debug_assert! { is_new }
+        debug_assert!(is_new);
         let is_new = self.known_files.insert((&self.init_file).into());
-        debug_assert! { is_new }
+        debug_assert!(is_new)
+    }
+
+    /// Restarts the watcher and resets the data.
+    ///
+    /// Called when the init file of the run has changed.
+    pub fn reset_run(&mut self, init: AllocInit) -> Res<()> {
+        self.reset();
+        let mut data = super::get_mut().chain_err(|| "while resetting the data")?;
+        data.reset(init);
+        Ok(())
     }
 
     /// Reads the content of a file and applies something to that content.
@@ -183,7 +217,7 @@ impl Watcher {
             // Not the first time, has the init file changed?
             if last_modified != *lm {
                 // Yes, update
-                debug_assert! { last_modified <= *lm }
+                debug_assert! { *lm <= last_modified }
                 *lm = last_modified
             } else {
                 // No, no need to load the file.
@@ -240,6 +274,12 @@ impl Watcher {
     pub fn gather_new_diffs(&mut self) -> Res<()> {
         use std::fs::read_dir;
 
+        // We need this to make sure we only work on file created **after** the init file.
+        let init_last_modified = self
+            .init_last_modified
+            .clone()
+            .ok_or("trying to gather diff file, but the init file has not been processed yet")?;
+
         debug_assert!(self.new_diffs.is_empty());
 
         let dir = read_dir(&self.dir)
@@ -258,27 +298,53 @@ impl Watcher {
                 continue;
             }
 
+            let mut file_path = PathBuf::new();
+            file_path.push(&self.dir);
+            file_path.push(file.file_name());
+
             let is_new = self.known_files.insert(file.file_name());
 
-            // File is
-            if is_new {
-                let mut file_path = PathBuf::new();
-                file_path.push(&self.dir);
-                file_path.push(file.file_name());
-
-                let diff = self
-                    .read_content(&file_path, |content| {
-                        let diff = Diff::from_str(content)?;
-                        Ok(diff)
-                    })
-                    .chain_err(|| {
-                        format!(
-                            "while reading content of file `{}`",
-                            file_path.to_string_lossy()
-                        )
-                    })?;
-                self.new_diffs.push(diff)
+            if !is_new {
+                continue;
             }
+
+            // Was the file written after the init file?
+            let last_modified = file_path
+                .metadata()
+                .chain_err(|| {
+                    format!(
+                        "could not retrieve metadata of file `{}`",
+                        file_path.to_string_lossy()
+                    )
+                })?
+                .modified()
+                .chain_err(|| {
+                    format!(
+                        "could not retrieve time of last modification of init file`{}`",
+                        file_path.to_string_lossy()
+                    )
+                })?;
+            if last_modified < init_last_modified {
+                // Note that we remove the file from `known_files`in this case. This is because we
+                // don't want to ignore this file in the future, as it might be overwritten and
+                // become relevant.
+                let was_there = self.known_files.remove(&file.file_name());
+                debug_assert!(was_there);
+                continue;
+            }
+
+            let diff = self
+                .read_content(&file_path, |content| {
+                    let diff = Diff::from_str(content)?;
+                    Ok(diff)
+                })
+                .chain_err(|| {
+                    format!(
+                        "while reading content of file `{}`",
+                        file_path.to_string_lossy()
+                    )
+                })?;
+            self.new_diffs.push(diff)
         }
         Ok(())
     }

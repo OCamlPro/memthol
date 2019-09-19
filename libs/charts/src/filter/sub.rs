@@ -38,6 +38,27 @@ impl SubFilter {
             SubFilter::Label(filter) => filter.apply(&alloc.labels),
         }
     }
+
+    /// Changes the filter kind of a sub-filter.
+    ///
+    /// Returns `true` iff the filter actually changed.
+    pub fn change_kind(&mut self, kind: FilterKind) -> bool {
+        if self.kind() == kind {
+            return false;
+        }
+
+        *self = Self::of_kind(kind);
+        true
+    }
+}
+
+impl fmt::Display for SubFilter {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Size(filter) => write!(fmt, "size {}", filter),
+            Self::Label(filter) => write!(fmt, "labels {}", filter),
+        }
+    }
 }
 
 impl From<SizeFilter> for SubFilter {
@@ -53,5 +74,37 @@ impl From<LabelFilter> for SubFilter {
 impl Default for SubFilter {
     fn default() -> Self {
         SizeFilter::default().into()
+    }
+}
+
+/// Sub-filter update.
+pub enum Update {
+    /// Size filter update.
+    Size(ord::SizeUpdate),
+    /// Label filter update.
+    Label(label::Update),
+}
+impl fmt::Display for Update {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Size(update) => update.fmt(fmt),
+            Self::Label(update) => update.fmt(fmt),
+        }
+    }
+}
+
+impl SubFilter {
+    /// Updates a sub-filter.
+    pub fn update(&mut self, update: Update) -> Res<bool> {
+        match self {
+            Self::Size(filter) => match update {
+                Update::Size(update) => filter.update(update),
+                update => bail!("cannot apply update `{}` to filter `{}`", update, filter),
+            },
+            Self::Label(filter) => match update {
+                Update::Label(update) => filter.update(update),
+                update => bail!("cannot apply update `{}` to filter `{}`", update, filter),
+            },
+        }
     }
 }

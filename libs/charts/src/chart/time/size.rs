@@ -15,14 +15,14 @@ pub struct TimeSize {
     /// Current total size.
     size: PointVal<usize>,
     /// Map used to construct the points.
-    map: Map<SinceStart, PointVal<(usize, usize)>>,
+    map: Map<Date, PointVal<(usize, usize)>>,
 }
 
 impl Default for TimeSize {
     fn default() -> Self {
         Self {
             timestamp: SinceStart::zero(),
-            size: PointVal::new(0, 0),
+            size: Self::init_size(),
             map: Map::new(),
         }
     }
@@ -32,6 +32,12 @@ impl ChartExt for TimeSize {
     fn new_points(&mut self, filters: &Filters, init: bool) -> Res<Points> {
         self.get_allocs(filters, init)?;
         Ok(self.generate_points()?.into())
+    }
+
+    fn reset(&mut self) {
+        self.timestamp = SinceStart::zero();
+        self.size = Self::init_size();
+        self.map.clear()
     }
 }
 
@@ -46,6 +52,11 @@ impl TimeSize {
             size,
             map,
         }
+    }
+
+    /// Initial size.
+    fn init_size() -> PointVal<usize> {
+        PointVal::new(0, 0)
     }
 }
 
@@ -89,11 +100,17 @@ impl TimeSize {
         debug_assert!(self.map.is_empty());
         debug_assert_eq!(self.size.filtered.len(), filters.len());
 
-        let data = data::get().chain_err(|| "while retrieving allocations for chart")?;
+        let data = data::get()
+            .chain_err(|| "while retrieving allocations")
+            .chain_err(|| "while building new points")?;
         let (my_map, timestamp) = (&mut self.map, &self.timestamp);
+        let start_time = data
+            .start_time()
+            .chain_err(|| "while building new points")?;
+        let as_date = |duration: SinceStart| start_time.copy_add(duration);
 
         if init {
-            map!(entry my_map, with filters => at SinceStart::zero());
+            map!(entry my_map, with filters => at as_date(SinceStart::zero()));
             ()
         }
 
@@ -103,7 +120,8 @@ impl TimeSize {
             |alloc| {
                 let index = filters.find_match(alloc);
 
-                let toc_point_val = map!(entry my_map, with filters => at alloc.toc.clone());
+                let toc_point_val =
+                    map!(entry my_map, with filters => at as_date(alloc.toc.clone()));
                 toc_point_val.get_mut(index).0 += alloc.size;
                 Ok(())
             },
@@ -119,7 +137,7 @@ impl TimeSize {
                         .chain_err(|| "while handling new dead allocations")?;
                     let index = filters.find_match(alloc);
 
-                    let toc_point_val = map!(entry my_map, with filters => at tod.clone());
+                    let toc_point_val = map!(entry my_map, with filters => at as_date(tod.clone()));
                     toc_point_val.get_mut(index).1 += alloc.size;
                 }
                 Ok(())

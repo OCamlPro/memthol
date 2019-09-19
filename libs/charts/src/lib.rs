@@ -22,7 +22,7 @@ pub mod filter;
 pub mod index;
 pub mod msg;
 pub mod point;
-pub mod time;
+pub mod uid;
 
 pub use base::Json;
 pub use chart::Chart;
@@ -30,9 +30,12 @@ pub use chart::Chart;
 use base::*;
 
 /// Trait implemented by all charts.
-pub trait ChartExt: Default {
+pub trait ChartExt {
     /// Generates the new points of the chart.
     fn new_points(&mut self, filters: &Filters, init: bool) -> Res<Points>;
+
+    /// Resets the chart.
+    fn reset(&mut self);
 }
 
 /// Aggregates some charts.
@@ -41,6 +44,11 @@ pub struct Charts {
     charts: Vec<Chart>,
     /// List of filters.
     filters: Filters,
+    /// Start time of the run.
+    ///
+    /// This is used to check whether we need to detect that the init file of the run has changed
+    /// and that we need to reset the charts.
+    start_time: Option<Date>,
 }
 
 impl Charts {
@@ -49,6 +57,7 @@ impl Charts {
         Self {
             charts: vec![],
             filters: Filters::new(),
+            start_time: None,
         }
     }
 
@@ -57,13 +66,47 @@ impl Charts {
         self.charts.push(chart)
     }
 
-    /// Extracts the new points for the different charts.
-    pub fn new_points(&mut self, init: bool) -> Res<Vec<Points>> {
-        let mut res = Vec::with_capacity(self.charts.len());
-        for chart in &mut self.charts {
-            res.push(chart.new_points(&self.filters, init)?);
+    /// Restarts the charts if needed.
+    fn restart_if_needed(&mut self) -> Res<bool> {
+        let data = data::get();
+        let start_time = data
+            .and_then(|data| data.start_time())
+            .chain_err(|| "while checking if the charts should be restarted")?;
+        if self.start_time != Some(start_time) {
+            self.start_time = Some(start_time);
+            for chart in &mut self.charts {
+                chart.reset()
+            }
+            Ok(true)
+        } else {
+            Ok(false)
         }
-        Ok(res)
+    }
+
+    /// Extracts the new points for the different charts.
+    ///
+    /// The boolean indicates whether the points should overwrite existing points. It is typically
+    /// true when the init file of the run has changed (the run was restarted).
+    pub fn new_points(&mut self, init: bool) -> Res<(point::ChartPoints, bool)> {
+        let restarted = self.restart_if_needed()?;
+        let mut points = point::ChartPoints::new();
+        for chart in &mut self.charts {
+            let chart_points = chart.new_points(&self.filters, restarted || init)?;
+            let prev = points.insert(chart.uid(), chart_points);
+            debug_assert!(prev.is_none())
+        }
+        Ok((points, restarted || init))
+    }
+
+    pub fn handle_chart_msg(&mut self, msg: msg::to_server::ChartsMsg) -> Res<()> {
+        match msg {
+            msg::to_server::ChartsMsg::New(x_axis, y_axis) => {
+                let nu_chart =
+                    chart::Chart::new(x_axis, y_axis).chain_err(|| "while creating new chart")?;
+                self.charts.push(nu_chart);
+                Ok(())
+            }
+        }
     }
 
     /// Handles a message from the client.
@@ -71,7 +114,8 @@ impl Charts {
         use msg::to_server::Msg::*;
 
         match msg {
-            Filters { msg } => self.filters.update(msg),
+            Charts(msg) => self.handle_chart_msg(msg)?,
+            Filters(msg) => self.filters.update(msg),
         }
 
         Ok(())

@@ -1,258 +1,310 @@
-//! A chart combines axes to create points.
+//! Charts.
+
+pub use charts::chart::ChartSpec;
 
 use crate::base::*;
 
-// pub mod series;
-pub mod time;
+pub use axis::{XAxis, YAxis};
 
-new_uid! {
-    mod chart_uid {
-        uid: ChartUid,
-        set: ChartUidSet,
-        map: ChartUidMap,
-    }
-}
+pub mod axis;
 
-pub use chart_uid::*;
-
-/// Prefix for the HTML identifier of all the charts.
-pub static CHART_HTML_PREFIX: &str = "memthol_chart_html_id";
-
-/// Generates a fresh uid and constructs a unique HTML id.
-fn generate_chart_uid_and_id() -> (ChartUid, String) {
-    let uid = ChartUid::fresh();
-    let id = format!("{}_{}", CHART_HTML_PREFIX, uid);
-    (uid, id)
-}
-
-/// Name of the HTML container for all charts.
-static HTML_CHART_CONTAINER_ID: &str = "memthol_chart_container";
-
-/// Stores the collection of charts.
+/// The collection of charts.
 pub struct Charts {
-    /// Time charts.
-    charts: Vec<time::TimeChart>,
-    /// Charts.
-    nu_charts: Vec<nu_chart::Chart>,
+    /// The actual collection of charts.
+    charts: Vec<Chart>,
+    /// Callback to send messages to the model.
+    to_model: Callback<Msg>,
 }
+
 impl Charts {
-    /// Constructor.
-    pub fn new() -> Self {
-        let (uid, id) = generate_chart_uid_and_id();
-        let total_size = time::TimeChart::total_size(id, uid);
-        let (uid, id) = generate_chart_uid_and_id();
-        let highest_lifetime = time::TimeChart::highest_lifetime(id, uid);
-        let (uid, id) = generate_chart_uid_and_id();
-        let total_size_2 = time::TimeChart::total_size(id, uid);
-        let (uid, id) = generate_chart_uid_and_id();
-        let highest_lifetime_2 = time::TimeChart::highest_lifetime(id, uid);
-        let charts = vec![
-            total_size,
-            highest_lifetime,
-            total_size_2,
-            highest_lifetime_2,
-        ];
+    /// Constructs an empty collection of charts.
+    pub fn new(to_model: Callback<Msg>) -> Self {
         Self {
-            charts,
-            nu_charts: vec![],
+            charts: vec![],
+            to_model,
         }
     }
 
-    /// Updates the actual charts.
-    pub fn update_data(&mut self, data: &Storage) {
-        for time_chart in &mut self.charts {
-            time_chart.update(data)
-        }
+    /// Sends a message to the model.
+    pub fn send(&self, msg: Msg) {
+        self.to_model.emit(msg)
     }
 
-    /// Renders itself as HTML.
-    pub fn render(&self) -> Html {
-        html! {
-            <g class={HTML_CHART_CONTAINER_ID}>
-                { for self.charts.iter().map(time::TimeChart::render) }
-            </g>
+    /// Retrieves the chart corresponding to some UID.
+    fn get_mut(&mut self, uid: charts::uid::ChartUid) -> Res<&mut Chart> {
+        debug_assert_eq!(
+            self.charts
+                .iter()
+                .filter(|chart| chart.uid() == uid)
+                .count(),
+            1
+        );
+        for chart in &mut self.charts {
+            if chart.uid() == uid {
+                return Ok(chart);
+            }
         }
+        bail!("unknown chart UID #{}", uid)
     }
 
-    /// Initial JS setup.
-    pub fn init(&mut self, data: &Storage) {
-        for time_chart in &mut self.charts {
-            time_chart.init(data)
-        }
-    }
-}
+    /// Applies an operation.
+    pub fn update(&mut self, action: msg::ChartsMsg) -> Res<ShouldRender> {
+        let should_render = match action {
+            msg::ChartsMsg::Build(uid) => {
+                let chart = self
+                    .get_mut(uid)
+                    .chain_err(|| format!("while building and binding chart #{}", uid))?;
+                chart.build_chart()?;
+                true
+            }
+        };
 
-/// # Actions.
-impl Charts {
-    /// Handles a chart message.
-    pub fn update(&mut self, data: Option<&Storage>, msg: msg::ChartsMsg) -> ShouldRender {
-        use msg::ChartsMsg::*;
-        match msg {
-            // Refresh-s happen when the layout has changed.
-            //
-            // When this happens, all charts must be deactivated before we can refresh their
-            // respective targets.
-            RefreshAll => {
-                let charts_and_data: Vec<_> = self
-                    .charts
-                    .iter_mut()
-                    .map(|chart| {
-                        let data = chart.chart_dispose();
-                        (chart, data)
-                    })
-                    .collect();
-                for (chart, data) in charts_and_data {
-                    chart.refresh_target(data)
+        Ok(should_render)
+    }
+
+    /// Alies an operation from the server.
+    pub fn server_update(&mut self, action: msg::from_server::ChartsMsg) -> Res<ShouldRender> {
+        use msg::from_server::ChartsMsg;
+        let should_render = match action {
+            ChartsMsg::NewChart(spec) => {
+                let uid = spec.uid();
+                let chart = Chart::new(spec);
+                self.charts.push(chart);
+                self.send(msg::ChartsMsg::build(uid));
+                true
+            }
+
+            ChartsMsg::NewPoints(mut points) => {
+                for chart in &mut self.charts {
+                    if let Some(points) = points.remove(&chart.uid()) {
+                        chart.overwrite_points(points)
+                    }
                 }
                 false
             }
-            ReloadData => match data {
-                None => false,
-                Some(data) => {
-                    self.init(data);
-                    true
+            ChartsMsg::AddPoints(mut points) => {
+                for chart in &mut self.charts {
+                    if let Some(points) = points.remove(&chart.uid()) {
+                        chart.add_points(points)
+                    }
+                }
+                false
+            }
+
+            msg => bail!(
+                "unsupported message from server: {}",
+                msg.as_json().unwrap_or_else(|_| format!("{:?}", msg))
+            ),
+        };
+        Ok(should_render)
+    }
+
+    /// Renders the charts.
+    pub fn render(&self) -> Html {
+        html! {
+            <g class=style::class::chart::CONTAINER>
+                { for self.charts.iter().map(Chart::render) }
+            </g>
+        }
+    }
+}
+
+/// A chart.
+pub struct Chart {
+    /// Chart specification.
+    spec: ChartSpec,
+    /// True if the chart is expanded.
+    visible: bool,
+    /// DOM element containing the chart.
+    container: String,
+    /// Actual chart as a JS value.
+    chart: Option<JsVal>,
+    /// Points from the server that have not been treated yet.
+    ///
+    /// The boolean is true when the points should overwrite the existing points.
+    points: Vec<(point::Points, bool)>,
+}
+impl Chart {
+    /// Constructor.
+    pub fn new(spec: ChartSpec) -> Self {
+        let container = style::class::chart::class(spec.uid());
+        Self {
+            spec,
+            visible: false,
+            container,
+            chart: None,
+            points: vec![],
+        }
+    }
+
+    /// UID accessor.
+    pub fn uid(&self) -> charts::uid::ChartUid {
+        self.spec.uid()
+    }
+
+    /// Builds the actual JS chart and attaches it to the right container.
+    ///
+    /// Also, makes the chart visible.
+    pub fn build_chart(&mut self) -> Res<()> {
+        use axis::AxisExt;
+
+        if self.chart.is_some() {
+            bail!("asked to build and bind a chart that's already built and binded")
+        }
+
+        let chart = js!(
+            am4core.useTheme(am4themes_animated);
+            var chart = am4core.create(@{&self.container}, am4charts.XYChart);
+            chart.data = [];
+            return chart
+        );
+
+        self.spec.x_axis().chart_apply(&chart);
+        self.spec.y_axis().chart_apply(&chart);
+
+        // Default series, for allocations not caught by any filter.
+        let default_series = js!(
+            var series = @{&chart}.series.push(new am4charts.LineSeries());
+            series.interpolationDuration = 0;
+            series.defaultState.transitionDuration = 0;
+            series.strokeWidth = 2;
+            series.minBulletDistance = 15;
+            series.title = "rest";
+            return series;
+        );
+
+        self.spec.x_axis().series_apply(&default_series, None);
+        self.spec.y_axis().series_apply(&default_series, None);
+
+        js!(@(no_return)
+            let chart = @{&chart};
+
+            // Cosmetic stuff.
+
+            // X-axis scrollbar.
+            chart.scrollbarX = new am4charts.XYChartScrollbar();
+            chart.scrollbarX.series.push(@{&default_series});
+            chart.scrollbarX.parent = chart.bottomAxesContainer;
+
+            // Progression bullet at the end of the line.
+            var bullet = @{&default_series}.createChild(am4charts.CircleBullet);
+            bullet.circle.radius = 5;
+            bullet.fillOpacity = 1;
+            bullet.fill = chart.colors.getIndex(0);
+            bullet.isMeasured = false;
+        );
+
+        for (points, overwrite) in self.points.drain(0..) {
+            if overwrite {
+                Self::really_overwrite_points(&chart, points)
+            } else {
+                Self::really_add_points(&chart, points)
+            }
+        }
+
+        self.chart = Some(chart);
+        self.visible = true;
+
+        Ok(())
+    }
+
+    /// Appends some points to the chart.
+    pub fn add_points(&mut self, points: point::Points) {
+        if let Some(chart) = self.chart.as_ref() {
+            Self::really_add_points(chart, points)
+        } else {
+            self.points.push((points, false))
+        }
+    }
+
+    /// Appends some points to the chart.
+    fn really_add_points(chart: &JsVal, points: point::Points) {
+        match points {
+            point::Points::Time(points) => match points {
+                charts::point::TimePoints::Size(points) => Self::inner_add_points(chart, points),
+            },
+        }
+    }
+
+    /// Appends some points to the chart.
+    fn inner_add_points<Key, Val>(chart: &JsVal, points: Vec<point::Point<Key, Val>>)
+    where
+        Key: JsExt + fmt::Display,
+        Val: JsExt + fmt::Display,
+    {
+        js!(@(no_return)
+            @{chart}.addData(@{points.as_js()});
+        )
+    }
+
+    /// Overwrites the points in a chart.
+    pub fn overwrite_points(&mut self, points: point::Points) {
+        if let Some(chart) = self.chart.as_ref() {
+            Self::really_overwrite_points(chart, points)
+        } else {
+            self.points.push((points, true))
+        }
+    }
+
+    /// Overwrites the points in a chart.
+    fn really_overwrite_points(chart: &JsVal, points: point::Points) {
+        match points {
+            point::Points::Time(points) => match points {
+                charts::point::TimePoints::Size(points) => {
+                    Self::inner_overwrite_points(chart, points)
                 }
             },
-            Close { uid } => self.close_chart(uid),
-            Move { uid, up } => self.move_chart(uid, up),
-
-            Visibility { uid, show } => {
-                if show {
-                    self.expand_chart(uid)
-                } else {
-                    self.collapse_chart(uid)
-                }
-            }
-
-            NuClose { index } => self.nu_close_chart(index),
-            NuMove { index, up } => self.nu_move_chart(index, up),
-            NuVisibility { index, show } => {
-                if show {
-                    self.nu_expand_chart(index)
-                } else {
-                    self.nu_collapse_chart(index)
-                }
-            }
         }
     }
 
-    /// Collapses a chart.
-    pub fn collapse_chart(&mut self, uid: ChartUid) -> ShouldRender {
-        for chart in &mut self.charts {
-            if chart.uid() == &uid {
-                let should_render = chart.collapse();
-                return should_render;
-            }
-        }
-        warn!("asked to collapse chart #{} which does not exist", uid);
-        false
-    }
-    /// Expands a chart.
-    pub fn expand_chart(&mut self, uid: ChartUid) -> ShouldRender {
-        for chart in &mut self.charts {
-            if chart.uid() == &uid {
-                let should_render = chart.expand();
-                return should_render;
-            }
-        }
-        warn!("asked to expand chart #{} which does not exist", uid);
-        false
+    /// Overwrites the points in a chart.
+    fn inner_overwrite_points<Key, Val>(chart: &JsVal, points: Vec<Point<Key, Val>>)
+    where
+        Key: JsExt + fmt::Display,
+        Val: JsExt + fmt::Display,
+    {
+        js!(@(no_return)
+            let chart = @{chart};
+            chart.data = @{points.as_js()};
+            chart.invalidateRawData();
+        )
     }
 
-    /// Collapses a chart.
-    pub fn nu_collapse_chart(&mut self, index: index::Chart) -> ShouldRender {
-        self.nu_charts[*index.deref()].collapse()
+    /// Creates a collapse button for this chart.
+    fn collapse_button(&self) -> Html {
+        let uid = self.uid();
+        buttons::collapse(move |_| format!("collapse #{}", uid).into())
     }
-    /// Expands a chart.
-    pub fn nu_expand_chart(&mut self, index: index::Chart) -> ShouldRender {
-        self.nu_charts[*index.deref()].expand()
+    /// Creates an expand button for this chart.
+    fn expand_button(&self) -> Html {
+        let uid = self.uid();
+        buttons::expand(move |_| format!("expand #{}", uid).into())
     }
-    /// Closes a chart.
-    pub fn nu_close_chart(&mut self, index: index::Chart) -> ShouldRender {
-        // Remove chart.
-        self.nu_charts.remove(*index.deref());
-        if *index.deref() < self.nu_charts.len() {
-            // Update the indices of the charts after the one we removed.
-            for chart in &mut self.nu_charts[*index.deref()..] {
-                chart.prev_index()
-            }
-        }
-        true
-    }
-    /// Swaps two charts.
-    pub fn nu_move_chart(&mut self, index: index::Chart, up: bool) -> ShouldRender {
-        let index_2 = if up {
-            // Moving up.
-            if let Some(prev) = index.prev() {
-                prev
-            } else {
-                return false;
-            }
+
+    /// Renders the chart.
+    pub fn render(&self) -> Html {
+        let expand_or_collapse_button = if self.visible {
+            self.collapse_button()
         } else {
-            // Moving down.
-            if let Some(next) = index.next(&self.charts) {
-                next
-            } else {
-                return false;
-            }
+            self.expand_button()
         };
-        self.nu_swap_chart(index, index_2)
-    }
-    /// Swaps two charts.
-    pub fn nu_swap_chart(&mut self, index_1: index::Chart, index_2: index::Chart) -> ShouldRender {
-        self.nu_charts.swap(*index_1.deref(), *index_2.deref());
-        // Update the actual indices.
-        self.nu_charts[*index_1.deref()].set_index(index_1);
-        self.nu_charts[*index_2.deref()].set_index(index_2);
-        true
-    }
 
-    /// Closes a chart.
-    pub fn close_chart(&mut self, uid: ChartUid) -> ShouldRender {
-        let mut index = None;
-        for (idx, chart) in self.charts.iter().enumerate() {
-            if chart.uid() == &uid {
-                index = Some(idx)
-            }
-        }
-        if let Some(idx) = index {
-            let chart = self.charts.remove(idx);
-            chart.destroy();
-            true
-        } else {
-            warn!(
-                "asked to destroy chart #{}, but there is no such chart",
-                uid
-            );
-            false
-        }
-    }
+        let uid = self.uid();
 
-    /// Move a chart.
-    pub fn move_chart(&mut self, uid: ChartUid, up: bool) -> ShouldRender {
-        let mut index = None;
-        for (idx, chart) in self.charts.iter().enumerate() {
-            if chart.uid() == &uid {
-                index = Some(idx)
-            }
-        }
+        html! {
+            <g>
+                <center class=style::class::chart::HEADER>
+                    { expand_or_collapse_button }
+                    { buttons::move_up(move |_| format!("move_up {}", uid).into()) }
+                    { buttons::move_down(move |_| format!("move_down {}", uid).into()) }
+                    { buttons::close(move |_| format!("close {}", uid).into()) }
 
-        if let Some(index) = index {
-            if up && 0 < index {
-                self.charts.swap(index - 1, index);
-                return true;
-            } else if !up && index + 1 < self.charts.len() {
-                self.charts.swap(index, index + 1);
-                return true;
-            }
-        } else {
-            warn!(
-                "asked to move chart #{} {}, but there is no such chart",
-                uid,
-                if up { "up" } else { "down" }
-            )
+                    <h2> { self.spec.desc() } </h2>
+                </center>
+                <div id={&self.container}
+                    class=style::class::chart::style(self.visible)
+                />
+            </g>
         }
-
-        false
     }
 }
