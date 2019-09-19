@@ -103,7 +103,7 @@ impl Filters {
     }
 
     /// Applies a filter message.
-    pub fn update(&mut self, msg: msg::to_server::FiltersMsg) {
+    pub fn update(&mut self, msg: msg::to_server::FiltersMsg) -> Res<Vec<msg::to_client::Msg>> {
         use msg::to_server::FiltersMsg::*;
         match msg {
             Add { filter } => self.filters.push(filter),
@@ -113,6 +113,7 @@ impl Filters {
             }
             Filter { index, msg } => self.filters[*index].update(msg),
         }
+        Ok(vec![])
     }
 
     /// Iterator over the filters.

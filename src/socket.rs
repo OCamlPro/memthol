@@ -126,9 +126,18 @@ impl Handler {
                 break;
             }
 
+            // List of messages to send to the client in response to the messages received from the
+            // client.
+            let mut to_client_msgs = vec![];
+
             // Handle the messages.
             for msg in self.from_client.drain() {
-                self.charts.handle_msg(msg)?
+                let msgs = self.charts.handle_msg(msg)?;
+                to_client_msgs.extend(msgs)
+            }
+
+            for msg in to_client_msgs {
+                self.send(msg)?
             }
 
             // Wait before rendering if necessary.
@@ -145,7 +154,7 @@ impl Handler {
             if overwrite || points.is_empty() {
                 let msg = msg::to_client::ChartsMsg::points(points, overwrite);
                 self.send(msg)
-                    .chain_err(|| "while sending points to the client")?;
+                    .chain_err(|| "while sending points to the client")?
             }
         }
 

@@ -184,9 +184,26 @@ pub mod to_client {
         /// A brand new list of points.
         ///
         /// Replaces all the points in a chart.
-        NewPoints(point::ChartPoints),
+        NewPoints(point::Points),
         /// Some points to append.
-        Points(point::ChartPoints),
+        Points(point::Points),
+    }
+
+    impl ChartMsg {
+        /// List of points overwriting the existing points.
+        pub fn new_points(uid: uid::ChartUid, points: point::Points) -> Msg {
+            Msg::charts(ChartsMsg::Chart {
+                uid,
+                msg: Self::NewPoints(points),
+            })
+        }
+        /// List of points to append.
+        pub fn points(uid: uid::ChartUid, points: point::Points) -> Msg {
+            Msg::charts(ChartsMsg::Chart {
+                uid,
+                msg: Self::Points(points),
+            })
+        }
     }
 
     impl Into<Res<Msg>> for RawMsg {

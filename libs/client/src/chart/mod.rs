@@ -67,7 +67,7 @@ impl Charts {
 
     /// Alies an operation from the server.
     pub fn server_update(&mut self, action: msg::from_server::ChartsMsg) -> Res<ShouldRender> {
-        use msg::from_server::ChartsMsg;
+        use msg::from_server::{ChartMsg, ChartsMsg};
         let should_render = match action {
             ChartsMsg::NewChart(spec) => {
                 let uid = spec.uid();
@@ -94,10 +94,17 @@ impl Charts {
                 false
             }
 
-            msg => bail!(
-                "unsupported message from server: {}",
-                msg.as_json().unwrap_or_else(|_| format!("{:?}", msg))
-            ),
+            ChartsMsg::Chart { uid, msg } => {
+                let (_index, chart) = self.get_mut(uid)?;
+                match msg {
+                    ChartMsg::NewPoints(points) => chart.overwrite_points(points),
+                    ChartMsg::Points(points) => chart.add_points(points),
+                }
+                true
+            } // msg => bail!(
+              //     "unsupported message from server: {}",
+              //     msg.as_json().unwrap_or_else(|_| format!("{:?}", msg))
+              // ),
         };
         Ok(should_render)
     }

@@ -98,26 +98,46 @@ impl Charts {
         Ok((points, restarted || init))
     }
 
-    pub fn handle_chart_msg(&mut self, msg: msg::to_server::ChartsMsg) -> Res<()> {
+    pub fn handle_chart_msg(
+        &mut self,
+        msg: msg::to_server::ChartsMsg,
+    ) -> Res<Vec<msg::to_client::Msg>> {
+        let mut to_client_msgs = vec![];
+
         match msg {
             msg::to_server::ChartsMsg::New(x_axis, y_axis) => {
-                let nu_chart =
+                let mut nu_chart =
                     chart::Chart::new(x_axis, y_axis).chain_err(|| "while creating new chart")?;
-                self.charts.push(nu_chart);
-                Ok(())
+
+                // Chart creation message.
+                to_client_msgs.push(msg::to_client::ChartsMsg::new_chart(
+                    nu_chart.spec().clone(),
+                ));
+                // Initial points message.
+                let points = nu_chart.new_points(&self.filters, true).chain_err(|| {
+                    format!(
+                        "while generating the initial points for new chart #{}",
+                        nu_chart.uid()
+                    )
+                })?;
+                to_client_msgs.push(msg::to_client::ChartMsg::new_points(nu_chart.uid(), points));
+
+                self.charts.push(nu_chart)
             }
         }
+
+        Ok(to_client_msgs)
     }
 
     /// Handles a message from the client.
-    pub fn handle_msg(&mut self, msg: msg::to_server::Msg) -> Res<()> {
+    pub fn handle_msg(&mut self, msg: msg::to_server::Msg) -> Res<Vec<msg::to_client::Msg>> {
         use msg::to_server::Msg::*;
 
-        match msg {
+        let msgs = match msg {
             Charts(msg) => self.handle_chart_msg(msg)?,
-            Filters(msg) => self.filters.update(msg),
-        }
+            Filters(msg) => self.filters.update(msg)?,
+        };
 
-        Ok(())
+        Ok(msgs)
     }
 }
