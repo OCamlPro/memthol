@@ -164,12 +164,17 @@ impl Chart {
 
         // Default series, for allocations not caught by any filter.
         let default_series = js!(
-            var series = @{&chart}.series.push(new am4charts.LineSeries());
-            series.interpolationDuration = 100;
+            let chart = @{&chart};
+            var series = chart.series.push(new am4charts.LineSeries());
+            series.interpolationDuration = 500;
             series.defaultState.transitionDuration = 0;
             series.strokeWidth = 2;
-            series.minBulletDistance = 15;
             series.title = "rest";
+            series.fillOpacity = 1;
+            var gradient = new am4core.LinearGradient();
+            gradient.addColor(chart.colors.getIndex(0), 0.2);
+            gradient.addColor(chart.colors.getIndex(0), 0);
+            series.fill = gradient;
             return series;
         );
 
@@ -185,13 +190,6 @@ impl Chart {
             chart.scrollbarX = new am4charts.XYChartScrollbar();
             chart.scrollbarX.series.push(@{&default_series});
             chart.scrollbarX.parent = chart.bottomAxesContainer;
-
-            // Progression bullet at the end of the line.
-            var bullet = @{&default_series}.createChild(am4charts.CircleBullet);
-            bullet.circle.radius = 5;
-            bullet.fillOpacity = 1;
-            bullet.fill = chart.colors.getIndex(0);
-            bullet.isMeasured = false;
         );
 
         for (points, overwrite) in self.points.drain(0..) {

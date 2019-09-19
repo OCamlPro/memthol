@@ -19,7 +19,9 @@ impl AxisExt for XAxis {
                 x_axis.periodChangeDateFormats.setKey("second", "[bold]h:mm a");
                 x_axis.periodChangeDateFormats.setKey("minute", "[bold]h:mm a");
                 x_axis.periodChangeDateFormats.setKey("hour", "[bold]h:mm a");
-                x_axis.extraMax = 0.2;
+                x_axis.interpolationDuration = @{cst::charts::INTERP_DURATION};
+                x_axis.rangeChangeDuration = @{cst::charts::INTERP_DURATION};
+                x_axis.extraMax = 0.05;
             ),
         }
     }
@@ -36,8 +38,8 @@ impl AxisExt for YAxis {
         match self {
             YAxis::TotalSize => js!(@(no_return)
                 var y_axis = @{chart}.yAxes.push(new am4charts.ValueAxis());
-                y_axis.interpolationDuration = 500;
-                y_axis.rangeChangeDuration = 500;
+                y_axis.interpolationDuration = @{cst::charts::INTERP_DURATION};
+                y_axis.rangeChangeDuration = @{cst::charts::INTERP_DURATION};
             ),
         }
     }

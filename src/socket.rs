@@ -70,7 +70,7 @@ impl Handler {
             charts: Charts::new(),
             from_client: FromClient::new(),
             last_frame: Instant::now(),
-            frame_span: Duration::from_millis(1_000),
+            frame_span: Duration::from_millis(500),
             ping_label,
             ping_msg,
         };
