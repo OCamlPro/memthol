@@ -79,7 +79,7 @@ impl Watcher {
                 .try_read_init()
                 .chain_err(|| "while checking whether the init file of the run has changed")?
             {
-                // Discard any error that might have happen in previous calls to
+                // Discard any error that might have happened in previous calls to
                 // `register_new_diffs` below.
                 diff_error = None;
                 self.reset_run(init)
@@ -244,24 +244,40 @@ impl Watcher {
 impl Watcher {
     /// Gathers and registers new diffs.
     ///
-    /// - sleeps for `200` milliseconds if there are no new diffs;
+    /// - sleeps for `100` milliseconds if there are no new diffs;
     /// - asserts `self.new_diffs.is_empty()`.
     pub fn register_new_diffs(&mut self) -> Res<()> {
         debug_assert!(self.new_diffs.is_empty());
-        self.gather_new_diffs()?;
 
-        if !self.new_diffs.is_empty() {
-            // Sort the diffs. This could be more efficient by having `gather_new_diffs` insert in a
-            // sorted list.
-            self.new_diffs
-                .sort_by(|diff_1, diff_2| diff_1.time.cmp(&diff_2.time));
+        // I don't know why, but sometimes `gather_new_diffs` will miss diff files when the profiler
+        // is running. Diffs following the missing diff file(s) will not make sense and will crash
+        // diff registration.
+        //
+        // So, this first call retrieves the highest time of last modification of the diffs
+        // gathered.
+        let upper_bound = self.gather_new_diffs(None)?;
 
-            for diff in self.new_diffs.drain(0..) {
-                super::add_diff(diff)?
+        // Now, `upper_bound.is_none()` iff no diff was found. In this case we do nothing.
+        if upper_bound.is_some() {
+            // If `upper_bound.is_some()`, we gather new diffs again but this time we give the upper
+            // bound we got previously. This tells diff gathering to ignore everything more recent
+            // than `upper_bound`. So, we will catch any intermediary diff we might have missed.
+            self.gather_new_diffs(upper_bound)?;
+
+            if !self.new_diffs.is_empty() {
+                // Sort the diffs. This could be more efficient by having `gather_new_diffs` insert
+                // in a sorted list.
+                self.new_diffs
+                    .sort_by(|diff_1, diff_2| diff_1.time.cmp(&diff_2.time));
+
+                for diff in self.new_diffs.drain(0..) {
+                    super::add_diff(diff)?
+                }
+            } else {
+                sleep(Duration::from_millis(100))
             }
-        } else {
-            sleep(Duration::from_millis(200))
         }
+
         Ok(())
     }
 
@@ -271,8 +287,10 @@ impl Watcher {
     /// - assumes `self.new_diffs.is_empty()`.
     /// - returns `true` if there was at list one new diff found (equivalent to
     ///     `!self.new_diffs.is_empty()`)
-    pub fn gather_new_diffs(&mut self) -> Res<()> {
+    pub fn gather_new_diffs(&mut self, upper_bound: Option<SystemTime>) -> Res<Option<SystemTime>> {
         use std::fs::read_dir;
+
+        let mut highest_last_modified = None;
 
         // We need this to make sure we only work on file created **after** the init file.
         let init_last_modified = self
@@ -280,7 +298,7 @@ impl Watcher {
             .clone()
             .ok_or("trying to gather diff file, but the init file has not been processed yet")?;
 
-        debug_assert!(self.new_diffs.is_empty());
+        debug_assert!(upper_bound.is_some() || self.new_diffs.is_empty());
 
         let dir = read_dir(&self.dir)
             .chain_err(|| format!("while reading dump directory `{}`", self.dir))?;
@@ -298,9 +316,7 @@ impl Watcher {
                 continue;
             }
 
-            let mut file_path = PathBuf::new();
-            file_path.push(&self.dir);
-            file_path.push(file.file_name());
+            let file_path = file.path();
 
             let is_new = self.known_files.insert(file.file_name());
 
@@ -324,7 +340,12 @@ impl Watcher {
                         file_path.to_string_lossy()
                     )
                 })?;
-            if last_modified < init_last_modified {
+            if last_modified < init_last_modified
+                || upper_bound
+                    .as_ref()
+                    .map(|ubound| &last_modified > ubound)
+                    .unwrap_or(false)
+            {
                 // Note that we remove the file from `known_files`in this case. This is because we
                 // don't want to ignore this file in the future, as it might be overwritten and
                 // become relevant.
@@ -332,6 +353,16 @@ impl Watcher {
                 debug_assert!(was_there);
                 continue;
             }
+
+            highest_last_modified = Some(if let Some(highest) = highest_last_modified {
+                if highest < last_modified {
+                    last_modified
+                } else {
+                    highest
+                }
+            } else {
+                last_modified
+            });
 
             let diff = self
                 .read_content(&file_path, |content| {
@@ -346,6 +377,6 @@ impl Watcher {
                 })?;
             self.new_diffs.push(diff)
         }
-        Ok(())
+        Ok(highest_last_modified)
     }
 }

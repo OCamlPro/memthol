@@ -35,7 +35,9 @@ impl AxisExt for YAxis {
     fn chart_apply(&self, chart: &JsVal) {
         match self {
             YAxis::TotalSize => js!(@(no_return)
-                @{chart}.yAxes.push(new am4charts.ValueAxis())
+                var y_axis = @{chart}.yAxes.push(new am4charts.ValueAxis());
+                y_axis.interpolationDuration = 500;
+                y_axis.rangeChangeDuration = 500;
             ),
         }
     }

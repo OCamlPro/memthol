@@ -165,7 +165,7 @@ impl Chart {
         // Default series, for allocations not caught by any filter.
         let default_series = js!(
             var series = @{&chart}.series.push(new am4charts.LineSeries());
-            series.interpolationDuration = 0;
+            series.interpolationDuration = 100;
             series.defaultState.transitionDuration = 0;
             series.strokeWidth = 2;
             series.minBulletDistance = 15;
