@@ -14,6 +14,16 @@ pub type TimePoint<Val> = Point<Date, Val>;
 pub enum TimePoints {
     Size(size::TimeSizePoints),
 }
+
+impl TimePoints {
+    /// True if there are no points.
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::Size(points) => points.is_empty(),
+        }
+    }
+}
+
 impl From<size::TimeSizePoints> for TimePoints {
     fn from(points: size::TimeSizePoints) -> Self {
         Self::Size(points)

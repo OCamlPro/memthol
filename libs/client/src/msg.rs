@@ -4,6 +4,8 @@ use crate::base::*;
 
 pub use charts::msg::{to_client as from_server, to_server};
 
+use charts::uid::ChartUid;
+
 /// Internal model messages.
 ///
 /// These messages are sent by the model's components to the model. The only exception is
@@ -63,12 +65,41 @@ impl From<ChartsMsg> for Msg {
 #[derive(Debug)]
 pub enum ChartsMsg {
     /// Builds a chart and attaches it to its container.
-    Build(charts::uid::ChartUid),
-    // /// Moves a chart up or down.
-    // Move { index: index::Chart, up: bool },
+    ///
+    /// This is typically sent after a chart is first render, thus creating the chart container. The
+    /// message forces to build and bind the chart once the container exists.
+    Build(ChartUid),
+    /// Moves a chart up or down.
+    Move {
+        /// UID of the chart.
+        uid: ChartUid,
+        /// Move up if true, down otherwise.
+        up: bool,
+    },
+    /// Toggles the visibility of a chart.
+    ToggleVisible(ChartUid),
+    /// Destroys a chart.
+    Destroy(ChartUid),
 }
 impl ChartsMsg {
-    pub fn build(uid: charts::uid::ChartUid) -> Msg {
+    /// Constructs a `Build` message.
+    pub fn build(uid: ChartUid) -> Msg {
         Self::Build(uid).into()
+    }
+    /// Constructs a message to move a chart up.
+    pub fn move_up(uid: ChartUid) -> Msg {
+        Self::Move { uid, up: true }.into()
+    }
+    /// Constructs a message to move a chart down.
+    pub fn move_down(uid: ChartUid) -> Msg {
+        Self::Move { uid, up: true }.into()
+    }
+    /// Constructs a message to toggle the visibility of a chart.
+    pub fn toggle_visible(uid: ChartUid) -> Msg {
+        Self::ToggleVisible(uid).into()
+    }
+    /// Constructs a message to destroy a chart.
+    pub fn destroy(uid: ChartUid) -> Msg {
+        Self::Destroy(uid).into()
     }
 }

@@ -31,7 +31,7 @@ impl Charts {
     }
 
     /// Retrieves the chart corresponding to some UID.
-    fn get_mut(&mut self, uid: charts::uid::ChartUid) -> Res<&mut Chart> {
+    fn get_mut(&mut self, uid: charts::uid::ChartUid) -> Res<(usize, &mut Chart)> {
         debug_assert_eq!(
             self.charts
                 .iter()
@@ -39,9 +39,9 @@ impl Charts {
                 .count(),
             1
         );
-        for chart in &mut self.charts {
+        for (index, chart) in self.charts.iter_mut().enumerate() {
             if chart.uid() == uid {
-                return Ok(chart);
+                return Ok((index, chart));
             }
         }
         bail!("unknown chart UID #{}", uid)
@@ -49,17 +49,12 @@ impl Charts {
 
     /// Applies an operation.
     pub fn update(&mut self, action: msg::ChartsMsg) -> Res<ShouldRender> {
-        let should_render = match action {
-            msg::ChartsMsg::Build(uid) => {
-                let chart = self
-                    .get_mut(uid)
-                    .chain_err(|| format!("while building and binding chart #{}", uid))?;
-                chart.build_chart()?;
-                true
-            }
-        };
-
-        Ok(should_render)
+        match action {
+            msg::ChartsMsg::Build(uid) => self.build(uid),
+            msg::ChartsMsg::Move { uid, up } => self.move_chart(uid, up),
+            msg::ChartsMsg::ToggleVisible(uid) => self.toggle_visible(uid),
+            msg::ChartsMsg::Destroy(uid) => self.destroy(uid),
+        }
     }
 
     /// Alies an operation from the server.
@@ -109,6 +104,74 @@ impl Charts {
     }
 }
 
+/// # Functions enforcing actions from internal messages
+impl Charts {
+    /// Move a chart, up if `up`, down otherwise.
+    pub fn move_chart(&mut self, uid: charts::uid::ChartUid, up: bool) -> Res<ShouldRender> {
+        let mut index = None;
+        for (idx, chart) in self.charts.iter().enumerate() {
+            if chart.uid() == uid {
+                index = Some(idx)
+            }
+        }
+
+        let index = if let Some(index) = index {
+            index
+        } else {
+            bail!("cannot move chart with unknown UID #{}", uid)
+        };
+
+        let other_index = if up {
+            // Move up.
+            if index > 0 {
+                index - 1
+            } else {
+                return Ok(false);
+            }
+        } else {
+            let other_index = index + 1;
+            // Move down.
+            if other_index < self.charts.len() {
+                other_index
+            } else {
+                return Ok(false);
+            }
+        };
+
+        self.charts.swap(index, other_index);
+
+        Ok(true)
+    }
+
+    /// Forces a chart to build its actual (JS) graph and bind it to its container.
+    pub fn build(&mut self, uid: charts::uid::ChartUid) -> Res<ShouldRender> {
+        let (_, chart) = self
+            .get_mut(uid)
+            .chain_err(|| format!("while building and binding chart #{}", uid))?;
+        chart.build_chart()?;
+        Ok(true)
+    }
+
+    /// Toggles the visibility of a chart.
+    pub fn toggle_visible(&mut self, uid: charts::uid::ChartUid) -> Res<ShouldRender> {
+        let (_, chart) = self
+            .get_mut(uid)
+            .chain_err(|| format!("while changing chart visibility"))?;
+        chart.toggle_visible();
+        Ok(true)
+    }
+
+    /// Destroys a chart.
+    pub fn destroy(&mut self, uid: charts::uid::ChartUid) -> Res<ShouldRender> {
+        let (index, _) = self
+            .get_mut(uid)
+            .chain_err(|| format!("while destroying chart"))?;
+        let chart = self.charts.remove(index);
+        chart.destroy();
+        Ok(true)
+    }
+}
+
 /// A chart.
 pub struct Chart {
     /// Chart specification.
@@ -140,6 +203,20 @@ impl Chart {
     /// UID accessor.
     pub fn uid(&self) -> charts::uid::ChartUid {
         self.spec.uid()
+    }
+
+    /// Toggles the visibility of the chart.
+    pub fn toggle_visible(&mut self) {
+        self.visible = !self.visible
+    }
+
+    /// Destroys the chart.
+    pub fn destroy(self) {
+        if let Some(chart) = self.chart {
+            js!(@(no_return)
+                @{chart}.dispose();
+            )
+        }
     }
 
     /// Builds the actual JS chart and attaches it to the right container.
@@ -267,16 +344,19 @@ impl Chart {
             chart.invalidateRawData();
         )
     }
+}
 
+/// # Rendering
+impl Chart {
     /// Creates a collapse button for this chart.
     fn collapse_button(&self) -> Html {
         let uid = self.uid();
-        buttons::collapse(move |_| format!("collapse #{}", uid).into())
+        buttons::collapse(move |_| msg::ChartsMsg::toggle_visible(uid))
     }
     /// Creates an expand button for this chart.
     fn expand_button(&self) -> Html {
         let uid = self.uid();
-        buttons::expand(move |_| format!("expand #{}", uid).into())
+        buttons::expand(move |_| msg::ChartsMsg::toggle_visible(uid))
     }
 
     /// Renders the chart.
@@ -293,9 +373,9 @@ impl Chart {
             <g>
                 <center class=style::class::chart::HEADER>
                     { expand_or_collapse_button }
-                    { buttons::move_up(move |_| format!("move_up {}", uid).into()) }
-                    { buttons::move_down(move |_| format!("move_down {}", uid).into()) }
-                    { buttons::close(move |_| format!("close {}", uid).into()) }
+                    { buttons::move_up(move |_| msg::ChartsMsg::move_up(uid)) }
+                    { buttons::move_down(move |_| msg::ChartsMsg::move_down(uid)) }
+                    { buttons::close(move |_| msg::ChartsMsg::destroy(uid)) }
 
                     <h2> { self.spec.desc() } </h2>
                 </center>

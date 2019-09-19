@@ -96,6 +96,15 @@ pub enum Points {
     Time(TimePoints),
 }
 
+impl Points {
+    /// True if there are no points.
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::Time(points) => points.is_empty(),
+        }
+    }
+}
+
 impl<T> From<T> for Points
 where
     T: Into<TimePoints>,
@@ -115,6 +124,11 @@ impl ChartPoints {
     /// Constructor.
     pub fn new() -> Self {
         Self { points: Map::new() }
+    }
+
+    /// True if there are no points.
+    pub fn is_empty(&self) -> bool {
+        self.points.iter().all(|(_uid, points)| points.is_empty())
     }
 }
 
