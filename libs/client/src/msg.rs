@@ -80,6 +80,11 @@ pub enum ChartsMsg {
     ToggleVisible(ChartUid),
     /// Destroys a chart.
     Destroy(ChartUid),
+
+    /// Sets the x-axis in the new chart element.
+    NewChartSetX(chart::axis::XAxis),
+    /// Sets the y-axis in the new chart element.
+    NewChartSetY(chart::axis::YAxis),
 }
 impl ChartsMsg {
     /// Constructs a `Build` message.
@@ -101,5 +106,14 @@ impl ChartsMsg {
     /// Constructs a message to destroy a chart.
     pub fn destroy(uid: ChartUid) -> Msg {
         Self::Destroy(uid).into()
+    }
+
+    /// Sets the x-axis in the new chart element.
+    pub fn new_chart_set_x(x: chart::axis::XAxis) -> Msg {
+        Self::NewChartSetX(x).into()
+    }
+    /// Sets the y-axis in the new chart element.
+    pub fn new_chart_set_y(y: chart::axis::YAxis) -> Msg {
+        Self::NewChartSetY(y).into()
     }
 }

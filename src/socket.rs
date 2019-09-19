@@ -142,9 +142,11 @@ impl Handler {
                 .charts
                 .new_points(false)
                 .chain_err(|| "while constructing points for the client")?;
-            let msg = msg::to_client::ChartsMsg::points(points, overwrite);
-            self.send(msg)
-                .chain_err(|| "while sending points to the client")?;
+            if overwrite || points.is_empty() {
+                let msg = msg::to_client::ChartsMsg::points(points, overwrite);
+                self.send(msg)
+                    .chain_err(|| "while sending points to the client")?;
+            }
         }
 
         Ok(())

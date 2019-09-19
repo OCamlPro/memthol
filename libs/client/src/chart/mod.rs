@@ -7,6 +7,7 @@ use crate::base::*;
 pub use axis::{XAxis, YAxis};
 
 pub mod axis;
+pub mod new;
 
 /// The collection of charts.
 pub struct Charts {
@@ -14,6 +15,8 @@ pub struct Charts {
     charts: Vec<Chart>,
     /// Callback to send messages to the model.
     to_model: Callback<Msg>,
+    /// Chart constructor element.
+    new_chart: new::NewChart,
 }
 
 impl Charts {
@@ -22,6 +25,7 @@ impl Charts {
         Self {
             charts: vec![],
             to_model,
+            new_chart: new::NewChart::new(),
         }
     }
 
@@ -49,11 +53,15 @@ impl Charts {
 
     /// Applies an operation.
     pub fn update(&mut self, action: msg::ChartsMsg) -> Res<ShouldRender> {
+        use msg::ChartsMsg::*;
         match action {
-            msg::ChartsMsg::Build(uid) => self.build(uid),
-            msg::ChartsMsg::Move { uid, up } => self.move_chart(uid, up),
-            msg::ChartsMsg::ToggleVisible(uid) => self.toggle_visible(uid),
-            msg::ChartsMsg::Destroy(uid) => self.destroy(uid),
+            Build(uid) => self.build(uid),
+            Move { uid, up } => self.move_chart(uid, up),
+            ToggleVisible(uid) => self.toggle_visible(uid),
+            Destroy(uid) => self.destroy(uid),
+
+            NewChartSetX(x_axis) => self.new_chart.set_x_axis(x_axis),
+            NewChartSetY(y_axis) => self.new_chart.set_y_axis(y_axis),
         }
     }
 
@@ -99,6 +107,7 @@ impl Charts {
         html! {
             <g class=style::class::chart::CONTAINER>
                 { for self.charts.iter().map(Chart::render) }
+                { self.new_chart.render() }
             </g>
         }
     }

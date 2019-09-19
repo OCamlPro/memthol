@@ -23,6 +23,12 @@ pub mod to_server {
         /// Creates a new chart.
         New(chart::axis::XAxis, chart::axis::YAxis),
     }
+    impl ChartsMsg {
+        /// Constructs a chart creation message.
+        pub fn new(x: chart::axis::XAxis, y: chart::axis::YAxis) -> Msg {
+            Self::New(x, y).into()
+        }
+    }
 
     /// Operations over filters.
     #[derive(Debug, Clone, Serialize, Deserialize)]
