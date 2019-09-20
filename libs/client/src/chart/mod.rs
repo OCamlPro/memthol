@@ -70,6 +70,7 @@ impl Charts {
         use msg::from_server::{ChartMsg, ChartsMsg};
         let should_render = match action {
             ChartsMsg::NewChart(spec) => {
+                info!("received a chart-creation message from the server");
                 let uid = spec.uid();
                 let chart = Chart::new(spec);
                 self.charts.push(chart);
@@ -78,6 +79,7 @@ impl Charts {
             }
 
             ChartsMsg::NewPoints(mut points) => {
+                info!("received a overwrite-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
                         chart.overwrite_points(points)
@@ -86,6 +88,7 @@ impl Charts {
                 false
             }
             ChartsMsg::AddPoints(mut points) => {
+                info!("received a add-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
                         chart.add_points(points)
@@ -95,6 +98,7 @@ impl Charts {
             }
 
             ChartsMsg::Chart { uid, msg } => {
+                info!("received a message specific to chart #{} from server", uid);
                 let (_index, chart) = self.get_mut(uid)?;
                 match msg {
                     ChartMsg::NewPoints(points) => chart.overwrite_points(points),
