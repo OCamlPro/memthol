@@ -42,11 +42,7 @@ impl fmt::Display for Color {
 impl Color {
     /// Color constructor.
     pub fn new(r: u8, g: u8, b: u8) -> Self {
-        Self {
-            r: r % 255u8,
-            g: g % 255u8,
-            b: b % 255u8,
-        }
+        Self { r, g, b }
     }
 
     /// Constructs a random color.
