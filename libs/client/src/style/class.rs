@@ -18,6 +18,8 @@ pub mod tabs {
         pub static LEFT: &str = "li_left";
         /// Right tab.
         pub static RIGHT: &str = "li_right";
+        /// Center tab.
+        pub static CENTER: &str = "li_center";
 
         /// Class for a left/right `<li>` tab container.
         pub fn get(float_left: bool) -> &'static str {
@@ -40,6 +42,18 @@ pub mod tabs {
             ACTIVE
         } else {
             INACTIVE
+        }
+    }
+
+    /// Class/style pair for an (in)active filter tab.
+    pub fn footer_get(is_active: bool, color: &charts::color::Color) -> (&'static str, String) {
+        if is_active {
+            (
+                ACTIVE,
+                format!("background-image: linear-gradient({}, black);", color),
+            )
+        } else {
+            (INACTIVE, format!("color: {};", color))
         }
     }
 }

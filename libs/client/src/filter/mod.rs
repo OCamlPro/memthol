@@ -78,6 +78,13 @@ impl Filters {
     pub fn render_tabs(&self) -> Html {
         html! {
             <>
+                // Actual filters.
+                { for self.filters.values().map(|filter| {
+                    let active = filter.uid() == self.active;
+                    filter.spec().render_tab(active)
+                } ) }
+                // Catch all.
+                { self.catch_all.render_tab(self.active == None) }
             </>
         }
     }
@@ -93,15 +100,24 @@ impl Filters {
 
 /// Extension trait for `FilterSpec`.
 pub trait FilterSpecExt {
-    /// Renders a spec.
-    fn render(&self) -> Html;
+    /// Renders a spec as a tab.
+    fn render_tab(&self, active: bool) -> Html;
 }
 
 impl FilterSpecExt for FilterSpec {
-    fn render(&self) -> Html {
+    fn render_tab(&self, active: bool) -> Html {
+        let uid = self.uid();
+        let (class, colorize) = style::class::tabs::footer_get(active, self.color());
         html! {
-            <>
-            </>
+            <li class={ style::class::tabs::li::get(false) }>
+                <a
+                    class={class}
+                    style={colorize}
+                    // onclick=|_| msg::FooterMsg::toggle_tab(tab)
+                > {
+                    self.name()
+                } </a>
+            </li>
         }
     }
 }

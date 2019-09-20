@@ -35,7 +35,7 @@ pub struct Color {
 
 impl fmt::Display for Color {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "#{:x}{:x}{:x}", self.r, self.g, self.b)
+        write!(fmt, "#{:0>2x}{:0>2x}{:0>2x}", self.r, self.g, self.b)
     }
 }
 

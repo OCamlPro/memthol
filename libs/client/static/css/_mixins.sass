@@ -71,9 +71,11 @@
     font-size: $font-size
 
 @mixin inactive_tab_style
+    @include font_shadow
     color: $menu_inactive_tab_fg
     background-image: linear-gradient($menu_inactive_tab_bg, $menu_bg)
 @mixin active_tab_style
+    @include font_shadow
     color: $menu_active_tab_fg
     background-image: linear-gradient($menu_active_tab_bg, $menu_bg)
 
@@ -140,4 +142,7 @@
         .li_right
             @include menu_tabs
             float: right
+        .li_center
+            @include menu_tabs
+            float: center
 
