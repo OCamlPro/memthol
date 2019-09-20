@@ -78,6 +78,8 @@ pub mod chart {
     ///
     /// Needs to be completed with the chart's uid.
     pub static PREFIX: &str = "memthol_chart_html_id_";
+    /// Chart axis selection class.
+    pub static SELECT_AXIS: &str = "select_axis";
 
     /// Class of an actual chart.
     pub fn class(uid: charts::uid::ChartUid) -> String {

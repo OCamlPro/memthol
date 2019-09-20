@@ -114,7 +114,7 @@ impl<Num: fmt::Display> fmt::Display for OrdFilter<Num> {
     }
 }
 
-impl<Num> crate::filter::FilterSpec<Num> for OrdFilter<Num>
+impl<Num> crate::filter::FilterExt<Num> for OrdFilter<Num>
 where
     Num: PartialOrd + PartialEq + fmt::Display + Default + alloc_data::Parseable + Clone + 'static,
     Self: Into<filter::SubFilter>,

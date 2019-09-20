@@ -262,7 +262,7 @@ impl Chart {
             series.interpolationDuration = 500;
             series.defaultState.transitionDuration = 0;
             series.strokeWidth = 2;
-            series.title = "rest";
+            series.title = "catch-all";
             series.fillOpacity = 1;
             var gradient = new am4core.LinearGradient();
             gradient.addColor(chart.colors.getIndex(0), 0.2);

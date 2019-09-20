@@ -22,3 +22,5 @@ regex = "*"
 error-chain = "*"
 alloc_data = { path = "../data" }
 charts = { path = "../charts" }
+strum = "*"
+strum_macros = "*"

@@ -87,7 +87,7 @@ new_uid! {
         /// [`Filter`]: ../filter/sub/struct.Filter.html (The Filter struct)
         /// [`Filters`]: ../filter/struct.Filters.html (The Filters struct)
         /// [`Charts`]: ../struct.Charts.html (The Charts struct)
-        Filter
+        FilterUid
     }
 }
 
@@ -99,7 +99,7 @@ new_uid! {
         ///
         /// [`SubFilter`]: ../filter/sub/struct.SubFilter.html (The SubFilter struct)
         /// [`Filter`]: ../filter/struct.Filter.html (The Filter struct)
-        SubFilter
+        SubFilterUid
     }
 }
 

@@ -14,7 +14,9 @@ pub use serde_derive::{Deserialize, Serialize};
 pub use alloc_data::{Alloc, Date, Diff, Init as AllocInit, SinceStart, Uid as AllocUid};
 
 pub use crate::{
-    chart, data, err,
+    chart,
+    color::Color,
+    data, err,
     err::{Res, ResExt},
     filter,
     filter::{Filter, Filters},

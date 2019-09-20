@@ -6,17 +6,20 @@ use crate::base::*;
 
 pub mod label;
 pub mod ord;
+mod spec;
 pub mod sub;
 
 pub use label::LabelFilter;
 use ord::OrdFilter;
+pub use spec::FilterSpec;
 pub use sub::SubFilter;
+pub use uid::{FilterUid, SubFilterUid};
 
 /// A filter over allocation sizes.
 pub type SizeFilter = OrdFilter<usize>;
 
 /// Function(s) a filter must implement.
-pub trait FilterSpec<Data>: Sized
+pub trait FilterExt<Data>: Sized
 where
     Data: ?Sized,
 {
@@ -155,16 +158,26 @@ impl std::ops::IndexMut<index::Filter> for Filters {
 pub struct Filter {
     /// Actual list of filters.
     filters: Vec<SubFilter>,
-    /// Name of the filter.
-    name: String,
+    /// Filter specification.
+    spec: FilterSpec,
 }
 impl Filter {
     /// Constructor.
-    pub fn new<S: Into<String>>(name: S) -> Filter {
+    pub fn new(spec: FilterSpec) -> Filter {
         Self {
             filters: vec![],
-            name: name.into(),
+            spec,
         }
+    }
+
+    /// Specification accessor.
+    pub fn spec(&self) -> &FilterSpec {
+        &self.spec
+    }
+
+    /// UID accessor.
+    pub fn uid(&self) -> Option<FilterUid> {
+        self.spec().uid()
     }
 
     /// Applies the filters to an allocation.

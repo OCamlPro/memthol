@@ -12,6 +12,11 @@ pub struct Model {
     pub socket_task: WebSocketTask,
     /// Collection of charts.
     pub charts: Charts,
+    /// Allocation filters.
+    pub filters: filter::Filters,
+
+    /// Footer DOM element.
+    pub footer: footer::Footer,
 }
 
 impl Model {
@@ -72,6 +77,8 @@ impl Component for Model {
             socket,
             socket_task,
             charts,
+            filters: filter::Filters::new(),
+            footer: footer::Footer::new(),
         }
     }
 
@@ -100,6 +107,9 @@ impl Component for Model {
             Msg::Charts(msg) => unwrap_or_send_err!(
                 self.charts.update(msg) => self default false
             ),
+            Msg::Footer(msg) => unwrap_or_send_err!(
+                self.footer.update(msg) => self default false
+            ),
 
             Msg::Msg(s) => {
                 info!("{}", s);
@@ -117,9 +127,12 @@ impl Component for Model {
 impl Renderable<Model> for Model {
     fn view(&self) -> Html {
         html! {
-            <div class=style::class::FULL_BODY>
-                { self.charts.render() }
-            </div>
+            <>
+                <div class=style::class::FULL_BODY>
+                    { self.charts.render() }
+                    { self.footer.render(&self.filters) }
+                </div>
+            </>
         }
     }
 }

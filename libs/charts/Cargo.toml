@@ -20,3 +20,4 @@ failure = "*"
 safe_index = "*"
 strum = "*"
 strum_macros = "*"
+rand = { version = "*", features = ["small_rng"] }

@@ -14,25 +14,34 @@ body
         font: $font_size $font_code_stack
 
     .body_header_footer
+        // padding: $layout_tab_height 0px ($layout_tab_height + $layout_footer_display_height) 0px
+        margin: 0
+        min-height: 100vh
         padding: $layout_tab_height 0px ($layout_tab_height + $layout_footer_display_height) 0px
         background-color: $body_bg
         color: $body_fg
 
-    .body
-        min-height: 100vh
+        .body
+            min-height: 100vh
 
-    .h1
-        color: $dark_blue
+        h1
+            color: $dark_blue
 
-    .memthol_chart_container
-        @include buttons
+        h2
+            color: $body_fg
 
-        .chart_header
-            margin: 0 $layout_left_right_margin
+        .memthol_chart_container
+            @include buttons
 
-        .chart_style
-            @include chart_style
+            .select_axis:
+                font: 100% $font_stack
 
-        .hidden_chart_style
-            @include chart_style
-            @include hidden
+            .chart_header
+                margin: 0 $layout_left_right_margin
+
+            .chart_style
+                @include chart_style
+
+            .hidden_chart_style
+                @include chart_style
+                @include hidden

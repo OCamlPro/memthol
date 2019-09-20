@@ -2,7 +2,7 @@
 
 use regex::Regex;
 
-use crate::{base::*, filter::FilterSpec};
+use crate::{base::*, filter::FilterExt};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Kind {
@@ -106,7 +106,7 @@ impl fmt::Display for LabelFilter {
     }
 }
 
-impl FilterSpec<[String]> for LabelFilter {
+impl FilterExt<[String]> for LabelFilter {
     fn apply(&self, alloc_data: &[String]) -> bool {
         match self {
             Self::Contain(specs) => Self::check_contain(specs, alloc_data),
@@ -149,7 +149,7 @@ pub enum LabelSpec {
     #[serde(with = "serde_regex")]
     Regex(Regex),
 }
-impl FilterSpec<str> for LabelSpec {
+impl FilterExt<str> for LabelSpec {
     fn apply(&self, label: &str) -> bool {
         match self {
             LabelSpec::Value(value) => label == value,

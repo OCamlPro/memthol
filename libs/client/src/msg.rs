@@ -21,6 +21,8 @@ pub enum Msg {
 
     /// Chart operations.
     Charts(ChartsMsg),
+    /// Footer operations.
+    Footer(FooterMsg),
 
     /// A message to print in the JS console.
     Msg(String),
@@ -61,7 +63,13 @@ impl From<ChartsMsg> for Msg {
         Self::Charts(msg)
     }
 }
+impl From<FooterMsg> for Msg {
+    fn from(msg: FooterMsg) -> Self {
+        Self::Footer(msg)
+    }
+}
 
+/// Operations over charts.
 #[derive(Debug)]
 pub enum ChartsMsg {
     /// Builds a chart and attaches it to its container.
@@ -117,3 +125,20 @@ impl ChartsMsg {
         Self::NewChartSetY(y).into()
     }
 }
+
+/// Footer operation.
+#[derive(Debug)]
+pub enum FooterMsg {
+    /// Toggles a tab.
+    ToggleTab(footer::FooterTab),
+}
+impl FooterMsg {
+    /// Toggles a tab.
+    pub fn toggle_tab(tab: footer::FooterTab) -> Msg {
+        Self::ToggleTab(tab).into()
+    }
+}
+
+/// Operations over filters.
+#[derive(Debug)]
+pub enum FiltersMsg {}

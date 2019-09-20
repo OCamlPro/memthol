@@ -38,6 +38,7 @@ pub use crate::{
     chart::Charts,
     cst, err,
     err::{bail, Res, ResExt},
+    filter, footer,
     model::Model,
     msg,
     msg::Msg,

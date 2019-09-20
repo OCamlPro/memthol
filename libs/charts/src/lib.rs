@@ -16,6 +16,7 @@
 
 pub mod base;
 pub mod chart;
+pub mod color;
 pub mod data;
 pub mod err;
 pub mod filter;
