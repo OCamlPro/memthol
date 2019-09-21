@@ -30,6 +30,8 @@ pub use chart::Chart;
 
 use base::*;
 
+use uid::ChartUid;
+
 /// Trait implemented by all charts.
 pub trait ChartExt {
     /// Generates the new points of the chart.
@@ -67,6 +69,18 @@ impl Charts {
         self.charts.push(chart)
     }
 
+    /// Chart mutable accessor.
+    pub fn get_mut(&mut self, uid: ChartUid) -> Res<&mut Chart> {
+        for chart in self.charts.iter_mut() {
+            if chart.uid() == uid {
+                return Ok(chart);
+            }
+        }
+        bail!("cannot access chart with unknown UID #{}", uid)
+    }
+}
+
+impl Charts {
     /// Restarts the charts if needed.
     fn restart_if_needed(&mut self) -> Res<bool> {
         let data = data::get();
@@ -102,7 +116,7 @@ impl Charts {
     pub fn handle_chart_msg(
         &mut self,
         msg: msg::to_server::ChartsMsg,
-    ) -> Res<Vec<msg::to_client::Msg>> {
+    ) -> Res<msg::to_client::Msgs> {
         let mut to_client_msgs = vec![];
 
         match msg {

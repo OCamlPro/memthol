@@ -1,13 +1,14 @@
 //! Charts.
 
-pub use charts::chart::ChartSpec;
+use charts::chart::ChartSpec;
 
 use crate::base::*;
 
-pub use axis::{XAxis, YAxis};
-
 pub mod axis;
 pub mod new;
+
+pub use axis::{XAxis, YAxis};
+pub use charts::chart::ChartUid;
 
 /// The collection of charts.
 pub struct Charts {
@@ -35,7 +36,7 @@ impl Charts {
     }
 
     /// Retrieves the chart corresponding to some UID.
-    fn get_mut(&mut self, uid: charts::uid::ChartUid) -> Res<(usize, &mut Chart)> {
+    fn get_mut(&mut self, uid: ChartUid) -> Res<(usize, &mut Chart)> {
         debug_assert_eq!(
             self.charts
                 .iter()
@@ -127,7 +128,7 @@ impl Charts {
 /// # Functions enforcing actions from internal messages
 impl Charts {
     /// Move a chart, up if `up`, down otherwise.
-    pub fn move_chart(&mut self, uid: charts::uid::ChartUid, up: bool) -> Res<ShouldRender> {
+    pub fn move_chart(&mut self, uid: ChartUid, up: bool) -> Res<ShouldRender> {
         let mut index = None;
         for (idx, chart) in self.charts.iter().enumerate() {
             if chart.uid() == uid {
@@ -164,7 +165,7 @@ impl Charts {
     }
 
     /// Forces a chart to build its actual (JS) graph and bind it to its container.
-    pub fn build(&mut self, uid: charts::uid::ChartUid) -> Res<ShouldRender> {
+    pub fn build(&mut self, uid: ChartUid) -> Res<ShouldRender> {
         let (_, chart) = self
             .get_mut(uid)
             .chain_err(|| format!("while building and binding chart #{}", uid))?;
@@ -173,7 +174,7 @@ impl Charts {
     }
 
     /// Toggles the visibility of a chart.
-    pub fn toggle_visible(&mut self, uid: charts::uid::ChartUid) -> Res<ShouldRender> {
+    pub fn toggle_visible(&mut self, uid: ChartUid) -> Res<ShouldRender> {
         let (_, chart) = self
             .get_mut(uid)
             .chain_err(|| format!("while changing chart visibility"))?;
@@ -182,7 +183,7 @@ impl Charts {
     }
 
     /// Destroys a chart.
-    pub fn destroy(&mut self, uid: charts::uid::ChartUid) -> Res<ShouldRender> {
+    pub fn destroy(&mut self, uid: ChartUid) -> Res<ShouldRender> {
         let (index, _) = self
             .get_mut(uid)
             .chain_err(|| format!("while destroying chart"))?;
@@ -221,7 +222,7 @@ impl Chart {
     }
 
     /// UID accessor.
-    pub fn uid(&self) -> charts::uid::ChartUid {
+    pub fn uid(&self) -> ChartUid {
         self.spec.uid()
     }
 

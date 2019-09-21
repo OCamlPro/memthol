@@ -96,7 +96,7 @@ pub mod chart {
     pub static SELECT_AXIS: &str = "select_axis";
 
     /// Class of an actual chart.
-    pub fn class(uid: charts::uid::ChartUid) -> String {
+    pub fn class(uid: crate::chart::ChartUid) -> String {
         format!("{}{}", PREFIX, uid)
     }
 
@@ -117,21 +117,26 @@ pub mod filter {
     /// Filter line class.
     pub static LINE: &str = "filter_ul";
 
-    /// Class for labels.
-    pub static VALUE: &str = "filter_value";
-
     /// Filter line classes.
     pub mod line {
         /// Class of a filter line cell.
         pub static CELL: &str = "filter_li";
+        /// Class of a filter setting cell.
+        pub static SETTINGS_CELL: &str = "filter_setting";
+        /// Class of a filter section.
+        pub static SECTION_CELL: &str = "filter_section";
         /// Class of a (allocation) property cell.
         pub static PROP_CELL: &str = "filter_prop";
         /// Class of a comparator cell.
         pub static CMP_CELL: &str = "filter_cmp";
         /// Class of a value cell.
         pub static VAL_CELL: &str = "filter_val";
+        /// Class of a settings value cell.
+        pub static SETTINGS_VALUE_CELL: &str = "filter_settings_value";
         /// Class of a label insertion element.
         pub static ADD_LABEL: &str = "filter_add_label";
+        /// Class for a label value.
+        pub static LABEL_VALUE: &str = "filter_value";
     }
 }
 

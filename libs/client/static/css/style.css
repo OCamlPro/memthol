@@ -622,6 +622,39 @@ footer .footer_display .filter_ul .filter_buttons .active_tick_button {
 footer .footer_display .filter_ul .filter_buttons .active_tick_button:hover {
   cursor: pointer;
 }
+footer .footer_display .filter_ul .filter_section {
+  display: block;
+  font-size: 16px;
+  text-align: center;
+  font-size: 150%;
+  color: #00d8ff;
+  width: 80%;
+  line-height: 35px;
+  height: 35px;
+}
+footer .footer_display .filter_ul .filter_setting {
+  display: block;
+  font-size: 16px;
+  text-align: center;
+  width: 10%;
+  line-height: 35px;
+  height: 35px;
+  float: left;
+  border-right-width: 1px;
+  border-right-color: white;
+  border-right-style: solid;
+  border-bottom-width: 1px;
+  border-bottom-color: white;
+  border-bottom-style: solid;
+}
+footer .footer_display .filter_ul .filter_setting select {
+  color: #8dedff;
+  font: 16px SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
+  background-color: #3a3a3a;
+  border-radius: 5px;
+  border-style: hidden;
+  text-align: center;
+}
 footer .footer_display .filter_ul .filter_prop {
   display: block;
   font-size: 16px;
@@ -678,12 +711,24 @@ footer .footer_display .filter_ul .filter_val {
   border-bottom-width: 1px;
   border-bottom-color: white;
   border-bottom-style: solid;
-  text-align: left;
+  text-align: center;
 }
 footer .footer_display .filter_ul .filter_val .filter_value {
   color: #8dedff;
   font: 16px Monaco, Consola, sans-serif;
   min-width: 5%;
+  height: 28px;
+  background-color: #3a3a3a;
+  border-radius: 5px;
+  border-style: hidden;
+  text-align: center;
+  margin: 0 5px;
+  padding: 0 5px;
+}
+footer .footer_display .filter_ul .filter_val .filter_settings_value {
+  color: #8dedff;
+  font: 16px Monaco, Consola, sans-serif;
+  width: 70%;
   height: 28px;
   background-color: #3a3a3a;
   border-radius: 5px;

@@ -47,7 +47,8 @@ impl Model {
                 alert!("{}", msg);
                 Ok(false)
             }
-            Msg::Charts { msg } => self.charts.server_update(msg),
+            Msg::Charts(msg) => self.charts.server_update(msg),
+            Msg::Filters(msg) => self.filters.server_update(msg),
         }
     }
 }
@@ -72,12 +73,13 @@ impl Component for Model {
         let mut socket = WebSocketService::new();
         let socket_task = Self::activate_ws(&mut link, &mut socket);
         let charts = Charts::new(link.send_back(|msg: Msg| msg));
+        let filters = filter::Filters::new(link.send_back(|msg: Msg| msg));
         Model {
             link,
             socket,
             socket_task,
             charts,
-            filters: filter::Filters::new(),
+            filters,
             footer: footer::Footer::new(),
         }
     }
@@ -109,6 +111,9 @@ impl Component for Model {
             ),
             Msg::Footer(msg) => unwrap_or_send_err!(
                 self.footer.update(msg) => self default false
+            ),
+            Msg::Filter(msg) => unwrap_or_send_err!(
+                self.filters.update(msg) => self default false
             ),
 
             Msg::Msg(s) => {

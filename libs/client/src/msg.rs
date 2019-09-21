@@ -4,7 +4,8 @@ use crate::base::*;
 
 pub use charts::msg::{to_client as from_server, to_server};
 
-use charts::uid::ChartUid;
+use chart::ChartUid;
+use filter::FilterUid;
 
 /// Internal model messages.
 ///
@@ -23,6 +24,8 @@ pub enum Msg {
     Charts(ChartsMsg),
     /// Footer operations.
     Footer(FooterMsg),
+    /// Filter operations.
+    Filter(FilterMsg),
 
     /// A message to print in the JS console.
     Msg(String),
@@ -66,6 +69,11 @@ impl From<ChartsMsg> for Msg {
 impl From<FooterMsg> for Msg {
     fn from(msg: FooterMsg) -> Self {
         Self::Footer(msg)
+    }
+}
+impl From<FilterMsg> for Msg {
+    fn from(msg: FilterMsg) -> Self {
+        Self::Filter(msg)
     }
 }
 
@@ -141,4 +149,31 @@ impl FooterMsg {
 
 /// Operations over filters.
 #[derive(Debug)]
-pub enum FiltersMsg {}
+pub enum FilterMsg {
+    /// Toggles a filter.
+    ToggleFilter(Option<FilterUid>),
+    /// Changes the name of a filter.
+    ChangeName {
+        uid: Option<FilterUid>,
+        new_name: ChangeData,
+    },
+    /// Changes the color of a filter.
+    ChangeColor {
+        uid: Option<FilterUid>,
+        new_color: ChangeData,
+    },
+}
+impl FilterMsg {
+    /// Toggles a filter.
+    pub fn toggle_filter(uid: Option<FilterUid>) -> Msg {
+        Self::ToggleFilter(uid).into()
+    }
+    /// Changes the name of a filter.
+    pub fn change_name(uid: Option<FilterUid>, new_name: ChangeData) -> Msg {
+        Self::ChangeName { uid, new_name }.into()
+    }
+    /// Changes the color of a filter.
+    pub fn change_color(uid: Option<FilterUid>, new_color: ChangeData) -> Msg {
+        Self::ChangeColor { uid, new_color }.into()
+    }
+}

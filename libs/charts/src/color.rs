@@ -41,8 +41,56 @@ impl fmt::Display for Color {
 
 impl Color {
     /// Color constructor.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use charts::color::Color;
+    /// let color = Color::new(0xff, 0x00, 0x00);
+    /// assert_eq!(&color.to_string(), "#ff0000")
+    /// ```
     pub fn new(r: u8, g: u8, b: u8) -> Self {
         Self { r, g, b }
+    }
+
+    /// Constructs a color from a string.
+    ///
+    /// - only accepts RGB strings starting with `#`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use charts::color::Color;
+    /// let color = Color::from_str("#ff0000").unwrap();
+    /// assert_eq!(&color.to_string(), "#ff0000")
+    /// ```
+    pub fn from_str<Str: AsRef<str>>(text: Str) -> Res<Self> {
+        let text = text.as_ref();
+
+        macro_rules! fail {
+            () => {
+                bail!("illegal RGB color string `{}`", text)
+            };
+            ($e:expr) => {
+                if let Ok(res) = $e {
+                    res
+                } else {
+                    fail!()
+                }
+            };
+        }
+
+        if text.len() != 7 || &text[0..1] != "#" {
+            fail!()
+        }
+
+        let (r, g, b) = (
+            fail!(u8::from_str_radix(&text[1..3], 16)),
+            fail!(u8::from_str_radix(&text[3..5], 16)),
+            fail!(u8::from_str_radix(&text[5..7], 16)),
+        );
+
+        Ok(Self::new(r, g, b))
     }
 
     /// Constructs a random color.

@@ -80,14 +80,19 @@ impl FilterKind {
 /// A list of filters.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Filters {
-    /// The actual list.
+    /// The actual list of filters.
     filters: Vec<Filter>,
+    /// The specification of the catch-all filter.
+    catch_all: FilterSpec,
 }
 
 impl Filters {
     /// Constructor.
     pub fn new() -> Self {
-        Filters { filters: vec![] }
+        Filters {
+            filters: vec![],
+            catch_all: FilterSpec::new_catch_all(),
+        }
     }
 
     /// Length of the list of filters.
@@ -95,28 +100,26 @@ impl Filters {
         self.filters.len()
     }
 
-    /// Searches for a filter that matches on the input allocation.
-    pub fn find_match(&self, alloc: &Alloc) -> Option<index::Filter> {
-        for (index, filter) in self.filters.iter().enumerate() {
-            if filter.apply(alloc) {
-                return Some(index::Filter::new(index));
-            }
+    /// Filter specification mutable accessor.
+    pub fn get_spec_mut(&mut self, uid: Option<FilterUid>) -> Res<&mut FilterSpec> {
+        if let Some(uid) = uid {
+            self.get_mut(uid).map(|(_, filter)| filter.spec_mut())
+        } else {
+            Ok(&mut self.catch_all)
         }
-        None
     }
 
-    /// Applies a filter message.
-    pub fn update(&mut self, msg: msg::to_server::FiltersMsg) -> Res<Vec<msg::to_client::Msg>> {
-        use msg::to_server::FiltersMsg::*;
-        match msg {
-            Add { filter } => self.filters.push(filter),
-            Rm { index } => {
-                self.filters.remove(*index);
-                ()
+    /// Filter mutable accessor.
+    ///
+    /// - returns the index of the filter and the filter itself;
+    /// - fails if the filter UID is unknown.
+    pub fn get_mut(&mut self, uid: FilterUid) -> Res<(usize, &mut Filter)> {
+        for (index, filter) in self.filters.iter_mut().enumerate() {
+            if filter.uid() == Some(uid) {
+                return Ok((index, filter));
             }
-            Filter { index, msg } => self.filters[*index].update(msg),
         }
-        Ok(vec![])
+        bail!("cannot access filter with unknown UID #{}", uid)
     }
 
     /// Iterator over the filters.
@@ -138,6 +141,71 @@ impl Filters {
     /// Overwrites a filter.
     pub fn set(&mut self, index: index::Filter, filter: Filter) {
         self.filters[*index.deref()] = filter
+    }
+
+    /// Searches for a filter that matches on the input allocation.
+    pub fn find_match(&self, alloc: &Alloc) -> Option<index::Filter> {
+        for (index, filter) in self.filters.iter().enumerate() {
+            if filter.apply(alloc) {
+                return Some(index::Filter::new(index));
+            }
+        }
+        None
+    }
+}
+
+/// # Message handling
+impl Filters {
+    /// Applies a filter message.
+    pub fn update(&mut self, msg: msg::to_server::FiltersMsg) -> Res<msg::to_client::Msgs> {
+        use msg::to_server::FiltersMsg::*;
+        match msg {
+            Add(filter) => self.add(filter),
+            Rm(uid) => self.remove(uid),
+            UpdateSpec { uid, spec } => self.update_spec(uid, spec),
+            Filter { uid, msg } => self.update_filter(uid, msg),
+        }
+    }
+
+    /// Adds a filter.
+    pub fn add(&mut self, filter: Filter) -> Res<msg::to_client::Msgs> {
+        self.filters.push(filter);
+        Ok(vec![])
+    }
+
+    /// Updates the specification of a filter.
+    pub fn update_spec(
+        &mut self,
+        uid: Option<FilterUid>,
+        new_spec: FilterSpec,
+    ) -> Res<msg::to_client::Msgs> {
+        let spec = self
+            .get_spec_mut(uid)
+            .chain_err(|| "while updating a filter specification")?;
+        *spec = new_spec;
+        Ok(vec![])
+    }
+
+    /// Handles a message for a particular filter.
+    pub fn update_filter(
+        &mut self,
+        uid: FilterUid,
+        msg: msg::to_server::FilterMsg,
+    ) -> Res<msg::to_client::Msgs> {
+        let (_, filter) = self
+            .get_mut(uid)
+            .chain_err(|| format!("while handling filter message {:?}", msg))?;
+        filter.update(msg);
+        Ok(vec![])
+    }
+
+    /// Removes a filter.
+    ///
+    /// - returns a message for the client to drop that filter.
+    pub fn remove(&mut self, uid: FilterUid) -> Res<msg::to_client::Msgs> {
+        let (index, _) = self.get_mut(uid).chain_err(|| "while removing chart")?;
+        self.filters.remove(index);
+        Ok(vec![msg::to_client::FiltersMsg::rm(uid).into()])
     }
 }
 
@@ -173,6 +241,10 @@ impl Filter {
     /// Specification accessor.
     pub fn spec(&self) -> &FilterSpec {
         &self.spec
+    }
+    /// Specification mutable accessor.
+    pub fn spec_mut(&mut self) -> &mut FilterSpec {
+        &mut self.spec
     }
 
     /// UID accessor.

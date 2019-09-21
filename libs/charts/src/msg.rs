@@ -7,6 +7,9 @@ use filter::*;
 pub mod to_server {
     use super::*;
 
+    /// A list of messages from the client to the server.
+    pub type Msgs = Vec<Msg>;
+
     /// Messages from the client to the server.
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum Msg {
@@ -34,23 +37,46 @@ pub mod to_server {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum FiltersMsg {
         /// Adds a new filter.
-        Add {
-            /// Filter to add.
-            filter: Filter,
-        },
+        Add(Filter),
         /// Removes a filter.
-        Rm {
-            /// Index of the filter to remove.
-            index: index::Filter,
+        Rm(uid::FilterUid),
+
+        /// Updates the specification of a filter.
+        UpdateSpec {
+            /// UID of the filter to remove.
+            uid: Option<uid::FilterUid>,
+            /// New specification.
+            spec: filter::FilterSpec,
         },
 
         /// Operation over a filter.
         Filter {
-            /// Index of the filter.
-            index: index::Filter,
+            /// UID of the filter.
+            uid: uid::FilterUid,
             /// The operation.
             msg: FilterMsg,
         },
+    }
+
+    impl FiltersMsg {
+        /// Adds a new filter.
+        pub fn add(filter: Filter) -> Msg {
+            Self::Add(filter).into()
+        }
+        /// Removes a filter.
+        pub fn rm(uid: uid::FilterUid) -> Msg {
+            Self::Rm(uid).into()
+        }
+
+        /// Updates the specification of a filter.
+        pub fn update_spec(uid: Option<uid::FilterUid>, spec: filter::FilterSpec) -> Msg {
+            Self::UpdateSpec { uid, spec }.into()
+        }
+
+        /// An operation over a single filter.
+        pub fn single(uid: uid::FilterUid, msg: FilterMsg) -> Msg {
+            Self::Filter { uid, msg }.into()
+        }
     }
 
     /// Operations over a filter.
@@ -108,6 +134,9 @@ pub mod to_server {
 pub mod to_client {
     use super::*;
 
+    /// A list of messages from the server to the client.
+    pub type Msgs = Vec<Msg>;
+
     /// Messages from the server to the client.
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum Msg {
@@ -119,10 +148,9 @@ pub mod to_client {
             msg: String,
         },
         /// A message for the charts.
-        Charts {
-            /// Chart message.
-            msg: ChartsMsg,
-        },
+        Charts(ChartsMsg),
+        /// A filter operation.
+        Filters(FiltersMsg),
     }
     impl Msg {
         /// Constructor for `Info`.
@@ -138,7 +166,18 @@ pub mod to_client {
         }
         /// Constructor for `Charts`.
         pub fn charts(msg: ChartsMsg) -> Self {
-            Self::Charts { msg }
+            Self::Charts(msg)
+        }
+    }
+
+    impl From<ChartsMsg> for Msg {
+        fn from(msg: ChartsMsg) -> Self {
+            Self::Charts(msg)
+        }
+    }
+    impl From<FiltersMsg> for Msg {
+        fn from(msg: FiltersMsg) -> Self {
+            Self::Filters(msg)
         }
     }
 
@@ -203,6 +242,19 @@ pub mod to_client {
                 uid,
                 msg: Self::Points(points),
             })
+        }
+    }
+
+    /// Filter operations.
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub enum FiltersMsg {
+        /// Removes a filter.
+        Rm(uid::FilterUid),
+    }
+    impl FiltersMsg {
+        /// Removes a filter.
+        pub fn rm(uid: uid::FilterUid) -> Msg {
+            Self::Rm(uid).into()
         }
     }
 

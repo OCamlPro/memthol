@@ -13,11 +13,6 @@ impl Footer {
         Self { active: None }
     }
 
-    /// True if the filter tab is active.
-    pub fn is_filter_tab_active(&self) -> bool {
-        self.active == Some(FooterTab::Filters)
-    }
-
     /// Applies a footer action.
     pub fn update(&mut self, msg: msg::FooterMsg) -> Res<ShouldRender> {
         use msg::FooterMsg::*;
@@ -38,27 +33,23 @@ impl Footer {
         html! {
             <footer><div id=style::id::FOOTER>
                 <ul id=style::id::FOOTER_TABS class=style::class::tabs::UL>
-                    { for FooterTab::all()
+                    { for NormalFooterTab::all()
                         .into_iter()
-                        .map(|tab| tab.render(Some(tab) == self.active))
+                        .map(|tab|
+                            tab.render(Some(tab) == self.active.and_then(FooterTab::normal_tab))
+                        )
                     }
-                    {
-                        if self.is_filter_tab_active() {
-                            filters.render_tabs()
-                        } else {
-                            html!(<a/>)
-                        }
-                    }
+                    { filters.render_tabs() }
                 </ul>
                 {
                     match self.active {
                         None => html!(<a/>),
-                        Some(FooterTab::Filters) => html! {
+                        Some(FooterTab::Filter) => html! {
                             <div class=style::class::footer::DISPLAY>
                                 { filters.render_filter() }
                             </div>
                         },
-                        Some(FooterTab::Info) => html! {
+                        Some(FooterTab::Normal(NormalFooterTab::Info)) => html! {
                             <div class=style::class::footer::DISPLAY>
                                 { "Info footer tab is not implemented." }
                             </div>
@@ -70,24 +61,14 @@ impl Footer {
     }
 }
 
-/// Footer tabs.
+/// Normal footer tab, *e.g.* not a filter tab.
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, strum_macros::EnumIter)]
-pub enum FooterTab {
+pub enum NormalFooterTab {
     /// Statistics tab.
     Info,
-    /// Filters tab.
-    Filters,
 }
-impl FooterTab {
-    /// Applies a function to all tabs.
-    pub fn map_all<F>(mut f: F)
-    where
-        F: FnMut(FooterTab),
-    {
-        f(Self::Info);
-        f(Self::Filters);
-    }
 
+impl NormalFooterTab {
     /// Renders a tab.
     pub fn render(&self, active: bool) -> Html {
         let tab = *self;
@@ -95,7 +76,7 @@ impl FooterTab {
             <li class={ style::class::tabs::li::get(true) }>
                 <a
                     class={ style::class::tabs::get(active) }
-                    onclick=|_| msg::FooterMsg::toggle_tab(tab)
+                    onclick=|_| msg::FooterMsg::toggle_tab(tab.into())
                 > {
                     self.to_string()
                 } </a>
@@ -103,17 +84,50 @@ impl FooterTab {
         }
     }
 
-    /// A list of all the tabs.
-    pub fn all() -> Vec<Self> {
+    /// Lists all tabs.
+    pub fn all() -> Vec<NormalFooterTab> {
         use strum::IntoEnumIterator;
         Self::iter().collect()
     }
 }
+
+impl fmt::Display for NormalFooterTab {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Info => write!(fmt, "Info"),
+        }
+    }
+}
+
+/// Footer tabs.
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+pub enum FooterTab {
+    /// Statistics tab.
+    Normal(NormalFooterTab),
+    /// Filters tab.
+    Filter,
+}
+
+impl FooterTab {
+    /// The normal tab, if any.
+    pub fn normal_tab(self) -> Option<NormalFooterTab> {
+        match self {
+            Self::Normal(tab) => Some(tab),
+            Self::Filter => None,
+        }
+    }
+}
+
 impl fmt::Display for FooterTab {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            FooterTab::Info => write!(fmt, "Info"),
-            FooterTab::Filters => write!(fmt, "Filters"),
+            FooterTab::Normal(tab) => write!(fmt, "{}", tab),
+            FooterTab::Filter => write!(fmt, "Filter"),
         }
+    }
+}
+impl From<NormalFooterTab> for FooterTab {
+    fn from(tab: NormalFooterTab) -> Self {
+        FooterTab::Normal(tab)
     }
 }

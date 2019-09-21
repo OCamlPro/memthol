@@ -27,7 +27,9 @@ footer
             $cell_height: 35px
             $prop_width: 5%
             $cmp_width: 5%
+            $setting_width: $prop_width + $cmp_width
             $val_width: 100% - 2 * $layout_left_right_margin - $prop_width - $cmp_width
+            $section_width: $prop_width + $cmp_width + $val_width
             $value_width: 5%
 
             .filter_buttons
@@ -41,6 +43,38 @@ footer
                 // border-bottom-width: 1px
                 // border-bottom-color: $white
                 // border-bottom-style: solid
+
+            .filter_section
+                @include hblock
+                @include centered
+                font-size: 150%
+                color: $dark_blue
+                width: $section_width
+                line-height: $cell_height
+                height: $cell_height
+
+            .filter_setting
+                @include hblock
+                @include centered
+                width: $setting_width
+                line-height: $cell_height
+                height: $cell_height
+                float: left
+                border-right-width: 1px
+                border-right-color: $white
+                border-right-style: solid
+                border-bottom-width: 1px
+                border-bottom-color: $white
+                border-bottom-style: solid
+
+                select
+                    color: $menu_fg
+                    font: $font_size $font_stack
+                    // height: 80 * $cell_height / 100
+                    background-color: $dark_grey
+                    border-radius: 5px
+                    border-style: hidden
+                    text-align: center
 
             .filter_prop
                 @include hblock
@@ -98,12 +132,24 @@ footer
                 border-bottom-width: 1px
                 border-bottom-color: $white
                 border-bottom-style: solid
-                text-align: left
+                text-align: center
 
                 .filter_value
                     color: $menu_fg
                     font: $font_size $font_code_stack
                     min-width: $value_width
+                    height: 80 * $cell_height / 100
+                    background-color: $dark_grey
+                    border-radius: 5px
+                    border-style: hidden
+                    text-align: center
+                    margin: 0 5px
+                    padding: 0 5px
+
+                .filter_settings_value
+                    color: $menu_fg
+                    font: $font_size $font_code_stack
+                    width: 70%
                     height: 80 * $cell_height / 100
                     background-color: $dark_grey
                     border-radius: 5px
