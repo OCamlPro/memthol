@@ -68,6 +68,23 @@ where
     }
 }
 
+/// Creates a (in)active tickbox.
+pub fn tickbox<ActiveAction, InactiveAction>(
+    active: bool,
+    active_action: ActiveAction,
+    inactive_action: InactiveAction,
+) -> Html
+where
+    ActiveAction: OnClick,
+    InactiveAction: OnClick,
+{
+    if active {
+        active_tickbox(active_action)
+    } else {
+        inactive_tickbox(inactive_action)
+    }
+}
+
 /// Creates an inactive tickbox button.
 pub fn inactive_tickbox<Action>(action: Action) -> Html
 where

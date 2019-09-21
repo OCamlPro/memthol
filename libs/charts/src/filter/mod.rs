@@ -115,7 +115,7 @@ impl Filters {
     /// - fails if the filter UID is unknown.
     pub fn get_mut(&mut self, uid: FilterUid) -> Res<(usize, &mut Filter)> {
         for (index, filter) in self.filters.iter_mut().enumerate() {
-            if filter.uid() == Some(uid) {
+            if filter.uid() == uid {
                 return Ok((index, filter));
             }
         }
@@ -183,7 +183,18 @@ impl Filters {
             .get_spec_mut(uid)
             .chain_err(|| "while updating a filter specification")?;
         *spec = new_spec;
-        Ok(vec![])
+        // Send it to the client.
+        let catch_all = if uid.is_none() {
+            Some(spec.clone())
+        } else {
+            None
+        };
+        let mut specs = Map::new();
+        if let Some(uid) = uid {
+            specs.insert(uid, spec.clone());
+        }
+        let msg = msg::to_client::FiltersMsg::update_specs(catch_all, specs);
+        Ok(vec![msg])
     }
 
     /// Handles a message for a particular filter.
@@ -222,6 +233,10 @@ impl std::ops::IndexMut<index::Filter> for Filters {
 }
 
 /// A filter that combines `SubFilter`s.
+///
+/// # Invariants
+///
+/// - `self.uid().is_some()`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Filter {
     /// Actual list of filters.
@@ -231,11 +246,15 @@ pub struct Filter {
 }
 impl Filter {
     /// Constructor.
-    pub fn new(spec: FilterSpec) -> Filter {
-        Self {
+    pub fn new(spec: FilterSpec) -> Res<Filter> {
+        if spec.uid().is_none() {
+            bail!("trying to construct a filter with no UID")
+        }
+        let slf = Self {
             filters: vec![],
             spec,
-        }
+        };
+        Ok(slf)
     }
 
     /// Specification accessor.
@@ -248,8 +267,10 @@ impl Filter {
     }
 
     /// UID accessor.
-    pub fn uid(&self) -> Option<FilterUid> {
-        self.spec().uid()
+    pub fn uid(&self) -> FilterUid {
+        self.spec()
+            .uid()
+            .expect("invariant violation, found a filter with no UID")
     }
 
     /// Applies the filters to an allocation.

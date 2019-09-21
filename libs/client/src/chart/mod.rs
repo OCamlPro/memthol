@@ -1,6 +1,6 @@
 //! Charts.
 
-use charts::chart::ChartSpec;
+pub use charts::chart::ChartSpec;
 
 use crate::base::*;
 
@@ -51,21 +51,123 @@ impl Charts {
         }
         bail!("unknown chart UID #{}", uid)
     }
+}
 
+/// # Internal message handling
+impl Charts {
     /// Applies an operation.
-    pub fn update(&mut self, action: msg::ChartsMsg) -> Res<ShouldRender> {
+    pub fn update(
+        &mut self,
+        filters: &filter::Filters,
+        action: msg::ChartsMsg,
+    ) -> Res<ShouldRender> {
         use msg::ChartsMsg::*;
         match action {
-            Build(uid) => self.build(uid),
+            Build(uid) => self.build(uid, filters),
             Move { uid, up } => self.move_chart(uid, up),
             ToggleVisible(uid) => self.toggle_visible(uid),
             Destroy(uid) => self.destroy(uid),
+
+            RefreshFilters => self.refresh_filters(filters),
 
             NewChartSetX(x_axis) => self.new_chart.set_x_axis(x_axis),
             NewChartSetY(y_axis) => self.new_chart.set_y_axis(y_axis),
         }
     }
 
+    /// Refreshes all filters in all charts.
+    fn refresh_filters(&mut self, filters: &filter::Filters) -> Res<ShouldRender> {
+        info!("refreshing filters");
+        for chart in &self.charts {
+            chart.replace_filters(filters)?
+        }
+
+        // Rendering is done at JS-level, no need to render the HTML.
+        Ok(false)
+    }
+
+    /// Move a chart, up if `up`, down otherwise.
+    fn move_chart(&mut self, uid: ChartUid, up: bool) -> Res<ShouldRender> {
+        let mut index = None;
+        for (idx, chart) in self.charts.iter().enumerate() {
+            if chart.uid() == uid {
+                index = Some(idx)
+            }
+        }
+
+        let index = if let Some(index) = index {
+            index
+        } else {
+            bail!("cannot move chart with unknown UID #{}", uid)
+        };
+
+        let other_index = if up {
+            // Move up.
+            if index > 0 {
+                index - 1
+            } else {
+                return Ok(false);
+            }
+        } else {
+            let other_index = index + 1;
+            // Move down.
+            if other_index < self.charts.len() {
+                other_index
+            } else {
+                return Ok(false);
+            }
+        };
+
+        self.charts.swap(index, other_index);
+
+        Ok(true)
+    }
+
+    /// Forces a chart to build its actual (JS) graph and bind it to its container.
+    fn build(&mut self, uid: ChartUid, filters: &filter::Filters) -> Res<ShouldRender> {
+        info!("building charts");
+        let (_, chart) = self
+            .get_mut(uid)
+            .chain_err(|| format!("while building and binding chart #{}", uid))?;
+        chart.build_chart(filters)?;
+        Ok(true)
+    }
+
+    /// Toggles the visibility of a chart.
+    fn toggle_visible(&mut self, uid: ChartUid) -> Res<ShouldRender> {
+        let (_, chart) = self
+            .get_mut(uid)
+            .chain_err(|| format!("while changing chart visibility"))?;
+        chart.toggle_visible();
+        Ok(true)
+    }
+
+    /// Destroys a chart.
+    fn destroy(&mut self, uid: ChartUid) -> Res<ShouldRender> {
+        let (index, _) = self
+            .get_mut(uid)
+            .chain_err(|| format!("while destroying chart"))?;
+        let chart = self.charts.remove(index);
+        chart.destroy();
+        Ok(true)
+    }
+}
+
+/// # Rendering
+impl Charts {
+    /// Renders the charts.
+    pub fn render(&self) -> Html {
+        html! {
+            <g class=style::class::chart::CONTAINER>
+                { for self.charts.iter().map(Chart::render) }
+                { self.new_chart.render() }
+            </g>
+        }
+    }
+}
+
+/// # Server message handling.
+impl Charts {
     /// Alies an operation from the server.
     pub fn server_update(&mut self, action: msg::from_server::ChartsMsg) -> Res<ShouldRender> {
         use msg::from_server::{ChartMsg, ChartsMsg};
@@ -113,84 +215,6 @@ impl Charts {
         };
         Ok(should_render)
     }
-
-    /// Renders the charts.
-    pub fn render(&self) -> Html {
-        html! {
-            <g class=style::class::chart::CONTAINER>
-                { for self.charts.iter().map(Chart::render) }
-                { self.new_chart.render() }
-            </g>
-        }
-    }
-}
-
-/// # Functions enforcing actions from internal messages
-impl Charts {
-    /// Move a chart, up if `up`, down otherwise.
-    pub fn move_chart(&mut self, uid: ChartUid, up: bool) -> Res<ShouldRender> {
-        let mut index = None;
-        for (idx, chart) in self.charts.iter().enumerate() {
-            if chart.uid() == uid {
-                index = Some(idx)
-            }
-        }
-
-        let index = if let Some(index) = index {
-            index
-        } else {
-            bail!("cannot move chart with unknown UID #{}", uid)
-        };
-
-        let other_index = if up {
-            // Move up.
-            if index > 0 {
-                index - 1
-            } else {
-                return Ok(false);
-            }
-        } else {
-            let other_index = index + 1;
-            // Move down.
-            if other_index < self.charts.len() {
-                other_index
-            } else {
-                return Ok(false);
-            }
-        };
-
-        self.charts.swap(index, other_index);
-
-        Ok(true)
-    }
-
-    /// Forces a chart to build its actual (JS) graph and bind it to its container.
-    pub fn build(&mut self, uid: ChartUid) -> Res<ShouldRender> {
-        let (_, chart) = self
-            .get_mut(uid)
-            .chain_err(|| format!("while building and binding chart #{}", uid))?;
-        chart.build_chart()?;
-        Ok(true)
-    }
-
-    /// Toggles the visibility of a chart.
-    pub fn toggle_visible(&mut self, uid: ChartUid) -> Res<ShouldRender> {
-        let (_, chart) = self
-            .get_mut(uid)
-            .chain_err(|| format!("while changing chart visibility"))?;
-        chart.toggle_visible();
-        Ok(true)
-    }
-
-    /// Destroys a chart.
-    pub fn destroy(&mut self, uid: ChartUid) -> Res<ShouldRender> {
-        let (index, _) = self
-            .get_mut(uid)
-            .chain_err(|| format!("while destroying chart"))?;
-        let chart = self.charts.remove(index);
-        chart.destroy();
-        Ok(true)
-    }
 }
 
 /// A chart.
@@ -230,7 +254,10 @@ impl Chart {
     pub fn toggle_visible(&mut self) {
         self.visible = !self.visible
     }
+}
 
+/// # Functions for message-handling.
+impl Chart {
     /// Destroys the chart.
     pub fn destroy(self) {
         if let Some(chart) = self.chart {
@@ -240,10 +267,63 @@ impl Chart {
         }
     }
 
+    /// Adds/remove a legend to/from the chart.
+    fn toggle_legend(chart: &JsVal, on: bool) {
+        if on {
+            info!("toggle legend on");
+            js!(@(no_return)
+                var chart = @{chart};
+                if (chart.legend === undefined) {
+                    chart.legend = new am4charts.Legend();
+                    chart.legend.labels.template.text = "[bold {color}]{name}[/]";
+                }
+            )
+        } else {
+            info!("toggle legend off");
+            js!(@(no_return)
+                var chart = @{chart};
+                if (chart.legend !== undefined) {
+                    chart.legend.dispose();
+                    chart.legend = undefined
+                }
+            )
+        }
+    }
+
+    /// Replaces the filters of the chart.
+    pub fn replace_filters(&self, filters: &filter::Filters) -> Res<()> {
+        let chart = if let Some(chart) = self.chart.as_ref() {
+            chart
+        } else {
+            return Ok(());
+        };
+
+        // Remove the legend if there's no active filter, turn it on if there are some.
+        Self::toggle_legend(chart, filters.len() > 0);
+
+        // Remove all series from the chart and DISPOSE. Otherwise they'll be orphaned.
+        js!(@(no_return)
+            var chart = @{chart};
+            // if (chart.legend !== undefined) {
+            //     chart.legend.dispose();
+            // }
+            // chart.legend = undefined;
+            while (chart.series.length > 0) {
+                chart.series.pop().dispose()
+            }
+        );
+        filters.specs_apply(|filter, _is_deleted| {
+            use crate::filter::FilterSpecExt;
+            filter.add_series_to(&self.spec, chart);
+            Ok(())
+        })?;
+        Ok(())
+    }
+
     /// Builds the actual JS chart and attaches it to the right container.
     ///
     /// Also, makes the chart visible.
-    pub fn build_chart(&mut self) -> Res<()> {
+    pub fn build_chart(&mut self, filters: &filter::Filters) -> Res<()> {
         use axis::AxisExt;
 
         if self.chart.is_some() {
@@ -254,41 +334,16 @@ impl Chart {
             am4core.useTheme(am4themes_animated);
             var chart = am4core.create(@{&self.container}, am4charts.XYChart);
             chart.data = [];
+            // Cosmetic stuff.
+            chart.scrollbarX = new am4charts.XYChartScrollbar();
+            chart.scrollbarX.parent = chart.bottomAxesContainer;
+            chart.cursor = new am4charts.XYCursor();
+
             return chart
         );
 
         self.spec.x_axis().chart_apply(&chart);
         self.spec.y_axis().chart_apply(&chart);
-
-        // Default series, for allocations not caught by any filter.
-        let default_series = js!(
-            let chart = @{&chart};
-            var series = chart.series.push(new am4charts.LineSeries());
-            series.interpolationDuration = 500;
-            series.defaultState.transitionDuration = 0;
-            series.strokeWidth = 2;
-            series.title = "catch-all";
-            series.fillOpacity = 1;
-            var gradient = new am4core.LinearGradient();
-            gradient.addColor(chart.colors.getIndex(0), 0.2);
-            gradient.addColor(chart.colors.getIndex(0), 0);
-            series.fill = gradient;
-            return series;
-        );
-
-        self.spec.x_axis().series_apply(&default_series, None);
-        self.spec.y_axis().series_apply(&default_series, None);
-
-        js!(@(no_return)
-            let chart = @{&chart};
-
-            // Cosmetic stuff.
-
-            // X-axis scrollbar.
-            chart.scrollbarX = new am4charts.XYChartScrollbar();
-            chart.scrollbarX.series.push(@{&default_series});
-            chart.scrollbarX.parent = chart.bottomAxesContainer;
-        );
 
         for (points, overwrite) in self.points.drain(0..) {
             if overwrite {
@@ -300,6 +355,9 @@ impl Chart {
 
         self.chart = Some(chart);
         self.visible = true;
+
+        self.replace_filters(filters)
+            .chain_err(|| format!("while build chart #{}", self.uid()))?;
 
         Ok(())
     }
@@ -369,31 +427,13 @@ impl Chart {
 
 /// # Rendering
 impl Chart {
-    /// Creates a collapse button for this chart.
-    fn collapse_button(&self) -> Html {
-        let uid = self.uid();
-        buttons::collapse(move |_| msg::ChartsMsg::toggle_visible(uid))
-    }
-    /// Creates an expand button for this chart.
-    fn expand_button(&self) -> Html {
-        let uid = self.uid();
-        buttons::expand(move |_| msg::ChartsMsg::toggle_visible(uid))
-    }
-
     /// Renders the chart.
     pub fn render(&self) -> Html {
-        let expand_or_collapse_button = if self.visible {
-            self.collapse_button()
-        } else {
-            self.expand_button()
-        };
-
         let uid = self.uid();
-
         html! {
             <g>
                 <center class=style::class::chart::HEADER>
-                    { expand_or_collapse_button }
+                    { self.expand_or_collapse_button() }
                     { buttons::move_up(move |_| msg::ChartsMsg::move_up(uid)) }
                     { buttons::move_down(move |_| msg::ChartsMsg::move_down(uid)) }
                     { buttons::close(move |_| msg::ChartsMsg::destroy(uid)) }
@@ -404,6 +444,16 @@ impl Chart {
                     class=style::class::chart::style(self.visible)
                 />
             </g>
+        }
+    }
+
+    /// Creates a collapse or expand button depending on whether the chart is visible.
+    fn expand_or_collapse_button(&self) -> Html {
+        let uid = self.uid();
+        if self.visible {
+            buttons::collapse(move |_| msg::ChartsMsg::toggle_visible(uid))
+        } else {
+            buttons::expand(move |_| msg::ChartsMsg::toggle_visible(uid))
         }
     }
 }

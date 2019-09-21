@@ -6,7 +6,7 @@ pub use charts::chart::axis::{XAxis, YAxis};
 
 pub trait AxisExt {
     fn chart_apply(&self, chart: &JsVal);
-    fn series_apply(&self, series: &JsVal, index: Option<usize>);
+    fn series_apply(&self, series: &JsVal, uid: Option<filter::FilterUid>);
 }
 
 impl AxisExt for XAxis {
@@ -16,17 +16,23 @@ impl AxisExt for XAxis {
                 var x_axis = @{chart}.xAxes.push(new am4charts.DateAxis());
                 x_axis.dateFormats.setKey("second", "ss");
                 x_axis.dateFormats.setKey("millisecond", "nnn");
-                x_axis.periodChangeDateFormats.setKey("second", "[bold]h:mm a");
-                x_axis.periodChangeDateFormats.setKey("minute", "[bold]h:mm a");
-                x_axis.periodChangeDateFormats.setKey("hour", "[bold]h:mm a");
+                x_axis.periodChangeDateFormats.setKey("second", "[bold]HH:mm a[/]");
+                x_axis.periodChangeDateFormats.setKey("minute", "[bold]HH:mm a[/]");
+                x_axis.periodChangeDateFormats.setKey("hour", "[bold]HH:mm a[/]");
+                x_axis.tooltipDateFormat = "[bold]HH:mm:ss.nnn[/]";
                 x_axis.interpolationDuration = @{cst::charts::INTERP_DURATION};
                 x_axis.rangeChangeDuration = @{cst::charts::INTERP_DURATION};
                 x_axis.extraMax = 0.05;
+                x_axis.renderer.ticks.template.disabled = false;
+                x_axis.renderer.ticks.template.strokeOpacity = 1;
+                // x_axis.renderer.ticks.template.stroke = am4core.color("#495C43");
+                x_axis.renderer.ticks.template.strokeWidth = 2;
+                x_axis.renderer.ticks.template.length = 10;
             ),
         }
     }
 
-    fn series_apply(&self, series: &JsVal, _: Option<usize>) {
+    fn series_apply(&self, series: &JsVal, _: Option<filter::FilterUid>) {
         js!(@(no_return)
             @{series}.dataFields.dateX = "x";
         )
@@ -44,9 +50,9 @@ impl AxisExt for YAxis {
         }
     }
 
-    fn series_apply(&self, series: &JsVal, index: Option<usize>) {
-        let y_name = if let Some(index) = index {
-            format!("y_{}", index)
+    fn series_apply(&self, series: &JsVal, uid: Option<filter::FilterUid>) {
+        let y_name = if let Some(uid) = uid {
+            format!("y_{}", uid)
         } else {
             "y".into()
         };

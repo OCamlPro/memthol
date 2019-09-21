@@ -250,11 +250,23 @@ pub mod to_client {
     pub enum FiltersMsg {
         /// Removes a filter.
         Rm(uid::FilterUid),
+        /// Updates all the specs.
+        UpdateSpecs {
+            catch_all: Option<FilterSpec>,
+            specs: Map<uid::FilterUid, FilterSpec>,
+        },
     }
     impl FiltersMsg {
         /// Removes a filter.
         pub fn rm(uid: uid::FilterUid) -> Msg {
             Self::Rm(uid).into()
+        }
+        /// Updates all the specs.
+        pub fn update_specs(
+            catch_all: Option<FilterSpec>,
+            specs: Map<uid::FilterUid, FilterSpec>,
+        ) -> Msg {
+            Self::UpdateSpecs { catch_all, specs }.into()
         }
     }
 

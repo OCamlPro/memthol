@@ -107,7 +107,7 @@ impl Component for Model {
             }
 
             Msg::Charts(msg) => unwrap_or_send_err!(
-                self.charts.update(msg) => self default false
+                self.charts.update(&self.filters, msg) => self default false
             ),
             Msg::Footer(msg) => unwrap_or_send_err!(
                 self.footer.update(msg) => self default false
@@ -120,11 +120,12 @@ impl Component for Model {
                 info!("{}", s);
                 false
             }
-
             Msg::Err(e) => {
                 alert!("{}", e.pretty());
                 true
             }
+
+            Msg::Noop => false,
         }
     }
 }

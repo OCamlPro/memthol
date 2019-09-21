@@ -29,9 +29,11 @@ pub enum Msg {
 
     /// A message to print in the JS console.
     Msg(String),
-
     /// An error.
     Err(err::Err),
+
+    /// A message that does nothing.
+    Noop,
 }
 
 impl Msg {
@@ -97,6 +99,9 @@ pub enum ChartsMsg {
     /// Destroys a chart.
     Destroy(ChartUid),
 
+    /// Forces to refresh the filters.
+    RefreshFilters,
+
     /// Sets the x-axis in the new chart element.
     NewChartSetX(chart::axis::XAxis),
     /// Sets the y-axis in the new chart element.
@@ -122,6 +127,11 @@ impl ChartsMsg {
     /// Constructs a message to destroy a chart.
     pub fn destroy(uid: ChartUid) -> Msg {
         Self::Destroy(uid).into()
+    }
+
+    /// Forces to refresh all the filters.
+    pub fn refresh_filters() -> Msg {
+        Self::RefreshFilters.into()
     }
 
     /// Sets the x-axis in the new chart element.
