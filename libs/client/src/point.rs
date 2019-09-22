@@ -33,9 +33,9 @@ where
             vals: PointVal { filtered, rest },
         } = self;
         let point = js!(return { "x": @{key.as_js()}, "y": @{rest.as_js()}});
-        for (index, val) in filtered.into_iter().enumerate() {
+        for (uid, val) in filtered.into_iter() {
             js!(@(no_return)
-                @{&point}[@{format!("y_{}", index)}] = @{val.as_js()};
+                @{&point}[@{format!("y_{}", uid)}] = @{val.as_js()};
             )
         }
         point

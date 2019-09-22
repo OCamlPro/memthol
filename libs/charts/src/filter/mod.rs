@@ -78,12 +78,14 @@ impl FilterKind {
 }
 
 /// A list of filters.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Filters {
     /// The actual list of filters.
     filters: Vec<Filter>,
     /// The specification of the catch-all filter.
     catch_all: FilterSpec,
+    /// Remembers which filter is responsible for an allocation.
+    memory: Map<AllocUid, FilterUid>,
 }
 
 impl Filters {
@@ -92,12 +94,18 @@ impl Filters {
         Filters {
             filters: vec![],
             catch_all: FilterSpec::new_catch_all(),
+            memory: Map::new(),
         }
     }
 
     /// Length of the list of filters.
     pub fn len(&self) -> usize {
         self.filters.len()
+    }
+
+    /// The list of filters.
+    pub fn filters(&self) -> &Vec<Filter> {
+        &self.filters
     }
 
     /// Filter specification mutable accessor.
@@ -143,14 +151,28 @@ impl Filters {
         self.filters[*index.deref()] = filter
     }
 
+    /// Remembers that an allocation is handled by some filter.
+    fn remember(memory: &mut Map<AllocUid, FilterUid>, alloc: AllocUid, filter: FilterUid) {
+        let prev = memory.insert(alloc, filter);
+        if prev.is_some() {
+            panic!("filter memory collision")
+        }
+    }
+
     /// Searches for a filter that matches on the input allocation.
-    pub fn find_match(&self, alloc: &Alloc) -> Option<index::Filter> {
-        for (index, filter) in self.filters.iter().enumerate() {
+    pub fn find_match(&mut self, alloc: &Alloc) -> Option<uid::FilterUid> {
+        for filter in &self.filters {
             if filter.apply(alloc) {
-                return Some(index::Filter::new(index));
+                Self::remember(&mut self.memory, alloc.uid().clone(), filter.uid());
+                return Some(filter.uid());
             }
         }
         None
+    }
+
+    /// Searches for a filter that matches on the input allocation, for its death.
+    pub fn find_dead_match(&mut self, alloc: &AllocUid) -> Option<uid::FilterUid> {
+        self.memory.get(alloc).map(|uid| *uid)
     }
 }
 

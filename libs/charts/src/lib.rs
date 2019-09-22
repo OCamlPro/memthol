@@ -35,10 +35,10 @@ use uid::ChartUid;
 /// Trait implemented by all charts.
 pub trait ChartExt {
     /// Generates the new points of the chart.
-    fn new_points(&mut self, filters: &Filters, init: bool) -> Res<Points>;
+    fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points>;
 
     /// Resets the chart.
-    fn reset(&mut self);
+    fn reset(&mut self, filters: &Filters);
 }
 
 /// Aggregates some charts.
@@ -78,6 +78,11 @@ impl Charts {
         }
         bail!("cannot access chart with unknown UID #{}", uid)
     }
+
+    /// Filters of the charts.
+    pub fn filters(&self) -> &Filters {
+        &self.filters
+    }
 }
 
 impl Charts {
@@ -90,7 +95,7 @@ impl Charts {
         if self.start_time != Some(start_time) {
             self.start_time = Some(start_time);
             for chart in &mut self.charts {
-                chart.reset()
+                chart.reset(&self.filters)
             }
             Ok(true)
         } else {
@@ -106,7 +111,7 @@ impl Charts {
         let restarted = self.restart_if_needed()?;
         let mut points = point::ChartPoints::new();
         for chart in &mut self.charts {
-            let chart_points = chart.new_points(&self.filters, restarted || init)?;
+            let chart_points = chart.new_points(&mut self.filters, restarted || init)?;
             let prev = points.insert(chart.uid(), chart_points);
             debug_assert!(prev.is_none())
         }
@@ -121,15 +126,15 @@ impl Charts {
 
         match msg {
             msg::to_server::ChartsMsg::New(x_axis, y_axis) => {
-                let mut nu_chart =
-                    chart::Chart::new(x_axis, y_axis).chain_err(|| "while creating new chart")?;
+                let mut nu_chart = chart::Chart::new(&mut self.filters, x_axis, y_axis)
+                    .chain_err(|| "while creating new chart")?;
 
                 // Chart creation message.
                 to_client_msgs.push(msg::to_client::ChartsMsg::new_chart(
                     nu_chart.spec().clone(),
                 ));
                 // Initial points message.
-                let points = nu_chart.new_points(&self.filters, true).chain_err(|| {
+                let points = nu_chart.new_points(&mut self.filters, true).chain_err(|| {
                     format!(
                         "while generating the initial points for new chart #{}",
                         nu_chart.uid()

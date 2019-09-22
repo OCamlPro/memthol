@@ -10,19 +10,19 @@ pub use chart::time::TimePoints;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointVal<Val> {
     /// Values for filter lines.
-    pub filtered: Vec<Val>,
+    pub filtered: Map<uid::FilterUid, Val>,
     /// Catch-all value.
     pub rest: Val,
 }
 impl<Val> PointVal<Val> {
     /// Constructor.
-    pub fn new(default: Val, filtered_len: usize) -> Self
+    pub fn new(default: Val, filters: &filter::Filters) -> Self
     where
         Val: Clone,
     {
-        let mut filtered = Vec::with_capacity(filtered_len);
-        for _ in 0..filtered_len {
-            filtered.push(default.clone())
+        let mut filtered = Map::new();
+        for filter in filters.filters() {
+            filtered.insert(filter.uid(), default.clone());
         }
         Self {
             filtered,
@@ -30,28 +30,44 @@ impl<Val> PointVal<Val> {
         }
     }
 
+    /// Immutable ref over some value.
+    pub fn get(&self, filtered_index: Option<uid::FilterUid>) -> Res<&Val> {
+        let val = match filtered_index {
+            None => &self.rest,
+            Some(uid) => match self.filtered.get(&uid) {
+                Some(val) => val,
+                None => bail!("unknown filter UID #{}", uid),
+            },
+        };
+        Ok(val)
+    }
+
     /// Mutable ref over some value.
-    pub fn get_mut(&mut self, filtered_index: Option<index::Filter>) -> &mut Val {
-        match filtered_index {
+    pub fn get_mut(&mut self, filtered_index: Option<uid::FilterUid>) -> Res<&mut Val> {
+        let val = match filtered_index {
             None => &mut self.rest,
-            Some(idx) => &mut self.filtered[*idx],
-        }
+            Some(uid) => match self.filtered.get_mut(&uid) {
+                Some(val) => val,
+                None => bail!("unknown filter UID #{}", uid),
+            },
+        };
+        Ok(val)
     }
 
     /// Map over all values.
-    pub fn map<F, Out>(self, mut f: F) -> PointVal<Out>
+    pub fn map<F, Out>(self, mut f: F) -> Res<PointVal<Out>>
     where
-        F: FnMut(Option<usize>, Val) -> Out,
+        F: FnMut(Option<uid::FilterUid>, Val) -> Res<Out>,
     {
-        PointVal {
-            filtered: self
-                .filtered
-                .into_iter()
-                .enumerate()
-                .map(|(index, val)| f(Some(index), val))
-                .collect(),
-            rest: f(None, self.rest),
+        let mut filtered = Map::new();
+        for (uid, val) in self.filtered {
+            filtered.insert(uid, f(Some(uid), val)?);
         }
+        let res = PointVal {
+            filtered,
+            rest: f(None, self.rest)?,
+        };
+        Ok(res)
     }
 }
 
@@ -82,8 +98,8 @@ where
             vals: PointVal { filtered, rest },
         } = self;
         write!(fmt, "{{ x: {}, y: {}", key, rest)?;
-        for (index, val) in filtered.iter().enumerate() {
-            write!(fmt, ", y_{}: {}", index, val)?
+        for (uid, val) in filtered.iter() {
+            write!(fmt, ", y_{}: {}", uid, val)?
         }
         write!(fmt, "}}")
     }

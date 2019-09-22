@@ -167,7 +167,7 @@ impl Handler {
             axis::{XAxis, YAxis},
             Chart,
         };
-        let chart = Chart::new(XAxis::Time, YAxis::TotalSize)?;
+        let chart = Chart::new(self.charts.filters(), XAxis::Time, YAxis::TotalSize)?;
         let create_graph = msg::to_client::ChartsMsg::new_chart(chart.spec().clone());
         self.charts.push(chart);
         self.send(create_graph)

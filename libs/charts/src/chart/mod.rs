@@ -18,25 +18,25 @@ pub enum RawChart {
 }
 
 impl ChartExt for RawChart {
-    fn new_points(&mut self, filters: &Filters, init: bool) -> Res<Points> {
+    fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points> {
         match self {
             Self::Time(time_chart) => time_chart.new_points(filters, init),
         }
     }
 
-    fn reset(&mut self) {
+    fn reset(&mut self, filters: &filter::Filters) {
         match self {
-            Self::Time(chart) => chart.reset(),
+            Self::Time(chart) => chart.reset(filters),
         }
     }
 }
 
 impl RawChart {
     /// Creates a raw chart.
-    pub fn new(x_axis: XAxis, y_axis: YAxis) -> Res<Self> {
+    pub fn new(filters: &filter::Filters, x_axis: XAxis, y_axis: YAxis) -> Res<Self> {
         let chart = match x_axis {
             XAxis::Time => Self::Time(match y_axis {
-                YAxis::TotalSize => time::TimeChart::new_total_size(),
+                YAxis::TotalSize => time::TimeChart::new_total_size(filters),
             }),
         };
         Ok(chart)
@@ -49,9 +49,9 @@ pub struct Chart {
 }
 impl Chart {
     /// Creates a time chart.
-    pub fn new(x_axis: XAxis, y_axis: YAxis) -> Res<Self> {
+    pub fn new(filters: &filter::Filters, x_axis: XAxis, y_axis: YAxis) -> Res<Self> {
         let spec = ChartSpec::new(x_axis, y_axis);
-        let chart = RawChart::new(x_axis, y_axis)?;
+        let chart = RawChart::new(filters, x_axis, y_axis)?;
         let slf = Self { spec, chart };
         Ok(slf)
     }
@@ -70,11 +70,11 @@ impl Chart {
 }
 
 impl ChartExt for Chart {
-    fn new_points(&mut self, filters: &Filters, init: bool) -> Res<Points> {
+    fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points> {
         self.chart.new_points(filters, init)
     }
 
-    fn reset(&mut self) {
-        self.chart.reset()
+    fn reset(&mut self, filters: &filter::Filters) {
+        self.chart.reset(filters)
     }
 }

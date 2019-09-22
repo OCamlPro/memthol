@@ -37,29 +37,30 @@ pub enum TimeChart {
     Size(TimeSize),
 }
 
-impl Default for TimeChart {
-    fn default() -> Self {
-        Self::Size(TimeSize::default())
+impl TimeChart {
+    /// Default constructor.
+    pub fn default(filters: &Filters) -> Self {
+        Self::Size(TimeSize::default(filters))
     }
 }
 
 impl ChartExt for TimeChart {
-    fn new_points(&mut self, filters: &Filters, init: bool) -> Res<Points> {
+    fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points> {
         match self {
             Self::Size(time_size_chart) => time_size_chart.new_points(filters, init),
         }
     }
 
-    fn reset(&mut self) {
+    fn reset(&mut self, filters: &Filters) {
         match self {
-            Self::Size(chart) => chart.reset(),
+            Self::Size(chart) => chart.reset(filters),
         }
     }
 }
 
 impl TimeChart {
     /// Total size over time constructor.
-    pub fn new_total_size() -> Self {
-        Self::Size(TimeSize::new())
+    pub fn new_total_size(filters: &Filters) -> Self {
+        Self::Size(TimeSize::new(filters))
     }
 }

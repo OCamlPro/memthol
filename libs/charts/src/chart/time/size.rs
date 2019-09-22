@@ -18,34 +18,35 @@ pub struct TimeSize {
     map: Map<Date, PointVal<(usize, usize)>>,
 }
 
-impl Default for TimeSize {
-    fn default() -> Self {
+impl TimeSize {
+    /// Default constructor.
+    pub fn default(filters: &filter::Filters) -> Self {
         Self {
             timestamp: SinceStart::zero(),
-            size: Self::init_size(),
+            size: Self::init_size(filters),
             map: Map::new(),
         }
     }
 }
 
 impl ChartExt for TimeSize {
-    fn new_points(&mut self, filters: &Filters, init: bool) -> Res<Points> {
+    fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points> {
         self.get_allocs(filters, init)?;
         Ok(self.generate_points()?.into())
     }
 
-    fn reset(&mut self) {
+    fn reset(&mut self, filters: &filter::Filters) {
         self.timestamp = SinceStart::zero();
-        self.size = Self::init_size();
+        self.size = Self::init_size(filters);
         self.map.clear()
     }
 }
 
 impl TimeSize {
     /// Constructor.
-    pub fn new() -> Self {
+    pub fn new(filters: &filter::Filters) -> Self {
         let timestamp = SinceStart::zero();
-        let size = PointVal::new(0, 0);
+        let size = PointVal::new(0, filters);
         let map = Map::new();
         Self {
             timestamp,
@@ -55,15 +56,14 @@ impl TimeSize {
     }
 
     /// Initial size.
-    fn init_size() -> PointVal<usize> {
-        PointVal::new(0, 0)
+    fn init_size(filters: &filter::Filters) -> PointVal<usize> {
+        PointVal::new(0, filters)
     }
 }
 
 macro_rules! map {
     (entry $map:expr, with $filters:expr => at $date:expr) => {
-        $map.entry($date)
-            .or_insert(PointVal::new((0, 0), $filters.len()))
+        $map.entry($date).or_insert(PointVal::new((0, 0), $filters))
     };
 }
 
@@ -80,10 +80,10 @@ impl TimeSize {
         let mut points = Vec::with_capacity(self.map.len());
 
         for (time, point_val) in map {
-            let point_val = point_val.map(|index_opt, (to_add, to_sub)| match index_opt {
-                None => (self.size.rest + to_add) - to_sub,
-                Some(idx) => (self.size.filtered[idx] + to_add) - to_sub,
-            });
+            let point_val = point_val.map(|uid, (to_add, to_sub)| {
+                let new_val = (self.size.get(uid)? + to_add) - to_sub;
+                Ok(new_val)
+            })?;
             self.size = point_val.clone();
             points.push(Point::new(time, point_val))
         }
@@ -96,9 +96,8 @@ impl TimeSize {
     /// - assumes `self.map.is_empty()`;
     /// - new allocations will be in `self.map`;
     /// - updates the internal timestamp.
-    fn get_allocs(&mut self, filters: &Filters, init: bool) -> Res<()> {
+    fn get_allocs(&mut self, filters: &mut Filters, init: bool) -> Res<()> {
         debug_assert!(self.map.is_empty());
-        debug_assert_eq!(self.size.filtered.len(), filters.len());
 
         let data = data::get()
             .chain_err(|| "while retrieving allocations")
@@ -118,11 +117,11 @@ impl TimeSize {
             timestamp,
             // New allocation.
             |alloc| {
-                let index = filters.find_match(alloc);
+                let uid = filters.find_match(alloc);
 
                 let toc_point_val =
                     map!(entry my_map, with filters => at as_date(alloc.toc.clone()));
-                toc_point_val.get_mut(index).0 += alloc.size;
+                toc_point_val.get_mut(uid)?.0 += alloc.size;
                 Ok(())
             },
         )?;
@@ -135,10 +134,10 @@ impl TimeSize {
                     let alloc = data
                         .get_alloc(uid)
                         .chain_err(|| "while handling new dead allocations")?;
-                    let index = filters.find_match(alloc);
+                    let uid = filters.find_dead_match(uid);
 
                     let toc_point_val = map!(entry my_map, with filters => at as_date(tod.clone()));
-                    toc_point_val.get_mut(index).1 += alloc.size;
+                    toc_point_val.get_mut(uid)?.1 += alloc.size;
                 }
                 Ok(())
             },
