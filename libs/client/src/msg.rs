@@ -25,7 +25,7 @@ pub enum Msg {
     /// Footer operations.
     Footer(FooterMsg),
     /// Filter operations.
-    Filter(FilterMsg),
+    Filter(FiltersMsg),
 
     /// A message to print in the JS console.
     Msg(String),
@@ -73,8 +73,8 @@ impl From<FooterMsg> for Msg {
         Self::Footer(msg)
     }
 }
-impl From<FilterMsg> for Msg {
-    fn from(msg: FilterMsg) -> Self {
+impl From<FiltersMsg> for Msg {
+    fn from(msg: FiltersMsg) -> Self {
         Self::Filter(msg)
     }
 }
@@ -159,31 +159,36 @@ impl FooterMsg {
 
 /// Operations over filters.
 #[derive(Debug)]
-pub enum FilterMsg {
-    /// Toggles a filter.
-    ToggleFilter(Option<FilterUid>),
-    /// Changes the name of a filter.
-    ChangeName {
+pub enum FiltersMsg {
+    /// A message for a specific filter specification.
+    FilterSpec {
+        /// Uid of the filter.
         uid: Option<FilterUid>,
-        new_name: ChangeData,
-    },
-    /// Changes the color of a filter.
-    ChangeColor {
-        uid: Option<FilterUid>,
-        new_color: ChangeData,
+        /// Message.
+        msg: FilterSpecMsg,
     },
 }
-impl FilterMsg {
-    /// Toggles a filter.
-    pub fn toggle_filter(uid: Option<FilterUid>) -> Msg {
-        Self::ToggleFilter(uid).into()
+impl FiltersMsg {
+    /// A message for a specific filter specification.
+    pub fn filter_spec(uid: Option<FilterUid>, msg: FilterSpecMsg) -> Msg {
+        Self::FilterSpec { uid, msg }.into()
     }
+}
+
+#[derive(Debug)]
+pub enum FilterSpecMsg {
+    /// Changes the name of a filter.
+    ChangeName(ChangeData),
+    /// Changes the color of a filter.
+    ChangeColor(ChangeData),
+}
+impl FilterSpecMsg {
     /// Changes the name of a filter.
     pub fn change_name(uid: Option<FilterUid>, new_name: ChangeData) -> Msg {
-        Self::ChangeName { uid, new_name }.into()
+        FiltersMsg::filter_spec(uid, Self::ChangeName(new_name)).into()
     }
     /// Changes the color of a filter.
     pub fn change_color(uid: Option<FilterUid>, new_color: ChangeData) -> Msg {
-        Self::ChangeColor { uid, new_color }.into()
+        FiltersMsg::filter_spec(uid, Self::ChangeColor(new_color)).into()
     }
 }

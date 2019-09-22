@@ -37,7 +37,7 @@ pub mod to_server {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum FiltersMsg {
         /// Adds a new filter.
-        Add(Filter),
+        AddNew,
         /// Removes a filter.
         Rm(uid::FilterUid),
 
@@ -60,8 +60,8 @@ pub mod to_server {
 
     impl FiltersMsg {
         /// Adds a new filter.
-        pub fn add(filter: Filter) -> Msg {
-            Self::Add(filter).into()
+        pub fn add_new() -> Msg {
+            Self::AddNew.into()
         }
         /// Removes a filter.
         pub fn rm(uid: uid::FilterUid) -> Msg {
@@ -248,6 +248,8 @@ pub mod to_client {
     /// Filter operations.
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum FiltersMsg {
+        /// Adds a filter.
+        Add(filter::Filter),
         /// Removes a filter.
         Rm(uid::FilterUid),
         /// Updates all the specs.
@@ -257,6 +259,10 @@ pub mod to_client {
         },
     }
     impl FiltersMsg {
+        /// Adds a filter.
+        pub fn add(filter: filter::Filter) -> Msg {
+            Self::Add(filter).into()
+        }
         /// Removes a filter.
         pub fn rm(uid: uid::FilterUid) -> Msg {
             Self::Rm(uid).into()

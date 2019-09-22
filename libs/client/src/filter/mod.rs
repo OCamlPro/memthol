@@ -10,10 +10,6 @@ pub use charts::filter::{FilterUid, SubFilterUid};
 pub struct Filters {
     /// Sends messages to the model.
     to_model: Callback<Msg>,
-    /// UID of the filter currently selected.
-    ///
-    /// `None` for `catch_all`.
-    active: Option<FilterUid>,
     /// Catch-all filter.
     catch_all: FilterSpec,
     /// Actual filters.
@@ -27,7 +23,6 @@ impl Filters {
     pub fn new(to_model: Callback<Msg>) -> Self {
         Filters {
             to_model,
-            active: None,
             catch_all: FilterSpec::new_catch_all(),
             filters: Map::new(),
             deleted: vec![],
@@ -95,17 +90,20 @@ impl Filters {
 /// # Internal message handling
 impl Filters {
     /// Applies a filter operation.
-    pub fn update(&mut self, msg: msg::FilterMsg) -> Res<ShouldRender> {
+    pub fn update(&mut self, msg: msg::FiltersMsg) -> Res<ShouldRender> {
+        use msg::{FilterSpecMsg::*, FiltersMsg::*};
         match msg {
-            msg::FilterMsg::ToggleFilter(uid) => {
-                self.active = uid;
-                Ok(true)
-            }
-            msg::FilterMsg::ChangeName { uid, new_name } => {
+            FilterSpec {
+                uid,
+                msg: ChangeName(new_name),
+            } => {
                 self.change_name(uid, new_name)?;
                 Ok(true)
             }
-            msg::FilterMsg::ChangeColor { uid, new_color } => {
+            FilterSpec {
+                uid,
+                msg: ChangeColor(new_color),
+            } => {
                 self.change_color(uid, new_color)?;
                 Ok(true)
             }
@@ -173,6 +171,13 @@ impl Filters {
     pub fn server_update(&mut self, msg: msg::from_server::FiltersMsg) -> Res<ShouldRender> {
         use msg::from_server::FiltersMsg::*;
         match msg {
+            Add(filter) => {
+                let prev = self.filters.insert(filter.uid(), filter);
+                if let Some(prev) = prev {
+                    bail!("filter UID collision on #{}", prev.uid())
+                }
+                Ok(true)
+            }
             Rm(uid) => {
                 self.remove(uid)?;
                 Ok(true)
@@ -216,23 +221,29 @@ impl Filters {
 /// # Rendering
 impl Filters {
     /// Renders the tabs for each filter.
-    pub fn render_tabs(&self) -> Html {
+    pub fn render_tabs(&self, active: Option<Option<FilterUid>>) -> Html {
         html! {
             <>
+                // Catch all.
+                { self.catch_all.render_tab(active == Some(None)) }
                 // Actual filters.
-                { for self.filters.values().map(|filter| {
-                    let active = Some(filter.uid()) == self.active;
+                { for self.filters.values().rev().map(|filter| {
+                    let active = Some(Some(filter.uid())) == active;
                     filter.spec().render_tab(active)
                 } ) }
-                // Catch all.
-                { self.catch_all.render_tab(self.active == None) }
+                // Add filter button.
+                <li
+                    class = style::class::tabs::li::get(false)
+                >
+                    { buttons::add(|_| msg::to_server::FiltersMsg::add_new().into()) }
+                </li>
             </>
         }
     }
 
     /// Renders the active filter.
-    pub fn render_filter(&self) -> Html {
-        let settings = match self.active {
+    pub fn render_filter(&self, active: Option<FilterUid>) -> Html {
+        let settings = match active {
             None => self.catch_all.render_settings(),
             Some(uid) => match self.filters.get(&uid) {
                 Some(filter) => filter.spec().render_settings(),
@@ -265,19 +276,15 @@ impl FilterSpecExt for FilterSpec {
         let (class, colorize) = style::class::tabs::footer_get(active, self.color());
         let inner = html! {
             <a
-                class = {class}
-                style = {colorize}
-                onclick = |_| if active {
-                    msg::FooterMsg::toggle_tab(footer::FooterTab::Filter)
-                } else {
-                    msg::FilterMsg::toggle_filter(uid)
-                }
+                class = class
+                style = colorize
+                onclick = |_| msg::FooterMsg::toggle_tab(footer::FooterTab::filter(uid))
             > {
                 self.name()
             } </a>
         };
         html! {
-            <li class={ style::class::tabs::li::get(false) }>
+            <li class = style::class::tabs::li::get(false)>
                 { inner }
             </li>
         }
@@ -288,8 +295,8 @@ impl FilterSpecExt for FilterSpec {
         let spec = self.clone();
         html!(
             <>
-                <ul class=style::class::filter::LINE>
-                    <li class=style::class::filter::BUTTONS>
+                <ul class = style::class::filter::LINE>
+                    <li class = style::class::filter::BUTTONS>
                         {
                             buttons::tickbox(
                                 // Tickbox is ticked when the spec is not edited.
@@ -310,41 +317,41 @@ impl FilterSpecExt for FilterSpec {
                     </li>
                 </ul>
 
-                <ul class=style::class::filter::LINE>
-                    <li class=style::class::filter::BUTTONS/>
+                <ul class = style::class::filter::LINE>
+                    <li class = style::class::filter::BUTTONS/>
 
-                    <li class=style::class::filter::line::CELL>
-                        <a class=style::class::filter::line::SETTINGS_CELL>
+                    <li class = style::class::filter::line::CELL>
+                        <a class = style::class::filter::line::SETTINGS_CELL>
                             { "name" }
                         </a>
                     </li>
-                    <li class=style::class::filter::line::CELL>
-                        <a class=style::class::filter::line::VAL_CELL>
+                    <li class = style::class::filter::line::CELL>
+                        <a class = style::class::filter::line::VAL_CELL>
                             <input
-                                type="text"
-                                onchange=|data| msg::FilterMsg::change_name(uid, data)
-                                value=self.name()
-                                class=style::class::filter::line::SETTINGS_VALUE_CELL
+                                type = "text"
+                                onchange = |data| msg::FilterSpecMsg::change_name(uid, data)
+                                value = self.name()
+                                class = style::class::filter::line::SETTINGS_VALUE_CELL
                             />
                         </a>
                     </li>
                 </ul>
 
-                <ul class=style::class::filter::LINE>
-                    <li class=style::class::filter::BUTTONS/>
+                <ul class = style::class::filter::LINE>
+                    <li class = style::class::filter::BUTTONS/>
 
-                    <li class=style::class::filter::line::CELL>
-                        <a class=style::class::filter::line::SETTINGS_CELL>
+                    <li class = style::class::filter::line::CELL>
+                        <a class = style::class::filter::line::SETTINGS_CELL>
                             { "color" }
                         </a>
                     </li>
-                    <li class=style::class::filter::line::CELL>
-                        <a class=style::class::filter::line::VAL_CELL>
+                    <li class = style::class::filter::line::CELL>
+                        <a class = style::class::filter::line::VAL_CELL>
                             <input
-                                type="color"
-                                onchange=|data| msg::FilterMsg::change_color(uid, data)
-                                value=self.color().to_string()
-                                class=style::class::filter::line::SETTINGS_VALUE_CELL
+                                type = "color"
+                                onchange = |data| msg::FilterSpecMsg::change_color(uid, data)
+                                value = self.color().to_string()
+                                class = style::class::filter::line::SETTINGS_VALUE_CELL
                             />
                         </a>
                     </li>

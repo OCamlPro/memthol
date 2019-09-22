@@ -53,7 +53,10 @@ pub mod tabs {
                 format!("background-image: linear-gradient({}, black);", color),
             )
         } else {
-            (INACTIVE, format!("color: {};", color))
+            (
+                INACTIVE,
+                format!("background-image: linear-gradient(black, {});", color),
+            )
         }
     }
 }

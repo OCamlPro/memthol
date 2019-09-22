@@ -160,17 +160,20 @@ impl Filters {
     pub fn update(&mut self, msg: msg::to_server::FiltersMsg) -> Res<msg::to_client::Msgs> {
         use msg::to_server::FiltersMsg::*;
         match msg {
-            Add(filter) => self.add(filter),
+            AddNew => self.add_new(),
             Rm(uid) => self.remove(uid),
             UpdateSpec { uid, spec } => self.update_spec(uid, spec),
             Filter { uid, msg } => self.update_filter(uid, msg),
         }
     }
 
-    /// Adds a filter.
-    pub fn add(&mut self, filter: Filter) -> Res<msg::to_client::Msgs> {
-        self.filters.push(filter);
-        Ok(vec![])
+    /// Adds a new filter.
+    pub fn add_new(&mut self) -> Res<msg::to_client::Msgs> {
+        let spec = FilterSpec::new(Color::random(true));
+        let filter = Filter::new(spec).chain_err(|| "while creating new filter")?;
+        self.filters.push(filter.clone());
+        let msg = msg::to_client::FiltersMsg::add(filter);
+        Ok(vec![msg])
     }
 
     /// Updates the specification of a filter.

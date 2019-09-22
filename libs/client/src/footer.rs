@@ -18,6 +18,8 @@ impl Footer {
         use msg::FooterMsg::*;
         match msg {
             ToggleTab(tab) => {
+                info!("footer: toggle {:?}", tab);
+                info!("        active {:?}", self.active);
                 if self.active == Some(tab) {
                     self.active = None
                 } else {
@@ -31,22 +33,22 @@ impl Footer {
     /// Renders itself.
     pub fn render(&self, filters: &filter::Filters) -> Html {
         html! {
-            <footer><div id=style::id::FOOTER>
+            <footer id=style::id::FOOTER>
                 <ul id=style::id::FOOTER_TABS class=style::class::tabs::UL>
                     { for NormalFooterTab::all()
                         .into_iter()
                         .map(|tab|
-                            tab.render(Some(tab) == self.active.and_then(FooterTab::normal_tab))
+                            tab.render(Some(tab) == self.active.and_then(FooterTab::get_normal_tab))
                         )
                     }
-                    { filters.render_tabs() }
+                    { filters.render_tabs(self.active.and_then(FooterTab::get_filter)) }
                 </ul>
                 {
                     match self.active {
                         None => html!(<a/>),
-                        Some(FooterTab::Filter) => html! {
+                        Some(FooterTab::Filter(active)) => html! {
                             <div class=style::class::footer::DISPLAY>
-                                { filters.render_filter() }
+                                { filters.render_filter(active) }
                             </div>
                         },
                         Some(FooterTab::Normal(NormalFooterTab::Info)) => html! {
@@ -56,7 +58,7 @@ impl Footer {
                         },
                     }
                 }
-            </div></footer>
+            </footer>
         }
     }
 }
@@ -102,18 +104,30 @@ impl fmt::Display for NormalFooterTab {
 /// Footer tabs.
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub enum FooterTab {
-    /// Statistics tab.
+    /// Info tab.
     Normal(NormalFooterTab),
     /// Filters tab.
-    Filter,
+    Filter(Option<filter::FilterUid>),
 }
 
 impl FooterTab {
+    /// Filter tab constructor.
+    pub fn filter(uid: Option<filter::FilterUid>) -> Self {
+        Self::Filter(uid)
+    }
+
     /// The normal tab, if any.
-    pub fn normal_tab(self) -> Option<NormalFooterTab> {
+    pub fn get_normal_tab(self) -> Option<NormalFooterTab> {
         match self {
             Self::Normal(tab) => Some(tab),
-            Self::Filter => None,
+            Self::Filter(_) => None,
+        }
+    }
+    /// The active filter, if any.
+    pub fn get_filter(self) -> Option<Option<filter::FilterUid>> {
+        match self {
+            Self::Normal(_) => None,
+            Self::Filter(uid) => Some(uid),
         }
     }
 }
@@ -122,10 +136,18 @@ impl fmt::Display for FooterTab {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             FooterTab::Normal(tab) => write!(fmt, "{}", tab),
-            FooterTab::Filter => write!(fmt, "Filter"),
+            FooterTab::Filter(uid) => {
+                write!(fmt, "Filter(")?;
+                match uid {
+                    None => write!(fmt, "catch-all")?,
+                    Some(uid) => write!(fmt, "#{}", uid)?,
+                }
+                write!(fmt, ")")
+            }
         }
     }
 }
+
 impl From<NormalFooterTab> for FooterTab {
     fn from(tab: NormalFooterTab) -> Self {
         FooterTab::Normal(tab)
