@@ -156,7 +156,12 @@ impl Data {
     pub fn add_diff(&mut self, diff: Diff) -> Res<()> {
         self.current_time = diff.time;
 
-        for alloc in diff.new {
+        for mut alloc in diff.new {
+            // Force the allocation to have toc/tod map the diff's time.
+            alloc.toc = diff.time;
+            if let Some(tod) = alloc.tod.as_mut() {
+                *tod = diff.time
+            }
             let uid = alloc.uid.clone();
 
             if let Some(tod) = alloc.tod.clone() {
@@ -177,7 +182,9 @@ impl Data {
                 )
             }
         }
-        for (uid, tod) in diff.dead {
+        for (uid, _tod) in diff.dead {
+            // Force TOD to be diff's time.
+            let tod = diff.time;
             let is_new = self.tod_map_get_mut(tod).insert(uid.clone());
             if !is_new {
                 bail!(
@@ -187,10 +194,7 @@ impl Data {
             }
 
             match self.uid_map.get_mut(&uid) {
-                Some(alloc) => alloc.set_tod(tod).map_err(|e| {
-                    let e: err::Err = e.into();
-                    e
-                })?,
+                Some(alloc) => alloc.set_tod(tod)?,
                 None => bail!("cannot register death for unknown allocation UID #{}", uid),
             }
         }

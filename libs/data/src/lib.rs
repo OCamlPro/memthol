@@ -334,6 +334,11 @@ impl Alloc {
         }
     }
 
+    /// Sets the time of creation.
+    pub fn set_toc(&mut self, toc: SinceStart) {
+        self.toc = toc
+    }
+
     /// UID accessor.
     pub fn uid(&self) -> &Uid {
         &self.uid
