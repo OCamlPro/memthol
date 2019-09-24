@@ -93,10 +93,21 @@ impl Watcher {
             }
 
             let diff_res = self.register_new_diffs();
-            // If there was a problem, remember it in `diff_error` and loop to check whether a
-            // restart happened.
-            if let Err(e) = diff_res {
-                diff_error = Some(e)
+
+            match diff_res {
+                Ok(true) => {
+                    // Parsed something, keep going.
+                    ()
+                }
+                Ok(false) => {
+                    // Nothing new, sleep for a bit.
+                    sleep(Duration::from_millis(100))
+                }
+                Err(e) => {
+                    // There was a problem, remember it in `diff_error` and loop to check whether
+                    // a restart happened.
+                    diff_error = Some(e)
+                }
             }
         }
     }
@@ -246,7 +257,8 @@ impl Watcher {
     ///
     /// - sleeps for `100` milliseconds if there are no new diffs;
     /// - asserts `self.new_diffs.is_empty()`.
-    pub fn register_new_diffs(&mut self) -> Res<()> {
+    /// - returns `true` if something new was discovered.
+    pub fn register_new_diffs(&mut self) -> Res<bool> {
         debug_assert!(self.new_diffs.is_empty());
 
         // I don't know why, but sometimes `gather_new_diffs` will miss diff files when the profiler
@@ -273,12 +285,12 @@ impl Watcher {
                 for diff in self.new_diffs.drain(0..) {
                     super::add_diff(diff)?
                 }
-            } else {
-                sleep(Duration::from_millis(100))
+
+                return Ok(true);
             }
         }
 
-        Ok(())
+        Ok(false)
     }
 
     /// Gathers the new diff files.
