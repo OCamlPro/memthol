@@ -78,12 +78,28 @@ impl FilterKind {
 }
 
 /// A list of filters.
+///
+/// Aggregates the following:
+///
+/// - a "catch all" [`FilterSpec`], the specification of the points that no filter catches;
+/// - a list of [`Filter`]s;
+/// - a memory from allocation UIDs to filter UIDs that tells which filter takes care of some
+///     allocation.
+///
+/// The point of the memory is that it is not possible to know which filter takes care of a given
+/// allocation after the first time we saw that allocation. Which we want to know when registering
+/// the death of an allocation. The reason we don't know is that new filters might have been
+/// introduced or some filters may have changed. Hence the filter assigned for this allocation a
+/// while ago may not be the one we would assign now.
+///
+/// [`FilterSpec`]: struct.FilterSpec.html (The FilterSpec struct)
+/// [`Filter`]: struct.Filter.html (The Filter struct)
 #[derive(Debug, Clone)]
 pub struct Filters {
-    /// The actual list of filters.
-    filters: Vec<Filter>,
     /// The specification of the catch-all filter.
     catch_all: FilterSpec,
+    /// The actual list of filters.
+    filters: Vec<Filter>,
     /// Remembers which filter is responsible for an allocation.
     memory: Map<AllocUid, FilterUid>,
 }
@@ -231,7 +247,9 @@ impl Filters {
         let (_, filter) = self
             .get_mut(uid)
             .chain_err(|| format!("while handling filter message {:?}", msg))?;
-        filter.update(msg);
+        filter
+            .update(msg)
+            .chain_err(|| format!("while updating filter `{}`", filter.spec().name()))?;
         Ok(vec![])
     }
 
@@ -259,15 +277,19 @@ impl std::ops::IndexMut<index::Filter> for Filters {
 
 /// A filter that combines `SubFilter`s.
 ///
+/// Also contains a [`FilterSpec`](struct.FilterSpec.html).
+///
 /// # Invariants
 ///
 /// - `self.uid().is_some()`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Filter {
     /// Actual list of filters.
-    filters: Vec<SubFilter>,
+    subs: Map<SubFilterUid, SubFilter>,
     /// Filter specification.
     spec: FilterSpec,
+    /// Edited flag, for the client.
+    edited: bool,
 }
 impl Filter {
     /// Constructor.
@@ -276,8 +298,9 @@ impl Filter {
             bail!("trying to construct a filter with no UID")
         }
         let slf = Self {
-            filters: vec![],
+            subs: Map::new(),
             spec,
+            edited: false,
         };
         Ok(slf)
     }
@@ -291,6 +314,19 @@ impl Filter {
         &mut self.spec
     }
 
+    /// Returns the edited flag.
+    pub fn edited(&self) -> bool {
+        self.edited
+    }
+    /// Sets the edited flag to true.
+    pub fn set_edited(&mut self) {
+        self.edited = true
+    }
+    /// Sets the edited flag to false.
+    pub fn unset_edited(&mut self) {
+        self.edited = false
+    }
+
     /// UID accessor.
     pub fn uid(&self) -> FilterUid {
         self.spec()
@@ -300,7 +336,7 @@ impl Filter {
 
     /// Applies the filters to an allocation.
     pub fn apply(&self, alloc: &Alloc) -> bool {
-        for filter in &self.filters {
+        for filter in self.subs.values() {
             if filter.apply(alloc) {
                 return true;
             }
@@ -309,49 +345,64 @@ impl Filter {
     }
 
     /// Applies a filter message.
-    pub fn update(&mut self, msg: msg::to_server::FilterMsg) {
+    pub fn update(&mut self, msg: msg::to_server::FilterMsg) -> Res<()> {
         use msg::to_server::FilterMsg::*;
 
         match msg {
-            Add { filter } => self.filters.push(filter),
-            Rm { index } => {
-                self.filters.remove(*index);
-                ()
+            ReplaceSubs(subs) => {
+                self.subs.clear();
+                for mut sub in subs {
+                    sub.sanitize();
+                    self.subs.insert(sub.uid(), sub);
+                }
             }
-            Update { index, filter } => self.filters[*index] = filter,
+            AddNew => {
+                let sub = SubFilter::default();
+                let prev = self.subs.insert(sub.uid(), sub);
+                debug_assert!(prev.is_none())
+            }
+            Rm(uid) => {
+                let prev = self.subs.remove(&uid);
+                if prev.is_none() {
+                    bail!("failed to remove subfilter with unknown UID #{}", uid)
+                }
+            }
+            Update(sub) => self.replace(sub)?,
         }
+
+        Ok(())
     }
 
-    /// Iterator over the sub-filters.
-    pub fn iter(&self) -> impl Iterator<Item = (index::SubFilter, &SubFilter)> {
-        self.filters
-            .iter()
-            .enumerate()
-            .map(|(index, filter)| (index::SubFilter::new(index), filter))
+    /// Iterator over the subfilters.
+    pub fn iter(&self) -> impl Iterator<Item = &SubFilter> {
+        self.subs.values()
     }
 
-    /// Mutable iterator over the sub-filters.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (index::SubFilter, &mut SubFilter)> {
-        self.filters
-            .iter_mut()
-            .enumerate()
-            .map(|(index, filter)| (index::SubFilter::new(index), filter))
+    /// Mutable iterator over the subfilters.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut SubFilter> {
+        self.subs.values_mut()
     }
 
-    /// Overwrites a sub-filter.
-    pub fn set(&mut self, index: index::SubFilter, sub_filter: SubFilter) {
-        self.filters[*index.deref()] = sub_filter
+    /// Inserts a subfilter.
+    ///
+    /// Fails if the subfilter is **not** new.
+    pub fn insert(&mut self, sub: SubFilter) -> Res<()> {
+        let prev = self.subs.insert(sub.uid(), sub);
+        if let Some(prev) = prev {
+            bail!("subfilter UID collision on #{}", prev.uid())
+        }
+        Ok(())
     }
-}
 
-impl std::ops::Index<index::SubFilter> for Filter {
-    type Output = SubFilter;
-    fn index(&self, index: index::SubFilter) -> &SubFilter {
-        &self.filters[*index.deref()]
-    }
-}
-impl std::ops::IndexMut<index::SubFilter> for Filter {
-    fn index_mut(&mut self, index: index::SubFilter) -> &mut SubFilter {
-        &mut self.filters[*index.deref()]
+    /// Replaces a subfilter.
+    ///
+    /// Fails if the subfilter **is** new.
+    pub fn replace(&mut self, sub: SubFilter) -> Res<()> {
+        let uid = sub.uid();
+        let prev = self.subs.insert(sub.uid(), sub);
+        if prev.is_none() {
+            bail!("failed to replace subfilter with unknown UID #{}", uid)
+        }
+        Ok(())
     }
 }

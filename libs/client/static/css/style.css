@@ -625,7 +625,7 @@ footer .footer_display .filter_ul .filter_buttons .active_tick_button:hover {
 footer .footer_display .filter_ul .filter_section {
   display: block;
   font-size: 16px;
-  text-align: center;
+  float: left;
   font-size: 150%;
   color: #00d8ff;
   width: 80%;

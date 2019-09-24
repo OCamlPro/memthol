@@ -2,6 +2,16 @@
 
 use super::*;
 
+/// A filter specification.
+///
+/// Contains the following:
+///
+/// - an optional UID;
+/// - a name;
+/// - a color.
+///
+/// The UID is optional because the filter specification can belong the "catch all" line of charts.
+/// It is made from the points that all filters miss.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilterSpec {
     /// Uid of the filter.

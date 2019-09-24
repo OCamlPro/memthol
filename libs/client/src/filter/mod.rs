@@ -4,7 +4,7 @@ use crate::base::*;
 
 use charts::filter::{Filter, FilterSpec};
 
-pub use charts::filter::{FilterUid, SubFilterUid};
+pub use charts::filter::{FilterUid, SubFilter, SubFilterUid};
 
 /// Stores all the filters.
 pub struct Filters {
@@ -35,6 +35,13 @@ impl Filters {
             None => Some(&mut self.catch_all),
             Some(uid) => self.filters.get_mut(&uid).map(Filter::spec_mut),
         }
+    }
+
+    /// Gives mutable access to a filter.
+    pub fn get_mut(&mut self, uid: FilterUid) -> Res<&mut Filter> {
+        self.filters
+            .get_mut(&uid)
+            .ok_or_else(|| format!("unknown filter UID #{}", uid).into())
     }
 
     /// Pushes a filter.
@@ -106,6 +113,10 @@ impl Filters {
             } => {
                 self.change_color(uid, new_color)?;
                 Ok(true)
+            }
+            Filter { uid, msg } => {
+                let filter = self.get_mut(uid)?;
+                filter_update(filter, msg)
             }
         }
     }
@@ -243,16 +254,23 @@ impl Filters {
 
     /// Renders the active filter.
     pub fn render_filter(&self, active: Option<FilterUid>) -> Html {
-        let settings = match active {
-            None => self.catch_all.render_settings(),
+        let (settings, filter_opt) = match active {
+            None => (self.catch_all.render_settings(), None),
             Some(uid) => match self.filters.get(&uid) {
-                Some(filter) => filter.spec().render_settings(),
-                None => html!(<a/>),
+                Some(filter) => (filter.spec().render_settings(), Some(filter)),
+                None => (html!(<a/>), None),
             },
         };
         html! {
             <>
                 { settings }
+                {
+                    if let Some(filter) = filter_opt {
+                        render_subs(filter)
+                    } else {
+                        html!(<a/>)
+                    }
+                }
             </>
         }
     }
@@ -263,11 +281,11 @@ pub trait FilterSpecExt {
     /// Renders a spec as a tab.
     fn render_tab(&self, active: bool) -> Html;
 
-    /// Renders the settings of a filter specification.
-    fn render_settings(&self) -> Html;
-
     /// Adds itself as a series to a chart.
     fn add_series_to(&self, spec: &chart::ChartSpec, chart: &JsVal);
+
+    /// Renders the settings of a filter specification.
+    fn render_settings(&self) -> Html;
 }
 
 impl FilterSpecExt for FilterSpec {
@@ -288,6 +306,32 @@ impl FilterSpecExt for FilterSpec {
                 { inner }
             </li>
         }
+    }
+
+    fn add_series_to(&self, spec: &chart::ChartSpec, chart: &JsVal) {
+        let series = js!(
+            let color = @{self.color().to_string()};
+            var series = new am4charts.LineSeries();
+            series.interpolationDuration = @{cst::charts::INTERP_DURATION};
+            series.defaultState.transitionDuration = 200;
+            series.hiddenState.transitionDuration = 200;
+            series.stroke = color;
+            series.strokeWidth = 1;
+            series.name = @{self.name()};
+            series.fill = color;
+            series.fillOpacity = 0.4;
+            return series;
+        );
+        use chart::axis::AxisExt;
+        spec.x_axis().series_apply(&series, self.uid());
+        spec.y_axis().series_apply(&series, self.uid());
+        js!(@(no_return)
+            var chart = @{chart};
+            console.log("adding " + @{&series}.name + " to chart");
+            var series = @{series};
+            chart.series.push(series);
+            chart.scrollbarX.series.push(series);
+        )
     }
 
     fn render_settings(&self) -> Html {
@@ -359,30 +403,298 @@ impl FilterSpecExt for FilterSpec {
             </>
         )
     }
+}
 
-    fn add_series_to(&self, spec: &chart::ChartSpec, chart: &JsVal) {
-        let series = js!(
-            let color = @{self.color().to_string()};
-            var series = new am4charts.LineSeries();
-            series.interpolationDuration = @{cst::charts::INTERP_DURATION};
-            series.defaultState.transitionDuration = 200;
-            series.hiddenState.transitionDuration = 200;
-            series.stroke = color;
-            series.strokeWidth = 1;
-            series.name = @{self.name()};
-            series.fill = color;
-            series.fillOpacity = 0.4;
-            return series;
-        );
-        use chart::axis::AxisExt;
-        spec.x_axis().series_apply(&series, self.uid());
-        spec.y_axis().series_apply(&series, self.uid());
-        js!(@(no_return)
-            var chart = @{chart};
-            console.log("adding " + @{&series}.name + " to chart");
-            var series = @{series};
-            chart.series.push(series);
-            chart.scrollbarX.series.push(series);
-        )
+fn filter_update(filter: &mut Filter, msg: msg::FilterMsg) -> Res<ShouldRender> {
+    use msg::FilterMsg::*;
+    match msg {
+        AddNew => {
+            let sub = SubFilter::default();
+            filter.insert(sub)?;
+            filter.set_edited();
+            Ok(true)
+        }
+        Sub(sub) => filter.replace(sub).map(|()| true),
     }
+}
+
+fn render_subs(filter: &Filter) -> Html {
+    html! {
+        <>
+            <ul class = style::class::filter::LINE>
+                <li class = style::class::filter::BUTTONS>
+                    {
+                        let uid = filter.uid();
+                        // # TODO
+                        // Fix this.
+                        let subs: Vec<_> = filter.iter().map(SubFilter::clone).collect();
+                        buttons::tickbox(
+                            // Tickbox is ticked when the spec is not edited.
+                            !filter.edited(),
+                            // If ticked, clicking does nothing.
+                            |_| Msg::Noop,
+                            // If unticked, clicking notifies the server.
+                            move |_| msg::to_server::FilterMsg::replace_subs(
+                                uid, subs.clone()
+                            ).into(),
+                        )
+                    }
+                </li>
+                <li class = style::class::filter::line::CELL>
+                    <a class = style::class::filter::line::SECTION_CELL>
+                        { "Filters" }
+                    </a>
+                </li>
+            </ul>
+            { for filter.iter().map(|sub| {
+                if sub.is_from_client() {
+                    info!("from client");
+                } else {
+                    info!("not from client");
+                }
+                html!(
+                    <ul class = style::class::filter::LINE>
+                        <li class = style::class::filter::BUTTONS>
+                            // {
+                            //     buttons::tickbox(
+                            //         // Tickbox is ticked when the spec is not edited.
+                            //         !self.edited(),
+                            //         // If ticked, clicking does nothing.
+                            //         |_| Msg::Noop,
+                            //         // If unticked, clicking notifies the server.
+                            //         move |_| msg::to_server::FiltersMsg::update_spec(
+                            //             uid, spec.clone()
+                            //         ).into(),
+                            //     )
+                            // }
+                        </li>
+                        {
+                            let uid = filter.uid();
+                            sub::prop_selector(
+                                sub,
+                                move |res| {
+                                    let res = res.map(|sub|
+                                        msg::FilterMsg::update_sub(uid, sub)
+                                    );
+                                    err::msg_of_res(res)
+                                }
+                            )
+                        }
+                        {
+                            let uid = filter.uid();
+                            sub::render_cells(
+                                sub,
+                                move |res| {
+                                    let res = res.map(|sub|
+                                        msg::FilterMsg::update_sub(uid, sub)
+                                    );
+                                    err::msg_of_res(res)
+                                }
+                            )
+                        }
+                    </ul>
+                )}
+            ) }
+
+            // Add button to add subfilters.
+            <ul class = style::class::filter::LINE>
+                <li class = style::class::filter::BUTTONS>
+                    {
+                        let uid = filter.uid();
+                        buttons::add(move |_| msg::FilterMsg::add_new(uid))
+                    }
+                    //     buttons::tickbox(
+                    //         // Tickbox is ticked when the spec is not edited.
+                    //         !self.edited(),
+                    //         // If ticked, clicking does nothing.
+                    //         |_| Msg::Noop,
+                    //         // If unticked, clicking notifies the server.
+                    //         move |_| msg::to_server::FiltersMsg::update_spec(
+                    //             uid, spec.clone()
+                    //         ).into(),
+                    //     )
+                    // }
+                </li>
+            </ul>
+        </>
+    }
+}
+
+mod sub {
+    use super::*;
+    use charts::filter::{FilterKind, SubFilter};
+
+    pub fn render_cells<Update>(filter: &SubFilter, update: Update) -> Html
+    where
+        Update: Fn(Res<SubFilter>) -> Msg + 'static + Clone,
+    {
+        pub use charts::filter::sub::RawSubFilter::*;
+        // Function that constructs a subfilter with the same UID.
+        let uid = filter.uid();
+        match filter.raw() {
+            Size(filter) => sub::size::render(filter, move |res| {
+                let res = res.map(|raw| SubFilter::new(uid, Size(raw)));
+                update(res)
+            }),
+            Label(_filter) => html! {
+                <>
+                </>
+            },
+        }
+    }
+
+    pub fn prop_selector<Update>(filter: &SubFilter, update: Update) -> Html
+    where
+        Update: Fn(Res<SubFilter>) -> Msg + 'static,
+    {
+        let filter = filter.clone();
+        let selected = filter.kind();
+        html! {
+            <li class=style::class::filter::line::CELL>
+                <a class=style::class::filter::line::PROP_CELL>
+                    <Select<FilterKind>
+                        selected=Some(selected)
+                        options=FilterKind::all()
+                        onchange=move |kind| {
+                            let mut filter = filter.clone();
+                            filter.change_kind(kind);
+                            update(Ok(filter))
+                        }
+                    />
+                </a>
+            </li>
+        }
+    }
+
+    mod size {
+        use super::*;
+        use charts::filter::{ord::Kind, SizeFilter};
+
+        /// Renders a size filter given an update function.
+        pub fn render<Update>(filter: &SizeFilter, update: Update) -> Html
+        where
+            Update: Fn(Res<SizeFilter>) -> Msg + Clone + 'static,
+        {
+            html! {
+                <>
+                    <li class=style::class::filter::line::CELL>
+                        <a class=style::class::filter::line::CMP_CELL>
+                            { kind_selector(filter, update.clone()) }
+                        </a>
+                    </li>
+                    { render_values(filter, update) }
+                </>
+            }
+        }
+
+        fn parse_text_data(data: ChangeData) -> Res<usize> {
+            use alloc_data::Parseable;
+            data.text_value()
+                .and_then(|text| usize::parse(text).map_err(|e| e.into()))
+        }
+
+        fn kind_selector<Update>(filter: &SizeFilter, update: Update) -> Html
+        where
+            Update: Fn(Res<SizeFilter>) -> Msg + 'static,
+        {
+            let selected = filter.cmp_kind();
+            html! {
+                <Select<Kind>
+                    selected=Some(selected)
+                    options=Kind::all()
+                    onchange=move |kind| update(Ok(SizeFilter::default_of_cmp(kind)))
+                />
+            }
+        }
+
+        fn render_values<Update>(filter: &SizeFilter, update: Update) -> Html
+        where
+            Update: Fn(Res<SizeFilter>) -> Msg + Clone + 'static,
+        {
+            match filter {
+                SizeFilter::Cmp { cmp, val } => {
+                    let cmp = *cmp;
+                    html! {
+                        <li class=style::class::filter::line::CELL>
+                            <a class=style::class::filter::line::VAL_CELL>
+                                <input
+                                    type="text"
+                                    class=style::class::filter::line::TEXT_VALUE
+                                    value=val.to_string()
+                                    onchange=|data| update(
+                                        parse_text_data(data)
+                                            .chain_err(||
+                                                format!(
+                                                    "while parsing value for filter operator `{}`",
+                                                    cmp
+                                                )
+                                            )
+                                            .map(|val|
+                                                SizeFilter::Cmp { cmp, val }
+                                            )
+                                    )
+                                >
+                                </input>
+                            </a>
+                        </li>
+                    }
+                }
+                SizeFilter::In { lb, ub } => {
+                    let (lb_clone, ub_clone) = (lb.clone(), ub.clone());
+                    let other_update = update.clone();
+                    html! {
+                        <li class=style::class::filter::line::CELL>
+                            <a class=style::class::filter::line::VAL_CELL>
+                                <code> { "[" } </code>
+                                <input
+                                    type="text"
+                                    class=style::class::filter::line::TEXT_VALUE
+                                    value=lb.to_string()
+                                    onchange=|data| {
+                                        let ub = ub_clone.clone();
+                                        other_update(
+                                            parse_text_data(data)
+                                                .and_then(|lb| SizeFilter::between(lb, ub))
+                                                .chain_err(||
+                                                    format!(
+                                                        "while parsing lower bound \
+                                                        for filter operator `{}`",
+                                                        Kind::In
+                                                    )
+                                                )
+                                        )
+                                    }
+                                >
+                                </input>
+                                <code> { "," } </code>
+                                <input
+                                    type="text"
+                                    class=style::class::filter::line::TEXT_VALUE
+                                    value=ub.to_string()
+                                    onchange=|data| {
+                                        let lb = lb_clone.clone();
+                                        update(
+                                            parse_text_data(data)
+                                                .and_then(|ub| SizeFilter::between(lb, ub))
+                                                .chain_err(||
+                                                    format!(
+                                                        "while parsing upper bound \
+                                                        for filter operator `{}`",
+                                                        Kind::In
+                                                    )
+                                                )
+                                        )
+                                    }
+                                >
+                                </input>
+                                <code> { "]" } </code>
+                            </a>
+                        </li>
+                    }
+                }
+            }
+        }
+
+    }
+
 }

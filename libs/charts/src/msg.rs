@@ -82,23 +82,24 @@ pub mod to_server {
     /// Operations over a filter.
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum FilterMsg {
-        /// Adds a new sub-filter.
-        Add {
-            /// Sub-filter to add.
-            filter: SubFilter,
-        },
-        /// Removes a sub-filter.
-        Rm {
-            /// Index of the sub-filter.
-            index: index::SubFilter,
-        },
-        /// Updates a sub-filter.
-        Update {
-            /// Index of the sub-filter to replace.
-            index: index::SubFilter,
-            /// New sub-filter.
-            filter: SubFilter,
-        },
+        /// Replaces the subfilters.
+        ReplaceSubs(Vec<SubFilter>),
+        /// Adds a new subfilter.
+        AddNew,
+        /// Removes a subfilter.
+        Rm(uid::SubFilterUid),
+        /// Updates a subfilter.
+        Update(SubFilter),
+    }
+    impl FilterMsg {
+        /// Replaces the subfilters.
+        pub fn replace_subs(uid: uid::FilterUid, subs: Vec<SubFilter>) -> Msg {
+            FiltersMsg::Filter {
+                uid,
+                msg: Self::ReplaceSubs(subs),
+            }
+            .into()
+        }
     }
 
     impl Into<yew::format::Text> for Msg {

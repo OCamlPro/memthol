@@ -167,11 +167,22 @@ pub enum FiltersMsg {
         /// Message.
         msg: FilterSpecMsg,
     },
+    /// A message for a specific filter.
+    Filter {
+        /// UID of the iflter.
+        uid: FilterUid,
+        /// Message.
+        msg: FilterMsg,
+    },
 }
 impl FiltersMsg {
     /// A message for a specific filter specification.
     pub fn filter_spec(uid: Option<FilterUid>, msg: FilterSpecMsg) -> Msg {
         Self::FilterSpec { uid, msg }.into()
+    }
+    /// A message for a specific filter.
+    pub fn filter(uid: FilterUid, msg: FilterMsg) -> Msg {
+        Self::Filter { uid, msg }.into()
     }
 }
 
@@ -190,5 +201,23 @@ impl FilterSpecMsg {
     /// Changes the color of a filter.
     pub fn change_color(uid: Option<FilterUid>, new_color: ChangeData) -> Msg {
         FiltersMsg::filter_spec(uid, Self::ChangeColor(new_color)).into()
+    }
+}
+
+#[derive(Debug)]
+pub enum FilterMsg {
+    /// Adds a new subfilter.
+    AddNew,
+    /// Updates a subfilter.
+    Sub(filter::SubFilter),
+}
+impl FilterMsg {
+    /// Adds a new subfilter.
+    pub fn add_new(uid: FilterUid) -> Msg {
+        FiltersMsg::filter(uid, Self::AddNew)
+    }
+    /// Updates a subfilter.
+    pub fn update_sub(uid: FilterUid, sub: filter::SubFilter) -> Msg {
+        FiltersMsg::filter(uid, Self::Sub(sub))
     }
 }

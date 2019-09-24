@@ -139,7 +139,7 @@ pub mod filter {
         /// Class of a label insertion element.
         pub static ADD_LABEL: &str = "filter_add_label";
         /// Class for a label value.
-        pub static LABEL_VALUE: &str = "filter_value";
+        pub static TEXT_VALUE: &str = "filter_value";
     }
 }
 
