@@ -434,9 +434,18 @@ impl Chart {
             <g>
                 <center class=style::class::chart::HEADER>
                     { self.expand_or_collapse_button() }
-                    { buttons::move_up(move |_| msg::ChartsMsg::move_up(uid)) }
-                    { buttons::move_down(move |_| msg::ChartsMsg::move_down(uid)) }
-                    { buttons::close(move |_| msg::ChartsMsg::destroy(uid)) }
+                    { Button::move_up(
+                        "Move the chart up",
+                        move |_| msg::ChartsMsg::move_up(uid)
+                    ) }
+                    { Button::move_down(
+                        "Move the chart down",
+                        move |_| msg::ChartsMsg::move_down(uid)
+                    ) }
+                    { Button::close(
+                        "Close the chart",
+                        move |_| msg::ChartsMsg::destroy(uid)
+                    ) }
 
                     <h2> { self.spec.desc() } </h2>
                 </center>
@@ -451,9 +460,13 @@ impl Chart {
     fn expand_or_collapse_button(&self) -> Html {
         let uid = self.uid();
         if self.visible {
-            buttons::collapse(move |_| msg::ChartsMsg::toggle_visible(uid))
+            Button::collapse("Collapse the chart", move |_| {
+                msg::ChartsMsg::toggle_visible(uid)
+            })
         } else {
-            buttons::expand(move |_| msg::ChartsMsg::toggle_visible(uid))
+            Button::expand("Expand the chart", move |_| {
+                msg::ChartsMsg::toggle_visible(uid)
+            })
         }
     }
 }

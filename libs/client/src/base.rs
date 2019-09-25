@@ -34,7 +34,8 @@ pub use charts::{base::Json, index, point::Point};
 // Re-exports.
 
 pub use crate::{
-    buttons, chart,
+    buttons::Button,
+    chart,
     chart::Charts,
     cst, err,
     err::{bail, Res, ResExt},

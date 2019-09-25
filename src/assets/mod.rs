@@ -278,6 +278,9 @@ var serverAddr = {{
             /// Collapse.
             COLLAPSE: asset_file!(pics / "collapse.png"),
 
+            /// Refresh.
+            REFRESH: asset_file!(pics / "refresh.png"),
+
             /// Tick, inactive.
             TICK_INACTIVE: asset_file!(pics / "tick_inactive.png"),
             /// Tick, active.

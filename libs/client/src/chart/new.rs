@@ -59,7 +59,10 @@ impl NewChart {
         html! {
             <g>
                 <center class=style::class::chart::HEADER>
-                    { buttons::add(move |_| msg::to_server::ChartsMsg::new(x_axis, y_axis).into()) }
+                    { Button::add(
+                        "Create a new chart",
+                        move |_| msg::to_server::ChartsMsg::new(x_axis, y_axis).into()
+                    ) }
 
                     <h2>
                         <Select<XAxis>

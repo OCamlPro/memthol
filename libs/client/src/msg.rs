@@ -29,6 +29,8 @@ pub enum Msg {
 
     /// A message to print in the JS console.
     Msg(String),
+    /// A warning to print in the JS console.
+    Warn(String),
     /// An error.
     Err(err::Err),
 
@@ -37,6 +39,14 @@ pub enum Msg {
 }
 
 impl Msg {
+    /// Text message constructor.
+    pub fn msg<S: Into<String>>(txt: S) -> Msg {
+        Self::Msg(txt.into())
+    }
+    /// Warning message constructor.
+    pub fn warn<S: Into<String>>(txt: S) -> Msg {
+        Self::Warn(txt.into())
+    }
     /// Error message constructor.
     pub fn err(e: err::Err) -> Self {
         Self::Err(e)

@@ -86,16 +86,17 @@ impl Component for Model {
 
     fn update(&mut self, msg: Msg) -> ShouldRender {
         match msg {
+            // Messages to/from the server.
             Msg::FromServer(msg) => {
                 let msg: Res<charts::msg::to_client::Msg> = msg.into();
                 unwrap_or_send_err!(self.handle_server_msg(msg) => self default false)
             }
-
             Msg::ToServer(msg) => {
                 self.server_send(msg);
                 false
             }
 
+            // Dealing with status changes in the connection with the server.
             Msg::ConnectionStatus(status) => {
                 use WebSocketStatus::*;
                 match status {
@@ -106,6 +107,7 @@ impl Component for Model {
                 false
             }
 
+            // Internal operations.
             Msg::Charts(msg) => unwrap_or_send_err!(
                 self.charts.update(&self.filters, msg) => self default false
             ),
@@ -116,8 +118,13 @@ impl Component for Model {
                 self.filters.update(msg) => self default false
             ),
 
+            // Basic communication messages.
             Msg::Msg(s) => {
                 info!("{}", s);
+                false
+            }
+            Msg::Warn(s) => {
+                warn!("{}", s);
                 false
             }
             Msg::Err(e) => {

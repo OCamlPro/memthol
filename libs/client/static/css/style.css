@@ -97,6 +97,14 @@ body .body_header_footer .memthol_chart_container .active_tick_button {
 body .body_header_footer .memthol_chart_container .active_tick_button:hover {
   cursor: pointer;
 }
+body .body_header_footer .memthol_chart_container .refresh_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+body .body_header_footer .memthol_chart_container .refresh_button:hover {
+  cursor: pointer;
+}
 body .body_header_footer .memthol_chart_container .chart_header {
   margin: 0 10%;
 }
@@ -206,6 +214,14 @@ header .tab_list .active_tick_button {
   content: url("../pics/tick_active.png");
 }
 header .tab_list .active_tick_button:hover {
+  cursor: pointer;
+}
+header .tab_list .refresh_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+header .tab_list .refresh_button:hover {
   cursor: pointer;
 }
 header .tab_list .li_left {
@@ -421,6 +437,14 @@ footer .tab_list .active_tick_button {
 footer .tab_list .active_tick_button:hover {
   cursor: pointer;
 }
+footer .tab_list .refresh_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+footer .tab_list .refresh_button:hover {
+  cursor: pointer;
+}
 footer .tab_list .li_left {
   float: left;
 }
@@ -620,6 +644,14 @@ footer .footer_display .filter_ul .filter_buttons .active_tick_button {
   content: url("../pics/tick_active.png");
 }
 footer .footer_display .filter_ul .filter_buttons .active_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons .refresh_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+footer .footer_display .filter_ul .filter_buttons .refresh_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_section {

@@ -75,6 +75,8 @@ pub mod button {
     pub static EXPAND: &str = "expand_button";
     /// Collapse button.
     pub static COLLAPSE: &str = "collapse_button";
+    /// Refresh button.
+    pub static REFRESH: &str = "refresh_button";
     /// Inactive tickbox button.
     pub static INACTIVE_TICK: &str = "inactive_tick_button";
     /// Active tickbox button.

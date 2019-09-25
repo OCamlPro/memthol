@@ -246,7 +246,10 @@ impl Filters {
                 <li
                     class = style::class::tabs::li::get(false)
                 >
-                    { buttons::add(|_| msg::to_server::FiltersMsg::add_new().into()) }
+                    { Button::add(
+                        "Create a new filter",
+                        |_| msg::to_server::FiltersMsg::add_new().into()
+                    ) }
                 </li>
             </>
         }
@@ -342,16 +345,19 @@ impl FilterSpecExt for FilterSpec {
                 <ul class = style::class::filter::LINE>
                     <li class = style::class::filter::BUTTONS>
                         {
-                            buttons::tickbox(
-                                // Tickbox is ticked when the spec is not edited.
-                                !self.edited(),
-                                // If ticked, clicking does nothing.
-                                |_| Msg::Noop,
-                                // If unticked, clicking notifies the server.
-                                move |_| msg::to_server::FiltersMsg::update_spec(
-                                    uid, spec.clone()
-                                ).into(),
-                            )
+                            if self.edited() {
+                                Button::inactive_tickbox(
+                                    "Apply the settings",
+                                    move |_| msg::to_server::FiltersMsg::update_spec(
+                                        uid, spec.clone()
+                                    ).into()
+                                )
+                            } else {
+                                Button::active_tickbox(
+                                    "Settings have not been edited",
+                                    move |_| Msg::Noop,
+                                )
+                            }
                         }
                     </li>
                     <li class = style::class::filter::line::CELL>
@@ -428,16 +434,19 @@ fn render_subs(filter: &Filter) -> Html {
                         // # TODO
                         // Fix this.
                         let subs: Vec<_> = filter.iter().map(SubFilter::clone).collect();
-                        buttons::tickbox(
-                            // Tickbox is ticked when the spec is not edited.
-                            !filter.edited(),
-                            // If ticked, clicking does nothing.
-                            |_| Msg::Noop,
-                            // If unticked, clicking notifies the server.
-                            move |_| msg::to_server::FilterMsg::replace_subs(
-                                uid, subs.clone()
-                            ).into(),
-                        )
+                        if filter.edited() {
+                            Button::inactive_tickbox(
+                                "Apply the modifications",
+                                move |_| msg::to_server::FilterMsg::replace_subs(
+                                    uid, subs.clone()
+                                ).into()
+                            )
+                        } else {
+                            Button::active_tickbox(
+                                "Filters have not been edited",
+                                move |_| Msg::Noop,
+                            )
+                        }
                     }
                 </li>
                 <li class = style::class::filter::line::CELL>
@@ -455,18 +464,10 @@ fn render_subs(filter: &Filter) -> Html {
                 html!(
                     <ul class = style::class::filter::LINE>
                         <li class = style::class::filter::BUTTONS>
-                            // {
-                            //     buttons::tickbox(
-                            //         // Tickbox is ticked when the spec is not edited.
-                            //         !self.edited(),
-                            //         // If ticked, clicking does nothing.
-                            //         |_| Msg::Noop,
-                            //         // If unticked, clicking notifies the server.
-                            //         move |_| msg::to_server::FiltersMsg::update_spec(
-                            //             uid, spec.clone()
-                            //         ).into(),
-                            //     )
-                            // }
+                            { Button::close(
+                                "Remove the filter",
+                                move |_| Msg::warn("filter removing is not implemented")
+                            ) }
                         </li>
                         {
                             let uid = filter.uid();
@@ -501,19 +502,8 @@ fn render_subs(filter: &Filter) -> Html {
                 <li class = style::class::filter::BUTTONS>
                     {
                         let uid = filter.uid();
-                        buttons::add(move |_| msg::FilterMsg::add_new(uid))
+                        Button::add("Add a new subfilter", move |_| msg::FilterMsg::add_new(uid))
                     }
-                    //     buttons::tickbox(
-                    //         // Tickbox is ticked when the spec is not edited.
-                    //         !self.edited(),
-                    //         // If ticked, clicking does nothing.
-                    //         |_| Msg::Noop,
-                    //         // If unticked, clicking notifies the server.
-                    //         move |_| msg::to_server::FiltersMsg::update_spec(
-                    //             uid, spec.clone()
-                    //         ).into(),
-                    //     )
-                    // }
                 </li>
             </ul>
         </>

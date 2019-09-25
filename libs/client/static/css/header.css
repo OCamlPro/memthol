@@ -96,6 +96,14 @@ header .tab_list .active_tick_button {
 header .tab_list .active_tick_button:hover {
   cursor: pointer;
 }
+header .tab_list .refresh_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+header .tab_list .refresh_button:hover {
+  cursor: pointer;
+}
 header .tab_list .li_left {
   float: left;
 }

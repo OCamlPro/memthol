@@ -97,6 +97,14 @@ body .body_header_footer .memthol_chart_container .active_tick_button {
 body .body_header_footer .memthol_chart_container .active_tick_button:hover {
   cursor: pointer;
 }
+body .body_header_footer .memthol_chart_container .refresh_button {
+  max-width: 25px;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+body .body_header_footer .memthol_chart_container .refresh_button:hover {
+  cursor: pointer;
+}
 body .body_header_footer .memthol_chart_container .chart_header {
   margin: 0 10%;
 }
