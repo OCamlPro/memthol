@@ -25,11 +25,17 @@ pub mod to_server {
     pub enum ChartsMsg {
         /// Creates a new chart.
         New(chart::axis::XAxis, chart::axis::YAxis),
+        /// Reloads all charts.
+        Reload,
     }
     impl ChartsMsg {
         /// Constructs a chart creation message.
         pub fn new(x: chart::axis::XAxis, y: chart::axis::YAxis) -> Msg {
             Self::New(x, y).into()
+        }
+        /// Reloads all charts.
+        pub fn reload() -> Msg {
+            Self::Reload.into()
         }
     }
 
@@ -253,6 +259,8 @@ pub mod to_client {
         Add(filter::Filter),
         /// Removes a filter.
         Rm(uid::FilterUid),
+        // /// Notifies that filter has been synchronized.
+        // Synced(uid::FilterUid),
         /// Updates all the specs.
         UpdateSpecs {
             catch_all: Option<FilterSpec>,

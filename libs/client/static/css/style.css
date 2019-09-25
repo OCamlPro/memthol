@@ -30,11 +30,8 @@ body .body_header_footer h1 {
 body .body_header_footer h2 {
   color: #3a3a3a;
 }
-body .body_header_footer .memthol_chart_container {
-  .select_axis-font: 100% SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
-}
 body .body_header_footer .memthol_chart_container .expand_button {
-  max-width: 25px;
+  height: 100%;
   float: left;
   content: url("../pics/expand.png");
 }
@@ -42,7 +39,7 @@ body .body_header_footer .memthol_chart_container .expand_button:hover {
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .collapse_button {
-  max-width: 25px;
+  height: 100%;
   float: left;
   content: url("../pics/collapse.png");
 }
@@ -50,7 +47,7 @@ body .body_header_footer .memthol_chart_container .collapse_button:hover {
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .move_up_button {
-  max-width: 25px;
+  height: 100%;
   float: left;
   content: url("../pics/arrow_up.png");
 }
@@ -58,15 +55,23 @@ body .body_header_footer .memthol_chart_container .move_up_button:hover {
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .move_down_button {
-  max-width: 25px;
+  height: 100%;
   float: left;
   content: url("../pics/arrow_down.png");
 }
 body .body_header_footer .memthol_chart_container .move_down_button:hover {
   cursor: pointer;
 }
+body .body_header_footer .memthol_chart_container .refresh_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+body .body_header_footer .memthol_chart_container .refresh_button:hover {
+  cursor: pointer;
+}
 body .body_header_footer .memthol_chart_container .close_button {
-  max-width: 25px;
+  height: 100%;
   float: right;
   content: url("../pics/close.png");
 }
@@ -74,7 +79,7 @@ body .body_header_footer .memthol_chart_container .close_button:hover {
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .add_button {
-  max-width: 25px;
+  height: 100%;
   float: right;
   content: url("../pics/add.png");
 }
@@ -82,7 +87,7 @@ body .body_header_footer .memthol_chart_container .add_button:hover {
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .inactive_tick_button {
-  max-width: 25px;
+  height: 100%;
   float: right;
   content: url("../pics/tick_inactive.png");
 }
@@ -90,23 +95,19 @@ body .body_header_footer .memthol_chart_container .inactive_tick_button:hover {
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .active_tick_button {
-  max-width: 25px;
+  height: 100%;
   float: right;
   content: url("../pics/tick_active.png");
 }
 body .body_header_footer .memthol_chart_container .active_tick_button:hover {
   cursor: pointer;
 }
-body .body_header_footer .memthol_chart_container .refresh_button {
-  max-width: 25px;
-  float: right;
-  content: url("../pics/refresh.png");
-}
-body .body_header_footer .memthol_chart_container .refresh_button:hover {
-  cursor: pointer;
-}
 body .body_header_footer .memthol_chart_container .chart_header {
   margin: 0 10%;
+  height: 2vh;
+}
+body .body_header_footer .memthol_chart_container .chart_header select {
+  font: 100% SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
 }
 body .body_header_footer .memthol_chart_container .chart_style {
   width: 100%;
@@ -142,202 +143,6 @@ header code.filter_label {
 header .h1 {
   color: #8dedff;
 }
-header .tab_list {
-  list-style-type: none;
-  overflow: hidden;
-  font-size: 0;
-  padding: 0;
-  font-size: 16px;
-  margin: 0;
-  padding: 0 10%;
-  height: 45px;
-}
-header .tab_list .expand_button {
-  max-width: 25px;
-  float: left;
-  content: url("../pics/expand.png");
-}
-header .tab_list .expand_button:hover {
-  cursor: pointer;
-}
-header .tab_list .collapse_button {
-  max-width: 25px;
-  float: left;
-  content: url("../pics/collapse.png");
-}
-header .tab_list .collapse_button:hover {
-  cursor: pointer;
-}
-header .tab_list .move_up_button {
-  max-width: 25px;
-  float: left;
-  content: url("../pics/arrow_up.png");
-}
-header .tab_list .move_up_button:hover {
-  cursor: pointer;
-}
-header .tab_list .move_down_button {
-  max-width: 25px;
-  float: left;
-  content: url("../pics/arrow_down.png");
-}
-header .tab_list .move_down_button:hover {
-  cursor: pointer;
-}
-header .tab_list .close_button {
-  max-width: 25px;
-  float: right;
-  content: url("../pics/close.png");
-}
-header .tab_list .close_button:hover {
-  cursor: pointer;
-}
-header .tab_list .add_button {
-  max-width: 25px;
-  float: right;
-  content: url("../pics/add.png");
-}
-header .tab_list .add_button:hover {
-  cursor: pointer;
-}
-header .tab_list .inactive_tick_button {
-  max-width: 25px;
-  float: right;
-  content: url("../pics/tick_inactive.png");
-}
-header .tab_list .inactive_tick_button:hover {
-  cursor: pointer;
-}
-header .tab_list .active_tick_button {
-  max-width: 25px;
-  float: right;
-  content: url("../pics/tick_active.png");
-}
-header .tab_list .active_tick_button:hover {
-  cursor: pointer;
-}
-header .tab_list .refresh_button {
-  max-width: 25px;
-  float: right;
-  content: url("../pics/refresh.png");
-}
-header .tab_list .refresh_button:hover {
-  cursor: pointer;
-}
-header .tab_list .li_left {
-  float: left;
-}
-header .tab_list .li_left .tab_active {
-  display: block;
-  font-size: 16px;
-  text-align: center;
-  border-radius: 5px;
-  padding: 14px 16px;
-  text-decoration: none;
-  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
-  color: white;
-  background-image: linear-gradient(#8dedff, black);
-}
-header .tab_list .li_left .tab_active:hover, header .tab_list .li_left .tab_active:active {
-  text-decoration: underline;
-  cursor: pointer;
-}
-header .tab_list .li_left .tab_inactive {
-  display: block;
-  font-size: 16px;
-  text-align: center;
-  border-radius: 5px;
-  padding: 14px 16px;
-  text-decoration: none;
-  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
-  color: #8dedff;
-  background-image: linear-gradient(#3a3a3a, black);
-}
-header .tab_list .li_left .tab_inactive:hover, header .tab_list .li_left .tab_inactive:active {
-  text-decoration: underline;
-  cursor: pointer;
-}
-header .tab_list .li_left .tab_inactive:hover, header .tab_list .li_left .tab_inactive:active {
-  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
-  color: white;
-  background-image: linear-gradient(#8dedff, black);
-}
-header .tab_list .li_right {
-  float: right;
-}
-header .tab_list .li_right .tab_active {
-  display: block;
-  font-size: 16px;
-  text-align: center;
-  border-radius: 5px;
-  padding: 14px 16px;
-  text-decoration: none;
-  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
-  color: white;
-  background-image: linear-gradient(#8dedff, black);
-}
-header .tab_list .li_right .tab_active:hover, header .tab_list .li_right .tab_active:active {
-  text-decoration: underline;
-  cursor: pointer;
-}
-header .tab_list .li_right .tab_inactive {
-  display: block;
-  font-size: 16px;
-  text-align: center;
-  border-radius: 5px;
-  padding: 14px 16px;
-  text-decoration: none;
-  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
-  color: #8dedff;
-  background-image: linear-gradient(#3a3a3a, black);
-}
-header .tab_list .li_right .tab_inactive:hover, header .tab_list .li_right .tab_inactive:active {
-  text-decoration: underline;
-  cursor: pointer;
-}
-header .tab_list .li_right .tab_inactive:hover, header .tab_list .li_right .tab_inactive:active {
-  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
-  color: white;
-  background-image: linear-gradient(#8dedff, black);
-}
-header .tab_list .li_center {
-  float: center;
-}
-header .tab_list .li_center .tab_active {
-  display: block;
-  font-size: 16px;
-  text-align: center;
-  border-radius: 5px;
-  padding: 14px 16px;
-  text-decoration: none;
-  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
-  color: white;
-  background-image: linear-gradient(#8dedff, black);
-}
-header .tab_list .li_center .tab_active:hover, header .tab_list .li_center .tab_active:active {
-  text-decoration: underline;
-  cursor: pointer;
-}
-header .tab_list .li_center .tab_inactive {
-  display: block;
-  font-size: 16px;
-  text-align: center;
-  border-radius: 5px;
-  padding: 14px 16px;
-  text-decoration: none;
-  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
-  color: #8dedff;
-  background-image: linear-gradient(#3a3a3a, black);
-}
-header .tab_list .li_center .tab_inactive:hover, header .tab_list .li_center .tab_inactive:active {
-  text-decoration: underline;
-  cursor: pointer;
-}
-header .tab_list .li_center .tab_inactive:hover, header .tab_list .li_center .tab_inactive:active {
-  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
-  color: white;
-  background-image: linear-gradient(#8dedff, black);
-}
 
 footer {
   font: 16px SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
@@ -347,6 +152,8 @@ footer {
   position: fixed;
   z-index: 600;
   left: 0;
+  background-color: black;
+  width: 100%;
   bottom: 0;
   box-shadow: 0px 0px 10px 10px black;
 }
@@ -363,94 +170,344 @@ footer code.filter_label {
 footer .h1 {
   color: #8dedff;
 }
-footer .tab_list {
+footer .expand_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/expand.png");
+}
+footer .expand_button:hover {
+  cursor: pointer;
+}
+footer .collapse_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/collapse.png");
+}
+footer .collapse_button:hover {
+  cursor: pointer;
+}
+footer .move_up_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/arrow_up.png");
+}
+footer .move_up_button:hover {
+  cursor: pointer;
+}
+footer .move_down_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/arrow_down.png");
+}
+footer .move_down_button:hover {
+  cursor: pointer;
+}
+footer .refresh_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+footer .refresh_button:hover {
+  cursor: pointer;
+}
+footer .close_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/close.png");
+}
+footer .close_button:hover {
+  cursor: pointer;
+}
+footer .add_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/add.png");
+}
+footer .add_button:hover {
+  cursor: pointer;
+}
+footer .inactive_tick_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/tick_inactive.png");
+}
+footer .inactive_tick_button:hover {
+  cursor: pointer;
+}
+footer .active_tick_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/tick_active.png");
+}
+footer .active_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs {
+  height: 45px;
+  margin: 0;
+  padding: 0;
+}
+footer .footer_tabs .footer_tabs_left {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: left;
+  height: 45px;
+  width: 10%;
+}
+footer .footer_tabs .footer_tabs_left .expand_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/expand.png");
+}
+footer .footer_tabs .footer_tabs_left .expand_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_left .collapse_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/collapse.png");
+}
+footer .footer_tabs .footer_tabs_left .collapse_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_left .move_up_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/arrow_up.png");
+}
+footer .footer_tabs .footer_tabs_left .move_up_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_left .move_down_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/arrow_down.png");
+}
+footer .footer_tabs .footer_tabs_left .move_down_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_left .refresh_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+footer .footer_tabs .footer_tabs_left .refresh_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_left .close_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/close.png");
+}
+footer .footer_tabs .footer_tabs_left .close_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_left .add_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/add.png");
+}
+footer .footer_tabs .footer_tabs_left .add_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_left .inactive_tick_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/tick_inactive.png");
+}
+footer .footer_tabs .footer_tabs_left .inactive_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_left .active_tick_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/tick_active.png");
+}
+footer .footer_tabs .footer_tabs_left .active_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_right {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: right;
+  vertical-align: middle;
+  height: 45px;
+  width: 10%;
+}
+footer .footer_tabs .footer_tabs_right .expand_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/expand.png");
+}
+footer .footer_tabs .footer_tabs_right .expand_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_right .collapse_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/collapse.png");
+}
+footer .footer_tabs .footer_tabs_right .collapse_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_right .move_up_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/arrow_up.png");
+}
+footer .footer_tabs .footer_tabs_right .move_up_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_right .move_down_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/arrow_down.png");
+}
+footer .footer_tabs .footer_tabs_right .move_down_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_right .refresh_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/refresh.png");
+}
+footer .footer_tabs .footer_tabs_right .refresh_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_right .close_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/close.png");
+}
+footer .footer_tabs .footer_tabs_right .close_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_right .add_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/add.png");
+}
+footer .footer_tabs .footer_tabs_right .add_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_right .inactive_tick_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/tick_inactive.png");
+}
+footer .footer_tabs .footer_tabs_right .inactive_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_right .active_tick_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/tick_active.png");
+}
+footer .footer_tabs .footer_tabs_right .active_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: left;
   list-style-type: none;
   overflow: hidden;
   font-size: 0;
   padding: 0;
   font-size: 16px;
   margin: 0;
-  padding: 0 10%;
+  padding: 0;
   height: 45px;
+  height: 45px;
+  width: 79.9%;
 }
-footer .tab_list .expand_button {
-  max-width: 25px;
+footer .footer_tabs .footer_tabs_center .expand_button {
+  height: 100%;
   float: left;
   content: url("../pics/expand.png");
 }
-footer .tab_list .expand_button:hover {
+footer .footer_tabs .footer_tabs_center .expand_button:hover {
   cursor: pointer;
 }
-footer .tab_list .collapse_button {
-  max-width: 25px;
+footer .footer_tabs .footer_tabs_center .collapse_button {
+  height: 100%;
   float: left;
   content: url("../pics/collapse.png");
 }
-footer .tab_list .collapse_button:hover {
+footer .footer_tabs .footer_tabs_center .collapse_button:hover {
   cursor: pointer;
 }
-footer .tab_list .move_up_button {
-  max-width: 25px;
+footer .footer_tabs .footer_tabs_center .move_up_button {
+  height: 100%;
   float: left;
   content: url("../pics/arrow_up.png");
 }
-footer .tab_list .move_up_button:hover {
+footer .footer_tabs .footer_tabs_center .move_up_button:hover {
   cursor: pointer;
 }
-footer .tab_list .move_down_button {
-  max-width: 25px;
+footer .footer_tabs .footer_tabs_center .move_down_button {
+  height: 100%;
   float: left;
   content: url("../pics/arrow_down.png");
 }
-footer .tab_list .move_down_button:hover {
+footer .footer_tabs .footer_tabs_center .move_down_button:hover {
   cursor: pointer;
 }
-footer .tab_list .close_button {
-  max-width: 25px;
-  float: right;
-  content: url("../pics/close.png");
-}
-footer .tab_list .close_button:hover {
-  cursor: pointer;
-}
-footer .tab_list .add_button {
-  max-width: 25px;
-  float: right;
-  content: url("../pics/add.png");
-}
-footer .tab_list .add_button:hover {
-  cursor: pointer;
-}
-footer .tab_list .inactive_tick_button {
-  max-width: 25px;
-  float: right;
-  content: url("../pics/tick_inactive.png");
-}
-footer .tab_list .inactive_tick_button:hover {
-  cursor: pointer;
-}
-footer .tab_list .active_tick_button {
-  max-width: 25px;
-  float: right;
-  content: url("../pics/tick_active.png");
-}
-footer .tab_list .active_tick_button:hover {
-  cursor: pointer;
-}
-footer .tab_list .refresh_button {
-  max-width: 25px;
+footer .footer_tabs .footer_tabs_center .refresh_button {
+  height: 100%;
   float: right;
   content: url("../pics/refresh.png");
 }
-footer .tab_list .refresh_button:hover {
+footer .footer_tabs .footer_tabs_center .refresh_button:hover {
   cursor: pointer;
 }
-footer .tab_list .li_left {
+footer .footer_tabs .footer_tabs_center .close_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/close.png");
+}
+footer .footer_tabs .footer_tabs_center .close_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .add_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/add.png");
+}
+footer .footer_tabs .footer_tabs_center .add_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .inactive_tick_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/tick_inactive.png");
+}
+footer .footer_tabs .footer_tabs_center .inactive_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .active_tick_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/tick_active.png");
+}
+footer .footer_tabs .footer_tabs_center .active_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .li_left {
   float: left;
 }
-footer .tab_list .li_left .tab_active {
+footer .footer_tabs .footer_tabs_center .li_left .tab_active {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
   text-align: center;
   border-radius: 5px;
   padding: 14px 16px;
@@ -459,13 +516,16 @@ footer .tab_list .li_left .tab_active {
   color: white;
   background-image: linear-gradient(#8dedff, black);
 }
-footer .tab_list .li_left .tab_active:hover, footer .tab_list .li_left .tab_active:active {
+footer .footer_tabs .footer_tabs_center .li_left .tab_active:hover, footer .footer_tabs .footer_tabs_center .li_left .tab_active:active {
   text-decoration: underline;
   cursor: pointer;
 }
-footer .tab_list .li_left .tab_inactive {
+footer .footer_tabs .footer_tabs_center .li_left .tab_inactive {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
   text-align: center;
   border-radius: 5px;
   padding: 14px 16px;
@@ -474,21 +534,24 @@ footer .tab_list .li_left .tab_inactive {
   color: #8dedff;
   background-image: linear-gradient(#3a3a3a, black);
 }
-footer .tab_list .li_left .tab_inactive:hover, footer .tab_list .li_left .tab_inactive:active {
+footer .footer_tabs .footer_tabs_center .li_left .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .li_left .tab_inactive:active {
   text-decoration: underline;
   cursor: pointer;
 }
-footer .tab_list .li_left .tab_inactive:hover, footer .tab_list .li_left .tab_inactive:active {
+footer .footer_tabs .footer_tabs_center .li_left .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .li_left .tab_inactive:active {
   text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
   color: white;
   background-image: linear-gradient(#8dedff, black);
 }
-footer .tab_list .li_right {
+footer .footer_tabs .footer_tabs_center .li_right {
   float: right;
 }
-footer .tab_list .li_right .tab_active {
+footer .footer_tabs .footer_tabs_center .li_right .tab_active {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
   text-align: center;
   border-radius: 5px;
   padding: 14px 16px;
@@ -497,13 +560,16 @@ footer .tab_list .li_right .tab_active {
   color: white;
   background-image: linear-gradient(#8dedff, black);
 }
-footer .tab_list .li_right .tab_active:hover, footer .tab_list .li_right .tab_active:active {
+footer .footer_tabs .footer_tabs_center .li_right .tab_active:hover, footer .footer_tabs .footer_tabs_center .li_right .tab_active:active {
   text-decoration: underline;
   cursor: pointer;
 }
-footer .tab_list .li_right .tab_inactive {
+footer .footer_tabs .footer_tabs_center .li_right .tab_inactive {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
   text-align: center;
   border-radius: 5px;
   padding: 14px 16px;
@@ -512,21 +578,24 @@ footer .tab_list .li_right .tab_inactive {
   color: #8dedff;
   background-image: linear-gradient(#3a3a3a, black);
 }
-footer .tab_list .li_right .tab_inactive:hover, footer .tab_list .li_right .tab_inactive:active {
+footer .footer_tabs .footer_tabs_center .li_right .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .li_right .tab_inactive:active {
   text-decoration: underline;
   cursor: pointer;
 }
-footer .tab_list .li_right .tab_inactive:hover, footer .tab_list .li_right .tab_inactive:active {
+footer .footer_tabs .footer_tabs_center .li_right .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .li_right .tab_inactive:active {
   text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
   color: white;
   background-image: linear-gradient(#8dedff, black);
 }
-footer .tab_list .li_center {
+footer .footer_tabs .footer_tabs_center .li_center {
   float: center;
 }
-footer .tab_list .li_center .tab_active {
+footer .footer_tabs .footer_tabs_center .li_center .tab_active {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
   text-align: center;
   border-radius: 5px;
   padding: 14px 16px;
@@ -535,13 +604,16 @@ footer .tab_list .li_center .tab_active {
   color: white;
   background-image: linear-gradient(#8dedff, black);
 }
-footer .tab_list .li_center .tab_active:hover, footer .tab_list .li_center .tab_active:active {
+footer .footer_tabs .footer_tabs_center .li_center .tab_active:hover, footer .footer_tabs .footer_tabs_center .li_center .tab_active:active {
   text-decoration: underline;
   cursor: pointer;
 }
-footer .tab_list .li_center .tab_inactive {
+footer .footer_tabs .footer_tabs_center .li_center .tab_inactive {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
   text-align: center;
   border-radius: 5px;
   padding: 14px 16px;
@@ -550,19 +622,62 @@ footer .tab_list .li_center .tab_inactive {
   color: #8dedff;
   background-image: linear-gradient(#3a3a3a, black);
 }
-footer .tab_list .li_center .tab_inactive:hover, footer .tab_list .li_center .tab_inactive:active {
+footer .footer_tabs .footer_tabs_center .li_center .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .li_center .tab_inactive:active {
   text-decoration: underline;
   cursor: pointer;
 }
-footer .tab_list .li_center .tab_inactive:hover, footer .tab_list .li_center .tab_inactive:active {
+footer .footer_tabs .footer_tabs_center .li_center .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .li_center .tab_inactive:active {
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .footer_tabs .footer_tabs_center .tab_active {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .footer_tabs .footer_tabs_center .tab_active:hover, footer .footer_tabs .footer_tabs_center .tab_active:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .tab_inactive {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: #8dedff;
+  background-image: linear-gradient(#3a3a3a, black);
+}
+footer .footer_tabs .footer_tabs_center .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .tab_inactive:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .tab_inactive:active {
   text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
   color: white;
   background-image: linear-gradient(#8dedff, black);
 }
 footer .footer_display {
-  background-color: black;
-  width: 100%;
   height: 400px;
+}
+footer .footer_display .separator {
+  width: 100%;
+  height: 1vh;
 }
 footer .footer_display .filter_ul {
   list-style-type: none;
@@ -573,17 +688,23 @@ footer .footer_display .filter_ul {
 footer .footer_display .filter_ul li {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
 }
 footer .footer_display .filter_ul .filter_buttons {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
   width: 10%;
-  height: 35px;
+  height: 45px;
   text-align: right;
   float: left;
 }
 footer .footer_display .filter_ul .filter_buttons .expand_button {
-  max-width: 25px;
+  height: 100%;
   float: left;
   content: url("../pics/expand.png");
 }
@@ -591,7 +712,7 @@ footer .footer_display .filter_ul .filter_buttons .expand_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_buttons .collapse_button {
-  max-width: 25px;
+  height: 100%;
   float: left;
   content: url("../pics/collapse.png");
 }
@@ -599,7 +720,7 @@ footer .footer_display .filter_ul .filter_buttons .collapse_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_buttons .move_up_button {
-  max-width: 25px;
+  height: 100%;
   float: left;
   content: url("../pics/arrow_up.png");
 }
@@ -607,15 +728,23 @@ footer .footer_display .filter_ul .filter_buttons .move_up_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_buttons .move_down_button {
-  max-width: 25px;
+  height: 100%;
   float: left;
   content: url("../pics/arrow_down.png");
 }
 footer .footer_display .filter_ul .filter_buttons .move_down_button:hover {
   cursor: pointer;
 }
+footer .footer_display .filter_ul .filter_buttons .refresh_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+footer .footer_display .filter_ul .filter_buttons .refresh_button:hover {
+  cursor: pointer;
+}
 footer .footer_display .filter_ul .filter_buttons .close_button {
-  max-width: 25px;
+  height: 100%;
   float: right;
   content: url("../pics/close.png");
 }
@@ -623,7 +752,7 @@ footer .footer_display .filter_ul .filter_buttons .close_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_buttons .add_button {
-  max-width: 25px;
+  height: 100%;
   float: right;
   content: url("../pics/add.png");
 }
@@ -631,7 +760,7 @@ footer .footer_display .filter_ul .filter_buttons .add_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_buttons .inactive_tick_button {
-  max-width: 25px;
+  height: 100%;
   float: right;
   content: url("../pics/tick_inactive.png");
 }
@@ -639,38 +768,36 @@ footer .footer_display .filter_ul .filter_buttons .inactive_tick_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_buttons .active_tick_button {
-  max-width: 25px;
+  height: 100%;
   float: right;
   content: url("../pics/tick_active.png");
 }
 footer .footer_display .filter_ul .filter_buttons .active_tick_button:hover {
   cursor: pointer;
 }
-footer .footer_display .filter_ul .filter_buttons .refresh_button {
-  max-width: 25px;
-  float: right;
-  content: url("../pics/refresh.png");
-}
-footer .footer_display .filter_ul .filter_buttons .refresh_button:hover {
-  cursor: pointer;
-}
 footer .footer_display .filter_ul .filter_section {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
   float: left;
   font-size: 150%;
   color: #00d8ff;
   width: 80%;
-  line-height: 35px;
-  height: 35px;
+  line-height: 45px;
+  height: 45px;
 }
 footer .footer_display .filter_ul .filter_setting {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
   text-align: center;
   width: 10%;
-  line-height: 35px;
-  height: 35px;
+  line-height: 45px;
+  height: 45px;
   float: left;
   border-right-width: 1px;
   border-right-color: white;
@@ -690,10 +817,13 @@ footer .footer_display .filter_ul .filter_setting select {
 footer .footer_display .filter_ul .filter_prop {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
   text-align: center;
   width: 5%;
-  line-height: 35px;
-  height: 35px;
+  line-height: 45px;
+  height: 45px;
   float: left;
   border-right-width: 1px;
   border-right-color: white;
@@ -713,10 +843,13 @@ footer .footer_display .filter_ul .filter_prop select {
 footer .footer_display .filter_ul .filter_cmp {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
   text-align: center;
   width: 5%;
-  line-height: 35px;
-  height: 35px;
+  line-height: 45px;
+  height: 45px;
   float: left;
   border-right-width: 1px;
   border-right-color: white;
@@ -736,9 +869,12 @@ footer .footer_display .filter_ul .filter_cmp select {
 footer .footer_display .filter_ul .filter_val {
   display: block;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
   text-align: center;
   min-width: 70%;
-  height: 35px;
+  height: 45px;
   float: left;
   border-bottom-width: 1px;
   border-bottom-color: white;
@@ -749,7 +885,7 @@ footer .footer_display .filter_ul .filter_val .filter_value {
   color: #8dedff;
   font: 16px Monaco, Consola, sans-serif;
   min-width: 5%;
-  height: 28px;
+  height: 36px;
   background-color: #3a3a3a;
   border-radius: 5px;
   border-style: hidden;
@@ -761,7 +897,7 @@ footer .footer_display .filter_ul .filter_val .filter_settings_value {
   color: #8dedff;
   font: 16px Monaco, Consola, sans-serif;
   width: 70%;
-  height: 28px;
+  height: 36px;
   background-color: #3a3a3a;
   border-radius: 5px;
   border-style: hidden;

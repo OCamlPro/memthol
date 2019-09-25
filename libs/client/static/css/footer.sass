@@ -7,16 +7,44 @@
 
 footer
     @include menu_style
+    @include buttons
 
+    background-color: $menu_bg
+    width: 100%
     bottom: 0
     box-shadow: 0px 0px 10px 10px $menu_bg
 
-    // #footer_tabs
+    .footer_tabs
+        height: $layout_tab_height
+        margin: 0
+        padding: 0
+
+        .footer_tabs_left
+            @include hblock(left)
+            @include float_buttons(right)
+            height: $layout_tab_height
+            width: $layout_split_left_width
+
+        .footer_tabs_right
+            @include hblock(right)
+            @include float_buttons(left)
+            vertical-align: middle
+            height: $layout_tab_height
+            width: $layout_split_right_width
+
+        .footer_tabs_center
+            @include hblock(left)
+            @include tab_list
+            @include menu_tabs
+            height: $layout_tab_height
+            width: $layout_split_center_width
 
     .footer_display
-        background-color: $menu_bg
-        width: 100%
         height: $layout_footer_display_height
+
+        .separator
+            width: 100%
+            height: 1vh
 
         .filter_ul
             @include hblock_container
@@ -24,7 +52,7 @@ footer
             li
                 @include hblock
 
-            $cell_height: 35px
+            $cell_height: $layout_tab_height
             $prop_width: 5%
             $cmp_width: 5%
             $setting_width: $prop_width + $cmp_width

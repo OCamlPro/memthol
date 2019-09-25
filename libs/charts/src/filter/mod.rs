@@ -190,6 +190,11 @@ impl Filters {
     pub fn find_dead_match(&mut self, alloc: &AllocUid) -> Option<uid::FilterUid> {
         self.memory.get(alloc).map(|uid| *uid)
     }
+
+    /// Resets all the filters.
+    pub fn reset(&mut self) {
+        self.memory.clear()
+    }
 }
 
 /// # Message handling

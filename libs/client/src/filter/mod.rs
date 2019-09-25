@@ -242,15 +242,6 @@ impl Filters {
                     let active = Some(Some(filter.uid())) == active;
                     filter.spec().render_tab(active)
                 } ) }
-                // Add filter button.
-                <li
-                    class = style::class::tabs::li::get(false)
-                >
-                    { Button::add(
-                        "Create a new filter",
-                        |_| msg::to_server::FiltersMsg::add_new().into()
-                    ) }
-                </li>
             </>
         }
     }
@@ -342,21 +333,19 @@ impl FilterSpecExt for FilterSpec {
         let spec = self.clone();
         html!(
             <>
+                <div class = style::class::filter::SEP/>
                 <ul class = style::class::filter::LINE>
                     <li class = style::class::filter::BUTTONS>
                         {
                             if self.edited() {
-                                Button::inactive_tickbox(
+                                Button::refresh(
                                     "Apply the settings",
                                     move |_| msg::to_server::FiltersMsg::update_spec(
                                         uid, spec.clone()
                                     ).into()
                                 )
                             } else {
-                                Button::active_tickbox(
-                                    "Settings have not been edited",
-                                    move |_| Msg::Noop,
-                                )
+                                html!(<a/>)
                             }
                         }
                     </li>
@@ -427,6 +416,7 @@ fn filter_update(filter: &mut Filter, msg: msg::FilterMsg) -> Res<ShouldRender> 
 fn render_subs(filter: &Filter) -> Html {
     html! {
         <>
+            <ul class = style::class::filter::SEP/>
             <ul class = style::class::filter::LINE>
                 <li class = style::class::filter::BUTTONS>
                     {

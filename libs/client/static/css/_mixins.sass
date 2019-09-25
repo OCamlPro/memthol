@@ -18,6 +18,8 @@
         @include button_move_up(left)
     .move_down_button
         @include button_move_down(left)
+    .refresh_button
+        @include button_refresh(right)
     .close_button
         @include button_close(right)
     .add_button
@@ -26,8 +28,26 @@
         @include button_tick_inactive(right)
     .active_tick_button
         @include button_tick_active(right)
+
+@mixin float_buttons($left_or_right)
+    .expand_button
+        @include button_expand($left_or_right)
+    .collapse_button
+        @include button_collapse($left_or_right)
+    .move_up_button
+        @include button_move_up($left_or_right)
+    .move_down_button
+        @include button_move_down($left_or_right)
     .refresh_button
-        @include button_refresh(right)
+        @include button_refresh($left_or_right)
+    .close_button
+        @include button_close($left_or_right)
+    .add_button
+        @include button_add($left_or_right)
+    .inactive_tick_button
+        @include button_tick_inactive($left_or_right)
+    .active_tick_button
+        @include button_tick_active($left_or_right)
 
 /// Code mixins.
 
@@ -68,9 +88,12 @@
     padding: 0
 
 /// An horizontal block.
-@mixin hblock
+@mixin hblock($float: center)
     display: block
     font-size: $font-size
+    margin: 0
+    padding: 0
+    float: $float
 
 @mixin inactive_tab_style
     @include font_black_shadow
@@ -129,22 +152,21 @@
     .h1
         color: $light_blue
 
-    .tab_list
-        @include hblock_container
-        @include buttons
+@mixin tab_list
+    @include hblock_container
+    @include buttons
 
-        font-size: $font_size
-        margin: 0
-        padding: 0 $layout_left_right_margin
-        height: $layout_tab_height
+    font-size: $font_size
+    margin: 0
+    padding: 0
+    height: $layout_tab_height
 
-        .li_left
-            @include menu_tabs
-            float: left
-        .li_right
-            @include menu_tabs
-            float: right
-        .li_center
-            @include menu_tabs
-            float: center
-
+    .li_left
+        @include menu_tabs
+        float: left
+    .li_right
+        @include menu_tabs
+        float: right
+    .li_center
+        @include menu_tabs
+        float: center

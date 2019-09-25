@@ -30,11 +30,8 @@ body .body_header_footer h1 {
 body .body_header_footer h2 {
   color: #3a3a3a;
 }
-body .body_header_footer .memthol_chart_container {
-  .select_axis-font: 100% SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
-}
 body .body_header_footer .memthol_chart_container .expand_button {
-  max-width: 25px;
+  height: 100%;
   float: left;
   content: url("../pics/expand.png");
 }
@@ -42,7 +39,7 @@ body .body_header_footer .memthol_chart_container .expand_button:hover {
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .collapse_button {
-  max-width: 25px;
+  height: 100%;
   float: left;
   content: url("../pics/collapse.png");
 }
@@ -50,7 +47,7 @@ body .body_header_footer .memthol_chart_container .collapse_button:hover {
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .move_up_button {
-  max-width: 25px;
+  height: 100%;
   float: left;
   content: url("../pics/arrow_up.png");
 }
@@ -58,15 +55,23 @@ body .body_header_footer .memthol_chart_container .move_up_button:hover {
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .move_down_button {
-  max-width: 25px;
+  height: 100%;
   float: left;
   content: url("../pics/arrow_down.png");
 }
 body .body_header_footer .memthol_chart_container .move_down_button:hover {
   cursor: pointer;
 }
+body .body_header_footer .memthol_chart_container .refresh_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+body .body_header_footer .memthol_chart_container .refresh_button:hover {
+  cursor: pointer;
+}
 body .body_header_footer .memthol_chart_container .close_button {
-  max-width: 25px;
+  height: 100%;
   float: right;
   content: url("../pics/close.png");
 }
@@ -74,7 +79,7 @@ body .body_header_footer .memthol_chart_container .close_button:hover {
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .add_button {
-  max-width: 25px;
+  height: 100%;
   float: right;
   content: url("../pics/add.png");
 }
@@ -82,7 +87,7 @@ body .body_header_footer .memthol_chart_container .add_button:hover {
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .inactive_tick_button {
-  max-width: 25px;
+  height: 100%;
   float: right;
   content: url("../pics/tick_inactive.png");
 }
@@ -90,23 +95,19 @@ body .body_header_footer .memthol_chart_container .inactive_tick_button:hover {
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .active_tick_button {
-  max-width: 25px;
+  height: 100%;
   float: right;
   content: url("../pics/tick_active.png");
 }
 body .body_header_footer .memthol_chart_container .active_tick_button:hover {
   cursor: pointer;
 }
-body .body_header_footer .memthol_chart_container .refresh_button {
-  max-width: 25px;
-  float: right;
-  content: url("../pics/refresh.png");
-}
-body .body_header_footer .memthol_chart_container .refresh_button:hover {
-  cursor: pointer;
-}
 body .body_header_footer .memthol_chart_container .chart_header {
   margin: 0 10%;
+  height: 2vh;
+}
+body .body_header_footer .memthol_chart_container .chart_header select {
+  font: 100% SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
 }
 body .body_header_footer .memthol_chart_container .chart_style {
   width: 100%;

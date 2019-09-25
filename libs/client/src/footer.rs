@@ -33,26 +33,40 @@ impl Footer {
     /// Renders itself.
     pub fn render(&self, filters: &filter::Filters) -> Html {
         html! {
-            <footer id=style::id::FOOTER>
-                <ul id=style::id::FOOTER_TABS class=style::class::tabs::UL>
-                    { for NormalFooterTab::all()
-                        .into_iter()
-                        .map(|tab|
-                            tab.render(Some(tab) == self.active.and_then(FooterTab::get_normal_tab))
-                        )
-                    }
-                    { filters.render_tabs(self.active.and_then(FooterTab::get_filter)) }
+            <footer id = style::id::FOOTER>
+                <ul class = style::class::footer::TABS>
+                    <li class = style::class::footer::tabs::LEFT>
+                        { Button::refresh(
+                            "Reload all points in all charts",
+                            |_| msg::to_server::ChartsMsg::reload().into()
+                        ) }
+                    </li>
+                    <li class = style::class::footer::tabs::CENTER>
+                        { for NormalFooterTab::all()
+                            .into_iter()
+                            .map(|tab|
+                                tab.render(Some(tab) == self.active.and_then(FooterTab::get_normal_tab))
+                            )
+                        }
+                        { filters.render_tabs(self.active.and_then(FooterTab::get_filter)) }
+                    </li>
+                    <li class = style::class::footer::tabs::RIGHT>
+                        { Button::add(
+                            "Create a new filter",
+                            |_| msg::to_server::FiltersMsg::add_new().into()
+                        ) }
+                    </li>
                 </ul>
                 {
                     match self.active {
                         None => html!(<a/>),
                         Some(FooterTab::Filter(active)) => html! {
-                            <div class=style::class::footer::DISPLAY>
+                            <div class = style::class::footer::DISPLAY>
                                 { filters.render_filter(active) }
                             </div>
                         },
                         Some(FooterTab::Normal(NormalFooterTab::Info)) => html! {
-                            <div class=style::class::footer::DISPLAY>
+                            <div class = style::class::footer::DISPLAY>
                                 { "Info footer tab is not implemented." }
                             </div>
                         },
@@ -75,9 +89,9 @@ impl NormalFooterTab {
     pub fn render(&self, active: bool) -> Html {
         let tab = *self;
         html! {
-            <li class={ style::class::tabs::li::get(true) }>
+            <li class = { style::class::tabs::li::get(true) }>
                 <a
-                    class={ style::class::tabs::get(active) }
+                    class = { style::class::tabs::get(active) }
                     onclick=|_| msg::FooterMsg::toggle_tab(tab.into())
                 > {
                     self.to_string()

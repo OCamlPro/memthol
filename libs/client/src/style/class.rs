@@ -121,6 +121,8 @@ pub mod filter {
     pub static BUTTONS: &str = "filter_buttons";
     /// Filter line class.
     pub static LINE: &str = "filter_ul";
+    /// Separator.
+    pub static SEP: &str = "separator";
 
     /// Filter line classes.
     pub mod line {
@@ -149,4 +151,16 @@ pub mod filter {
 pub mod footer {
     /// Display window.
     pub static DISPLAY: &str = "footer_display";
+    /// Class of the tabs of the footer.
+    pub static TABS: &str = "footer_tabs";
+
+    /// Tab-related classes.
+    pub mod tabs {
+        /// Class of the left part of the tabs.
+        pub static LEFT: &str = "footer_tabs_left";
+        /// Class of the right part of the tabs.
+        pub static RIGHT: &str = "footer_tabs_right";
+        /// Class of the center part of the tabs.
+        pub static CENTER: &str = "footer_tabs_center";
+    }
 }

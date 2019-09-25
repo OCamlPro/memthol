@@ -144,6 +144,22 @@ impl Charts {
 
                 self.charts.push(nu_chart)
             }
+
+            msg::to_server::ChartsMsg::Reload => {
+                let mut new_points = point::ChartPoints::new();
+                for chart in &mut self.charts {
+                    chart.reset(&self.filters);
+                    self.filters.reset();
+                    let points = chart.new_points(&mut self.filters, true).chain_err(|| {
+                        format!("while generating points for chart #{}", chart.uid())
+                    })?;
+                    let prev = new_points.insert(chart.uid(), points);
+                    if prev.is_some() {
+                        bail!("chart UID collision on #{}", chart.uid())
+                    }
+                }
+                to_client_msgs.push(msg::to_client::ChartsMsg::new_points(new_points))
+            }
         }
 
         Ok(to_client_msgs)
