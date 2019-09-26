@@ -100,6 +100,44 @@ impl Filters {
     pub fn update(&mut self, msg: msg::FiltersMsg) -> Res<ShouldRender> {
         use msg::{FilterSpecMsg::*, FiltersMsg::*};
         match msg {
+            Save(None) => {
+                info!("saving catch-all's spec");
+                self.catch_all.unset_edited();
+                self.to_model.emit(
+                    msg::to_server::FiltersMsg::update_spec(None, self.catch_all.clone()).into(),
+                );
+                Ok(true)
+            }
+            Save(Some(uid)) => {
+                let filter = self.get_mut(uid)?;
+                info!("saving {}...", filter.name());
+                let spec = if filter.spec().edited() {
+                    filter.spec_mut().unset_edited();
+                    let spec = filter.spec().clone();
+                    Some(spec)
+                } else {
+                    None
+                };
+                let subs = if filter.edited() {
+                    filter.unset_edited();
+                    let subs = filter.iter().map(SubFilter::clone).collect();
+                    Some(subs)
+                } else {
+                    None
+                };
+
+                if let Some(spec) = spec {
+                    info!("- spec");
+                    self.to_model
+                        .emit(msg::to_server::FiltersMsg::update_spec(Some(uid), spec).into());
+                }
+                if let Some(subs) = subs {
+                    info!("- subs");
+                    self.to_model
+                        .emit(msg::to_server::FilterMsg::replace_subs(uid, subs).into());
+                }
+                Ok(true)
+            }
             FilterSpec {
                 uid,
                 msg: ChangeName(new_name),
@@ -182,22 +220,29 @@ impl Filters {
     pub fn server_update(&mut self, msg: msg::from_server::FiltersMsg) -> Res<ShouldRender> {
         use msg::from_server::FiltersMsg::*;
         match msg {
-            Add(filter) => {
-                let prev = self.filters.insert(filter.uid(), filter);
-                if let Some(prev) = prev {
-                    bail!("filter UID collision on #{}", prev.uid())
-                }
-                Ok(true)
-            }
-            Rm(uid) => {
-                self.remove(uid)?;
-                Ok(true)
-            }
-            UpdateSpecs { catch_all, specs } => {
-                self.update_specs(catch_all, specs)?;
-                Ok(true)
-            }
+            Add(filter) => self.add_filter(filter),
+            Rm(uid) => self.rm_filter(uid),
+            UpdateSpecs { catch_all, specs } => self.update_specs(catch_all, specs),
         }
+    }
+
+    /// Adds a filter in the map.
+    ///
+    /// - triggers a refresh of the filters of all the charts.
+    pub fn add_filter(&mut self, filter: Filter) -> Res<ShouldRender> {
+        let prev = self.filters.insert(filter.uid(), filter);
+        if let Some(prev) = prev {
+            bail!("filter UID collision on #{}", prev.uid())
+        }
+        self.to_model.emit(msg::ChartsMsg::refresh_filters());
+        Ok(true)
+    }
+
+    /// Removes a filter from the map.
+    pub fn rm_filter(&mut self, uid: FilterUid) -> Res<ShouldRender> {
+        self.remove(uid)?;
+        self.to_model.emit(msg::ChartsMsg::refresh_filters());
+        Ok(true)
     }
 
     /// Updates the specifications of the filters in the map.
@@ -207,7 +252,7 @@ impl Filters {
         &mut self,
         catch_all: Option<FilterSpec>,
         mut specs: Map<FilterUid, FilterSpec>,
-    ) -> Res<()> {
+    ) -> Res<ShouldRender> {
         if let Some(mut spec) = catch_all {
             spec.unset_edited();
             self.catch_all = spec
@@ -225,7 +270,7 @@ impl Filters {
             )
         }
         self.to_model.emit(msg::ChartsMsg::refresh_filters());
-        Ok(())
+        Ok(true)
     }
 }
 
@@ -248,15 +293,50 @@ impl Filters {
 
     /// Renders the active filter.
     pub fn render_filter(&self, active: Option<FilterUid>) -> Html {
-        let (settings, filter_opt) = match active {
-            None => (self.catch_all.render_settings(), None),
+        info!("rendering filter");
+        let (settings, edited, filter_opt) = match active {
+            None => (
+                self.catch_all.render_settings(),
+                self.catch_all.edited(),
+                None,
+            ),
             Some(uid) => match self.filters.get(&uid) {
-                Some(filter) => (filter.spec().render_settings(), Some(filter)),
-                None => (html!(<a/>), None),
+                Some(filter) => (
+                    filter.spec().render_settings(),
+                    {
+                        info!("-        filter.edited(): {}", filter.edited());
+                        info!("- filter.spec().edited(): {}", filter.spec().edited());
+                        filter.edited() || filter.spec().edited()
+                    },
+                    Some(filter),
+                ),
+                None => (html!(<a/>), false, None),
             },
         };
         html! {
             <>
+                <div class = style::class::filter::SEP/>
+                <ul class = style::class::filter::LINE>
+                    <li class = style::class::filter::BUTTONS>
+                    </li>
+                    <li class = style::class::filter::line::CELL>
+                        <a class = style::class::filter::line::SECTION_CELL>
+                            { "Settings" }
+                        </a>
+                    </li>
+                    <li class = style::class::filter::BUTTONS>
+                        {
+                            if edited {
+                                Button::save(
+                                    "Save all changes",
+                                    move |_| msg::FiltersMsg::save(active)
+                                )
+                            } else {
+                                html!(<a/>)
+                            }
+                        }
+                    </li>
+                </ul>
                 { settings }
                 {
                     if let Some(filter) = filter_opt {
@@ -330,32 +410,8 @@ impl FilterSpecExt for FilterSpec {
 
     fn render_settings(&self) -> Html {
         let uid = self.uid();
-        let spec = self.clone();
         html!(
             <>
-                <div class = style::class::filter::SEP/>
-                <ul class = style::class::filter::LINE>
-                    <li class = style::class::filter::BUTTONS>
-                        {
-                            if self.edited() {
-                                Button::refresh(
-                                    "Apply the settings",
-                                    move |_| msg::to_server::FiltersMsg::update_spec(
-                                        uid, spec.clone()
-                                    ).into()
-                                )
-                            } else {
-                                html!(<a/>)
-                            }
-                        }
-                    </li>
-                    <li class = style::class::filter::line::CELL>
-                        <a class = style::class::filter::line::SECTION_CELL>
-                            { "Settings" }
-                        </a>
-                    </li>
-                </ul>
-
                 <ul class = style::class::filter::LINE>
                     <li class = style::class::filter::BUTTONS/>
 
@@ -409,35 +465,26 @@ fn filter_update(filter: &mut Filter, msg: msg::FilterMsg) -> Res<ShouldRender> 
             filter.set_edited();
             Ok(true)
         }
-        Sub(sub) => filter.replace(sub).map(|()| true),
+        Sub(sub) => {
+            filter.replace(sub)?;
+            filter.set_edited();
+            Ok(true)
+        }
+        RmSub(uid) => {
+            filter.remove(uid)?;
+            filter.set_edited();
+            Ok(true)
+        }
     }
 }
 
 fn render_subs(filter: &Filter) -> Html {
+    let uid = filter.uid();
     html! {
         <>
             <ul class = style::class::filter::SEP/>
             <ul class = style::class::filter::LINE>
                 <li class = style::class::filter::BUTTONS>
-                    {
-                        let uid = filter.uid();
-                        // # TODO
-                        // Fix this.
-                        let subs: Vec<_> = filter.iter().map(SubFilter::clone).collect();
-                        if filter.edited() {
-                            Button::inactive_tickbox(
-                                "Apply the modifications",
-                                move |_| msg::to_server::FilterMsg::replace_subs(
-                                    uid, subs.clone()
-                                ).into()
-                            )
-                        } else {
-                            Button::active_tickbox(
-                                "Filters have not been edited",
-                                move |_| Msg::Noop,
-                            )
-                        }
-                    }
                 </li>
                 <li class = style::class::filter::line::CELL>
                     <a class = style::class::filter::line::SECTION_CELL>
@@ -446,17 +493,13 @@ fn render_subs(filter: &Filter) -> Html {
                 </li>
             </ul>
             { for filter.iter().map(|sub| {
-                if sub.is_from_client() {
-                    info!("from client");
-                } else {
-                    info!("not from client");
-                }
+                let sub_uid = sub.uid();
                 html!(
                     <ul class = style::class::filter::LINE>
                         <li class = style::class::filter::BUTTONS>
                             { Button::close(
                                 "Remove the filter",
-                                move |_| Msg::warn("filter removing is not implemented")
+                                move |_| msg::FilterMsg::rm_sub(uid, sub_uid)
                             ) }
                         </li>
                         {

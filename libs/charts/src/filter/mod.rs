@@ -319,7 +319,12 @@ impl Filter {
         &mut self.spec
     }
 
-    /// Returns the edited flag.
+    /// Name of the filter.
+    pub fn name(&self) -> &str {
+        self.spec().name()
+    }
+
+    /// True if the filter itself, and not the spec, has been edited.
     pub fn edited(&self) -> bool {
         self.edited
     }
@@ -347,6 +352,15 @@ impl Filter {
             }
         }
         false
+    }
+
+    /// Removes a subfilter.
+    pub fn remove(&mut self, sub_uid: uid::SubFilterUid) -> Res<()> {
+        let prev = self.subs.remove(&sub_uid);
+        if prev.is_none() {
+            bail!("failed to remove unknown subfilter UID #{}", sub_uid)
+        }
+        Ok(())
     }
 
     /// Applies a filter message.

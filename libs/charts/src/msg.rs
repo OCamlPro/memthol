@@ -106,6 +106,15 @@ pub mod to_server {
             }
             .into()
         }
+
+        /// Removes a subfilter.
+        pub fn rm_sub(uid: uid::FilterUid, sub_uid: SubFilterUid) -> Msg {
+            FiltersMsg::Filter {
+                uid,
+                msg: Self::Rm(sub_uid),
+            }
+            .into()
+        }
     }
 
     impl Into<yew::format::Text> for Msg {

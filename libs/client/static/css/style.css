@@ -62,6 +62,14 @@ body .body_header_footer .memthol_chart_container .move_down_button {
 body .body_header_footer .memthol_chart_container .move_down_button:hover {
   cursor: pointer;
 }
+body .body_header_footer .memthol_chart_container .save_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/save.png");
+}
+body .body_header_footer .memthol_chart_container .save_button:hover {
+  cursor: pointer;
+}
 body .body_header_footer .memthol_chart_container .refresh_button {
   height: 100%;
   float: right;
@@ -202,6 +210,14 @@ footer .move_down_button {
 footer .move_down_button:hover {
   cursor: pointer;
 }
+footer .save_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/save.png");
+}
+footer .save_button:hover {
+  cursor: pointer;
+}
 footer .refresh_button {
   height: 100%;
   float: right;
@@ -288,12 +304,12 @@ footer .footer_tabs .footer_tabs_left .move_down_button {
 footer .footer_tabs .footer_tabs_left .move_down_button:hover {
   cursor: pointer;
 }
-footer .footer_tabs .footer_tabs_left .refresh_button {
+footer .footer_tabs .footer_tabs_left .save_button {
   height: 100%;
   float: right;
-  content: url("../pics/refresh.png");
+  content: url("../pics/save.png");
 }
-footer .footer_tabs .footer_tabs_left .refresh_button:hover {
+footer .footer_tabs .footer_tabs_left .save_button:hover {
   cursor: pointer;
 }
 footer .footer_tabs .footer_tabs_left .close_button {
@@ -370,12 +386,12 @@ footer .footer_tabs .footer_tabs_right .move_down_button {
 footer .footer_tabs .footer_tabs_right .move_down_button:hover {
   cursor: pointer;
 }
-footer .footer_tabs .footer_tabs_right .refresh_button {
+footer .footer_tabs .footer_tabs_right .save_button {
   height: 100%;
   float: left;
-  content: url("../pics/refresh.png");
+  content: url("../pics/save.png");
 }
-footer .footer_tabs .footer_tabs_right .refresh_button:hover {
+footer .footer_tabs .footer_tabs_right .save_button:hover {
   cursor: pointer;
 }
 footer .footer_tabs .footer_tabs_right .close_button {
@@ -457,6 +473,14 @@ footer .footer_tabs .footer_tabs_center .move_down_button {
   content: url("../pics/arrow_down.png");
 }
 footer .footer_tabs .footer_tabs_center .move_down_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .save_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/save.png");
+}
+footer .footer_tabs .footer_tabs_center .save_button:hover {
   cursor: pointer;
 }
 footer .footer_tabs .footer_tabs_center .refresh_button {
@@ -733,6 +757,14 @@ footer .footer_display .filter_ul .filter_buttons .move_down_button {
   content: url("../pics/arrow_down.png");
 }
 footer .footer_display .filter_ul .filter_buttons .move_down_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons .save_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/save.png");
+}
+footer .footer_display .filter_ul .filter_buttons .save_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_buttons .refresh_button {

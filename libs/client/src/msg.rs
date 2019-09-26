@@ -170,6 +170,8 @@ impl FooterMsg {
 /// Operations over filters.
 #[derive(Debug)]
 pub enum FiltersMsg {
+    /// Updates a filter on the server.
+    Save(Option<FilterUid>),
     /// A message for a specific filter specification.
     FilterSpec {
         /// Uid of the filter.
@@ -186,6 +188,10 @@ pub enum FiltersMsg {
     },
 }
 impl FiltersMsg {
+    /// Updates a filter on the server.
+    pub fn save(uid: Option<FilterUid>) -> Msg {
+        Self::Save(uid).into()
+    }
     /// A message for a specific filter specification.
     pub fn filter_spec(uid: Option<FilterUid>, msg: FilterSpecMsg) -> Msg {
         Self::FilterSpec { uid, msg }.into()
@@ -220,6 +226,8 @@ pub enum FilterMsg {
     AddNew,
     /// Updates a subfilter.
     Sub(filter::SubFilter),
+    /// Removes a subfilter.
+    RmSub(filter::SubFilterUid),
 }
 impl FilterMsg {
     /// Adds a new subfilter.
@@ -229,5 +237,9 @@ impl FilterMsg {
     /// Updates a subfilter.
     pub fn update_sub(uid: FilterUid, sub: filter::SubFilter) -> Msg {
         FiltersMsg::filter(uid, Self::Sub(sub))
+    }
+    /// Removes a subfilter.
+    pub fn rm_sub(uid: FilterUid, sub_uid: filter::SubFilterUid) -> Msg {
+        FiltersMsg::filter(uid, Self::RmSub(sub_uid))
     }
 }

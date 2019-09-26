@@ -62,6 +62,14 @@ body .body_header_footer .memthol_chart_container .move_down_button {
 body .body_header_footer .memthol_chart_container .move_down_button:hover {
   cursor: pointer;
 }
+body .body_header_footer .memthol_chart_container .save_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/save.png");
+}
+body .body_header_footer .memthol_chart_container .save_button:hover {
+  cursor: pointer;
+}
 body .body_header_footer .memthol_chart_container .refresh_button {
   height: 100%;
   float: right;
