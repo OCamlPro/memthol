@@ -2,6 +2,9 @@
 
 use crate::base::*;
 
+/// Initial size value.
+const INIT_SIZE_VALUE: usize = 0;
+
 /// A total-size-over-time point.
 pub type TimeSizePoint = super::TimePoint<usize>;
 /// Some total-size-over-time points.
@@ -23,7 +26,7 @@ impl TimeSize {
     pub fn default(filters: &filter::Filters) -> Self {
         Self {
             timestamp: SinceStart::zero(),
-            size: Self::init_size(filters),
+            size: Self::init_size_point(filters),
             map: Map::new(),
         }
     }
@@ -37,7 +40,7 @@ impl ChartExt for TimeSize {
 
     fn reset(&mut self, filters: &filter::Filters) {
         self.timestamp = SinceStart::zero();
-        self.size = Self::init_size(filters);
+        self.size = Self::init_size_point(filters);
         self.map.clear()
     }
 }
@@ -56,8 +59,8 @@ impl TimeSize {
     }
 
     /// Initial size.
-    fn init_size(filters: &filter::Filters) -> PointVal<usize> {
-        PointVal::new(0, filters)
+    fn init_size_point(filters: &filter::Filters) -> PointVal<usize> {
+        PointVal::new(INIT_SIZE_VALUE, filters)
     }
 }
 
@@ -81,11 +84,12 @@ impl TimeSize {
 
         for (time, point_val) in map {
             let point_val = point_val.map(|uid, (to_add, to_sub)| {
-                let new_val = (self.size.get(uid)? + to_add) - to_sub;
+                let new_val = (*self.size.get_mut_or(uid, INIT_SIZE_VALUE) + to_add) - to_sub;
                 Ok(new_val)
             })?;
             self.size = point_val.clone();
-            points.push(Point::new(time, point_val))
+            let point = Point::new(time, point_val);
+            points.push(point)
         }
 
         Ok(points)
@@ -121,7 +125,9 @@ impl TimeSize {
 
                 let toc_point_val =
                     map!(entry my_map, with filters => at as_date(alloc.toc.clone()));
-                toc_point_val.get_mut(uid)?.0 += alloc.size;
+                toc_point_val
+                    .get_mut_or(uid, (INIT_SIZE_VALUE, INIT_SIZE_VALUE))
+                    .0 += alloc.size;
                 Ok(())
             },
         )?;

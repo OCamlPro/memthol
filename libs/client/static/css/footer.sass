@@ -60,9 +60,21 @@ footer
             $section_width: $prop_width + $cmp_width + $val_width
             $value_width: 5%
 
-            .filter_buttons
+            .filter_buttons_left
                 @include hblock
-                @include buttons
+                @include float_buttons(right)
+                width: $layout_left_right_margin
+                // line-height: $cell_height
+                height: $cell_height
+                text-align: right
+                float: left
+                // border-bottom-width: 1px
+                // border-bottom-color: $white
+                // border-bottom-style: solid
+
+            .filter_buttons_right
+                @include hblock
+                @include float_buttons(left)
                 width: $layout_left_right_margin
                 // line-height: $cell_height
                 height: $cell_height

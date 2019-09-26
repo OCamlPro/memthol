@@ -47,7 +47,7 @@ impl Model {
                 alert!("{}", msg);
                 Ok(false)
             }
-            Msg::Charts(msg) => self.charts.server_update(msg),
+            Msg::Charts(msg) => self.charts.server_update(&self.filters, msg),
             Msg::Filters(msg) => self.filters.server_update(msg),
         }
     }

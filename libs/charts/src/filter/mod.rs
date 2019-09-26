@@ -119,7 +119,7 @@ impl Filters {
         self.filters.len()
     }
 
-    /// The list of filters.
+    /// The list of active filters.
     pub fn filters(&self) -> &Vec<Filter> {
         &self.filters
     }
@@ -200,71 +200,32 @@ impl Filters {
 /// # Message handling
 impl Filters {
     /// Applies a filter message.
-    pub fn update(&mut self, msg: msg::to_server::FiltersMsg) -> Res<msg::to_client::Msgs> {
+    pub fn update(&mut self, msg: msg::to_server::FiltersMsg) -> Res<(msg::to_client::Msgs, bool)> {
         use msg::to_server::FiltersMsg::*;
-        match msg {
-            AddNew => self.add_new(),
-            Rm(uid) => self.remove(uid),
-            UpdateSpec { uid, spec } => self.update_spec(uid, spec),
-            Filter { uid, msg } => self.update_filter(uid, msg),
-        }
+        let (res, should_reload) = match msg {
+            RequestNew => (self.add_new(), false),
+            UpdateAll { catch_all, filters } => (self.update_all(catch_all, filters), true),
+        };
+        res.map(|msgs| (msgs, should_reload))
+    }
+
+    /// Updates all the filters.
+    pub fn update_all(
+        &mut self,
+        catch_all: FilterSpec,
+        filters: Vec<Filter>,
+    ) -> Res<msg::to_client::Msgs> {
+        self.catch_all = catch_all;
+        self.filters = filters;
+        Ok(vec![])
     }
 
     /// Adds a new filter.
     pub fn add_new(&mut self) -> Res<msg::to_client::Msgs> {
         let spec = FilterSpec::new(Color::random(true));
         let filter = Filter::new(spec).chain_err(|| "while creating new filter")?;
-        self.filters.push(filter.clone());
         let msg = msg::to_client::FiltersMsg::add(filter);
         Ok(vec![msg])
-    }
-
-    /// Updates the specification of a filter.
-    pub fn update_spec(
-        &mut self,
-        uid: Option<FilterUid>,
-        new_spec: FilterSpec,
-    ) -> Res<msg::to_client::Msgs> {
-        let spec = self
-            .get_spec_mut(uid)
-            .chain_err(|| "while updating a filter specification")?;
-        *spec = new_spec;
-        // Send it to the client.
-        let catch_all = if uid.is_none() {
-            Some(spec.clone())
-        } else {
-            None
-        };
-        let mut specs = Map::new();
-        if let Some(uid) = uid {
-            specs.insert(uid, spec.clone());
-        }
-        let msg = msg::to_client::FiltersMsg::update_specs(catch_all, specs);
-        Ok(vec![msg])
-    }
-
-    /// Handles a message for a particular filter.
-    pub fn update_filter(
-        &mut self,
-        uid: FilterUid,
-        msg: msg::to_server::FilterMsg,
-    ) -> Res<msg::to_client::Msgs> {
-        let (_, filter) = self
-            .get_mut(uid)
-            .chain_err(|| format!("while handling filter message {:?}", msg))?;
-        filter
-            .update(msg)
-            .chain_err(|| format!("while updating filter `{}`", filter.spec().name()))?;
-        Ok(vec![])
-    }
-
-    /// Removes a filter.
-    ///
-    /// - returns a message for the client to drop that filter.
-    pub fn remove(&mut self, uid: FilterUid) -> Res<msg::to_client::Msgs> {
-        let (index, _) = self.get_mut(uid).chain_err(|| "while removing chart")?;
-        self.filters.remove(index);
-        Ok(vec![msg::to_client::FiltersMsg::rm(uid).into()])
     }
 }
 
@@ -360,35 +321,6 @@ impl Filter {
         if prev.is_none() {
             bail!("failed to remove unknown subfilter UID #{}", sub_uid)
         }
-        Ok(())
-    }
-
-    /// Applies a filter message.
-    pub fn update(&mut self, msg: msg::to_server::FilterMsg) -> Res<()> {
-        use msg::to_server::FilterMsg::*;
-
-        match msg {
-            ReplaceSubs(subs) => {
-                self.subs.clear();
-                for mut sub in subs {
-                    sub.sanitize();
-                    self.subs.insert(sub.uid(), sub);
-                }
-            }
-            AddNew => {
-                let sub = SubFilter::default();
-                let prev = self.subs.insert(sub.uid(), sub);
-                debug_assert!(prev.is_none())
-            }
-            Rm(uid) => {
-                let prev = self.subs.remove(&uid);
-                if prev.is_none() {
-                    bail!("failed to remove subfilter with unknown UID #{}", uid)
-                }
-            }
-            Update(sub) => self.replace(sub)?,
-        }
-
         Ok(())
     }
 

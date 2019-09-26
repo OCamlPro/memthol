@@ -77,7 +77,6 @@ impl Charts {
 
     /// Refreshes all filters in all charts.
     fn refresh_filters(&mut self, filters: &filter::Filters) -> Res<ShouldRender> {
-        info!("refreshing filters");
         for chart in &self.charts {
             chart.replace_filters(filters)?
         }
@@ -125,7 +124,6 @@ impl Charts {
 
     /// Forces a chart to build its actual (JS) graph and bind it to its container.
     fn build(&mut self, uid: ChartUid, filters: &filter::Filters) -> Res<ShouldRender> {
-        info!("building charts");
         let (_, chart) = self
             .get_mut(uid)
             .chain_err(|| format!("while building and binding chart #{}", uid))?;
@@ -169,7 +167,11 @@ impl Charts {
 /// # Server message handling.
 impl Charts {
     /// Alies an operation from the server.
-    pub fn server_update(&mut self, action: msg::from_server::ChartsMsg) -> Res<ShouldRender> {
+    pub fn server_update(
+        &mut self,
+        filters: &filter::Filters,
+        action: msg::from_server::ChartsMsg,
+    ) -> Res<ShouldRender> {
         use msg::from_server::{ChartMsg, ChartsMsg};
         let should_render = match action {
             ChartsMsg::NewChart(spec) => {
@@ -181,12 +183,18 @@ impl Charts {
                 true
             }
 
-            ChartsMsg::NewPoints(mut points) => {
+            ChartsMsg::NewPoints {
+                mut points,
+                refresh_filters,
+            } => {
                 info!("received a overwrite-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
                         chart.overwrite_points(points)
                     }
+                }
+                if refresh_filters {
+                    self.refresh_filters(filters)?;
                 }
                 false
             }
@@ -270,7 +278,6 @@ impl Chart {
     /// Adds/remove a legend to/from the chart.
     fn toggle_legend(chart: &JsVal, on: bool) {
         if on {
-            info!("toggle legend on");
             js!(@(no_return)
                 var chart = @{chart};
                 if (chart.legend === undefined) {
@@ -279,7 +286,6 @@ impl Chart {
                 }
             )
         } else {
-            info!("toggle legend off");
             js!(@(no_return)
                 var chart = @{chart};
                 if (chart.legend !== undefined) {
@@ -312,7 +318,7 @@ impl Chart {
                 chart.series.pop().dispose()
             }
         );
-        filters.specs_apply(|filter, _is_deleted| {
+        filters.specs_apply(|filter| {
             use crate::filter::FilterSpecExt;
             filter.add_series_to(&self.spec, chart);
             Ok(())

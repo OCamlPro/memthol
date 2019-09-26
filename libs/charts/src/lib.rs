@@ -86,7 +86,7 @@ impl Charts {
 }
 
 impl Charts {
-    /// Restarts the charts if needed.
+    /// Restarts the charts and the filters if needed.
     fn restart_if_needed(&mut self) -> Res<bool> {
         let data = data::get();
         let start_time = data
@@ -97,6 +97,7 @@ impl Charts {
             for chart in &mut self.charts {
                 chart.reset(&self.filters)
             }
+            self.filters.reset();
             Ok(true)
         } else {
             Ok(false)
@@ -146,23 +147,32 @@ impl Charts {
             }
 
             msg::to_server::ChartsMsg::Reload => {
-                let mut new_points = point::ChartPoints::new();
-                for chart in &mut self.charts {
-                    chart.reset(&self.filters);
-                    self.filters.reset();
-                    let points = chart.new_points(&mut self.filters, true).chain_err(|| {
-                        format!("while generating points for chart #{}", chart.uid())
-                    })?;
-                    let prev = new_points.insert(chart.uid(), points);
-                    if prev.is_some() {
-                        bail!("chart UID collision on #{}", chart.uid())
-                    }
-                }
-                to_client_msgs.push(msg::to_client::ChartsMsg::new_points(new_points))
+                let msg = self.reload_points(false)?;
+                to_client_msgs.push(msg)
             }
         }
 
         Ok(to_client_msgs)
+    }
+
+    /// Recomputes all the points, and returns them as a message for the client.
+    pub fn reload_points(&mut self, refresh_filters: bool) -> Res<msg::to_client::Msg> {
+        let mut new_points = point::ChartPoints::new();
+        for chart in &mut self.charts {
+            chart.reset(&self.filters);
+            self.filters.reset();
+            let points = chart
+                .new_points(&mut self.filters, true)
+                .chain_err(|| format!("while generating points for chart #{}", chart.uid()))?;
+            let prev = new_points.insert(chart.uid(), points);
+            if prev.is_some() {
+                bail!("chart UID collision on #{}", chart.uid())
+            }
+        }
+        Ok(msg::to_client::ChartsMsg::new_points(
+            new_points,
+            refresh_filters,
+        ))
     }
 
     /// Handles a message from the client.
@@ -171,7 +181,13 @@ impl Charts {
 
         let msgs = match msg {
             Charts(msg) => self.handle_chart_msg(msg)?,
-            Filters(msg) => self.filters.update(msg)?,
+            Filters(msg) => {
+                let (mut msgs, should_reload) = self.filters.update(msg)?;
+                if should_reload {
+                    msgs.push(self.reload_points(true)?)
+                }
+                msgs
+            }
         };
 
         Ok(msgs)

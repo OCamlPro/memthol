@@ -158,6 +158,14 @@ footer .footer_tabs .footer_tabs_left .save_button {
 footer .footer_tabs .footer_tabs_left .save_button:hover {
   cursor: pointer;
 }
+footer .footer_tabs .footer_tabs_left .refresh_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+footer .footer_tabs .footer_tabs_left .refresh_button:hover {
+  cursor: pointer;
+}
 footer .footer_tabs .footer_tabs_left .close_button {
   height: 100%;
   float: right;
@@ -238,6 +246,14 @@ footer .footer_tabs .footer_tabs_right .save_button {
   content: url("../pics/save.png");
 }
 footer .footer_tabs .footer_tabs_right .save_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_right .refresh_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/refresh.png");
+}
+footer .footer_tabs .footer_tabs_right .refresh_button:hover {
   cursor: pointer;
 }
 footer .footer_tabs .footer_tabs_right .close_button {
@@ -562,7 +578,7 @@ footer .footer_display .filter_ul li {
   padding: 0;
   float: center;
 }
-footer .footer_display .filter_ul .filter_buttons {
+footer .footer_display .filter_ul .filter_buttons_left {
   display: block;
   font-size: 16px;
   margin: 0;
@@ -573,84 +589,175 @@ footer .footer_display .filter_ul .filter_buttons {
   text-align: right;
   float: left;
 }
-footer .footer_display .filter_ul .filter_buttons .expand_button {
+footer .footer_display .filter_ul .filter_buttons_left .expand_button {
   height: 100%;
-  float: left;
+  float: right;
   content: url("../pics/expand.png");
 }
-footer .footer_display .filter_ul .filter_buttons .expand_button:hover {
+footer .footer_display .filter_ul .filter_buttons_left .expand_button:hover {
   cursor: pointer;
 }
-footer .footer_display .filter_ul .filter_buttons .collapse_button {
+footer .footer_display .filter_ul .filter_buttons_left .collapse_button {
   height: 100%;
-  float: left;
+  float: right;
   content: url("../pics/collapse.png");
 }
-footer .footer_display .filter_ul .filter_buttons .collapse_button:hover {
+footer .footer_display .filter_ul .filter_buttons_left .collapse_button:hover {
   cursor: pointer;
 }
-footer .footer_display .filter_ul .filter_buttons .move_up_button {
+footer .footer_display .filter_ul .filter_buttons_left .move_up_button {
   height: 100%;
-  float: left;
+  float: right;
   content: url("../pics/arrow_up.png");
 }
-footer .footer_display .filter_ul .filter_buttons .move_up_button:hover {
+footer .footer_display .filter_ul .filter_buttons_left .move_up_button:hover {
   cursor: pointer;
 }
-footer .footer_display .filter_ul .filter_buttons .move_down_button {
+footer .footer_display .filter_ul .filter_buttons_left .move_down_button {
   height: 100%;
-  float: left;
+  float: right;
   content: url("../pics/arrow_down.png");
 }
-footer .footer_display .filter_ul .filter_buttons .move_down_button:hover {
+footer .footer_display .filter_ul .filter_buttons_left .move_down_button:hover {
   cursor: pointer;
 }
-footer .footer_display .filter_ul .filter_buttons .save_button {
+footer .footer_display .filter_ul .filter_buttons_left .save_button {
   height: 100%;
-  float: left;
+  float: right;
   content: url("../pics/save.png");
 }
-footer .footer_display .filter_ul .filter_buttons .save_button:hover {
+footer .footer_display .filter_ul .filter_buttons_left .save_button:hover {
   cursor: pointer;
 }
-footer .footer_display .filter_ul .filter_buttons .refresh_button {
+footer .footer_display .filter_ul .filter_buttons_left .refresh_button {
   height: 100%;
   float: right;
   content: url("../pics/refresh.png");
 }
-footer .footer_display .filter_ul .filter_buttons .refresh_button:hover {
+footer .footer_display .filter_ul .filter_buttons_left .refresh_button:hover {
   cursor: pointer;
 }
-footer .footer_display .filter_ul .filter_buttons .close_button {
+footer .footer_display .filter_ul .filter_buttons_left .close_button {
   height: 100%;
   float: right;
   content: url("../pics/close.png");
 }
-footer .footer_display .filter_ul .filter_buttons .close_button:hover {
+footer .footer_display .filter_ul .filter_buttons_left .close_button:hover {
   cursor: pointer;
 }
-footer .footer_display .filter_ul .filter_buttons .add_button {
+footer .footer_display .filter_ul .filter_buttons_left .add_button {
   height: 100%;
   float: right;
   content: url("../pics/add.png");
 }
-footer .footer_display .filter_ul .filter_buttons .add_button:hover {
+footer .footer_display .filter_ul .filter_buttons_left .add_button:hover {
   cursor: pointer;
 }
-footer .footer_display .filter_ul .filter_buttons .inactive_tick_button {
+footer .footer_display .filter_ul .filter_buttons_left .inactive_tick_button {
   height: 100%;
   float: right;
   content: url("../pics/tick_inactive.png");
 }
-footer .footer_display .filter_ul .filter_buttons .inactive_tick_button:hover {
+footer .footer_display .filter_ul .filter_buttons_left .inactive_tick_button:hover {
   cursor: pointer;
 }
-footer .footer_display .filter_ul .filter_buttons .active_tick_button {
+footer .footer_display .filter_ul .filter_buttons_left .active_tick_button {
   height: 100%;
   float: right;
   content: url("../pics/tick_active.png");
 }
-footer .footer_display .filter_ul .filter_buttons .active_tick_button:hover {
+footer .footer_display .filter_ul .filter_buttons_left .active_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons_right {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  width: 10%;
+  height: 45px;
+  text-align: right;
+  float: left;
+}
+footer .footer_display .filter_ul .filter_buttons_right .expand_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/expand.png");
+}
+footer .footer_display .filter_ul .filter_buttons_right .expand_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons_right .collapse_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/collapse.png");
+}
+footer .footer_display .filter_ul .filter_buttons_right .collapse_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons_right .move_up_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/arrow_up.png");
+}
+footer .footer_display .filter_ul .filter_buttons_right .move_up_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons_right .move_down_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/arrow_down.png");
+}
+footer .footer_display .filter_ul .filter_buttons_right .move_down_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons_right .save_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/save.png");
+}
+footer .footer_display .filter_ul .filter_buttons_right .save_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons_right .refresh_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/refresh.png");
+}
+footer .footer_display .filter_ul .filter_buttons_right .refresh_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons_right .close_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/close.png");
+}
+footer .footer_display .filter_ul .filter_buttons_right .close_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons_right .add_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/add.png");
+}
+footer .footer_display .filter_ul .filter_buttons_right .add_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons_right .inactive_tick_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/tick_inactive.png");
+}
+footer .footer_display .filter_ul .filter_buttons_right .inactive_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons_right .active_tick_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/tick_active.png");
+}
+footer .footer_display .filter_ul .filter_buttons_right .active_tick_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_section {

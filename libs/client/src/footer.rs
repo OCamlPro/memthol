@@ -18,14 +18,20 @@ impl Footer {
         use msg::FooterMsg::*;
         match msg {
             ToggleTab(tab) => {
-                info!("footer: toggle {:?}", tab);
-                info!("        active {:?}", self.active);
                 if self.active == Some(tab) {
                     self.active = None
                 } else {
                     self.active = Some(tab)
                 }
                 Ok(true)
+            }
+            Removed(uid) => {
+                if self.active == Some(FooterTab::Filter(Some(uid))) {
+                    self.active = Some(FooterTab::Filter(None));
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
             }
         }
     }
@@ -53,8 +59,18 @@ impl Footer {
                     <li class = style::class::footer::tabs::RIGHT>
                         { Button::add(
                             "Create a new filter",
-                            |_| msg::to_server::FiltersMsg::add_new().into()
+                            |_| msg::to_server::FiltersMsg::request_new().into()
                         ) }
+                        {
+                            if filters.edited() {
+                                Button::save(
+                                    "Save all changes",
+                                    move |_| msg::FiltersMsg::save()
+                                )
+                            } else {
+                                html!(<a/>)
+                            }
+                        }
                     </li>
                 </ul>
                 {

@@ -42,78 +42,34 @@ pub mod to_server {
     /// Operations over filters.
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum FiltersMsg {
-        /// Adds a new filter.
-        AddNew,
-        /// Removes a filter.
-        Rm(uid::FilterUid),
+        /// Requests a new filter.
+        ///
+        /// This will cause the server to generate a new filter to send to the client (*via*
+        /// [`FiltersMsg::Add`]). The server will **not** register the filter in any way, this will
+        /// happen when/if the user saves the modifications.
+        ///
+        /// [`FiltersMsg::Add`]: ../to_client/enum.FiltersMsg.html#variant.Add
+        /// (The Add message)
+        RequestNew,
 
-        /// Updates the specification of a filter.
-        UpdateSpec {
-            /// UID of the filter to remove.
-            uid: Option<uid::FilterUid>,
-            /// New specification.
-            spec: filter::FilterSpec,
-        },
-
-        /// Operation over a filter.
-        Filter {
-            /// UID of the filter.
-            uid: uid::FilterUid,
-            /// The operation.
-            msg: FilterMsg,
+        /// Updates all the filters.
+        UpdateAll {
+            /// New specification for the catch-all filter.
+            catch_all: filter::FilterSpec,
+            /// New filters.
+            filters: Vec<Filter>,
         },
     }
 
     impl FiltersMsg {
-        /// Adds a new filter.
-        pub fn add_new() -> Msg {
-            Self::AddNew.into()
-        }
-        /// Removes a filter.
-        pub fn rm(uid: uid::FilterUid) -> Msg {
-            Self::Rm(uid).into()
+        /// Requests a new filter.
+        pub fn request_new() -> Msg {
+            Self::RequestNew.into()
         }
 
-        /// Updates the specification of a filter.
-        pub fn update_spec(uid: Option<uid::FilterUid>, spec: filter::FilterSpec) -> Msg {
-            Self::UpdateSpec { uid, spec }.into()
-        }
-
-        /// An operation over a single filter.
-        pub fn single(uid: uid::FilterUid, msg: FilterMsg) -> Msg {
-            Self::Filter { uid, msg }.into()
-        }
-    }
-
-    /// Operations over a filter.
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub enum FilterMsg {
-        /// Replaces the subfilters.
-        ReplaceSubs(Vec<SubFilter>),
-        /// Adds a new subfilter.
-        AddNew,
-        /// Removes a subfilter.
-        Rm(uid::SubFilterUid),
-        /// Updates a subfilter.
-        Update(SubFilter),
-    }
-    impl FilterMsg {
-        /// Replaces the subfilters.
-        pub fn replace_subs(uid: uid::FilterUid, subs: Vec<SubFilter>) -> Msg {
-            FiltersMsg::Filter {
-                uid,
-                msg: Self::ReplaceSubs(subs),
-            }
-            .into()
-        }
-
-        /// Removes a subfilter.
-        pub fn rm_sub(uid: uid::FilterUid, sub_uid: SubFilterUid) -> Msg {
-            FiltersMsg::Filter {
-                uid,
-                msg: Self::Rm(sub_uid),
-            }
-            .into()
+        /// Updates all the filters.
+        pub fn update_all(catch_all: filter::FilterSpec, filters: Vec<Filter>) -> Msg {
+            Self::UpdateAll { catch_all, filters }.into()
         }
     }
 
@@ -205,7 +161,10 @@ pub mod to_client {
         /// Message for a specific chart.
         Chart { uid: uid::ChartUid, msg: ChartMsg },
         /// A new collection of points, overwrites existing points.
-        NewPoints(point::ChartPoints),
+        NewPoints {
+            points: point::ChartPoints,
+            refresh_filters: bool,
+        },
         /// Some points to append to existing points.
         AddPoints(point::ChartPoints),
     }
@@ -215,8 +174,11 @@ pub mod to_client {
             Msg::charts(Self::NewChart(spec))
         }
         /// Constructor for `NewPoints`.
-        pub fn new_points(points: point::ChartPoints) -> Msg {
-            Msg::charts(Self::NewPoints(points))
+        pub fn new_points(points: point::ChartPoints, refresh_filters: bool) -> Msg {
+            Msg::charts(Self::NewPoints {
+                points,
+                refresh_filters,
+            })
         }
         /// Constructor for `AddPoints`.
         pub fn add_points(points: point::ChartPoints) -> Msg {
@@ -226,7 +188,7 @@ pub mod to_client {
         /// Constructs a `NewPoints` if `overwrite`, and a `AddPoints` otherwise.
         pub fn points(points: point::ChartPoints, overwrite: bool) -> Msg {
             if overwrite {
-                Self::new_points(points)
+                Self::new_points(points, false)
             } else {
                 Self::add_points(points)
             }
@@ -265,6 +227,12 @@ pub mod to_client {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum FiltersMsg {
         /// Adds a filter.
+        ///
+        /// This message always comes in response to a [`FiltersMsg::RequestNew`] message for the
+        /// server.
+        ///
+        /// [`FiltersMsg::RequestNew`]: ../to_server/enum.FiltersMsg.html#variant.RequestNew
+        /// (The RequestNew message)
         Add(filter::Filter),
         /// Removes a filter.
         Rm(uid::FilterUid),

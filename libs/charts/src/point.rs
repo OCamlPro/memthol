@@ -31,15 +31,15 @@ impl<Val> PointVal<Val> {
     }
 
     /// Immutable ref over some value.
-    pub fn get(&self, filtered_index: Option<uid::FilterUid>) -> Res<&Val> {
+    pub fn get_mut_or(&mut self, filtered_index: Option<uid::FilterUid>, default: Val) -> &mut Val {
         let val = match filtered_index {
-            None => &self.rest,
-            Some(uid) => match self.filtered.get(&uid) {
-                Some(val) => val,
-                None => bail!("unknown filter UID #{}", uid),
-            },
+            None => &mut self.rest,
+            Some(uid) => {
+                let entry = self.filtered.entry(uid);
+                entry.or_insert(default)
+            }
         };
-        Ok(val)
+        val
     }
 
     /// Mutable ref over some value.
@@ -48,7 +48,7 @@ impl<Val> PointVal<Val> {
             None => &mut self.rest,
             Some(uid) => match self.filtered.get_mut(&uid) {
                 Some(val) => val,
-                None => bail!("unknown filter UID #{}", uid),
+                None => bail!("unknown filter UID #{} (get_mut)", uid),
             },
         };
         Ok(val)

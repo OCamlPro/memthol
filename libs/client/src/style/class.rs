@@ -120,7 +120,9 @@ pub mod chart {
 /// Filter-related classes.
 pub mod filter {
     /// Filter buttons class.
-    pub static BUTTONS: &str = "filter_buttons";
+    pub static BUTTONS_LEFT: &str = "filter_buttons_left";
+    /// Filter buttons class.
+    pub static BUTTONS_RIGHT: &str = "filter_buttons_right";
     /// Filter line class.
     pub static LINE: &str = "filter_ul";
     /// Separator.

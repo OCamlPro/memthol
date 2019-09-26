@@ -14,8 +14,8 @@ pub struct Filters {
     catch_all: FilterSpec,
     /// Actual filters.
     filters: Map<FilterUid, Filter>,
-    /// Deleted filters.
-    deleted: Vec<Filter>,
+    /// True if a filtered was removed and the server was not notified.
+    deleted: bool,
 }
 
 impl Filters {
@@ -25,8 +25,21 @@ impl Filters {
             to_model,
             catch_all: FilterSpec::new_catch_all(),
             filters: Map::new(),
-            deleted: vec![],
+            deleted: false,
         }
+    }
+
+    /// True if at least one filter was edited.
+    pub fn edited(&self) -> bool {
+        if self.deleted || self.catch_all.edited() {
+            return true;
+        }
+        for filter in self.filters.values() {
+            if filter.edited() || filter.spec().edited() {
+                return true;
+            }
+        }
+        false
     }
 
     /// Gives mutable access to a filter specification.
@@ -61,34 +74,28 @@ impl Filters {
 
     /// Removes a filter.
     pub fn remove(&mut self, uid: FilterUid) -> Res<()> {
-        if let Some(filter) = self.filters.remove(&uid) {
-            self.deleted.push(filter);
+        if self.filters.remove(&uid).is_some() {
             Ok(())
         } else {
             bail!("failed to remove filter #{}: unknown UID", uid)
         }
     }
 
-    /// Returns the number active and deleted filters, **not** including the catch-all.
+    /// Returns the number filters, **not** including the catch-all.
     pub fn len(&self) -> usize {
-        self.filters.len() + self.deleted.len()
+        self.filters.len()
     }
 
-    /// Applies a function to all specification filters, including the deleted filters.
-    ///
-    /// The function is given a boolean flag that's true when the filter was deleted.
+    /// Applies a function to all specification filters.
     ///
     /// Typically used when refreshing filters for a chart.
     pub fn specs_apply<F>(&self, mut f: F) -> Res<()>
     where
-        F: FnMut(&FilterSpec, bool) -> Res<()>,
+        F: FnMut(&FilterSpec) -> Res<()>,
     {
-        f(&self.catch_all, false)?;
+        f(&self.catch_all)?;
         for filter in self.filters.values() {
-            f(filter.spec(), false)?
-        }
-        for filter in &self.deleted {
-            f(filter.spec(), true)?
+            f(filter.spec())?
         }
         Ok(())
     }
@@ -100,44 +107,29 @@ impl Filters {
     pub fn update(&mut self, msg: msg::FiltersMsg) -> Res<ShouldRender> {
         use msg::{FilterSpecMsg::*, FiltersMsg::*};
         match msg {
-            Save(None) => {
-                info!("saving catch-all's spec");
-                self.catch_all.unset_edited();
-                self.to_model.emit(
-                    msg::to_server::FiltersMsg::update_spec(None, self.catch_all.clone()).into(),
-                );
-                Ok(true)
-            }
-            Save(Some(uid)) => {
-                let filter = self.get_mut(uid)?;
-                info!("saving {}...", filter.name());
-                let spec = if filter.spec().edited() {
-                    filter.spec_mut().unset_edited();
-                    let spec = filter.spec().clone();
-                    Some(spec)
-                } else {
-                    None
-                };
-                let subs = if filter.edited() {
-                    filter.unset_edited();
-                    let subs = filter.iter().map(SubFilter::clone).collect();
-                    Some(subs)
-                } else {
-                    None
-                };
+            Save => {
+                self.deleted = false;
+                let catch_all = self.catch_all.clone();
+                let mut filters = Vec::with_capacity(self.filters.len());
 
-                if let Some(spec) = spec {
-                    info!("- spec");
-                    self.to_model
-                        .emit(msg::to_server::FiltersMsg::update_spec(Some(uid), spec).into());
+                self.catch_all.unset_edited();
+                for filter in self.filters.values_mut() {
+                    filters.push(filter.clone());
+                    filter.unset_edited();
+                    filter.spec_mut().unset_edited()
                 }
-                if let Some(subs) = subs {
-                    info!("- subs");
-                    self.to_model
-                        .emit(msg::to_server::FilterMsg::replace_subs(uid, subs).into());
-                }
+                self.to_model
+                    .emit(msg::to_server::FiltersMsg::update_all(catch_all, filters).into());
                 Ok(true)
             }
+
+            Rm(uid) => {
+                self.remove(uid)?;
+                self.deleted = true;
+                self.to_model.emit(msg::FooterMsg::removed(uid));
+                Ok(true)
+            }
+
             FilterSpec {
                 uid,
                 msg: ChangeName(new_name),
@@ -157,6 +149,11 @@ impl Filters {
                 filter_update(filter, msg)
             }
         }
+    }
+
+    /// Sends a message to the model to refresh the filters of all charts.
+    pub fn send_refresh_filters(&self) {
+        self.to_model.emit(msg::ChartsMsg::refresh_filters())
     }
 
     /// Changes the name of a filter.
@@ -198,7 +195,6 @@ impl Filters {
         };
 
         if let Some(spec) = self.get_spec_mut(uid) {
-            info!("new color: {}", new_color);
             spec.set_color(new_color);
             spec.set_edited()
         } else {
@@ -229,25 +225,33 @@ impl Filters {
     /// Adds a filter in the map.
     ///
     /// - triggers a refresh of the filters of all the charts.
-    pub fn add_filter(&mut self, filter: Filter) -> Res<ShouldRender> {
+    pub fn add_filter(&mut self, mut filter: Filter) -> Res<ShouldRender> {
+        filter.set_edited();
+        let uid = filter.uid();
         let prev = self.filters.insert(filter.uid(), filter);
         if let Some(prev) = prev {
             bail!("filter UID collision on #{}", prev.uid())
         }
-        self.to_model.emit(msg::ChartsMsg::refresh_filters());
+        self.to_model
+            .emit(msg::FooterMsg::toggle_tab(footer::FooterTab::filter(Some(
+                uid,
+            ))));
         Ok(true)
     }
 
     /// Removes a filter from the map.
+    ///
+    /// - changes the active filter to catch-all.
     pub fn rm_filter(&mut self, uid: FilterUid) -> Res<ShouldRender> {
         self.remove(uid)?;
-        self.to_model.emit(msg::ChartsMsg::refresh_filters());
+        self.to_model.emit(msg::FooterMsg::removed(uid));
+        // self.send_refresh_filters();
         Ok(true)
     }
 
     /// Updates the specifications of the filters in the map.
     ///
-    /// - also sends a message to the model to refresh the filters in all graphs.
+    /// - triggers a refresh of the filters of all the charts.
     pub fn update_specs(
         &mut self,
         catch_all: Option<FilterSpec>,
@@ -269,7 +273,7 @@ impl Filters {
                 specs.len()
             )
         }
-        self.to_model.emit(msg::ChartsMsg::refresh_filters());
+        self.send_refresh_filters();
         Ok(true)
     }
 }
@@ -293,43 +297,30 @@ impl Filters {
 
     /// Renders the active filter.
     pub fn render_filter(&self, active: Option<FilterUid>) -> Html {
-        info!("rendering filter");
-        let (settings, edited, filter_opt) = match active {
-            None => (
-                self.catch_all.render_settings(),
-                self.catch_all.edited(),
-                None,
-            ),
+        let (settings, filter_opt) = match active {
+            None => (self.catch_all.render_settings(), None),
             Some(uid) => match self.filters.get(&uid) {
-                Some(filter) => (
-                    filter.spec().render_settings(),
-                    {
-                        info!("-        filter.edited(): {}", filter.edited());
-                        info!("- filter.spec().edited(): {}", filter.spec().edited());
-                        filter.edited() || filter.spec().edited()
-                    },
-                    Some(filter),
-                ),
-                None => (html!(<a/>), false, None),
+                Some(filter) => (filter.spec().render_settings(), Some(filter)),
+                None => (html!(<a/>), None),
             },
         };
         html! {
             <>
                 <div class = style::class::filter::SEP/>
                 <ul class = style::class::filter::LINE>
-                    <li class = style::class::filter::BUTTONS>
+                    <li class = style::class::filter::BUTTONS_LEFT>
                     </li>
                     <li class = style::class::filter::line::CELL>
                         <a class = style::class::filter::line::SECTION_CELL>
                             { "Settings" }
                         </a>
                     </li>
-                    <li class = style::class::filter::BUTTONS>
+                    <li class = style::class::filter::BUTTONS_RIGHT>
                         {
-                            if edited {
-                                Button::save(
-                                    "Save all changes",
-                                    move |_| msg::FiltersMsg::save(active)
+                            if let Some(uid) = active {
+                                Button::close(
+                                    "Delete the filter",
+                                    move |_| msg::FiltersMsg::rm(uid)
                                 )
                             } else {
                                 html!(<a/>)
@@ -413,7 +404,7 @@ impl FilterSpecExt for FilterSpec {
         html!(
             <>
                 <ul class = style::class::filter::LINE>
-                    <li class = style::class::filter::BUTTONS/>
+                    <li class = style::class::filter::BUTTONS_LEFT/>
 
                     <li class = style::class::filter::line::CELL>
                         <a class = style::class::filter::line::SETTINGS_CELL>
@@ -433,7 +424,7 @@ impl FilterSpecExt for FilterSpec {
                 </ul>
 
                 <ul class = style::class::filter::LINE>
-                    <li class = style::class::filter::BUTTONS/>
+                    <li class = style::class::filter::BUTTONS_LEFT/>
 
                     <li class = style::class::filter::line::CELL>
                         <a class = style::class::filter::line::SETTINGS_CELL>
@@ -484,7 +475,7 @@ fn render_subs(filter: &Filter) -> Html {
         <>
             <ul class = style::class::filter::SEP/>
             <ul class = style::class::filter::LINE>
-                <li class = style::class::filter::BUTTONS>
+                <li class = style::class::filter::BUTTONS_LEFT>
                 </li>
                 <li class = style::class::filter::line::CELL>
                     <a class = style::class::filter::line::SECTION_CELL>
@@ -496,7 +487,7 @@ fn render_subs(filter: &Filter) -> Html {
                 let sub_uid = sub.uid();
                 html!(
                     <ul class = style::class::filter::LINE>
-                        <li class = style::class::filter::BUTTONS>
+                        <li class = style::class::filter::BUTTONS_LEFT>
                             { Button::close(
                                 "Remove the filter",
                                 move |_| msg::FilterMsg::rm_sub(uid, sub_uid)
@@ -532,7 +523,7 @@ fn render_subs(filter: &Filter) -> Html {
 
             // Add button to add subfilters.
             <ul class = style::class::filter::LINE>
-                <li class = style::class::filter::BUTTONS>
+                <li class = style::class::filter::BUTTONS_LEFT>
                     {
                         let uid = filter.uid();
                         Button::add("Add a new subfilter", move |_| msg::FilterMsg::add_new(uid))

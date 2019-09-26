@@ -95,6 +95,8 @@ impl Handler {
         log!(self.ip => "init...");
         self.init()?;
 
+        log!(self.ip => "running...");
+
         // Let's do this.
         loop {
             self.set_last_frame();

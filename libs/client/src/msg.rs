@@ -159,11 +159,17 @@ impl ChartsMsg {
 pub enum FooterMsg {
     /// Toggles a tab.
     ToggleTab(footer::FooterTab),
+    /// Lets the footer know a filter was removed.
+    Removed(FilterUid),
 }
 impl FooterMsg {
     /// Toggles a tab.
     pub fn toggle_tab(tab: footer::FooterTab) -> Msg {
         Self::ToggleTab(tab).into()
+    }
+    /// Lets the footer know a filter was removed.
+    pub fn removed(uid: FilterUid) -> Msg {
+        Self::Removed(uid).into()
     }
 }
 
@@ -171,7 +177,9 @@ impl FooterMsg {
 #[derive(Debug)]
 pub enum FiltersMsg {
     /// Updates a filter on the server.
-    Save(Option<FilterUid>),
+    Save,
+    /// Removes a filter.
+    Rm(FilterUid),
     /// A message for a specific filter specification.
     FilterSpec {
         /// Uid of the filter.
@@ -189,8 +197,12 @@ pub enum FiltersMsg {
 }
 impl FiltersMsg {
     /// Updates a filter on the server.
-    pub fn save(uid: Option<FilterUid>) -> Msg {
-        Self::Save(uid).into()
+    pub fn save() -> Msg {
+        Self::Save.into()
+    }
+    /// Removes a filter.
+    pub fn rm(uid: FilterUid) -> Msg {
+        Self::Rm(uid).into()
     }
     /// A message for a specific filter specification.
     pub fn filter_spec(uid: Option<FilterUid>, msg: FilterSpecMsg) -> Msg {
