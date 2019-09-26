@@ -78,6 +78,14 @@ body .body_header_footer .memthol_chart_container .refresh_button {
 body .body_header_footer .memthol_chart_container .refresh_button:hover {
   cursor: pointer;
 }
+body .body_header_footer .memthol_chart_container .undo_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/undo.png");
+}
+body .body_header_footer .memthol_chart_container .undo_button:hover {
+  cursor: pointer;
+}
 body .body_header_footer .memthol_chart_container .close_button {
   height: 100%;
   float: right;
@@ -226,6 +234,14 @@ footer .refresh_button {
 footer .refresh_button:hover {
   cursor: pointer;
 }
+footer .undo_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/undo.png");
+}
+footer .undo_button:hover {
+  cursor: pointer;
+}
 footer .close_button {
   height: 100%;
   float: right;
@@ -320,6 +336,14 @@ footer .footer_tabs .footer_tabs_left .refresh_button {
 footer .footer_tabs .footer_tabs_left .refresh_button:hover {
   cursor: pointer;
 }
+footer .footer_tabs .footer_tabs_left .undo_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/undo.png");
+}
+footer .footer_tabs .footer_tabs_left .undo_button:hover {
+  cursor: pointer;
+}
 footer .footer_tabs .footer_tabs_left .close_button {
   height: 100%;
   float: right;
@@ -408,6 +432,14 @@ footer .footer_tabs .footer_tabs_right .refresh_button {
   content: url("../pics/refresh.png");
 }
 footer .footer_tabs .footer_tabs_right .refresh_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_right .undo_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/undo.png");
+}
+footer .footer_tabs .footer_tabs_right .undo_button:hover {
   cursor: pointer;
 }
 footer .footer_tabs .footer_tabs_right .close_button {
@@ -505,6 +537,14 @@ footer .footer_tabs .footer_tabs_center .refresh_button {
   content: url("../pics/refresh.png");
 }
 footer .footer_tabs .footer_tabs_center .refresh_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .undo_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/undo.png");
+}
+footer .footer_tabs .footer_tabs_center .undo_button:hover {
   cursor: pointer;
 }
 footer .footer_tabs .footer_tabs_center .close_button {
@@ -791,6 +831,14 @@ footer .footer_display .filter_ul .filter_buttons_left .refresh_button {
 footer .footer_display .filter_ul .filter_buttons_left .refresh_button:hover {
   cursor: pointer;
 }
+footer .footer_display .filter_ul .filter_buttons_left .undo_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/undo.png");
+}
+footer .footer_display .filter_ul .filter_buttons_left .undo_button:hover {
+  cursor: pointer;
+}
 footer .footer_display .filter_ul .filter_buttons_left .close_button {
   height: 100%;
   float: right;
@@ -880,6 +928,14 @@ footer .footer_display .filter_ul .filter_buttons_right .refresh_button {
   content: url("../pics/refresh.png");
 }
 footer .footer_display .filter_ul .filter_buttons_right .refresh_button:hover {
+  cursor: pointer;
+}
+footer .footer_display .filter_ul .filter_buttons_right .undo_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/undo.png");
+}
+footer .footer_display .filter_ul .filter_buttons_right .undo_button:hover {
   cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_buttons_right .close_button {

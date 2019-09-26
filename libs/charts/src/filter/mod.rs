@@ -204,18 +204,36 @@ impl Filters {
         use msg::to_server::FiltersMsg::*;
         let (res, should_reload) = match msg {
             RequestNew => (self.add_new(), false),
+            Revert => (self.revert(), false),
             UpdateAll { catch_all, filters } => (self.update_all(catch_all, filters), true),
         };
         res.map(|msgs| (msgs, should_reload))
     }
 
+    /// Sends all the filters to the client.
+    pub fn revert(&self) -> Res<msg::to_client::Msgs> {
+        let catch_all = self.catch_all.clone();
+        let filters = self.filters.clone();
+        Ok(vec![msg::to_client::FiltersMsg::revert(catch_all, filters)])
+    }
+
     /// Updates all the filters.
+    ///
+    /// # TODO
+    ///
+    /// - decide whether we need to re-compute all the points using the `edited()` flags. If only
+    ///     filter specifications have change, there is no need to re-compute the points.
     pub fn update_all(
         &mut self,
-        catch_all: FilterSpec,
-        filters: Vec<Filter>,
+        mut catch_all: FilterSpec,
+        mut filters: Vec<Filter>,
     ) -> Res<msg::to_client::Msgs> {
+        catch_all.unset_edited();
         self.catch_all = catch_all;
+        for filter in &mut filters {
+            filter.unset_edited();
+            filter.spec_mut().unset_edited();
+        }
         self.filters = filters;
         Ok(vec![])
     }

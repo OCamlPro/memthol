@@ -78,6 +78,14 @@ body .body_header_footer .memthol_chart_container .refresh_button {
 body .body_header_footer .memthol_chart_container .refresh_button:hover {
   cursor: pointer;
 }
+body .body_header_footer .memthol_chart_container .undo_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/undo.png");
+}
+body .body_header_footer .memthol_chart_container .undo_button:hover {
+  cursor: pointer;
+}
 body .body_header_footer .memthol_chart_container .close_button {
   height: 100%;
   float: right;

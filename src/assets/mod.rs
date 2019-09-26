@@ -282,6 +282,8 @@ var serverAddr = {{
             REFRESH: asset_file!(pics / "refresh.png"),
             /// Refresh.
             SAVE: asset_file!(pics / "save.png"),
+            /// Undo.
+            UNDO: asset_file!(pics / "undo.png"),
 
             /// Tick, inactive.
             TICK_INACTIVE: asset_file!(pics / "tick_inactive.png"),

@@ -217,7 +217,20 @@ impl Filters {
         use msg::from_server::FiltersMsg::*;
         match msg {
             Add(filter) => self.add_filter(filter),
-            Rm(uid) => self.rm_filter(uid),
+            Revert { catch_all, filters } => {
+                self.catch_all = catch_all;
+                for filter in self.filters.values() {
+                    let uid = filter.uid();
+                    if filters.iter().all(|filter| filter.uid() != uid) {
+                        self.to_model.emit(msg::FooterMsg::removed(uid));
+                    }
+                }
+                self.filters.clear();
+                for filter in filters {
+                    self.filters.insert(filter.uid(), filter);
+                }
+                Ok(true)
+            }
             UpdateSpecs { catch_all, specs } => self.update_specs(catch_all, specs),
         }
     }

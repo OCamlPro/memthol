@@ -52,6 +52,9 @@ pub mod to_server {
         /// (The Add message)
         RequestNew,
 
+        /// Requests the current server-side list of filters.
+        Revert,
+
         /// Updates all the filters.
         UpdateAll {
             /// New specification for the catch-all filter.
@@ -65,6 +68,10 @@ pub mod to_server {
         /// Requests a new filter.
         pub fn request_new() -> Msg {
             Self::RequestNew.into()
+        }
+        /// Requests the current server-side list of filters.
+        pub fn revert() -> Msg {
+            Self::Revert.into()
         }
 
         /// Updates all the filters.
@@ -234,10 +241,13 @@ pub mod to_client {
         /// [`FiltersMsg::RequestNew`]: ../to_server/enum.FiltersMsg.html#variant.RequestNew
         /// (The RequestNew message)
         Add(filter::Filter),
-        /// Removes a filter.
-        Rm(uid::FilterUid),
-        // /// Notifies that filter has been synchronized.
-        // Synced(uid::FilterUid),
+
+        /// Orders the client to revert all its filters.
+        Revert {
+            catch_all: FilterSpec,
+            filters: Vec<Filter>,
+        },
+
         /// Updates all the specs.
         UpdateSpecs {
             catch_all: Option<FilterSpec>,
@@ -249,10 +259,12 @@ pub mod to_client {
         pub fn add(filter: filter::Filter) -> Msg {
             Self::Add(filter).into()
         }
-        /// Removes a filter.
-        pub fn rm(uid: uid::FilterUid) -> Msg {
-            Self::Rm(uid).into()
+
+        /// Orders the client to revert all its filters.
+        pub fn revert(catch_all: FilterSpec, filters: Vec<Filter>) -> Msg {
+            Self::Revert { catch_all, filters }.into()
         }
+
         /// Updates all the specs.
         pub fn update_specs(
             catch_all: Option<FilterSpec>,

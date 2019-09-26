@@ -63,10 +63,18 @@ impl Footer {
                         ) }
                         {
                             if filters.edited() {
-                                Button::save(
-                                    "Save all changes",
-                                    move |_| msg::FiltersMsg::save()
-                                )
+                                html! {
+                                    <>
+                                        { Button::save(
+                                            "Save all changes",
+                                            move |_| msg::FiltersMsg::save()
+                                        ) }
+                                        { Button::undo(
+                                            "Undo all changes",
+                                            move |_| msg::to_server::FiltersMsg::revert().into()
+                                        ) }
+                                    </>
+                                }
                             } else {
                                 html!(<a/>)
                             }

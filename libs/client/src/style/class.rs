@@ -77,6 +77,8 @@ pub mod button {
     pub static COLLAPSE: &str = "collapse_button";
     /// Refresh button.
     pub static REFRESH: &str = "refresh_button";
+    /// Undo button.
+    pub static UNDO: &str = "undo_button";
     /// Save button.
     pub static SAVE: &str = "save_button";
     /// Inactive tickbox button.
