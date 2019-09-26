@@ -546,14 +546,14 @@ mod sub {
         // Function that constructs a subfilter with the same UID.
         let uid = filter.uid();
         match filter.raw() {
-            Size(filter) => sub::size::render(filter, move |res| {
+            Size(filter) => size::render(filter, move |res| {
                 let res = res.map(|raw| SubFilter::new(uid, Size(raw)));
                 update(res)
             }),
-            Label(_filter) => html! {
-                <>
-                </>
-            },
+            Label(filter) => label::render(filter, move |res| {
+                let res = res.map(|raw| SubFilter::new(uid, Label(raw)));
+                update(res)
+            }),
         }
     }
 
@@ -706,6 +706,128 @@ mod sub {
                         </li>
                     }
                 }
+            }
+        }
+
+    }
+
+    mod label {
+        use super::*;
+        use charts::filter::{
+            label::{Kind, LabelSpec},
+            LabelFilter,
+        };
+
+        pub fn render<Update>(filter: &LabelFilter, update: Update) -> Html
+        where
+            Update: Fn(Res<LabelFilter>) -> Msg + Clone + 'static,
+        {
+            let specs = match filter {
+                LabelFilter::Contain(specs) => specs,
+                LabelFilter::Exclude(specs) => specs,
+            };
+
+            html! {
+                <>
+                    <li class=style::class::filter::line::CELL>
+                        <a class=style::class::filter::line::CMP_CELL>
+                            { kind_selector(filter, update.clone()) }
+                        </a>
+                    </li>
+                    <li class=style::class::filter::line::CELL>
+                        <a class=style::class::filter::line::VAL_CELL>
+                            <code> { "[" } </code>
+                            {
+                                for specs.iter().enumerate().map(
+                                    |(index, spec)| {
+                                        html! {
+                                            // Attach to nothing, will become kid of the `<div>` above.
+                                            <>
+                                                { dots(filter, update.clone(), index) }
+                                                {
+                                                    let slf = filter.clone();
+                                                    let update = update.clone();
+                                                    render_spec(
+                                                        spec,
+                                                        move |spec| update(
+                                                            spec.map(
+                                                                |spec| {
+                                                                    let mut filter = slf.clone();
+                                                                    filter.insert(index, spec);
+                                                                    filter
+                                                                }
+                                                            )
+                                                        )
+                                                    )
+                                                }
+                                            </>
+                                        }
+                                    }
+                                )
+                            }
+                            { dots(filter, update.clone(), specs.len()) }
+                            <code> { "]" } </code>
+                        </a>
+                    </li>
+                </>
+            }
+        }
+
+        fn kind_selector<Update>(filter: &LabelFilter, update: Update) -> Html
+        where
+            Update: Fn(Res<LabelFilter>) -> Msg + 'static,
+        {
+            let (selected, specs) = filter.kind();
+            let specs = specs.clone();
+            html! {
+                <Select<Kind>
+                    selected=Some(selected)
+                    options=Kind::all()
+                    onchange=move |kind| update(Ok(LabelFilter::of_kind(kind, specs.clone())))
+                />
+            }
+        }
+
+        ///
+        pub fn dots<Update>(filter: &LabelFilter, update: Update, index: usize) -> Html
+        where
+            Update: Fn(Res<LabelFilter>) -> Msg + Clone + 'static,
+        {
+            let slf = filter.clone();
+            html! {
+                <code
+                    class=style::class::filter::line::ADD_LABEL
+                    onclick=move |_| {
+                        let mut filter = slf.clone();
+                        let specs = filter.specs_mut();
+                        specs.insert(
+                            index, LabelSpec::default()
+                        );
+                        update(Ok(filter))
+                    }
+                >{"..."}</code>
+            }
+        }
+
+        fn render_spec<Update>(spec: &LabelSpec, update: Update) -> Html
+        where
+            Update: Fn(Res<LabelSpec>) -> Msg + 'static,
+        {
+            let value = match spec {
+                LabelSpec::Value(value) => format!("{}", value),
+                LabelSpec::Regex(regex) => format!("#\"{}\"#", regex),
+            };
+            html! {
+                <input
+                    type="text"
+                    class=style::class::filter::line::TEXT_VALUE
+                    value=value
+                    onchange=|data| update(
+                        data.text_value()
+                            .and_then(LabelSpec::new)
+                            .chain_err(|| "while parsing label")
+                    )
+                />
             }
         }
 
