@@ -16,8 +16,12 @@ serde = "*"
 serde_derive = "*"
 serde_regex = "*"
 yew = "*"
-failure = "*"
 safe_index = "*"
 strum = "*"
 strum_macros = "*"
 rand = { version = "*", features = ["small_rng"] }
+
+[dependencies.failure]
+version = "*"
+default-features = false
+features = ["std"]
