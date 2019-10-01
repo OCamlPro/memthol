@@ -592,6 +592,7 @@ footer .footer_tabs .footer_tabs_center .tab_inactive:hover, footer .footer_tabs
 }
 footer .footer_display {
   height: 400px;
+  overflow: scroll;
 }
 footer .footer_display .separator {
   width: 100%;
