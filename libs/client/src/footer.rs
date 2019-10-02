@@ -51,7 +51,9 @@ impl Footer {
                         { for NormalFooterTab::all()
                             .into_iter()
                             .map(|tab|
-                                tab.render(Some(tab) == self.active.and_then(FooterTab::get_normal_tab))
+                                tab.render(
+                                    Some(tab) == self.active.and_then(FooterTab::get_normal_tab)
+                                )
                             )
                         }
                         { filters.render_tabs(self.active.and_then(FooterTab::get_filter)) }

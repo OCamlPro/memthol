@@ -59,6 +59,9 @@ pub mod tabs {
             )
         }
     }
+
+    /// Class of a tab separator,
+    pub static SEP: &str = "tab_sep";
 }
 
 /// Button-related classes.
@@ -144,6 +147,8 @@ pub mod filter {
         pub static CMP_CELL: &str = "filter_cmp";
         /// Class of a value cell.
         pub static VAL_CELL: &str = "filter_val";
+        /// Class of a settings button.
+        pub static SETTINGS_BUTTON: &str = "filter_settings_button";
         /// Class of a settings value cell.
         pub static SETTINGS_VALUE_CELL: &str = "filter_settings_value";
         /// Class of a label insertion element.

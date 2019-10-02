@@ -57,10 +57,12 @@ pub mod to_server {
 
         /// Updates all the filters.
         UpdateAll {
-            /// New specification for the catch-all filter.
-            catch_all: filter::FilterSpec,
+            /// New specificationfor the "everything" filter.
+            everything: filter::FilterSpec,
             /// New filters.
             filters: Vec<Filter>,
+            /// New specification for the "catch-all" filter.
+            catch_all: filter::FilterSpec,
         },
     }
 
@@ -75,8 +77,17 @@ pub mod to_server {
         }
 
         /// Updates all the filters.
-        pub fn update_all(catch_all: filter::FilterSpec, filters: Vec<Filter>) -> Msg {
-            Self::UpdateAll { catch_all, filters }.into()
+        pub fn update_all(
+            everything: filter::FilterSpec,
+            filters: Vec<Filter>,
+            catch_all: filter::FilterSpec,
+        ) -> Msg {
+            Self::UpdateAll {
+                everything,
+                filters,
+                catch_all,
+            }
+            .into()
         }
     }
 
@@ -244,8 +255,9 @@ pub mod to_client {
 
         /// Orders the client to revert all its filters.
         Revert {
-            catch_all: FilterSpec,
+            everything: FilterSpec,
             filters: Vec<Filter>,
+            catch_all: FilterSpec,
         },
 
         /// Updates all the specs.
@@ -258,8 +270,13 @@ pub mod to_client {
         }
 
         /// Orders the client to revert all its filters.
-        pub fn revert(catch_all: FilterSpec, filters: Vec<Filter>) -> Msg {
-            Self::Revert { catch_all, filters }.into()
+        pub fn revert(everything: FilterSpec, filters: Vec<Filter>, catch_all: FilterSpec) -> Msg {
+            Self::Revert {
+                everything,
+                filters,
+                catch_all,
+            }
+            .into()
         }
 
         /// Updates all the specs.

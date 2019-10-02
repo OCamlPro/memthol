@@ -199,7 +199,11 @@ impl Filters {
         let (res, should_reload) = match msg {
             RequestNew => (self.add_new(), false),
             Revert => (self.revert(), false),
-            UpdateAll { catch_all, filters } => (self.update_all(catch_all, filters), true),
+            UpdateAll {
+                everything,
+                filters,
+                catch_all,
+            } => (self.update_all(everything, filters, catch_all), true),
         };
         res.map(|msgs| (msgs, should_reload))
     }
@@ -207,8 +211,11 @@ impl Filters {
     /// Sends all the filters to the client.
     pub fn revert(&self) -> Res<msg::to_client::Msgs> {
         let catch_all = self.catch_all.clone();
+        let everything = self.everything.clone();
         let filters = self.filters.clone();
-        Ok(vec![msg::to_client::FiltersMsg::revert(catch_all, filters)])
+        Ok(vec![msg::to_client::FiltersMsg::revert(
+            everything, filters, catch_all,
+        )])
     }
 
     /// Updates all the filters.
@@ -219,11 +226,14 @@ impl Filters {
     ///     filter specifications have changed, there is no need to re-compute the points.
     pub fn update_all(
         &mut self,
-        mut catch_all: FilterSpec,
+        mut everything: FilterSpec,
         mut filters: Vec<Filter>,
+        mut catch_all: FilterSpec,
     ) -> Res<msg::to_client::Msgs> {
         catch_all.unset_edited();
         self.catch_all = catch_all;
+        everything.unset_edited();
+        self.everything = everything;
         for filter in &mut filters {
             filter.unset_edited();
             filter.spec_mut().unset_edited();

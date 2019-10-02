@@ -194,6 +194,8 @@ pub enum FiltersMsg {
         /// Message.
         msg: FilterMsg,
     },
+    /// Moves a filter left or right.
+    Move { uid: FilterUid, left: bool },
 }
 impl FiltersMsg {
     /// Updates a filter on the server.
@@ -211,6 +213,10 @@ impl FiltersMsg {
     /// A message for a specific filter.
     pub fn filter(uid: FilterUid, msg: FilterMsg) -> Msg {
         Self::Filter { uid, msg }.into()
+    }
+    /// Moves a filter left or right.
+    pub fn move_filter(uid: FilterUid, left: bool) -> Msg {
+        Self::Move { uid, left }.into()
     }
 }
 

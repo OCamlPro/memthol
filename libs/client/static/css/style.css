@@ -623,6 +623,17 @@ footer .footer_tabs .footer_tabs_center .li_left .tab_inactive:hover, footer .fo
   color: white;
   background-image: linear-gradient(#8dedff, black);
 }
+footer .footer_tabs .footer_tabs_center .li_left .tab_sep {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  width: 5px;
+}
 footer .footer_tabs .footer_tabs_center .li_right {
   float: right;
 }
@@ -666,6 +677,17 @@ footer .footer_tabs .footer_tabs_center .li_right .tab_inactive:hover, footer .f
   text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
   color: white;
   background-image: linear-gradient(#8dedff, black);
+}
+footer .footer_tabs .footer_tabs_center .li_right .tab_sep {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  width: 5px;
 }
 footer .footer_tabs .footer_tabs_center .li_center {
   float: center;
@@ -711,6 +733,17 @@ footer .footer_tabs .footer_tabs_center .li_center .tab_inactive:hover, footer .
   color: white;
   background-image: linear-gradient(#8dedff, black);
 }
+footer .footer_tabs .footer_tabs_center .li_center .tab_sep {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  width: 5px;
+}
 footer .footer_tabs .footer_tabs_center .tab_active {
   display: block;
   font-size: 16px;
@@ -751,6 +784,339 @@ footer .footer_tabs .footer_tabs_center .tab_inactive:hover, footer .footer_tabs
   text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
   color: white;
   background-image: linear-gradient(#8dedff, black);
+}
+footer .footer_tabs .footer_tabs_center .tab_sep {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  width: 5px;
+}
+footer .footer_tabs .footer_tabs_center {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: left;
+  list-style-type: none;
+  overflow: hidden;
+  font-size: 0;
+  padding: 0;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  height: 45px;
+  height: 45px;
+  width: 79.9%;
+}
+footer .footer_tabs .footer_tabs_center .expand_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/expand.png");
+}
+footer .footer_tabs .footer_tabs_center .expand_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .collapse_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/collapse.png");
+}
+footer .footer_tabs .footer_tabs_center .collapse_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .move_up_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/arrow_up.png");
+}
+footer .footer_tabs .footer_tabs_center .move_up_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .move_down_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/arrow_down.png");
+}
+footer .footer_tabs .footer_tabs_center .move_down_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .save_button {
+  height: 100%;
+  float: left;
+  content: url("../pics/save.png");
+}
+footer .footer_tabs .footer_tabs_center .save_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .refresh_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/refresh.png");
+}
+footer .footer_tabs .footer_tabs_center .refresh_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .undo_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/undo.png");
+}
+footer .footer_tabs .footer_tabs_center .undo_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .close_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/close.png");
+}
+footer .footer_tabs .footer_tabs_center .close_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .add_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/add.png");
+}
+footer .footer_tabs .footer_tabs_center .add_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .inactive_tick_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/tick_inactive.png");
+}
+footer .footer_tabs .footer_tabs_center .inactive_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .active_tick_button {
+  height: 100%;
+  float: right;
+  content: url("../pics/tick_active.png");
+}
+footer .footer_tabs .footer_tabs_center .active_tick_button:hover {
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .li_left {
+  float: left;
+}
+footer .footer_tabs .footer_tabs_center .li_left .tab_active {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .footer_tabs .footer_tabs_center .li_left .tab_active:hover, footer .footer_tabs .footer_tabs_center .li_left .tab_active:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .li_left .tab_inactive {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: #8dedff;
+  background-image: linear-gradient(#3a3a3a, black);
+}
+footer .footer_tabs .footer_tabs_center .li_left .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .li_left .tab_inactive:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .li_left .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .li_left .tab_inactive:active {
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .footer_tabs .footer_tabs_center .li_left .tab_sep {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  width: 5px;
+}
+footer .footer_tabs .footer_tabs_center .li_right {
+  float: right;
+}
+footer .footer_tabs .footer_tabs_center .li_right .tab_active {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .footer_tabs .footer_tabs_center .li_right .tab_active:hover, footer .footer_tabs .footer_tabs_center .li_right .tab_active:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .li_right .tab_inactive {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: #8dedff;
+  background-image: linear-gradient(#3a3a3a, black);
+}
+footer .footer_tabs .footer_tabs_center .li_right .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .li_right .tab_inactive:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .li_right .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .li_right .tab_inactive:active {
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .footer_tabs .footer_tabs_center .li_right .tab_sep {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  width: 5px;
+}
+footer .footer_tabs .footer_tabs_center .li_center {
+  float: center;
+}
+footer .footer_tabs .footer_tabs_center .li_center .tab_active {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .footer_tabs .footer_tabs_center .li_center .tab_active:hover, footer .footer_tabs .footer_tabs_center .li_center .tab_active:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .li_center .tab_inactive {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: #8dedff;
+  background-image: linear-gradient(#3a3a3a, black);
+}
+footer .footer_tabs .footer_tabs_center .li_center .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .li_center .tab_inactive:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .li_center .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .li_center .tab_inactive:active {
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .footer_tabs .footer_tabs_center .li_center .tab_sep {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  width: 5px;
+}
+footer .footer_tabs .footer_tabs_center .tab_active {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .footer_tabs .footer_tabs_center .tab_active:hover, footer .footer_tabs .footer_tabs_center .tab_active:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .tab_inactive {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: #8dedff;
+  background-image: linear-gradient(#3a3a3a, black);
+}
+footer .footer_tabs .footer_tabs_center .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .tab_inactive:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+footer .footer_tabs .footer_tabs_center .tab_inactive:hover, footer .footer_tabs .footer_tabs_center .tab_inactive:active {
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  color: white;
+  background-image: linear-gradient(#8dedff, black);
+}
+footer .footer_tabs .footer_tabs_center .tab_sep {
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  width: 5px;
 }
 footer .footer_display {
   height: 400px;
@@ -1100,6 +1466,23 @@ footer .footer_display .filter_ul .filter_val .filter_settings_value {
   text-align: center;
   margin: 0 5px;
   padding: 0 5px;
+}
+footer .footer_display .filter_ul .filter_val .filter_settings_button {
+  color: #8dedff;
+  font: 16px Monaco, Consola, sans-serif;
+  width: 35%;
+  line-height: 45px;
+  height: 36px;
+  background-color: #3a3a3a;
+  border-radius: 5px;
+  border-style: hidden;
+  text-align: center;
+  margin: 0 5px;
+  padding: 0 5px;
+}
+footer .footer_display .filter_ul .filter_val .filter_settings_button:hover, footer .footer_display .filter_ul .filter_val .filter_settings_button:active {
+  text-decoration: underline;
+  cursor: pointer;
 }
 footer .footer_display .filter_ul .filter_val .filter_add_label:hover {
   text-decoration: underline;

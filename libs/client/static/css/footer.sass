@@ -39,6 +39,13 @@ footer
             height: $layout_tab_height
             width: $layout_split_center_width
 
+        .footer_tabs_center
+            @include hblock(left)
+            @include tab_list
+            @include menu_tabs
+            height: $layout_tab_height
+            width: $layout_split_center_width
+
     .footer_display
         height: $layout_footer_display_height
         overflow: scroll
@@ -97,6 +104,7 @@ footer
             .filter_setting
                 @include hblock
                 @include centered
+
                 width: $setting_width
                 line-height: $cell_height
                 height: $cell_height
@@ -198,6 +206,24 @@ footer
                     text-align: center
                     margin: 0 5px
                     padding: 0 5px
+
+                .filter_settings_button
+                    color: $menu_fg
+                    font: $font_size $font_code_stack
+                    width: 35%
+                    line-height: $cell_height
+                    height: 80 * $cell_height / 100
+                    background-color: $dark_grey
+                    border-radius: 5px
+                    border-style: hidden
+                    text-align: center
+                    margin: 0 5px
+                    padding: 0 5px
+
+                    &:hover,
+                    &:active
+                        text-decoration: underline
+                        cursor: pointer
 
                 .filter_add_label
                     &:hover
