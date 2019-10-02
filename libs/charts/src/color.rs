@@ -97,14 +97,58 @@ impl Color {
     ///
     /// - `dark` indicates whether the random color should be relatively dark.
     pub fn random(dark: bool) -> Self {
-        let mod_val = 156u8;
         let mut rng = rng!();
-        let mut get = || rng.gen::<u8>() % mod_val + if dark { 0u8 } else { 100u8 };
+        let mut values = Vec::with_capacity(3);
+        // Generate a first hi value.
+        values.push(Self::random_hi_u8(&mut rng));
+        // Decide wether the next value is high too.
+        let v_2_hi = rng.gen::<bool>();
+        // Generate a second value.
+        values.push(if v_2_hi {
+            Self::random_hi_u8(&mut rng)
+        } else {
+            Self::random_mid_u8(&mut rng)
+        });
+        // Decide wether the next value is high too.
+        let v_3_hi = (!v_2_hi || !dark) && rng.gen::<bool>();
+        // Generate a third value.
+        values.push(if v_3_hi {
+            Self::random_hi_u8(&mut rng)
+        } else {
+            Self::random_low_u8(&mut rng)
+        });
+
+        // Shuffle stuff around.
+        use rand::seq::SliceRandom;
+        values.shuffle(&mut *rng);
+
         Self {
-            r: get(),
-            g: get(),
-            b: get(),
+            r: values[0],
+            g: values[1],
+            b: values[2],
         }
+    }
+    /// A random u8 between a lower-bound and an upper-bound.
+    ///
+    /// Panics if `lb >= ub`.
+    fn random_u8(rng: &mut SmallRng, lb: u8, ub: u8) -> u8 {
+        if lb >= ub {
+            panic!("illegal call `Color::random_u8(_, {}, {})`", lb, ub)
+        }
+        let mod_val = ub - lb + 1;
+        rng.gen::<u8>() % mod_val + lb
+    }
+    /// A random u8 between `200` and `255`.
+    fn random_hi_u8(rng: &mut SmallRng) -> u8 {
+        Self::random_u8(rng, 200, 255)
+    }
+    /// A random u8 between `100` and `200`.
+    fn random_mid_u8(rng: &mut SmallRng) -> u8 {
+        Self::random_u8(rng, 100, 200)
+    }
+    /// A random u8 between `50` and `150`.
+    fn random_low_u8(rng: &mut SmallRng) -> u8 {
+        Self::random_u8(rng, 50, 150)
     }
 
     /// Keeps on constructing colors until the input predicate is true.

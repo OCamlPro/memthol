@@ -459,7 +459,7 @@ impl FilterSpecExt for FilterSpec {
             series.strokeWidth = 1;
             series.name = @{self.name()};
             series.fill = color;
-            series.fillOpacity = 0.4;
+            series.fillOpacity = 0.01;
             return series;
         );
         use chart::axis::AxisExt;

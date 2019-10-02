@@ -31,7 +31,7 @@ impl FilterSpec {
     /// Constructor for user-defined filters.
     pub fn new(color: Color) -> Self {
         let uid = FilterUid::fresh();
-        let name = format!("filter {}", uid);
+        let name = "new filter".to_string();
         Self {
             uid: LineUid::Filter(uid),
             name,
