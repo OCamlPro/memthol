@@ -147,24 +147,13 @@ impl Filters {
     }
 
     /// Iterator over the filters.
-    pub fn iter(&self) -> impl Iterator<Item = (index::Filter, &Filter)> {
-        self.filters
-            .iter()
-            .enumerate()
-            .map(|(index, filter)| (index::Filter::new(index), filter))
+    pub fn iter(&self) -> impl Iterator<Item = &Filter> {
+        self.filters.iter()
     }
 
     /// Mutable iterator over the filters.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (index::Filter, &mut Filter)> {
-        self.filters
-            .iter_mut()
-            .enumerate()
-            .map(|(index, filter)| (index::Filter::new(index), filter))
-    }
-
-    /// Overwrites a filter.
-    pub fn set(&mut self, index: index::Filter, filter: Filter) {
-        self.filters[*index.deref()] = filter
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Filter> {
+        self.filters.iter_mut()
     }
 
     /// Remembers that an allocation is handled by some filter.
@@ -244,18 +233,6 @@ impl Filters {
         let filter = Filter::new(spec).chain_err(|| "while creating new filter")?;
         let msg = msg::to_client::FiltersMsg::add(filter);
         Ok(vec![msg])
-    }
-}
-
-impl std::ops::Index<index::Filter> for Filters {
-    type Output = Filter;
-    fn index(&self, index: index::Filter) -> &Filter {
-        &self.filters[*index.deref()]
-    }
-}
-impl std::ops::IndexMut<index::Filter> for Filters {
-    fn index_mut(&mut self, index: index::Filter) -> &mut Filter {
-        &mut self.filters[*index.deref()]
     }
 }
 

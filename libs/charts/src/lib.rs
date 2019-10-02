@@ -10,7 +10,6 @@
 //! [`Watcher`] type which, after [`start`]ing it, will monitor a directory for init and diff files.
 //!
 //! [`Json`]: ./base/trait.Json.html (The Json trait)
-//! [`data`]: ./data/index.html (The data module)
 //! [`Watcher`]: ./data/struct.Watcher.html (The Watcher struct in module data)
 //! [`start`]: ./data/fn.start.html (The start function in module data)
 
@@ -20,7 +19,6 @@ pub mod color;
 pub mod data;
 pub mod err;
 pub mod filter;
-pub mod index;
 pub mod msg;
 pub mod point;
 pub mod uid;

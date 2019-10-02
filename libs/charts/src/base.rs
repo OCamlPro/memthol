@@ -20,7 +20,7 @@ pub use crate::{
     err::{Res, ResExt},
     filter,
     filter::{Filter, Filters},
-    index, msg, point,
+    msg, point,
     point::{Point, PointVal, Points},
     uid, ChartExt,
 };
