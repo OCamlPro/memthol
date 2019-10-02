@@ -5,7 +5,7 @@ use crate::base::*;
 pub use charts::msg::{to_client as from_server, to_server};
 
 use chart::ChartUid;
-use filter::FilterUid;
+use filter::{FilterUid, LineUid};
 
 /// Internal model messages.
 ///
@@ -183,7 +183,7 @@ pub enum FiltersMsg {
     /// A message for a specific filter specification.
     FilterSpec {
         /// Uid of the filter.
-        uid: Option<FilterUid>,
+        uid: LineUid,
         /// Message.
         msg: FilterSpecMsg,
     },
@@ -205,7 +205,7 @@ impl FiltersMsg {
         Self::Rm(uid).into()
     }
     /// A message for a specific filter specification.
-    pub fn filter_spec(uid: Option<FilterUid>, msg: FilterSpecMsg) -> Msg {
+    pub fn filter_spec(uid: LineUid, msg: FilterSpecMsg) -> Msg {
         Self::FilterSpec { uid, msg }.into()
     }
     /// A message for a specific filter.
@@ -223,11 +223,11 @@ pub enum FilterSpecMsg {
 }
 impl FilterSpecMsg {
     /// Changes the name of a filter.
-    pub fn change_name(uid: Option<FilterUid>, new_name: ChangeData) -> Msg {
+    pub fn change_name(uid: LineUid, new_name: ChangeData) -> Msg {
         FiltersMsg::filter_spec(uid, Self::ChangeName(new_name)).into()
     }
     /// Changes the color of a filter.
-    pub fn change_color(uid: Option<FilterUid>, new_color: ChangeData) -> Msg {
+    pub fn change_color(uid: LineUid, new_color: ChangeData) -> Msg {
         FiltersMsg::filter_spec(uid, Self::ChangeColor(new_color)).into()
     }
 }

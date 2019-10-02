@@ -4,7 +4,7 @@ use crate::base::*;
 
 use charts::filter::{Filter, FilterSpec};
 
-pub use charts::filter::{FilterUid, SubFilter, SubFilterUid};
+pub use charts::filter::{FilterUid, LineUid, SubFilter, SubFilterUid};
 
 /// Stores all the filters.
 pub struct Filters {
@@ -12,9 +12,11 @@ pub struct Filters {
     to_model: Callback<Msg>,
     /// Catch-all filter.
     catch_all: FilterSpec,
+    /// Everything filter.
+    everything: FilterSpec,
     /// Actual filters.
     filters: Map<FilterUid, Filter>,
-    /// True if a filtered was removed and the server was not notified.
+    /// True if a filter was removed and the server was not notified.
     deleted: bool,
 }
 
@@ -24,6 +26,7 @@ impl Filters {
         Filters {
             to_model,
             catch_all: FilterSpec::new_catch_all(),
+            everything: FilterSpec::new_everything(),
             filters: Map::new(),
             deleted: false,
         }
@@ -43,10 +46,11 @@ impl Filters {
     }
 
     /// Gives mutable access to a filter specification.
-    pub fn get_spec_mut(&mut self, uid: Option<FilterUid>) -> Option<&mut FilterSpec> {
+    pub fn get_spec_mut(&mut self, uid: LineUid) -> Option<&mut FilterSpec> {
         match uid {
-            None => Some(&mut self.catch_all),
-            Some(uid) => self.filters.get_mut(&uid).map(Filter::spec_mut),
+            LineUid::CatchAll => Some(&mut self.catch_all),
+            LineUid::Everything => Some(&mut self.everything),
+            LineUid::Filter(uid) => self.filters.get_mut(&uid).map(Filter::spec_mut),
         }
     }
 
@@ -93,9 +97,15 @@ impl Filters {
     where
         F: FnMut(&FilterSpec) -> Res<()>,
     {
-        f(&self.catch_all)?;
-        for filter in self.filters.values() {
-            f(filter.spec())?
+        // Only run on "everything" if there are no filters.
+        if self.filters.is_empty() {
+            f(&self.everything)?
+        } else {
+            f(&self.everything)?;
+            for filter in self.filters.values() {
+                f(filter.spec())?
+            }
+            f(&self.catch_all)?
         }
         Ok(())
     }
@@ -157,7 +167,7 @@ impl Filters {
     }
 
     /// Changes the name of a filter.
-    pub fn change_name(&mut self, uid: Option<FilterUid>, new_name: ChangeData) -> Res<()> {
+    pub fn change_name(&mut self, uid: LineUid, new_name: ChangeData) -> Res<()> {
         let new_name = match new_name.text_value() {
             Ok(new_name) => new_name,
             Err(e) => {
@@ -174,9 +184,8 @@ impl Filters {
         } else {
             bail!(
                 "unable to update the name of unknown filter #{} to `{}`",
-                uid.map(|uid| uid.to_string())
-                    .unwrap_or_else(|| "??".into()),
-                new_name
+                uid,
+                new_name,
             )
         }
 
@@ -184,7 +193,7 @@ impl Filters {
     }
 
     /// Changes the color of a filter.
-    pub fn change_color(&mut self, uid: Option<FilterUid>, new_color: ChangeData) -> Res<()> {
+    pub fn change_color(&mut self, uid: LineUid, new_color: ChangeData) -> Res<()> {
         let new_color = match new_color.text_value() {
             Ok(new_color) => charts::color::Color::from_str(new_color)
                 .chain_err(|| "while changing the color of a filter")?,
@@ -200,9 +209,8 @@ impl Filters {
         } else {
             bail!(
                 "unable to update the name of unknown filter #{} to `{}`",
-                uid.map(|uid| uid.to_string())
-                    .unwrap_or_else(|| "??".into()),
-                new_color
+                uid,
+                new_color,
             )
         }
 
@@ -231,7 +239,7 @@ impl Filters {
                 }
                 Ok(true)
             }
-            UpdateSpecs { catch_all, specs } => self.update_specs(catch_all, specs),
+            UpdateSpecs(specs) => self.update_specs(specs),
         }
     }
 
@@ -246,9 +254,9 @@ impl Filters {
             bail!("filter UID collision on #{}", prev.uid())
         }
         self.to_model
-            .emit(msg::FooterMsg::toggle_tab(footer::FooterTab::filter(Some(
-                uid,
-            ))));
+            .emit(msg::FooterMsg::toggle_tab(footer::FooterTab::filter(
+                LineUid::Filter(uid),
+            )));
         Ok(true)
     }
 
@@ -265,17 +273,20 @@ impl Filters {
     /// Updates the specifications of the filters in the map.
     ///
     /// - triggers a refresh of the filters of all the charts.
-    pub fn update_specs(
-        &mut self,
-        catch_all: Option<FilterSpec>,
-        mut specs: Map<FilterUid, FilterSpec>,
-    ) -> Res<ShouldRender> {
-        if let Some(mut spec) = catch_all {
+    pub fn update_specs(&mut self, mut specs: Map<LineUid, FilterSpec>) -> Res<ShouldRender> {
+        // Update "everything" filter.
+        if let Some(mut spec) = specs.remove(&LineUid::Everything) {
+            spec.unset_edited();
+            self.everything = spec
+        }
+        // Update "catch-all" filter.
+        if let Some(mut spec) = specs.remove(&LineUid::CatchAll) {
             spec.unset_edited();
             self.catch_all = spec
         }
+        // Check all filters for changes.
         for filter in self.filters.values_mut() {
-            if let Some(mut spec) = specs.remove(&filter.uid()) {
+            if let Some(mut spec) = specs.remove(&LineUid::Filter(filter.uid())) {
                 spec.unset_edited();
                 *filter.spec_mut() = spec
             }
@@ -294,25 +305,34 @@ impl Filters {
 /// # Rendering
 impl Filters {
     /// Renders the tabs for each filter.
-    pub fn render_tabs(&self, active: Option<Option<FilterUid>>) -> Html {
-        html! {
-            <>
-                // Catch all.
-                { self.catch_all.render_tab(active == Some(None)) }
-                // Actual filters.
-                { for self.filters.values().rev().map(|filter| {
-                    let active = Some(Some(filter.uid())) == active;
-                    filter.spec().render_tab(active)
-                } ) }
-            </>
+    pub fn render_tabs(&self, active: Option<LineUid>) -> Html {
+        // If there are no user-defined filters, only render the "everything" filter.
+        if self.filters.is_empty() {
+            self.everything
+                .render_tab(active == Some(LineUid::Everything))
+        } else {
+            html! {
+                <>
+                    // Catch-all filter.
+                    { self.catch_all.render_tab(active == Some(LineUid::CatchAll)) }
+                    // Actual filters.
+                    { for self.filters.values().rev().map(|filter| {
+                        let active = Some(LineUid::Filter(filter.uid())) == active;
+                        filter.spec().render_tab(active)
+                    } ) }
+                    // Everything filter.
+                    { self.everything.render_tab(active == Some(LineUid::Everything))}
+                </>
+            }
         }
     }
 
     /// Renders the active filter.
-    pub fn render_filter(&self, active: Option<FilterUid>) -> Html {
+    pub fn render_filter(&self, active: LineUid) -> Html {
         let (settings, filter_opt) = match active {
-            None => (self.catch_all.render_settings(), None),
-            Some(uid) => match self.filters.get(&uid) {
+            LineUid::CatchAll => (self.catch_all.render_settings(), None),
+            LineUid::Everything => (self.everything.render_settings(), None),
+            LineUid::Filter(uid) => match self.filters.get(&uid) {
                 Some(filter) => (filter.spec().render_settings(), Some(filter)),
                 None => (html!(<a/>), None),
             },
@@ -330,7 +350,7 @@ impl Filters {
                     </li>
                     <li class = style::class::filter::BUTTONS_RIGHT>
                         {
-                            if let Some(uid) = active {
+                            if let Some(uid) = active.filter_uid() {
                                 Button::close(
                                     "Delete the filter",
                                     move |_| msg::FiltersMsg::rm(uid)

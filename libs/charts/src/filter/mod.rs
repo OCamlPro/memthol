@@ -13,7 +13,7 @@ pub use label::LabelFilter;
 use ord::OrdFilter;
 pub use spec::FilterSpec;
 pub use sub::SubFilter;
-pub use uid::{FilterUid, SubFilterUid};
+pub use uid::{FilterUid, LineUid, SubFilterUid};
 
 /// A filter over allocation sizes.
 pub type SizeFilter = OrdFilter<usize>;
@@ -81,7 +81,9 @@ impl FilterKind {
 ///
 /// Aggregates the following:
 ///
-/// - a "catch all" [`FilterSpec`], the specification of the points that no filter catches;
+/// - a "catch all" [`FilterSpec`], the specification for the points that no filter catches;
+/// - a "everything" [`FilterSpec`], the specification for all the points, regardless of
+///     user-defined filters;
 /// - a list of [`Filter`]s;
 /// - a memory from allocation UIDs to filter UIDs that tells which filter takes care of some
 ///     allocation.
@@ -96,8 +98,10 @@ impl FilterKind {
 /// [`Filter`]: struct.Filter.html (The Filter struct)
 #[derive(Debug, Clone)]
 pub struct Filters {
-    /// The specification of the catch-all filter.
+    /// The specification of the "catch-all" filter.
     catch_all: FilterSpec,
+    /// The specification of the "everything" filter.
+    everything: FilterSpec,
     /// The actual list of filters.
     filters: Vec<Filter>,
     /// Remembers which filter is responsible for an allocation.
@@ -110,6 +114,7 @@ impl Filters {
         Filters {
             filters: vec![],
             catch_all: FilterSpec::new_catch_all(),
+            everything: FilterSpec::new_everything(),
             memory: Map::new(),
         }
     }
@@ -211,7 +216,7 @@ impl Filters {
     /// # TODO
     ///
     /// - decide whether we need to re-compute all the points using the `edited()` flags. If only
-    ///     filter specifications have change, there is no need to re-compute the points.
+    ///     filter specifications have changed, there is no need to re-compute the points.
     pub fn update_all(
         &mut self,
         mut catch_all: FilterSpec,
@@ -255,7 +260,7 @@ pub struct Filter {
 impl Filter {
     /// Constructor.
     pub fn new(spec: FilterSpec) -> Res<Filter> {
-        if spec.uid().is_none() {
+        if spec.uid().filter_uid().is_none() {
             bail!("trying to construct a filter with no UID")
         }
         let slf = Self {
@@ -297,6 +302,7 @@ impl Filter {
     pub fn uid(&self) -> FilterUid {
         self.spec()
             .uid()
+            .filter_uid()
             .expect("invariant violation, found a filter with no UID")
     }
 

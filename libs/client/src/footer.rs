@@ -26,8 +26,8 @@ impl Footer {
                 Ok(true)
             }
             Removed(uid) => {
-                if self.active == Some(FooterTab::Filter(Some(uid))) {
-                    self.active = Some(FooterTab::Filter(None));
+                if self.active == Some(FooterTab::Filter(filter::LineUid::Filter(uid))) {
+                    self.active = Some(FooterTab::Filter(filter::LineUid::Everything));
                     Ok(true)
                 } else {
                     Ok(false)
@@ -145,12 +145,12 @@ pub enum FooterTab {
     /// Info tab.
     Normal(NormalFooterTab),
     /// Filters tab.
-    Filter(Option<filter::FilterUid>),
+    Filter(filter::LineUid),
 }
 
 impl FooterTab {
     /// Filter tab constructor.
-    pub fn filter(uid: Option<filter::FilterUid>) -> Self {
+    pub fn filter(uid: filter::LineUid) -> Self {
         Self::Filter(uid)
     }
 
@@ -162,7 +162,7 @@ impl FooterTab {
         }
     }
     /// The active filter, if any.
-    pub fn get_filter(self) -> Option<Option<filter::FilterUid>> {
+    pub fn get_filter(self) -> Option<filter::LineUid> {
         match self {
             Self::Normal(_) => None,
             Self::Filter(uid) => Some(uid),
@@ -174,14 +174,7 @@ impl fmt::Display for FooterTab {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             FooterTab::Normal(tab) => write!(fmt, "{}", tab),
-            FooterTab::Filter(uid) => {
-                write!(fmt, "Filter(")?;
-                match uid {
-                    None => write!(fmt, "catch-all")?,
-                    Some(uid) => write!(fmt, "#{}", uid)?,
-                }
-                write!(fmt, ")")
-            }
+            FooterTab::Filter(uid) => write!(fmt, "Filter({})", uid),
         }
     }
 }

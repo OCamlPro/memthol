@@ -249,10 +249,7 @@ pub mod to_client {
         },
 
         /// Updates all the specs.
-        UpdateSpecs {
-            catch_all: Option<FilterSpec>,
-            specs: Map<uid::FilterUid, FilterSpec>,
-        },
+        UpdateSpecs(Map<uid::LineUid, FilterSpec>),
     }
     impl FiltersMsg {
         /// Adds a filter.
@@ -266,11 +263,8 @@ pub mod to_client {
         }
 
         /// Updates all the specs.
-        pub fn update_specs(
-            catch_all: Option<FilterSpec>,
-            specs: Map<uid::FilterUid, FilterSpec>,
-        ) -> Msg {
-            Self::UpdateSpecs { catch_all, specs }.into()
+        pub fn update_specs(specs: Map<uid::LineUid, FilterSpec>) -> Msg {
+            Self::UpdateSpecs(specs).into()
         }
     }
 

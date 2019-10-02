@@ -19,9 +19,9 @@ mod cargo_web {
             println!("```");
             panic!("cargo-web is not installed")
         };
-        match Command::new("cargo").arg("web").arg("help").status() {
-            Ok(status) => {
-                if status.success() {
+        match Command::new("cargo").arg("web").arg("help").output() {
+            Ok(output) => {
+                if output.status.success() {
                     ()
                 } else {
                     fail("`cargo-web` is not installed", None)
@@ -216,7 +216,7 @@ mod client {
 }
 
 fn main() {
-    // println!("cargo:rerun-if-changed=\"static\"");
+    println!("cargo:rerun-if-changed=\"static\"");
     cargo_web::check();
     client::deploy();
     client::copy_assets()

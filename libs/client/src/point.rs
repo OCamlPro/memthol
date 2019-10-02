@@ -30,12 +30,12 @@ where
     fn as_js(self) -> JsVal {
         let Point {
             key,
-            vals: PointVal { filtered, rest },
+            vals: PointVal { map },
         } = self;
-        let point = js!(return { "x": @{key.as_js()}, "y": @{rest.as_js()}});
-        for (uid, val) in filtered.into_iter() {
+        let point = js!(return { "x": @{key.as_js()} });
+        for (uid, val) in map.into_iter() {
             js!(@(no_return)
-                @{&point}[@{format!("y_{}", uid)}] = @{val.as_js()};
+                @{&point}[@{uid.y_axis_key()}] = @{val.as_js()};
             )
         }
         point
