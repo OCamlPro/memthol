@@ -216,7 +216,7 @@ mod client {
 }
 
 fn main() {
-    println!("cargo:rerun-if-changed=\"static\"");
+    // println!("cargo:rerun-if-changed=\"static\"");
     cargo_web::check();
     client::deploy();
     client::copy_assets()

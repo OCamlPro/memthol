@@ -1,19 +1,7 @@
-//! An example of serving static assets with Gotham.
+//! Memthol's UI.
 
 #[macro_use]
 extern crate clap;
-
-#[macro_use]
-pub mod base;
-#[macro_use]
-pub mod conf;
-#[macro_use]
-pub mod err;
-
-pub mod assets;
-pub mod msg;
-pub mod router;
-pub mod socket;
 
 /// Default clap values.
 mod default {
@@ -71,7 +59,7 @@ pub fn main() {
     };
 
     let verb = matches.occurrences_of("VERB") > 0;
-    conf::set_verb(verb);
+    memthol::conf::set_verb(verb);
 
     let dump_dir = matches.value_of("DIR").expect("argument with default");
 
@@ -82,19 +70,19 @@ pub fn main() {
     println!("|===|");
     println!();
 
-    let router = router::new();
+    let router = memthol::router::new();
 
     println!("initializing assets...");
-    unwrap! {
-        assets::init(&addr, port)
+    memthol::unwrap! {
+        memthol::assets::init(&addr, port)
     }
 
     println!("starting data monitoring...");
     charts::data::start(dump_dir);
 
     println!("starting socket listeners...");
-    unwrap! {
-        socket::spawn_server(addr, port + 1)
+    memthol::unwrap! {
+        memthol::socket::spawn_server(addr, port + 1)
     }
 
     gotham::start(path, router)
