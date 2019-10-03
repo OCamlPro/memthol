@@ -29,7 +29,7 @@ pub use yew::{
 
 pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Uid as AllocUid};
 
-pub use charts::{base::Json, index, point::Point};
+pub use charts::{base::Json, point::Point};
 
 // Re-exports.
 

@@ -65,3 +65,25 @@ mk_buttons! {
     /// Creates a move up button.
     pub fn move_up(...) { class = MOVE_UP }
 }
+
+impl<Action, Title> Button<Action, Title>
+where
+    Action: OnClick,
+    Title: Into<String>,
+{
+    /// Creates a text button.
+    pub fn text<S>(text: S, title: Title, action: Action, class: &'static str) -> Html
+    where
+        S: Into<String>,
+    {
+        html! {
+            <a
+                class = class
+                onclick = |e| action(e)
+                title = title.into()
+            >
+                { text.into() }
+            </a>
+        }
+    }
+}

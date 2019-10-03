@@ -19,9 +19,9 @@ mod cargo_web {
             println!("```");
             panic!("cargo-web is not installed")
         };
-        match Command::new("cargo").arg("web").arg("help").status() {
-            Ok(status) => {
-                if status.success() {
+        match Command::new("cargo").arg("web").arg("help").output() {
+            Ok(output) => {
+                if output.status.success() {
                     ()
                 } else {
                     fail("`cargo-web` is not installed", None)

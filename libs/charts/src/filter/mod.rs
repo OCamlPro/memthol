@@ -13,7 +13,7 @@ pub use label::LabelFilter;
 use ord::OrdFilter;
 pub use spec::FilterSpec;
 pub use sub::SubFilter;
-pub use uid::{FilterUid, SubFilterUid};
+pub use uid::{FilterUid, LineUid, SubFilterUid};
 
 /// A filter over allocation sizes.
 pub type SizeFilter = OrdFilter<usize>;
@@ -81,7 +81,9 @@ impl FilterKind {
 ///
 /// Aggregates the following:
 ///
-/// - a "catch all" [`FilterSpec`], the specification of the points that no filter catches;
+/// - a "catch all" [`FilterSpec`], the specification for the points that no filter catches;
+/// - a "everything" [`FilterSpec`], the specification for all the points, regardless of
+///     user-defined filters;
 /// - a list of [`Filter`]s;
 /// - a memory from allocation UIDs to filter UIDs that tells which filter takes care of some
 ///     allocation.
@@ -96,8 +98,10 @@ impl FilterKind {
 /// [`Filter`]: struct.Filter.html (The Filter struct)
 #[derive(Debug, Clone)]
 pub struct Filters {
-    /// The specification of the catch-all filter.
+    /// The specification of the "catch-all" filter.
     catch_all: FilterSpec,
+    /// The specification of the "everything" filter.
+    everything: FilterSpec,
     /// The actual list of filters.
     filters: Vec<Filter>,
     /// Remembers which filter is responsible for an allocation.
@@ -110,6 +114,7 @@ impl Filters {
         Filters {
             filters: vec![],
             catch_all: FilterSpec::new_catch_all(),
+            everything: FilterSpec::new_everything(),
             memory: Map::new(),
         }
     }
@@ -147,24 +152,13 @@ impl Filters {
     }
 
     /// Iterator over the filters.
-    pub fn iter(&self) -> impl Iterator<Item = (index::Filter, &Filter)> {
-        self.filters
-            .iter()
-            .enumerate()
-            .map(|(index, filter)| (index::Filter::new(index), filter))
+    pub fn iter(&self) -> impl Iterator<Item = &Filter> {
+        self.filters.iter()
     }
 
     /// Mutable iterator over the filters.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (index::Filter, &mut Filter)> {
-        self.filters
-            .iter_mut()
-            .enumerate()
-            .map(|(index, filter)| (index::Filter::new(index), filter))
-    }
-
-    /// Overwrites a filter.
-    pub fn set(&mut self, index: index::Filter, filter: Filter) {
-        self.filters[*index.deref()] = filter
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Filter> {
+        self.filters.iter_mut()
     }
 
     /// Remembers that an allocation is handled by some filter.
@@ -205,7 +199,11 @@ impl Filters {
         let (res, should_reload) = match msg {
             RequestNew => (self.add_new(), false),
             Revert => (self.revert(), false),
-            UpdateAll { catch_all, filters } => (self.update_all(catch_all, filters), true),
+            UpdateAll {
+                everything,
+                filters,
+                catch_all,
+            } => (self.update_all(everything, filters, catch_all), true),
         };
         res.map(|msgs| (msgs, should_reload))
     }
@@ -213,8 +211,11 @@ impl Filters {
     /// Sends all the filters to the client.
     pub fn revert(&self) -> Res<msg::to_client::Msgs> {
         let catch_all = self.catch_all.clone();
+        let everything = self.everything.clone();
         let filters = self.filters.clone();
-        Ok(vec![msg::to_client::FiltersMsg::revert(catch_all, filters)])
+        Ok(vec![msg::to_client::FiltersMsg::revert(
+            everything, filters, catch_all,
+        )])
     }
 
     /// Updates all the filters.
@@ -222,14 +223,17 @@ impl Filters {
     /// # TODO
     ///
     /// - decide whether we need to re-compute all the points using the `edited()` flags. If only
-    ///     filter specifications have change, there is no need to re-compute the points.
+    ///     filter specifications have changed, there is no need to re-compute the points.
     pub fn update_all(
         &mut self,
-        mut catch_all: FilterSpec,
+        mut everything: FilterSpec,
         mut filters: Vec<Filter>,
+        mut catch_all: FilterSpec,
     ) -> Res<msg::to_client::Msgs> {
         catch_all.unset_edited();
         self.catch_all = catch_all;
+        everything.unset_edited();
+        self.everything = everything;
         for filter in &mut filters {
             filter.unset_edited();
             filter.spec_mut().unset_edited();
@@ -244,18 +248,6 @@ impl Filters {
         let filter = Filter::new(spec).chain_err(|| "while creating new filter")?;
         let msg = msg::to_client::FiltersMsg::add(filter);
         Ok(vec![msg])
-    }
-}
-
-impl std::ops::Index<index::Filter> for Filters {
-    type Output = Filter;
-    fn index(&self, index: index::Filter) -> &Filter {
-        &self.filters[*index.deref()]
-    }
-}
-impl std::ops::IndexMut<index::Filter> for Filters {
-    fn index_mut(&mut self, index: index::Filter) -> &mut Filter {
-        &mut self.filters[*index.deref()]
     }
 }
 
@@ -278,7 +270,7 @@ pub struct Filter {
 impl Filter {
     /// Constructor.
     pub fn new(spec: FilterSpec) -> Res<Filter> {
-        if spec.uid().is_none() {
+        if spec.uid().filter_uid().is_none() {
             bail!("trying to construct a filter with no UID")
         }
         let slf = Self {
@@ -320,6 +312,7 @@ impl Filter {
     pub fn uid(&self) -> FilterUid {
         self.spec()
             .uid()
+            .filter_uid()
             .expect("invariant violation, found a filter with no UID")
     }
 

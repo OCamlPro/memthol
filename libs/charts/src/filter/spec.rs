@@ -17,7 +17,7 @@ pub struct FilterSpec {
     /// Uid of the filter.
     ///
     /// None if the specification if for the catch-all filter.
-    uid: Option<FilterUid>,
+    uid: LineUid,
     /// Name of the filter.
     name: String,
     /// Color of the filter.
@@ -28,12 +28,12 @@ pub struct FilterSpec {
     edited: bool,
 }
 impl FilterSpec {
-    /// Constructor.
+    /// Constructor for user-defined filters.
     pub fn new(color: Color) -> Self {
         let uid = FilterUid::fresh();
-        let name = format!("filter {}", uid);
+        let name = "new filter".to_string();
         Self {
-            uid: Some(uid),
+            uid: LineUid::Filter(uid),
             name,
             color,
             edited: false,
@@ -43,15 +43,25 @@ impl FilterSpec {
     /// Constructs a specification for the catch-all filter.
     pub fn new_catch_all() -> Self {
         Self {
-            uid: None,
+            uid: LineUid::CatchAll,
             name: "catch all".into(),
             color: Color::new(0x01, 0x93, 0xff),
             edited: false,
         }
     }
 
+    /// Constructs a specification for the everything filter.
+    pub fn new_everything() -> Self {
+        Self {
+            uid: LineUid::Everything,
+            name: "everything".into(),
+            color: Color::new(0xff, 0x66, 0x00),
+            edited: false,
+        }
+    }
+
     /// UID accessor.
-    pub fn uid(&self) -> Option<FilterUid> {
+    pub fn uid(&self) -> LineUid {
         self.uid
     }
 

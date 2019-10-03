@@ -121,12 +121,23 @@ impl TimeSize {
             timestamp,
             // New allocation.
             |alloc| {
-                let uid = filters.find_match(alloc);
+                // Filter UID that matches the allocation, or catch-all.
+                let uid = if let Some(uid) = filters.find_match(alloc) {
+                    uid::LineUid::Filter(uid)
+                } else {
+                    uid::LineUid::CatchAll
+                };
 
                 let toc_point_val =
                     map!(entry my_map, with filters => at as_date(alloc.toc.clone()));
+
+                // Update the filter that matches the allocation.
                 toc_point_val
                     .get_mut_or(uid, (INIT_SIZE_VALUE, INIT_SIZE_VALUE))
+                    .0 += alloc.size;
+                // Update the everything line.
+                toc_point_val
+                    .get_mut_or(uid::LineUid::Everything, (INIT_SIZE_VALUE, INIT_SIZE_VALUE))
                     .0 += alloc.size;
                 Ok(())
             },
@@ -140,10 +151,17 @@ impl TimeSize {
                     let alloc = data
                         .get_alloc(uid)
                         .chain_err(|| "while handling new dead allocations")?;
-                    let uid = filters.find_dead_match(uid);
+
+                    let uid = if let Some(uid) = filters.find_dead_match(uid) {
+                        uid::LineUid::Filter(uid)
+                    } else {
+                        uid::LineUid::CatchAll
+                    };
 
                     let toc_point_val = map!(entry my_map, with filters => at as_date(tod.clone()));
+
                     toc_point_val.get_mut(uid)?.1 += alloc.size;
+                    toc_point_val.get_mut(uid::LineUid::Everything)?.1 += alloc.size
                 }
                 Ok(())
             },

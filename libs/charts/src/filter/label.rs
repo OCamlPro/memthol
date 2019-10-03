@@ -124,25 +124,62 @@ impl LabelFilter {
     /// Helper that returns true if some labels verify the input specs.
     fn check_contain(specs: &[LabelSpec], labels: &[String]) -> bool {
         let mut labels = labels.iter();
-        'next_spec: for spec in specs.iter() {
+        let mut specs = specs.iter();
+
+        'next_spec: while let Some(spec) = specs.next() {
+            // `can_skip` is true if `spec` does not have to match the next label, it can match
+            // labels appearing later in the sequence.
+            let (can_skip, spec) = if spec.matches_anything() {
+                // We're matching a sequence of anything. Find the next spec that's not an
+                // `Anything`.
+                let mut spec_opt = None;
+                'drain_match_anything: while let Some(spec) = specs.next() {
+                    if spec.matches_anything() {
+                        continue 'drain_match_anything;
+                    } else {
+                        spec_opt = Some(spec);
+                        break 'drain_match_anything;
+                    }
+                }
+
+                if let Some(spec) = spec_opt {
+                    (true, spec)
+                } else {
+                    // We're matching anything, and there is no spec to match after that.
+                    return true;
+                }
+            } else {
+                // We're matching an actual spec.
+                (false, spec)
+            };
+
             'find_match: while let Some(label) = labels.next() {
                 if spec.apply(label) {
+                    // Found a match.
                     continue 'next_spec;
-                } else {
+                } else if can_skip {
+                    // `spec` does not have to match right away, keep moving.
                     continue 'find_match;
+                } else {
+                    return false;
                 }
             }
+
             // Only reachable if there are no more labels.
             return false;
         }
-        // Only reachable if there are no more specs and all succeeded.
-        true
+
+        // Only reachable if there are no more specs and all succeeded. Now we just need to check if
+        // there are labels left.
+        labels.next().is_none()
     }
 }
 
 /// Label specification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LabelSpec {
+    /// Matches a sequence of arbitrary labels.
+    Anything,
     /// An actualy label value.
     Value(String),
     /// A regular expression.
@@ -154,6 +191,7 @@ impl FilterExt<str> for LabelSpec {
         match self {
             LabelSpec::Value(value) => label == value,
             LabelSpec::Regex(regex) => regex.is_match(label),
+            LabelSpec::Anything => true,
         }
     }
 }
@@ -163,6 +201,7 @@ impl fmt::Display for LabelSpec {
         match self {
             Self::Value(label) => label.fmt(fmt),
             Self::Regex(regex) => write!(fmt, "#\"{}\"#", regex),
+            Self::Anything => write!(fmt, "..."),
         }
     }
 }
@@ -204,13 +243,27 @@ impl LabelSpec {
         match self {
             LabelSpec::Value(s) => s == "",
             LabelSpec::Regex(_) => false,
+            LabelSpec::Anything => false,
+        }
+    }
+
+    /// True if the spec matches anything.
+    pub fn matches_anything(&self) -> bool {
+        match self {
+            Self::Anything => true,
+            Self::Value(_) => false,
+            Self::Regex(_) => false,
         }
     }
 }
 
 impl From<String> for LabelSpec {
     fn from(s: String) -> Self {
-        Self::Value(s)
+        if &s == "..." {
+            Self::Anything
+        } else {
+            Self::Value(s)
+        }
     }
 }
 impl<'a> From<&'a str> for LabelSpec {

@@ -6,7 +6,7 @@ pub use charts::chart::axis::{XAxis, YAxis};
 
 pub trait AxisExt {
     fn chart_apply(&self, chart: &JsVal);
-    fn series_apply(&self, series: &JsVal, uid: Option<filter::FilterUid>);
+    fn series_apply(&self, series: &JsVal, uid: filter::LineUid);
 }
 
 impl AxisExt for XAxis {
@@ -32,7 +32,7 @@ impl AxisExt for XAxis {
         }
     }
 
-    fn series_apply(&self, series: &JsVal, _: Option<filter::FilterUid>) {
+    fn series_apply(&self, series: &JsVal, _: filter::LineUid) {
         js!(@(no_return)
             @{series}.dataFields.dateX = "x";
         )
@@ -50,12 +50,8 @@ impl AxisExt for YAxis {
         }
     }
 
-    fn series_apply(&self, series: &JsVal, uid: Option<filter::FilterUid>) {
-        let y_name = if let Some(uid) = uid {
-            format!("y_{}", uid)
-        } else {
-            "y".into()
-        };
+    fn series_apply(&self, series: &JsVal, uid: filter::LineUid) {
+        let y_name = uid.y_axis_key();
         js!(@(no_return)
             let series = @{series};
             series.dataFields.valueY = @{&y_name};
