@@ -7,6 +7,7 @@ use crate::base::*;
 pub mod label;
 pub mod ord;
 mod spec;
+pub mod string_like;
 pub mod sub;
 
 pub use label::LabelFilter;
@@ -33,7 +34,7 @@ pub enum CmpKind {
     /// Ordered comparison.
     Ord(ord::Kind),
     /// Label comparison.
-    Label(label::Kind),
+    Label(label::LabelPred),
 }
 impl CmpKind {
     /// Ordered comparison constructor.
@@ -41,7 +42,7 @@ impl CmpKind {
         Self::Ord(kind)
     }
     /// Label comparison constructor.
-    pub fn new_label(kind: label::Kind) -> Self {
+    pub fn new_label(kind: label::LabelPred) -> Self {
         Self::Label(kind)
     }
 }

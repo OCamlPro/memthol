@@ -823,7 +823,7 @@ mod sub {
     mod label {
         use super::*;
         use charts::filter::{
-            label::{Kind, LabelSpec},
+            label::{LabelPred, LabelSpec},
             LabelFilter,
         };
 
@@ -831,10 +831,7 @@ mod sub {
         where
             Update: Fn(Res<LabelFilter>) -> Msg + Clone + 'static,
         {
-            let specs = match filter {
-                LabelFilter::Contain(specs) => specs,
-                LabelFilter::Exclude(specs) => specs,
-            };
+            let specs = filter.specs();
 
             html! {
                 <>
@@ -862,7 +859,7 @@ mod sub {
                                                             spec.map(
                                                                 |spec| {
                                                                     let mut filter = slf.clone();
-                                                                    filter.insert(index, spec);
+                                                                    filter.replace(index, spec);
                                                                     filter
                                                                 }
                                                             )
@@ -886,13 +883,13 @@ mod sub {
         where
             Update: Fn(Res<LabelFilter>) -> Msg + 'static,
         {
-            let (selected, specs) = filter.kind();
+            let (selected, specs) = (filter.pred(), filter.specs());
             let specs = specs.clone();
             html! {
-                <Select<Kind>
+                <Select<LabelPred>
                     selected=Some(selected)
-                    options=Kind::all()
-                    onchange=move |kind| update(Ok(LabelFilter::of_kind(kind, specs.clone())))
+                    options=LabelPred::all()
+                    onchange=move |kind| update(Ok(LabelFilter::new(kind, specs.clone())))
                 />
             }
         }

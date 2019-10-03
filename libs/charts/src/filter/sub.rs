@@ -203,7 +203,7 @@ pub enum Update {
     /// Size filter update.
     Size(ord::SizeUpdate),
     /// Label filter update.
-    Label(label::Update),
+    Label(label::LabelUpdate),
 }
 impl fmt::Display for Update {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {

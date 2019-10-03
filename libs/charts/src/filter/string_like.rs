@@ -1,0 +1,257 @@
+//! Generic filter constructions for allocation properties that are lists of string-like elements.
+//!
+//! Used for labels and locations.
+
+use crate::{base::*, filter::FilterExt};
+
+/// A comparison predicate over lists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum Pred {
+    Contain,
+    Exclude,
+}
+impl fmt::Display for Pred {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Contain => write!(fmt, "contain"),
+            Self::Exclude => write!(fmt, "exclude"),
+        }
+    }
+}
+impl Pred {
+    pub fn all() -> Vec<Pred> {
+        vec![Self::Contain, Self::Exclude]
+    }
+}
+
+/// Trait that string-like specifications must implement.
+pub trait SpecExt: Default + Clone + fmt::Display + Sized {
+    /// Type of data the specification is able to check for matches.
+    type Data;
+
+    /// Description of the kind of data this specification works on.
+    const DATA_DESC: &'static str;
+
+    /// Constructor from strings.
+    fn from_string<S>(s: S) -> Res<Self>
+    where
+        S: Into<String>;
+
+    /// True if the specification is empty, meaning it is ignored.
+    fn is_empty(&self) -> bool;
+
+    /// Extracts data from an allocation.
+    fn data_of_alloc(alloc: &Alloc) -> &Vec<Self::Data>;
+
+    /// True if the input data is a match for this specification.
+    fn matches(&self, data: &Self::Data) -> bool;
+
+    /// True if the specification matches a repetition of anything.
+    fn matches_anything(&self) -> bool;
+}
+
+/// A filter for a lists of string-like elements.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct StringLikeFilter<Spec> {
+    /// The predicate.
+    pred: Pred,
+    /// The specifications.
+    specs: Vec<Spec>,
+}
+
+impl<Spec> Default for StringLikeFilter<Spec> {
+    fn default() -> Self {
+        Self {
+            pred: Pred::Contain,
+            specs: vec![],
+        }
+    }
+}
+
+impl<Spec> fmt::Display for StringLikeFilter<Spec>
+where
+    Spec: SpecExt,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{} {} [", Spec::DATA_DESC, self.pred)?;
+        for spec in &self.specs {
+            write!(fmt, " ... {}", spec)?
+        }
+        write!(fmt, " ... ]")
+    }
+}
+
+impl<Spec> StringLikeFilter<Spec> {
+    /// Constructor.
+    pub fn new(pred: Pred, specs: Vec<Spec>) -> Self {
+        Self { pred, specs }
+    }
+    /// "Contain" constructor.
+    pub fn contain(specs: Vec<Spec>) -> Self {
+        Self {
+            pred: Pred::Contain,
+            specs,
+        }
+    }
+    /// "Exclude" constructor.
+    pub fn exclude(specs: Vec<Spec>) -> Self {
+        Self {
+            pred: Pred::Exclude,
+            specs,
+        }
+    }
+
+    /// Predicate of a filter.
+    pub fn pred(&self) -> Pred {
+        self.pred
+    }
+    /// Specifications of a filter.
+    pub fn specs(&self) -> &Vec<Spec> {
+        &self.specs
+    }
+    /// Specifications of a filter, mutable version.
+    pub fn specs_mut(&mut self) -> &mut Vec<Spec> {
+        &mut self.specs
+    }
+}
+
+impl<Spec> FilterExt<[Spec::Data]> for StringLikeFilter<Spec>
+where
+    Spec: SpecExt,
+{
+    fn apply(&self, data: &[Spec::Data]) -> bool {
+        self.matches(data)
+    }
+}
+
+impl<Spec> StringLikeFilter<Spec>
+where
+    Spec: SpecExt,
+{
+    /// Replaces the specification at some index.
+    pub fn replace(&mut self, index: usize, spec: Spec) {
+        if spec.is_empty() {
+            self.specs.remove(index);
+        } else {
+            self.specs[index] = spec
+        }
+    }
+
+    /// True if the filter input data is a match for the filter.
+    pub fn matches(&self, data: &[Spec::Data]) -> bool {
+        let res = Self::check_contain(&self.specs, data);
+        match self.pred {
+            Pred::Contain => res,
+            Pred::Exclude => !res,
+        }
+    }
+
+    /// Helper that returns true if some labels verify the input specs.
+    fn check_contain(specs: &Vec<Spec>, data: &[Spec::Data]) -> bool {
+        let mut data = data.iter();
+        let mut specs = specs.iter();
+
+        'next_spec: while let Some(spec) = specs.next() {
+            // `can_skip` is true if `spec` does not have to match the next label, it can match
+            // data appearing later in the sequence.
+            let (can_skip, spec) = if spec.matches_anything() {
+                // We're matching a sequence of anything. Find the next spec that's not an
+                // `Anything`.
+                let mut spec_opt = None;
+                'drain_match_anything: while let Some(spec) = specs.next() {
+                    if spec.matches_anything() {
+                        continue 'drain_match_anything;
+                    } else {
+                        spec_opt = Some(spec);
+                        break 'drain_match_anything;
+                    }
+                }
+
+                if let Some(spec) = spec_opt {
+                    (true, spec)
+                } else {
+                    // We're matching anything, and there is no spec to match after that.
+                    return true;
+                }
+            } else {
+                // We're matching an actual spec.
+                (false, spec)
+            };
+
+            'find_match: while let Some(data) = data.next() {
+                if spec.matches(data) {
+                    // Found a match.
+                    continue 'next_spec;
+                } else if can_skip {
+                    // `spec` does not have to match right away, keep moving.
+                    continue 'find_match;
+                } else {
+                    return false;
+                }
+            }
+
+            // Only reachable if there are no more data.
+            return false;
+        }
+
+        // Only reachable if there are no more specs and all succeeded. Now we just need to check if
+        // there are data left.
+        data.next().is_none()
+    }
+}
+
+/// An update for a string-like filter.
+pub enum Update {
+    /// Change the predicate of the filter.
+    Pred(Pred),
+    /// Add a new specification at some position.
+    Add(usize),
+    /// Replace a specification at some position.
+    Replace(usize, String),
+}
+impl fmt::Display for Update {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Pred(pred) => write!(fmt, "pred <- {}", pred),
+            Self::Add(index) => write!(fmt, "specs <- add at {}", index),
+            Self::Replace(index, spec) => write!(fmt, "specs[{}] <- {}", index, spec),
+        }
+    }
+}
+
+impl<Spec> StringLikeFilter<Spec>
+where
+    Spec: SpecExt,
+{
+    /// Updates the filter.
+    ///
+    /// Returns true iff something changed.
+    pub fn update(&mut self, update: Update) -> Res<bool> {
+        let has_changed = match update {
+            Update::Pred(pred) => {
+                if pred != self.pred {
+                    self.pred = pred;
+                    true
+                } else {
+                    false
+                }
+            }
+            Update::Add(index) => {
+                self.specs.insert(index, Spec::default());
+                true
+            }
+            Update::Replace(index, spec) => {
+                let spec = Spec::from_string(spec).chain_err(|| {
+                    format!(
+                        "while replacing {} spec #{} in filter",
+                        Spec::DATA_DESC,
+                        index
+                    )
+                })?;
+                self.specs[index] = spec;
+                true
+            }
+        };
+        Ok(has_changed)
+    }
+}
