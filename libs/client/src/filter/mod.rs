@@ -663,6 +663,10 @@ mod sub {
                 let res = res.map(|raw| SubFilter::new(uid, Label(raw)));
                 update(res)
             }),
+            Loc(filter) => loc::render(filter, move |res| {
+                let res = res.map(|raw| SubFilter::new(uid, Loc(raw)));
+                update(res)
+            }),
         }
     }
 
@@ -932,6 +936,121 @@ mod sub {
                     onchange=|data| update(
                         data.text_value()
                             .and_then(LabelSpec::new)
+                            .chain_err(|| "while parsing label")
+                    )
+                />
+            }
+        }
+
+    }
+
+    mod loc {
+        use super::*;
+        use charts::filter::{
+            loc::{LocPred, LocSpec},
+            LocFilter,
+        };
+
+        pub fn render<Update>(filter: &LocFilter, update: Update) -> Html
+        where
+            Update: Fn(Res<LocFilter>) -> Msg + Clone + 'static,
+        {
+            let specs = filter.specs();
+
+            html! {
+                <>
+                    <li class=style::class::filter::line::CELL>
+                        <a class=style::class::filter::line::CMP_CELL>
+                            { kind_selector(filter, update.clone()) }
+                        </a>
+                    </li>
+                    <li class=style::class::filter::line::CELL>
+                        <a class=style::class::filter::line::VAL_CELL>
+                            <code> { "[" } </code>
+                            {
+                                for specs.iter().enumerate().map(
+                                    |(index, spec)| {
+                                        html! {
+                                            // Attach to nothing, will become kid of the `<div>` above.
+                                            <>
+                                                { add_new(filter, update.clone(), index) }
+                                                {
+                                                    let slf = filter.clone();
+                                                    let update = update.clone();
+                                                    render_spec(
+                                                        spec,
+                                                        move |spec| update(
+                                                            spec.map(
+                                                                |spec| {
+                                                                    let mut filter = slf.clone();
+                                                                    filter.replace(index, spec);
+                                                                    filter
+                                                                }
+                                                            )
+                                                        )
+                                                    )
+                                                }
+                                            </>
+                                        }
+                                    }
+                                )
+                            }
+                            { add_new(filter, update.clone(), specs.len()) }
+                            <code> { "]" } </code>
+                        </a>
+                    </li>
+                </>
+            }
+        }
+
+        fn kind_selector<Update>(filter: &LocFilter, update: Update) -> Html
+        where
+            Update: Fn(Res<LocFilter>) -> Msg + 'static,
+        {
+            let (selected, specs) = (filter.pred(), filter.specs());
+            let specs = specs.clone();
+            html! {
+                <Select<LocPred>
+                    selected=Some(selected)
+                    options=LocPred::all()
+                    onchange=move |kind| update(Ok(LocFilter::new(kind, specs.clone())))
+                />
+            }
+        }
+
+        ///
+        pub fn add_new<Update>(filter: &LocFilter, update: Update, index: usize) -> Html
+        where
+            Update: Fn(Res<LocFilter>) -> Msg + Clone + 'static,
+        {
+            let slf = filter.clone();
+            html! {
+                <code
+                    class=style::class::filter::line::ADD_LABEL
+                    onclick=move |_| {
+                        let mut filter = slf.clone();
+                        let specs = filter.specs_mut();
+                        specs.insert(
+                            index, LocSpec::default()
+                        );
+                        update(Ok(filter))
+                    }
+                >{"+"}</code>
+            }
+        }
+
+        fn render_spec<Update>(spec: &LocSpec, update: Update) -> Html
+        where
+            Update: Fn(Res<LocSpec>) -> Msg + 'static,
+        {
+            html! {
+                <input
+                    type="text"
+                    class=style::class::filter::line::TEXT_VALUE
+                    value=spec.to_string()
+                    onchange=|data| update(
+                        data.text_value()
+                            .and_then(LocSpec::new)
                             .chain_err(|| "while parsing label")
                     )
                 />

@@ -45,24 +45,7 @@ impl string_like::SpecExt for LabelSpec {
     where
         S: Into<String>,
     {
-        let label = s.into();
-        macro_rules! illegal {
-            () => {{
-                let err: err::Err = format!("illegal regex `{}`", label).into();
-                err
-            }};
-        }
-        if label.len() > 2 && &label[0..2] == "#\"" {
-            if &label[label.len() - 2..label.len()] != "\"#" {
-                bail!(illegal!().chain_err(|| "a regex must end with `\"#`"))
-            }
-
-            let regex = Regex::new(&label[2..label.len() - 2])
-                .map_err(|e| illegal!().chain_err(|| format!("{}", e)))?;
-            Ok(regex.into())
-        } else {
-            Ok(label.into())
-        }
+        Self::new(s)
     }
 
     /// True if the spec is an empty label.

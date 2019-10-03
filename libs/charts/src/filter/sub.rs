@@ -13,6 +13,8 @@ pub enum RawSubFilter {
     Size(SizeFilter),
     /// Filter over labels.
     Label(LabelFilter),
+    /// Filter over locations.
+    Loc(LocFilter),
 }
 impl RawSubFilter {
     /// Default filter for some filter kind.
@@ -20,6 +22,7 @@ impl RawSubFilter {
         match kind {
             FilterKind::Size => SizeFilter::default().into(),
             FilterKind::Label => LabelFilter::default().into(),
+            FilterKind::Loc => LocFilter::default().into(),
         }
     }
 
@@ -28,6 +31,7 @@ impl RawSubFilter {
         match self {
             Self::Size(_) => FilterKind::Size,
             Self::Label(_) => FilterKind::Label,
+            Self::Loc(_) => FilterKind::Loc,
         }
     }
 
@@ -36,6 +40,7 @@ impl RawSubFilter {
         match self {
             RawSubFilter::Size(filter) => filter.apply(&alloc.size),
             RawSubFilter::Label(filter) => filter.apply(&alloc.labels),
+            RawSubFilter::Loc(filter) => filter.apply(&alloc.trace.locs()),
         }
     }
 
@@ -56,11 +61,15 @@ impl RawSubFilter {
         match self {
             Self::Size(filter) => match update {
                 Update::Size(update) => filter.update(update),
-                update => bail!("cannot apply update `{}` to filter `{}`", update, filter),
+                update => bail!("cannot apply update `{}` to filter `{}`", update, self),
             },
             Self::Label(filter) => match update {
                 Update::Label(update) => filter.update(update),
-                update => bail!("cannot apply update `{}` to filter `{}`", update, filter),
+                update => bail!("cannot apply update `{}` to filter `{}`", update, self),
+            },
+            Self::Loc(filter) => match update {
+                Update::Loc(update) => filter.update(update),
+                update => bail!("cannot apply update `{}` to filter `{}`", update, self),
             },
         }
     }
@@ -71,6 +80,7 @@ impl fmt::Display for RawSubFilter {
         match self {
             Self::Size(filter) => write!(fmt, "size {}", filter),
             Self::Label(filter) => write!(fmt, "labels {}", filter),
+            Self::Loc(filter) => write!(fmt, "callstack {}", filter),
         }
     }
 }
@@ -83,6 +93,11 @@ impl From<SizeFilter> for RawSubFilter {
 impl From<LabelFilter> for RawSubFilter {
     fn from(filter: LabelFilter) -> Self {
         Self::Label(filter)
+    }
+}
+impl From<LocFilter> for RawSubFilter {
+    fn from(filter: LocFilter) -> Self {
+        Self::Loc(filter)
     }
 }
 impl Default for RawSubFilter {
@@ -204,12 +219,15 @@ pub enum Update {
     Size(ord::SizeUpdate),
     /// Label filter update.
     Label(label::LabelUpdate),
+    /// Location filter update.
+    Loc(loc::LocUpdate),
 }
 impl fmt::Display for Update {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Size(update) => update.fmt(fmt),
             Self::Label(update) => update.fmt(fmt),
+            Self::Loc(update) => update.fmt(fmt),
         }
     }
 }
