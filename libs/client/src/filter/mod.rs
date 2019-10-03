@@ -852,7 +852,7 @@ mod sub {
                                         html! {
                                             // Attach to nothing, will become kid of the `<div>` above.
                                             <>
-                                                { dots(filter, update.clone(), index) }
+                                                { add_new(filter, update.clone(), index) }
                                                 {
                                                     let slf = filter.clone();
                                                     let update = update.clone();
@@ -874,7 +874,7 @@ mod sub {
                                     }
                                 )
                             }
-                            { dots(filter, update.clone(), specs.len()) }
+                            { add_new(filter, update.clone(), specs.len()) }
                             <code> { "]" } </code>
                         </a>
                     </li>
@@ -898,7 +898,7 @@ mod sub {
         }
 
         ///
-        pub fn dots<Update>(filter: &LabelFilter, update: Update, index: usize) -> Html
+        pub fn add_new<Update>(filter: &LabelFilter, update: Update, index: usize) -> Html
         where
             Update: Fn(Res<LabelFilter>) -> Msg + Clone + 'static,
         {
@@ -914,7 +914,7 @@ mod sub {
                         );
                         update(Ok(filter))
                     }
-                >{"..."}</code>
+                >{"+"}</code>
             }
         }
 
@@ -925,6 +925,7 @@ mod sub {
             let value = match spec {
                 LabelSpec::Value(value) => format!("{}", value),
                 LabelSpec::Regex(regex) => format!("#\"{}\"#", regex),
+                LabelSpec::Anything => "...".into(),
             };
             html! {
                 <input
