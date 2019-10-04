@@ -24,6 +24,11 @@ pub use error_chain::bail;
 pub use num_bigint::BigUint;
 pub use serde_derive::{Deserialize, Serialize};
 
+#[macro_use]
+pub mod mem;
+
+pub mod labels;
+pub mod locs;
 pub mod parser;
 mod time;
 
