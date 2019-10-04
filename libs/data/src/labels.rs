@@ -1,11 +1,14 @@
 //! Handles the internals of label sharing.
 
+pub use serde_derive::{Deserialize, Serialize};
+
 // Macro defined in `crate::mem`.
 new! {
     mod mem for Vec<String>
 }
 
 /// A label UID.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Uid {
     uid: mem::Uid,
 }

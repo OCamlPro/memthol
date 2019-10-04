@@ -155,42 +155,6 @@ impl Loc {
     }
 }
 
-/// A trace of locations.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct Trace {
-    /// The actual trace of locations.
-    trace: Vec<(Loc, usize)>,
-}
-swarkn::display! {
-    impl for Trace {
-        self, fmt => {
-            write!(fmt, "[")?;
-            for (loc, count) in &self.trace {
-                write!(fmt, " {}#{}", loc, count)?
-            }
-            write!(fmt, " ]")
-        }
-    }
-}
-impl std::ops::Deref for Trace {
-    type Target = Vec<(Loc, usize)>;
-    fn deref(&self) -> &Vec<(Loc, usize)> {
-        &self.trace
-    }
-}
-
-impl Trace {
-    /// Trace constructor.
-    pub fn new(trace: Vec<(Loc, usize)>) -> Self {
-        Self { trace }
-    }
-
-    /// List of locations.
-    pub fn locs(&self) -> &Vec<(Loc, usize)> {
-        &self.trace
-    }
-}
-
 /// A list of labels.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Labels {
@@ -274,9 +238,9 @@ pub struct Alloc {
     /// Size of the allocation.
     pub size: usize,
     /// Allocation-site callstack.
-    pub trace: Trace,
+    trace: locs::Uid,
     /// User-defined labels.
-    pub labels: Vec<String>,
+    labels: labels::Uid,
     /// Time of creation.
     pub toc: SinceStart,
     /// Time of death.
@@ -285,17 +249,32 @@ pub struct Alloc {
 swarkn::display! {
     impl for Alloc {
         self, fmt => {
+            let my_labels = labels::get(self.labels);
+            let my_trace = locs::get(self.trace);
             let mut labels = "[".to_string();
-            for label in &self.labels {
+            for label in my_labels.iter() {
                 labels.push_str(" ");
                 labels.push_str(label)
             }
             labels.push_str(" ]");
-            write!(
-                fmt,
-                "{}: {}, {}, {}, {}, {}, ",
-                self.uid, self.kind, self.size, self.trace, labels, self.toc
-            )?;
+            write!(fmt, "{}: {}, {}, ", self.uid, self.kind, self.size)?;
+
+            // Write the trace.
+            write!(fmt, "[")?;
+            for (loc, count) in my_trace.iter() {
+                write!(fmt, " {}#{}", loc, count)?
+            }
+            write!(fmt, " ], ")?;
+
+            // Write the labels.
+            write!(fmt, "[")?;
+            for label in my_labels.iter() {
+                write!(fmt, " {}", label)?
+            }
+            write!(fmt, " ], ")?;
+
+            write!(fmt, "{}, ", self.toc)?;
+
             if let Some(tod) = &self.tod {
                 write!(fmt, "{}", tod)?
             } else {
@@ -312,11 +291,13 @@ impl Alloc {
         uid: Uid,
         kind: AllocKind,
         size: usize,
-        trace: Trace,
+        trace: Vec<(Loc, usize)>,
         labels: Vec<String>,
         toc: SinceStart,
         tod: Option<SinceStart>,
     ) -> Self {
+        let trace = locs::add(trace);
+        let labels = labels::add(labels);
         Self {
             uid,
             kind,
@@ -362,8 +343,12 @@ impl Alloc {
         self.size
     }
     /// Trace accessor.
-    pub fn trace(&self) -> &Trace {
-        &self.trace
+    pub fn trace(&self) -> std::sync::Arc<Vec<(Loc, usize)>> {
+        locs::get(self.trace)
+    }
+    /// Labels accessor.
+    pub fn labels(&self) -> std::sync::Arc<Vec<String>> {
+        labels::get(self.labels)
     }
     /// Time of creation accessor.
     pub fn toc(&self) -> SinceStart {

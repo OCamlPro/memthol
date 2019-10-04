@@ -2,12 +2,14 @@
 
 use std::{collections::BTreeMap as Map, sync::Arc};
 
+pub use serde_derive::{Deserialize, Serialize};
+
 /// A UID.
 ///
 /// Cannot be constructed outside of [`alloc_data::mem`].
 ///
 /// [`alloc_data::mem`]: index.html (The mem module in alloc_data)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct Uid {
     /// Actual index.
     index: usize,

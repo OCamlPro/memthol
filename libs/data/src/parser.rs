@@ -156,8 +156,8 @@ impl<'txt> Parser<'txt> {
     /// assert_eq! { alloc.uid.to_string(), "523" }
     /// assert_eq! { alloc.kind, AllocKind::Major }
     /// assert_eq! { alloc.size, 32 }
-    /// assert_eq! { *alloc.trace, vec![ (Loc::new("file", 7, (3, 5)), 11) ] }
-    /// assert_eq! { alloc.labels, vec![ "label".to_string() ] }
+    /// assert_eq! { &*alloc.trace(), &vec![ (Loc::new("file", 7, (3, 5)), 11) ] }
+    /// assert_eq! { &*alloc.labels(), &vec![ "label".to_string() ] }
     /// assert_eq! { alloc.toc.to_string(), "5.3" }
     /// assert! { alloc.tod.is_none() }
     /// ```
@@ -172,8 +172,8 @@ impl<'txt> Parser<'txt> {
     /// assert_eq! { alloc.uid.to_string(), "523" }
     /// assert_eq! { alloc.kind, AllocKind::Major }
     /// assert_eq! { alloc.size, 32 }
-    /// assert_eq! { *alloc.trace, vec![ (Loc::new("file", 7, (3, 5)), 11) ] }
-    /// assert_eq! { alloc.labels, vec![ "label_1".to_string(), "label_2".to_string() ] }
+    /// assert_eq! { &*alloc.trace(), &vec![ (Loc::new("file", 7, (3, 5)), 11) ] }
+    /// assert_eq! { &*alloc.labels(), &vec![ "label_1".to_string(), "label_2".to_string() ] }
     /// assert_eq! { alloc.toc.to_string(), "5.3" }
     /// assert_eq! { alloc.tod.unwrap().to_string(), "7.3" }
     /// ```
@@ -289,7 +289,7 @@ impl<'txt> Parser<'txt> {
     }
 
     /// Parses a trace of location/count pairs.
-    pub fn trace(&mut self) -> Res<Trace> {
+    pub fn trace(&mut self) -> Res<Vec<(Loc, usize)>> {
         self.tag("[")?;
         self.ws();
         let mut vec = Vec::with_capacity(17);
@@ -299,7 +299,7 @@ impl<'txt> Parser<'txt> {
             self.ws()
         }
         vec.shrink_to_fit();
-        Ok(Trace::new(vec))
+        Ok(vec)
     }
 
     pub fn loc(&mut self) -> Res<Loc> {

@@ -39,8 +39,8 @@ impl RawSubFilter {
     pub fn apply(&self, alloc: &Alloc) -> bool {
         match self {
             RawSubFilter::Size(filter) => filter.apply(&alloc.size),
-            RawSubFilter::Label(filter) => filter.apply(&alloc.labels),
-            RawSubFilter::Loc(filter) => filter.apply(&alloc.trace.locs()),
+            RawSubFilter::Label(filter) => filter.apply(&alloc.labels()),
+            RawSubFilter::Loc(filter) => filter.apply(&alloc.trace()),
         }
     }
 
