@@ -909,8 +909,7 @@ mod sub {
                     class=style::class::filter::line::ADD_LABEL
                     onclick=move |_| {
                         let mut filter = slf.clone();
-                        let specs = filter.specs_mut();
-                        specs.insert(
+                        filter.insert(
                             index, LabelSpec::default()
                         );
                         update(Ok(filter))
@@ -1029,8 +1028,7 @@ mod sub {
                     class=style::class::filter::line::ADD_LABEL
                     onclick=move |_| {
                         let mut filter = slf.clone();
-                        let specs = filter.specs_mut();
-                        specs.insert(
+                        filter.insert(
                             index, LocSpec::default()
                         );
                         update(Ok(filter))

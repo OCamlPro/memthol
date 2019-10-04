@@ -109,10 +109,6 @@ impl<Spec> StringLikeFilter<Spec> {
     pub fn specs(&self) -> &Vec<Spec> {
         &self.specs
     }
-    /// Specifications of a filter, mutable version.
-    pub fn specs_mut(&mut self) -> &mut Vec<Spec> {
-        &mut self.specs
-    }
 }
 
 impl<Spec> FilterExt<[Spec::Data]> for StringLikeFilter<Spec>
@@ -128,12 +124,56 @@ impl<Spec> StringLikeFilter<Spec>
 where
     Spec: SpecExt,
 {
+    /// Removes consecutive wildcards in the specs.
+    ///
+    /// Ideally, this should run after any manipulation over `self.specs`.
+    fn clean_specs(&mut self) {
+        // Going old-school to be able to remove elements of `self.specs` as we go through it.
+        let mut i = 0;
+        let mut prev_is_wildcard = false;
+        while i < self.specs.len() {
+            // The loop invariant to prove termination is that `self.specs.len() - i` decreases by
+            // `1` at each iteration. This is because ¬`increment` ⊨ "an element was removed from
+            // `self.specs`". Note also that `increment` ⊨ "no element was removed", which is
+            // irrelevant for termination but important for correction.
+            let increment = if self.specs[i].matches_anything() {
+                // Current element is a wildcard.
+                if prev_is_wildcard {
+                    // Previous element is a wildcard, remove current element. Preserving order is
+                    // mandatory, do **not** evil-optimize it to `swap_remove`.
+                    self.specs.remove(i);
+                    false
+                } else {
+                    // Previous element is not a wildcard, remember and keep going.
+                    prev_is_wildcard = true;
+                    true
+                }
+            } else {
+                // Not a wildcard, remember and keep going.
+                prev_is_wildcard = false;
+                true
+            };
+            if increment {
+                i += 1
+            }
+        }
+    }
+
     /// Replaces the specification at some index.
     pub fn replace(&mut self, index: usize, spec: Spec) {
         if spec.is_empty() {
             self.specs.remove(index);
         } else {
-            self.specs[index] = spec
+            self.specs[index] = spec;
+        }
+        self.clean_specs()
+    }
+
+    /// Inserts a specification at some index.
+    pub fn insert(&mut self, index: usize, spec: Spec) {
+        if !spec.is_empty() {
+            self.specs.insert(index, spec);
+            self.clean_specs()
         }
     }
 
