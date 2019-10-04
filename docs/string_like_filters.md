@@ -6,7 +6,7 @@ For the former, the labels themselves are the string elements; for the latter, i
 
 ## String Filters
 
-A string filter can have two shapes: an actual *string value* or a *regex*. A string value is simply
+A string filter can have three shapes: an actual *string value*, a *regex*, or a *match anything* / *wildcard* filter represented by the string `"..."`. This wildcard filter is discussed in [its own section] below. A string value is simply
 given as a value. To match precisely the string `"my label"`, one only needs to write `my label`.
 So, a filter that matches the list of label `[ "label 1", "label 2" ]` will be written
 
@@ -21,6 +21,45 @@ write the filter as
 |     |     |     |
 |:---:|:---:|:---:|
 | labels | contain | `[` `#"label [0-9]"#` `label 2` `]` |
+
+## The Wildcard Filter
+
+The wildcard filter, written `...`, **lazily** matches a repetition of any string-like element of
+the list. To break this definition down, let us separate two cases: the first one is when `...` is
+not followed by another string-like filter, and second one is when it is followed by another filter.
+
+In the first case, `...` simply matches everything. Consider for instance the filter
+
+|     |     |     |
+|:---:|:---:|:---:|
+| labels | contain | `[` `#"label [0-9]"#` `...` `]` |
+
+This filter matches any list of label that starts with a label accepted by the first regex filter.
+The following lists of labels are all accepted by the filter above.
+
+- `[` `label 0` `]`
+- `[` `label 7` `anything` `at` `all` `]`
+- `[` `label 3` `label 7` `]`
+
+Now when `...` is followed by another string-like filter `f`, then the wildcard matches *anything up
+to and **excluding** a label matched by `f`*. This is important because wildcards are *lazy*, which
+can lead to some counterintuitive results. Consider the following filter.
+
+|     |     |     |
+|:---:|:---:|:---:|
+| labels | contain | `[` `...` `#"label [0-9]"#` `]` |
+
+It is tempting to read it as *matching any list ending with `label <d>` where `<d>` is a digit*, but
+it is wrong. A counterexample is this list of labels:
+
+```
+[ "some label" "label 7" "another label" "label 0" ]
+```
+
+Now, by definition `...` matches anything up to and excluding a label recognized by `#"label
+[0-9]"#`. So here, `...` matches `some label`, but that's it since `label 7` is a match for `#"label
+[0-9]"#`. Hence the filter rejects this list of labels, because there should be nothing left after
+the match for `#"label [0-9]"#`. But there are still `another label` and `label 0` left.
 
 ## Callstack (Location) Filters
 
@@ -65,3 +104,5 @@ Whitespaces are inserted for readability but are not needed:
 |:---:|:---|
 | `src/main.ml : _` | matches any line of `src/main.ml` |
 | `#".*/main.ml"# : 107` | matches line 107 of any `main.ml` file regardless of its path |
+
+[its own section]: #the-wildcard-filter (The Wildcard Filter)
