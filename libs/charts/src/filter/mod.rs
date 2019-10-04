@@ -5,11 +5,14 @@
 use crate::base::*;
 
 pub mod label;
+pub mod loc;
 pub mod ord;
 mod spec;
+pub mod string_like;
 pub mod sub;
 
 pub use label::LabelFilter;
+pub use loc::LocFilter;
 use ord::OrdFilter;
 pub use spec::FilterSpec;
 pub use sub::SubFilter;
@@ -33,7 +36,9 @@ pub enum CmpKind {
     /// Ordered comparison.
     Ord(ord::Kind),
     /// Label comparison.
-    Label(label::Kind),
+    Label(label::LabelPred),
+    /// Location comparison.
+    Loc(loc::LocPred),
 }
 impl CmpKind {
     /// Ordered comparison constructor.
@@ -41,8 +46,12 @@ impl CmpKind {
         Self::Ord(kind)
     }
     /// Label comparison constructor.
-    pub fn new_label(kind: label::Kind) -> Self {
+    pub fn new_label(kind: label::LabelPred) -> Self {
         Self::Label(kind)
+    }
+    /// Location comparison constructor.
+    pub fn new_loc(kind: loc::LocPred) -> Self {
+        Self::Loc(kind)
     }
 }
 impl fmt::Display for CmpKind {
@@ -50,6 +59,7 @@ impl fmt::Display for CmpKind {
         match self {
             Self::Ord(kind) => write!(fmt, "{}", kind),
             Self::Label(kind) => write!(fmt, "{}", kind),
+            Self::Loc(kind) => write!(fmt, "{}", kind),
         }
     }
 }
@@ -61,19 +71,22 @@ pub enum FilterKind {
     Size,
     /// Label filter.
     Label,
+    /// Location filter.
+    Loc,
 }
 impl fmt::Display for FilterKind {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Size => write!(fmt, "size"),
             Self::Label => write!(fmt, "labels"),
+            Self::Loc => write!(fmt, "locations"),
         }
     }
 }
 
 impl FilterKind {
     pub fn all() -> Vec<FilterKind> {
-        vec![FilterKind::Size, FilterKind::Label]
+        vec![FilterKind::Size, FilterKind::Label, FilterKind::Loc]
     }
 }
 

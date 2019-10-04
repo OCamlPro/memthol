@@ -179,6 +179,11 @@ impl Trace {
     pub fn new(trace: Vec<(Loc, usize)>) -> Self {
         Self { trace }
     }
+
+    /// List of locations.
+    pub fn locs(&self) -> &Vec<(Loc, usize)> {
+        &self.trace
+    }
 }
 
 /// A list of labels.
