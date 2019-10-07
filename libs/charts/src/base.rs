@@ -4,6 +4,7 @@ pub use std::{
     collections::{BTreeMap as Map, BTreeSet as Set},
     fmt,
     ops::{Deref, DerefMut},
+    sync::Arc,
 };
 
 pub use error_chain::bail;

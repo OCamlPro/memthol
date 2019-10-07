@@ -239,8 +239,8 @@ impl string_like::SpecExt for LocSpec {
         }
     }
 
-    fn data_of_alloc(alloc: &Alloc) -> &Vec<Self::Data> {
-        alloc.trace.locs()
+    fn data_of_alloc(alloc: &Alloc) -> Arc<Vec<Self::Data>> {
+        alloc.trace()
     }
 
     /// True if the input data is a match for this specification.

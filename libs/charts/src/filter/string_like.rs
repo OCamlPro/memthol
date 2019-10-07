@@ -41,7 +41,7 @@ pub trait SpecExt: Default + Clone + fmt::Display + Sized {
     fn is_empty(&self) -> bool;
 
     /// Extracts data from an allocation.
-    fn data_of_alloc(alloc: &Alloc) -> &Vec<Self::Data>;
+    fn data_of_alloc(alloc: &Alloc) -> Arc<Vec<Self::Data>>;
 
     /// True if the input data is a match for this specification.
     fn matches(&self, data: &Self::Data) -> bool;
@@ -111,11 +111,11 @@ impl<Spec> StringLikeFilter<Spec> {
     }
 }
 
-impl<Spec> FilterExt<[Spec::Data]> for StringLikeFilter<Spec>
+impl<Spec> FilterExt<Arc<Vec<Spec::Data>>> for StringLikeFilter<Spec>
 where
     Spec: SpecExt,
 {
-    fn apply(&self, data: &[Spec::Data]) -> bool {
+    fn apply(&self, data: &Arc<Vec<Spec::Data>>) -> bool {
         self.matches(data)
     }
 }

@@ -57,8 +57,8 @@ impl string_like::SpecExt for LabelSpec {
         }
     }
 
-    fn data_of_alloc(alloc: &Alloc) -> &Vec<Self::Data> {
-        &alloc.labels
+    fn data_of_alloc(alloc: &Alloc) -> Arc<Vec<Self::Data>> {
+        alloc.labels()
     }
 
     /// True if the input data is a match for this specification.
