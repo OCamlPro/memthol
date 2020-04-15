@@ -1,6 +1,6 @@
 //! Footer DOM element.
 
-use crate::base::*;
+use crate::common::*;
 
 pub struct Footer {
     /// Active footer tab, if any.
@@ -25,82 +25,82 @@ impl Footer {
                 }
                 Ok(true)
             }
-            Removed(uid) => {
-                if self.active == Some(FooterTab::Filter(filter::LineUid::Filter(uid))) {
-                    self.active = Some(FooterTab::Filter(filter::LineUid::Everything));
-                    Ok(true)
-                } else {
-                    Ok(false)
-                }
-            }
+            // Removed(uid) => {
+            //     if self.active == Some(FooterTab::Filter(filter::LineUid::Filter(uid))) {
+            //         self.active = Some(FooterTab::Filter(filter::LineUid::Everything));
+            //         Ok(true)
+            //     } else {
+            //         Ok(false)
+            //     }
+            // }
         }
     }
 
-    /// Renders itself.
-    pub fn render(&self, filters: &filter::Filters) -> Html {
-        html! {
-            <footer id = style::id::FOOTER>
-                <ul class = style::class::footer::TABS>
-                    <li class = style::class::footer::tabs::LEFT>
-                        { Button::refresh(
-                            "Reload all points in all charts",
-                            |_| msg::to_server::ChartsMsg::reload().into()
-                        ) }
-                    </li>
-                    <li class = style::class::footer::tabs::CENTER>
-                        { for NormalFooterTab::all()
-                            .into_iter()
-                            .map(|tab|
-                                tab.render(
-                                    Some(tab) == self.active.and_then(FooterTab::get_normal_tab)
-                                )
-                            )
-                        }
-                        { filters.render_tabs(self.active.and_then(FooterTab::get_filter)) }
-                    </li>
-                    <li class = style::class::footer::tabs::RIGHT>
-                        { Button::add(
-                            "Create a new filter",
-                            |_| msg::to_server::FiltersMsg::request_new().into()
-                        ) }
-                        {
-                            if filters.edited() {
-                                html! {
-                                    <>
-                                        { Button::save(
-                                            "Save all changes",
-                                            move |_| msg::FiltersMsg::save()
-                                        ) }
-                                        { Button::undo(
-                                            "Undo all changes",
-                                            move |_| msg::to_server::FiltersMsg::revert().into()
-                                        ) }
-                                    </>
-                                }
-                            } else {
-                                html!(<a/>)
-                            }
-                        }
-                    </li>
-                </ul>
-                {
-                    match self.active {
-                        None => html!(<a/>),
-                        Some(FooterTab::Filter(active)) => html! {
-                            <div class = style::class::footer::DISPLAY>
-                                { filters.render_filter(active) }
-                            </div>
-                        },
-                        Some(FooterTab::Normal(NormalFooterTab::Info)) => html! {
-                            <div class = style::class::footer::DISPLAY>
-                                { "Info footer tab is not implemented." }
-                            </div>
-                        },
-                    }
-                }
-            </footer>
-        }
-    }
+    // /// Renders itself.
+    // pub fn render(&self, filters: &filter::Filters) -> Html {
+    //     html! {
+    //         <footer id = style::id::FOOTER>
+    //             <ul class = style::class::footer::TABS>
+    //                 <li class = style::class::footer::tabs::LEFT>
+    //                     { Button::refresh(
+    //                         "Reload all points in all charts",
+    //                         |_| msg::to_server::ChartsMsg::reload().into()
+    //                     ) }
+    //                 </li>
+    //                 <li class = style::class::footer::tabs::CENTER>
+    //                     { for NormalFooterTab::all()
+    //                         .into_iter()
+    //                         .map(|tab|
+    //                             tab.render(
+    //                                 Some(tab) == self.active.and_then(FooterTab::get_normal_tab)
+    //                             )
+    //                         )
+    //                     }
+    //                     { filters.render_tabs(self.active.and_then(FooterTab::get_filter)) }
+    //                 </li>
+    //                 <li class = style::class::footer::tabs::RIGHT>
+    //                     { Button::add(
+    //                         "Create a new filter",
+    //                         |_| msg::to_server::FiltersMsg::request_new().into()
+    //                     ) }
+    //                     {
+    //                         if filters.edited() {
+    //                             html! {
+    //                                 <>
+    //                                     { Button::save(
+    //                                         "Save all changes",
+    //                                         move |_| msg::FiltersMsg::save()
+    //                                     ) }
+    //                                     { Button::undo(
+    //                                         "Undo all changes",
+    //                                         move |_| msg::to_server::FiltersMsg::revert().into()
+    //                                     ) }
+    //                                 </>
+    //                             }
+    //                         } else {
+    //                             html!(<a/>)
+    //                         }
+    //                     }
+    //                 </li>
+    //             </ul>
+    //             {
+    //                 match self.active {
+    //                     None => html!(<a/>),
+    //                     Some(FooterTab::Filter(active)) => html! {
+    //                         <div class = style::class::footer::DISPLAY>
+    //                             { filters.render_filter(active) }
+    //                         </div>
+    //                     },
+    //                     Some(FooterTab::Normal(NormalFooterTab::Info)) => html! {
+    //                         <div class = style::class::footer::DISPLAY>
+    //                             { "Info footer tab is not implemented." }
+    //                         </div>
+    //                     },
+    //                 }
+    //             }
+    //         </footer>
+        // }
+    // }
 }
 
 /// Normal footer tab, *e.g.* not a filter tab.
@@ -112,13 +112,13 @@ pub enum NormalFooterTab {
 
 impl NormalFooterTab {
     /// Renders a tab.
-    pub fn render(&self, active: bool) -> Html {
+    pub fn render(&self, model: &Model, active: bool) -> Html {
         let tab = *self;
         html! {
             <li class = { style::class::tabs::li::get(true) }>
                 <a
                     class = { style::class::tabs::get(active) }
-                    onclick=|_| msg::FooterMsg::toggle_tab(tab.into())
+                    onclick = model.link.callback(move |_| msg::FooterMsg::toggle_tab(tab.into()))
                 > {
                     self.to_string()
                 } </a>
@@ -146,37 +146,37 @@ impl fmt::Display for NormalFooterTab {
 pub enum FooterTab {
     /// Info tab.
     Normal(NormalFooterTab),
-    /// Filters tab.
-    Filter(filter::LineUid),
+    // /// Filters tab.
+    // Filter(filter::LineUid),
 }
 
 impl FooterTab {
-    /// Filter tab constructor.
-    pub fn filter(uid: filter::LineUid) -> Self {
-        Self::Filter(uid)
-    }
+    // /// Filter tab constructor.
+    // pub fn filter(uid: filter::LineUid) -> Self {
+    //     Self::Filter(uid)
+    // }
 
     /// The normal tab, if any.
     pub fn get_normal_tab(self) -> Option<NormalFooterTab> {
         match self {
             Self::Normal(tab) => Some(tab),
-            Self::Filter(_) => None,
+            // Self::Filter(_) => None,
         }
     }
-    /// The active filter, if any.
-    pub fn get_filter(self) -> Option<filter::LineUid> {
-        match self {
-            Self::Normal(_) => None,
-            Self::Filter(uid) => Some(uid),
-        }
-    }
+    // /// The active filter, if any.
+    // pub fn get_filter(self) -> Option<filter::LineUid> {
+    //     match self {
+    //         Self::Normal(_) => None,
+    //         Self::Filter(uid) => Some(uid),
+    //     }
+    // }
 }
 
 impl fmt::Display for FooterTab {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             FooterTab::Normal(tab) => write!(fmt, "{}", tab),
-            FooterTab::Filter(uid) => write!(fmt, "Filter({})", uid),
+            // FooterTab::Filter(uid) => write!(fmt, "Filter({})", uid),
         }
     }
 }

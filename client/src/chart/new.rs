@@ -1,6 +1,6 @@
 //! Part of the BUI that handles chart creation.
 
-use crate::base::{
+use crate::common::{
     chart::axis::{XAxis, YAxis},
     *,
 };
@@ -54,12 +54,13 @@ impl NewChart {
     }
 
     /// Renders itself.
-    pub fn render(&self) -> Html {
+    pub fn render(&self, model: &Model) -> Html {
         let (x_axis, y_axis) = (self.x_axis, self.y_axis);
         html! {
             <g>
                 <center class=style::class::chart::HEADER>
                     { Button::add(
+                        model,
                         "Create a new chart",
                         move |_| msg::to_server::ChartsMsg::new(x_axis, y_axis).into()
                     ) }
@@ -68,13 +69,13 @@ impl NewChart {
                         <Select<XAxis>
                             selected = Some(x_axis)
                             options = XAxis::all()
-                            onchange = msg::ChartsMsg::new_chart_set_x
+                            onchange = model.link.callback(msg::ChartsMsg::new_chart_set_x)
                         />
                         { "    /    " }
                         <Select<YAxis>
                             selected = Some(y_axis)
                             options = x_axis.y_axes()
-                            onchange = msg::ChartsMsg::new_chart_set_y
+                            onchange = model.link.callback(msg::ChartsMsg::new_chart_set_y)
                         />
                     </h2>
                 </center>

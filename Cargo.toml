@@ -3,7 +3,7 @@ members = [
     "libs/base",
     "libs/alloc_data",
     "libs/charts",
-    # "client",
+    "client",
     # "memthol",
 ]
 # default-members = [
@@ -11,7 +11,6 @@ members = [
 # ]
 
 exclude = [
-    "client",
     "memthol",
 ]
 

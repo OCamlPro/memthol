@@ -7,6 +7,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+alloc_data = { path = "../libs/alloc_data" }
+base = { path = "../libs/base" }
+charts = { path = "../libs/charts" }
+
 chrono = "*"
 error-chain = "*"
 lazy_static = "*"
@@ -21,6 +25,3 @@ strum_macros = "*"
 typed-html = { version = "*", features = ["stdweb"] }
 web_logger = "*"
 yew = { version = "*", features = ["std_web"] }
-
-alloc_data = { path = "../libs/alloc_data" }
-charts = { path = "../libs/charts" }

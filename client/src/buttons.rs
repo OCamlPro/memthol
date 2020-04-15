@@ -1,6 +1,6 @@
 //! Helpers for memthol's UI buttons.
 
-use crate::base::*;
+use crate::common::*;
 
 /// Button constructor.
 ///
@@ -27,12 +27,12 @@ macro_rules! mk_buttons {
         where Action: OnClick, Title: Into<String> {
             $(
                 $(#[$meta])*
-                pub fn $fn_name(title: Title, action: Action) -> Html {
+                pub fn $fn_name(model: &crate::Model, title: Title, action: Action) -> Html {
                     html! {
                         <img
-                            class = style::class::button::$button_class
+                            // class = style::class::button::$button_class
                             title = title.into()
-                            onclick = |e| action(e)
+                            onclick = model.link.callback(action)
                         />
                     }
                 }
@@ -72,14 +72,20 @@ where
     Title: Into<String>,
 {
     /// Creates a text button.
-    pub fn text<S>(text: S, title: Title, action: Action, class: &'static str) -> Html
+    pub fn text<S>(
+        model: &Model,
+        text: S,
+        title: Title,
+        action: Action,
+        class: &'static str
+    ) -> Html
     where
         S: Into<String>,
     {
         html! {
             <a
                 class = class
-                onclick = |e| action(e)
+                onclick = model.link.callback(action)
                 title = title.into()
             >
                 { text.into() }

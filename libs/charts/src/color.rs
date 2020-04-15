@@ -2,9 +2,9 @@
 
 use std::sync::RwLock;
 
-use crate::base::*;
+use crate::common::*;
 
-pub use rand::{
+pub use base::rand::{
     rngs::SmallRng,
     {Rng, SeedableRng},
 };
@@ -119,7 +119,7 @@ impl Color {
         });
 
         // Shuffle stuff around.
-        use rand::seq::SliceRandom;
+        use base::rand::seq::SliceRandom;
         values.shuffle(&mut *rng);
 
         Self {

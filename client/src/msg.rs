@@ -1,6 +1,6 @@
 //! Messages of the client.
 
-use crate::base::*;
+use crate::common::*;
 
 pub use charts::msg::{to_client as from_server, to_server};
 
@@ -24,8 +24,8 @@ pub enum Msg {
     Charts(ChartsMsg),
     /// Footer operations.
     Footer(FooterMsg),
-    /// Filter operations.
-    Filter(FiltersMsg),
+    // /// Filter operations.
+    // Filter(FiltersMsg),
 
     /// A message to print in the JS console.
     Msg(String),
@@ -83,11 +83,11 @@ impl From<FooterMsg> for Msg {
         Self::Footer(msg)
     }
 }
-impl From<FiltersMsg> for Msg {
-    fn from(msg: FiltersMsg) -> Self {
-        Self::Filter(msg)
-    }
-}
+// impl From<FiltersMsg> for Msg {
+//     fn from(msg: FiltersMsg) -> Self {
+//         Self::Filter(msg)
+//     }
+// }
 
 /// Operations over charts.
 #[derive(Debug)]
@@ -159,18 +159,18 @@ impl ChartsMsg {
 pub enum FooterMsg {
     /// Toggles a tab.
     ToggleTab(footer::FooterTab),
-    /// Lets the footer know a filter was removed.
-    Removed(FilterUid),
+    // /// Lets the footer know a filter was removed.
+    // Removed(FilterUid),
 }
 impl FooterMsg {
     /// Toggles a tab.
     pub fn toggle_tab(tab: footer::FooterTab) -> Msg {
         Self::ToggleTab(tab).into()
     }
-    /// Lets the footer know a filter was removed.
-    pub fn removed(uid: FilterUid) -> Msg {
-        Self::Removed(uid).into()
-    }
+    // /// Lets the footer know a filter was removed.
+    // pub fn removed(uid: FilterUid) -> Msg {
+    //     Self::Removed(uid).into()
+    // }
 }
 
 /// Operations over filters.
@@ -197,28 +197,28 @@ pub enum FiltersMsg {
     /// Moves a filter left or right.
     Move { uid: FilterUid, left: bool },
 }
-impl FiltersMsg {
-    /// Updates a filter on the server.
-    pub fn save() -> Msg {
-        Self::Save.into()
-    }
-    /// Removes a filter.
-    pub fn rm(uid: FilterUid) -> Msg {
-        Self::Rm(uid).into()
-    }
-    /// A message for a specific filter specification.
-    pub fn filter_spec(uid: LineUid, msg: FilterSpecMsg) -> Msg {
-        Self::FilterSpec { uid, msg }.into()
-    }
-    /// A message for a specific filter.
-    pub fn filter(uid: FilterUid, msg: FilterMsg) -> Msg {
-        Self::Filter { uid, msg }.into()
-    }
-    /// Moves a filter left or right.
-    pub fn move_filter(uid: FilterUid, left: bool) -> Msg {
-        Self::Move { uid, left }.into()
-    }
-}
+// impl FiltersMsg {
+//     /// Updates a filter on the server.
+//     pub fn save() -> Msg {
+//         Self::Save.into()
+//     }
+//     /// Removes a filter.
+//     pub fn rm(uid: FilterUid) -> Msg {
+//         Self::Rm(uid).into()
+//     }
+//     /// A message for a specific filter specification.
+//     pub fn filter_spec(uid: LineUid, msg: FilterSpecMsg) -> Msg {
+//         Self::FilterSpec { uid, msg }.into()
+//     }
+//     /// A message for a specific filter.
+//     pub fn filter(uid: FilterUid, msg: FilterMsg) -> Msg {
+//         Self::Filter { uid, msg }.into()
+//     }
+//     /// Moves a filter left or right.
+//     pub fn move_filter(uid: FilterUid, left: bool) -> Msg {
+//         Self::Move { uid, left }.into()
+//     }
+// }
 
 #[derive(Debug)]
 pub enum FilterSpecMsg {
@@ -227,16 +227,16 @@ pub enum FilterSpecMsg {
     /// Changes the color of a filter.
     ChangeColor(ChangeData),
 }
-impl FilterSpecMsg {
-    /// Changes the name of a filter.
-    pub fn change_name(uid: LineUid, new_name: ChangeData) -> Msg {
-        FiltersMsg::filter_spec(uid, Self::ChangeName(new_name)).into()
-    }
-    /// Changes the color of a filter.
-    pub fn change_color(uid: LineUid, new_color: ChangeData) -> Msg {
-        FiltersMsg::filter_spec(uid, Self::ChangeColor(new_color)).into()
-    }
-}
+// impl FilterSpecMsg {
+//     /// Changes the name of a filter.
+//     pub fn change_name(uid: LineUid, new_name: ChangeData) -> Msg {
+//         FiltersMsg::filter_spec(uid, Self::ChangeName(new_name)).into()
+//     }
+//     /// Changes the color of a filter.
+//     pub fn change_color(uid: LineUid, new_color: ChangeData) -> Msg {
+//         FiltersMsg::filter_spec(uid, Self::ChangeColor(new_color)).into()
+//     }
+// }
 
 #[derive(Debug)]
 pub enum FilterMsg {
@@ -247,17 +247,17 @@ pub enum FilterMsg {
     /// Removes a subfilter.
     RmSub(filter::SubFilterUid),
 }
-impl FilterMsg {
-    /// Adds a new subfilter.
-    pub fn add_new(uid: FilterUid) -> Msg {
-        FiltersMsg::filter(uid, Self::AddNew)
-    }
-    /// Updates a subfilter.
-    pub fn update_sub(uid: FilterUid, sub: filter::SubFilter) -> Msg {
-        FiltersMsg::filter(uid, Self::Sub(sub))
-    }
-    /// Removes a subfilter.
-    pub fn rm_sub(uid: FilterUid, sub_uid: filter::SubFilterUid) -> Msg {
-        FiltersMsg::filter(uid, Self::RmSub(sub_uid))
-    }
-}
+// impl FilterMsg {
+//     /// Adds a new subfilter.
+//     pub fn add_new(uid: FilterUid) -> Msg {
+//         FiltersMsg::filter(uid, Self::AddNew)
+//     }
+//     /// Updates a subfilter.
+//     pub fn update_sub(uid: FilterUid, sub: filter::SubFilter) -> Msg {
+//         FiltersMsg::filter(uid, Self::Sub(sub))
+//     }
+//     /// Removes a subfilter.
+//     pub fn rm_sub(uid: FilterUid, sub_uid: filter::SubFilterUid) -> Msg {
+//         FiltersMsg::filter(uid, Self::RmSub(sub_uid))
+//     }
+// }

@@ -13,7 +13,8 @@
 //! [`Watcher`]: ./data/struct.Watcher.html (The Watcher struct in module data)
 //! [`start`]: ./data/fn.start.html (The start function in module data)
 
-pub mod base;
+pub mod common;
+
 pub mod chart;
 pub mod color;
 pub mod data;
@@ -23,10 +24,10 @@ pub mod msg;
 pub mod point;
 pub mod uid;
 
-pub use base::Json;
+pub use common::Json;
 pub use chart::Chart;
 
-use base::*;
+use common::*;
 
 use uid::ChartUid;
 

@@ -1,6 +1,6 @@
 //! Model of the client.
 
-use crate::base::*;
+use crate::common::*;
 
 /// Model of the client.
 pub struct Model {
@@ -9,11 +9,13 @@ pub struct Model {
     /// Socket service with the server.
     pub socket: WebSocketService,
     /// Socket task for receiving/sending messages from/to the server.
-    pub socket_task: WebSocketTask,
-    /// Collection of charts.
-    pub charts: Charts,
-    /// Allocation filters.
-    pub filters: filter::Filters,
+    pub socket_task: Option<WebSocketTask>,
+    /// Errors.
+    errors: Vec<err::Err>,
+    // /// Collection of charts.
+    // pub charts: Charts,
+    // /// Allocation filters.
+    // pub filters: filter::Filters,
 
     /// Footer DOM element.
     pub footer: footer::Footer,
@@ -21,12 +23,13 @@ pub struct Model {
 
 impl Model {
     /// Activates the websocket to receive data from the server.
-    fn activate_ws(link: &mut ComponentLink<Self>, socket: &mut WebSocketService) -> WebSocketTask {
+    fn activate_ws(link: &mut ComponentLink<Self>, socket: &mut WebSocketService) -> Res<WebSocketTask> {
         let (addr, port) = get_server_addr();
         let addr = format!("ws://{}:{}", addr, port + 1);
-        let callback = link.send_back(|msg| Msg::FromServer(msg));
-        let notification = link.send_back(|status| Msg::ConnectionStatus(status));
-        socket.connect(&addr, callback, notification)
+        let callback = link.callback(|msg| Msg::FromServer(msg));
+        let notification = link.callback(|status| Msg::ConnectionStatus(status));
+        let task = socket.connect(&addr, callback, notification)?;
+        Ok(task)
     }
 }
 
@@ -34,7 +37,7 @@ impl Model {
 impl Model {
     /// Sends a message to the server.
     pub fn server_send(&mut self, msg: msg::to_server::Msg) {
-        self.socket_task.send(msg)
+        self.socket_task.as_mut().map(|socket| socket.send(msg));
     }
 
     /// Handles a message from the server.
@@ -47,8 +50,8 @@ impl Model {
                 alert!("{}", msg);
                 Ok(false)
             }
-            Msg::Charts(msg) => self.charts.server_update(&self.filters, msg),
-            Msg::Filters(msg) => self.filters.server_update(msg),
+            Msg::Charts(msg) => todo!(), // self.charts.server_update(&self.filters, msg),
+            Msg::Filters(msg) => todo!(), // self.filters.server_update(msg),
         }
     }
 }
@@ -58,7 +61,7 @@ macro_rules! unwrap_or_send_err {
         match $e {
             Ok(res) => res,
             Err(e) => {
-                $slf.link.send_self(e.into());
+                $slf.link.send_message(e);
                 $default
             }
         }
@@ -71,15 +74,19 @@ impl Component for Model {
 
     fn create(_: Self::Properties, mut link: ComponentLink<Self>) -> Self {
         let mut socket = WebSocketService::new();
-        let socket_task = Self::activate_ws(&mut link, &mut socket);
-        let charts = Charts::new(link.send_back(|msg: Msg| msg));
-        let filters = filter::Filters::new(link.send_back(|msg: Msg| msg));
+        let (socket_task, errors) = match Self::activate_ws(&mut link, &mut socket) {
+            Ok(res) => (Some(res), vec![]),
+            Err(e) => (None, vec![e]),
+        };
+        // let charts = Charts::new(link.send_back(|msg: Msg| msg));
+        // let filters = filter::Filters::new(link.send_back(|msg: Msg| msg));
         Model {
             link,
             socket,
             socket_task,
-            charts,
-            filters,
+            errors,
+            // charts,
+            // filters,
             footer: footer::Footer::new(),
         }
     }
@@ -108,15 +115,16 @@ impl Component for Model {
             }
 
             // Internal operations.
-            Msg::Charts(msg) => unwrap_or_send_err!(
-                self.charts.update(&self.filters, msg) => self default false
-            ),
+            Msg::Charts(msg) => todo!(),
+            // Msg::Charts(msg) => unwrap_or_send_err!(
+            //     self.charts.update(&self.filters, msg) => self default false
+            // ),
             Msg::Footer(msg) => unwrap_or_send_err!(
                 self.footer.update(msg) => self default false
             ),
-            Msg::Filter(msg) => unwrap_or_send_err!(
-                self.filters.update(msg) => self default false
-            ),
+        //     Msg::Filter(msg) => unwrap_or_send_err!(
+        //         self.filters.update(msg) => self default false
+        //     ),
 
             // Basic communication messages.
             Msg::Msg(s) => {
@@ -135,16 +143,13 @@ impl Component for Model {
             Msg::Noop => false,
         }
     }
-}
-
-impl Renderable<Model> for Model {
     fn view(&self) -> Html {
         html! {
             <>
-                <div class=style::class::FULL_BODY>
-                    { self.charts.render() }
-                    { self.footer.render(&self.filters) }
-                </div>
+                // <div class=crate::style::class::FULL_BODY>
+                //     { self.charts.render() }
+                //     { self.footer.render(&self.filters) }
+                // </div>
             </>
         }
     }

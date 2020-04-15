@@ -1,6 +1,6 @@
 //! Client/server messages.
 
-use crate::base::*;
+use crate::common::*;
 use filter::*;
 
 /// Messages from the client to the server.
