@@ -126,6 +126,11 @@ impl Date {
         Date { date }
     }
 
+    /// Date accessor.
+    pub fn date(&self) -> &DateTime {
+        &self.date
+    }
+
     /// Timestamp version of a date.
     ///
     /// Returns a pair `(` timestamp's seconds `,` timestamp's subsec nanoseconds `)`.

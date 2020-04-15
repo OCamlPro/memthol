@@ -96,5 +96,5 @@ base::impl_display! {
         write!(fmt, "{}{}", (*self).as_secs(), nanos)
     }
 
-    Date = write!(fmt, "{}", *self);
+    Date = write!(fmt, "{}", self.date());
 }

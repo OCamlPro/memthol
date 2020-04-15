@@ -140,7 +140,7 @@ impl Loc {
     /// assert_eq! { format!("{}", loc), s }
     /// assert_eq! { loc.file, "blah/stuff/file.ml" }
     /// assert_eq! { loc.line, 325 }
-    /// assert_eq! { loc.span, (7, 38) }
+    /// assert_eq! { loc.span, (7, 38).into() }
     /// ```
     pub fn from_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
         Parser::parse_all(s.as_ref(), Parser::loc, "location")
@@ -158,7 +158,7 @@ impl Loc {
     /// assert_eq! { format!("{}", loc), s[0..s.len()-2] }
     /// assert_eq! { loc.file, "blah/stuff/file.ml" }
     /// assert_eq! { loc.line, 325 }
-    /// assert_eq! { loc.span, (7, 38) }
+    /// assert_eq! { loc.span, (7, 38).into() }
     /// assert_eq! { count, 5 }
     /// ```
     pub fn from_str_with_count<Str: AsRef<str>>(s: Str) -> Res<(Self, usize)> {
