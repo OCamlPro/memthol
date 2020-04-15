@@ -1,0 +1,21 @@
+[package]
+name = "memthol"
+version = "0.1.0"
+authors = ["Adrien Champion <adrien.champion@ocamlpro.com"]
+edition = "2018"
+build = "build.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+gotham = "*"
+error-chain = "*"
+lazy_static = "*"
+websocket = "*"
+clap = "*"
+alloc_data = { path = "../libs/data" }
+charts = { path = "../libs/charts" }
+
+[build-dependencies]
+fs_extra = "*"
+lazy_static = "*"

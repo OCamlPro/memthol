@@ -5,14 +5,16 @@ authors = ["Adrien Champion <adrien.champion@email.com>"]
 edition = "2018"
 
 [dependencies]
+chrono = { version = "*", features = ["serde"] }
+error-chain = "*"
+lazy_static = "*"
 num-bigint = { version = "*", features = ["serde"] }
 num-traits = "*"
-lazy_static = "*"
-rand = "*"
-toml = "*"
 serde = "*"
 serde_derive = "*"
 stdweb = "*"
-chrono = { version = "*", features = ["serde"] }
-error-chain = "*"
+toml = "*"
+
 swarkn = { git = "https://github.com/AdrienChampion/swarkn" }
+
+base = { path = "../base" }

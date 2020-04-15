@@ -24,6 +24,8 @@ pub use error_chain::bail;
 pub use num_bigint::BigUint;
 pub use serde_derive::{Deserialize, Serialize};
 
+use base::*;
+
 #[macro_use]
 pub mod mem;
 
@@ -31,6 +33,8 @@ pub mod labels;
 pub mod locs;
 pub mod parser;
 mod time;
+
+mod fmt;
 
 pub use parser::err::ParseRes as Res;
 pub use parser::Parser;
@@ -40,16 +44,15 @@ pub use time::{Date, Duration, SinceStart};
 mod test;
 
 /// A bigint UID.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, PartialEq, Eq, PartialOrd, Ord,
+    Serialize, Deserialize,
+)]
 pub struct Uid {
     /// The actual bigint.
     uid: BigUint,
 }
-swarkn::display! {
-    impl for Uid {
-        self, fmt => self.uid.fmt(fmt)
-    }
-}
+
 impl std::ops::Deref for Uid {
     type Target = BigUint;
     fn deref(&self) -> &BigUint {
@@ -87,33 +90,41 @@ impl Uid {
     }
 }
 
+/// A span.
+#[derive(
+    Clone, Debug, PartialEq, Eq, PartialOrd, Ord,
+    From,
+    Serialize, Deserialize,
+)]
+pub struct Span {
+    /// Start of the span.
+    pub start: usize,
+    /// End of the span.
+    pub end: usize,
+}
+
 /// A location.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, PartialEq, Eq, PartialOrd, Ord,
+    Serialize, Deserialize,
+)]
 pub struct Loc {
     /// File the location is for.
     pub file: String,
     /// Line in the file.
     pub line: usize,
     /// Column span at that line in the file.
-    pub span: (usize, usize),
-}
-swarkn::display! {
-    impl for Loc {
-        self, fmt => write!(
-            fmt,
-            "`{}`:{}:{}-{}",
-            self.file, self.line, self.span.0, self.span.1
-        )
-    }
+    pub span: Span,
 }
 
 impl Loc {
     /// Constructor.
-    pub fn new<S: Into<String>>(file: S, line: usize, span: (usize, usize)) -> Self {
+    pub fn new<IntoString, IntoSpan>(file: IntoString, line: usize, span: IntoSpan) -> Self
+    where IntoString: Into<String>, IntoSpan: Into<Span> {
         Self {
             file: file.into(),
             line,
-            span,
+            span: span.into(),
         }
     }
 
@@ -156,20 +167,12 @@ impl Loc {
 }
 
 /// A list of labels.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone,
+    Serialize, Deserialize,
+)]
 pub struct Labels {
     labels: Vec<String>,
-}
-swarkn::display! {
-    impl for Labels {
-        self, fmt => {
-            write!(fmt, "[")?;
-            for label in &self.labels {
-                write!(fmt, " `{}`", label)?
-            }
-            write!(fmt, " ]")
-        }
-    }
 }
 impl Labels {
     /// Trace constructor.
@@ -179,18 +182,16 @@ impl Labels {
 }
 
 /// A kind of allocation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq,
+    Serialize, Deserialize,
+)]
 pub enum AllocKind {
     Minor,
     Major,
     MajorPostponed,
     Serialized,
     Unknown,
-}
-swarkn::display! {
-    impl for AllocKind {
-        self, fmt => write!(fmt, "{}", self.as_str())
-    }
 }
 
 impl AllocKind {
@@ -229,7 +230,10 @@ impl AllocKind {
 }
 
 /// Some allocation information.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, PartialEq, Eq,
+    Serialize, Deserialize,
+)]
 pub struct Alloc {
     /// Uid of the allocation.
     pub uid: Uid,
@@ -245,44 +249,6 @@ pub struct Alloc {
     pub toc: SinceStart,
     /// Time of death.
     pub tod: Option<SinceStart>,
-}
-swarkn::display! {
-    impl for Alloc {
-        self, fmt => {
-            let my_labels = labels::get(self.labels);
-            let my_trace = locs::get(self.trace);
-            let mut labels = "[".to_string();
-            for label in my_labels.iter() {
-                labels.push_str(" ");
-                labels.push_str(label)
-            }
-            labels.push_str(" ]");
-            write!(fmt, "{}: {}, {}, ", self.uid, self.kind, self.size)?;
-
-            // Write the trace.
-            write!(fmt, "[")?;
-            for (loc, count) in my_trace.iter() {
-                write!(fmt, " {}#{}", loc, count)?
-            }
-            write!(fmt, " ], ")?;
-
-            // Write the labels.
-            write!(fmt, "[")?;
-            for label in my_labels.iter() {
-                write!(fmt, " {}", label)?
-            }
-            write!(fmt, " ], ")?;
-
-            write!(fmt, "{}, ", self.toc)?;
-
-            if let Some(tod) = &self.tod {
-                write!(fmt, "{}", tod)?
-            } else {
-                write!(fmt, "_")?
-            }
-            write!(fmt, " }}")
-        }
-    }
 }
 
 impl Alloc {
@@ -368,7 +334,10 @@ impl Alloc {
 /// A diff.
 ///
 /// **NB:** `Display` for this type is multi-line.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, PartialEq, Eq,
+    Serialize, Deserialize,
+)]
 pub struct Diff {
     /// Timestamp.
     pub time: SinceStart,
@@ -376,21 +345,6 @@ pub struct Diff {
     pub new: Vec<Alloc>,
     /// Data freed in this diff.
     pub dead: Vec<(Uid, SinceStart)>,
-}
-swarkn::display! {
-    impl for Diff {
-        self, fmt => {
-            write!(fmt, "{}; new: {{\n", self.time)?;
-            for alloc in &self.new {
-                write!(fmt, "    {},\n", alloc)?
-            }
-            write!(fmt, "}};\ndead {{\n")?;
-            for (uid, date) in &self.dead {
-                write!(fmt, "    #{}: {},\n", uid, date)?
-            }
-            write!(fmt, "}}\n")
-        }
-    }
 }
 
 impl Diff {
@@ -406,7 +360,10 @@ impl Diff {
 }
 
 /// Data from a memthol init file.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug,
+    Serialize, Deserialize,
+)]
 pub struct Init {
     /// The start time of the run: an absolute date.
     pub start_time: Date,
@@ -439,15 +396,6 @@ impl Init {
         let txt = txt.as_ref();
         let mut parser = Parser::new(txt);
         parser.init()
-    }
-}
-swarkn::display! {
-    impl for Init {
-        self, fmt => {
-            writeln!(fmt, "start: {}", self.start_time)?;
-            writeln!(fmt, "word_size: {}", self.word_size)?;
-            Ok(())
-        }
     }
 }
 

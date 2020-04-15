@@ -206,32 +206,3 @@ impl Date {
         )
     }
 }
-
-swarkn::display! {
-    impl for SinceStart {
-        self, fmt => {
-            let mut nanos = format!(".{:>09}", self.duration.subsec_nanos());
-            // Remove trailing zeros.
-            loop {
-                match nanos.pop() {
-                    // Remove zeros.
-                    Some('0') => (),
-                    // There was nothing but zeros, remove dot as well (last character).
-                    Some('.') => break,
-                    // Otherwise it's a number, we must keep it and stop removing stuff.
-                    Some(c) => {
-                        nanos.push(c);
-                        break;
-                    }
-                    None => unreachable!(),
-                }
-            }
-            write!(fmt, "{}{}", self.duration.as_secs(), nanos)
-        }
-    }
-}
-swarkn::display! {
-    impl for Date {
-        self, fmt => write!(fmt, "{}", self.date)
-    }
-}

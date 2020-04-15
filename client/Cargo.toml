@@ -1,24 +1,26 @@
 [package]
-name = "charts"
+name = "client"
 version = "0.1.0"
-authors = ["Adrien Champion <adrien.champion@email.com>"]
+authors = ["AdrienChampion <adrien.champion@email.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-alloc_data = { path = "../alloc_data" }
-
-anyhow = "*"
+chrono = "*"
 error-chain = "*"
 lazy_static = "*"
-rand = { version = "*", features = ["small_rng"] }
+log = "*"
 regex = "*"
 safe_index = "*"
 serde = "*"
-serde_derive = "*"
-serde_json = "*"
-serde_regex = "*"
+stdweb = "*"
+stdweb-derive = "*"
 strum = "*"
 strum_macros = "*"
+typed-html = { version = "*", features = ["stdweb"] }
+web_logger = "*"
 yew = { version = "*", features = ["std_web"] }
+
+alloc_data = { path = "../libs/alloc_data" }
+charts = { path = "../libs/charts" }

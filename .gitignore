@@ -2,3 +2,4 @@
 /static
 libs/client/static/css/package-lock.json
 .DS_Store
+*.lock
