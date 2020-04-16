@@ -145,10 +145,10 @@ impl Component for Model {
     fn view(&self) -> Html {
         html! {
             <>
-                // <div class=crate::style::class::FULL_BODY>
-                //     { self.charts.render() }
-                //     { self.footer.render(&self.filters) }
-                // </div>
+                <div class=crate::style::class::FULL_BODY>
+                    { self.charts.render(self) }
+                    { self.footer.render(self, &self.filters) }
+                </div>
             </>
         }
     }

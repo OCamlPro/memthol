@@ -7,7 +7,7 @@ use crate::common::*;
 pub mod axis;
 pub mod new;
 
-// pub use axis::{XAxis, YAxis};
+pub use axis::{XAxis, YAxis};
 pub use charts::chart::ChartUid;
 
 /// The collection of charts.
@@ -216,10 +216,11 @@ impl Charts {
                     ChartMsg::Points(points) => chart.add_points(points),
                 }
                 true
-            } // msg => bail!(
-              //     "unsupported message from server: {}",
-              //     msg.as_json().unwrap_or_else(|_| format!("{:?}", msg))
-              // ),
+            }
+            // msg => bail!(
+            //     "unsupported message from server: {}",
+            //     msg.as_json().unwrap_or_else(|_| format!("{:?}", msg))
+            // ),
         };
         Ok(should_render)
     }
