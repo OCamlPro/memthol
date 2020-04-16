@@ -155,12 +155,13 @@ impl Charts {
 impl Charts {
     /// Renders the charts.
     pub fn render(&self, model: &Model) -> Html {
-        html! {
+        let res = html! {
             <g class=style::class::chart::CONTAINER>
                 { for self.charts.iter().map(|chart| chart.render(model)) }
                 { self.new_chart.render(model) }
             </g>
-        }
+        };
+        res
     }
 }
 
@@ -175,7 +176,7 @@ impl Charts {
         use msg::from_server::{ChartMsg, ChartsMsg};
         let should_render = match action {
             ChartsMsg::NewChart(spec) => {
-                info!("received a chart-creation message from the server");
+                debug!("received a chart-creation message from the server");
                 let uid = spec.uid();
                 let chart = Chart::new(spec);
                 self.charts.push(chart);
@@ -187,7 +188,7 @@ impl Charts {
                 mut points,
                 refresh_filters,
             } => {
-                info!("received a overwrite-points message from the server");
+                debug!("received an overwrite-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
                         chart.overwrite_points(points)
@@ -199,7 +200,7 @@ impl Charts {
                 false
             }
             ChartsMsg::AddPoints(mut points) => {
-                info!("received a add-points message from the server");
+                debug!("received an add-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
                         chart.add_points(points)
@@ -209,7 +210,7 @@ impl Charts {
             }
 
             ChartsMsg::Chart { uid, msg } => {
-                info!("received a message specific to chart #{} from server", uid);
+                debug!("received a message specific to chart #{} from server", uid);
                 let (_index, chart) = self.get_mut(uid)?;
                 match msg {
                     ChartMsg::NewPoints(points) => chart.overwrite_points(points),
@@ -281,7 +282,7 @@ impl Chart {
         if on {
             js!(@(no_return)
                 var chart = @{chart};
-                if (chart.legend === undefined) {
+                if (chart.legend === undefined || chart.legend === null) {
                     chart.legend = new am4charts.Legend();
                     chart.legend.labels.template.text = "[bold {color}]{name}[/]";
                 }
@@ -305,9 +306,6 @@ impl Chart {
             return Ok(());
         };
 
-        // Remove the legend if there's no active filter, turn it on if there are some.
-        Self::toggle_legend(chart, filters.len() > 0);
-
         // Remove all series from the chart and DISPOSE. Otherwise they'll be orphaned.
         js!(@(no_return)
             var chart = @{chart};
@@ -324,6 +322,10 @@ impl Chart {
             filter.add_series_to(&self.spec, chart);
             Ok(())
         })?;
+
+        // Remove the legend if there's no active filter, turn it on if there are some.
+        Self::toggle_legend(chart, filters.len() > 0);
+
         Ok(())
     }
 
@@ -364,7 +366,7 @@ impl Chart {
         self.visible = true;
 
         self.replace_filters(filters)
-            .chain_err(|| format!("while build chart #{}", self.uid()))?;
+            .chain_err(|| format!("while building chart #{}", self.uid()))?;
 
         Ok(())
     }
@@ -423,6 +425,7 @@ impl Chart {
     where
         Key: JsExt + fmt::Display,
         Val: JsExt + fmt::Display,
+        charts::point::PointVal<Val>: fmt::Debug,
     {
         js!(@(no_return)
             let chart = @{chart};

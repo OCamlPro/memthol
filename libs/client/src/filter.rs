@@ -34,7 +34,7 @@ impl Filters {
 
     /// True if at least one filter was edited.
     pub fn edited(&self) -> bool {
-        if self.edited || self.catch_all.edited() {
+        if self.edited || self.everything.edited() || self.catch_all.edited() {
             return true;
         }
         for filter in &self.filters {
@@ -290,7 +290,7 @@ impl Filters {
     pub fn rm_filter(&mut self, uid: FilterUid) -> Res<ShouldRender> {
         self.remove(uid)?;
         self.to_model.emit(msg::FooterMsg::removed(uid));
-        // self.send_refresh_filters();
+        self.send_refresh_filters();
         Ok(true)
     }
 
@@ -470,11 +470,11 @@ impl FilterSpecExt for FilterSpec {
         spec.y_axis().series_apply(&series, self.uid());
         js!(@(no_return)
             var chart = @{chart};
-            console.log("adding " + @{&series}.name + " to chart");
             var series = @{series};
             chart.series.push(series);
             chart.scrollbarX.series.push(series);
-        )
+            chart.invalidateRawData();
+        );
     }
 
     fn render_settings(&self, model: &Model) -> Html {

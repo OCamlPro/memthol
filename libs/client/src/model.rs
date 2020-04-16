@@ -50,7 +50,10 @@ impl Model {
                 alert!("{}", msg);
                 Ok(false)
             }
-            Msg::Charts(msg) => self.charts.server_update(&self.filters, msg),
+            Msg::Charts(msg) => {
+                let res = self.charts.server_update(&self.filters, msg);
+                res
+            },
             Msg::Filters(msg) => self.filters.server_update(msg),
         }
     }
@@ -107,7 +110,7 @@ impl Component for Model {
             Msg::ConnectionStatus(status) => {
                 use WebSocketStatus::*;
                 match status {
-                    Opened => info!("successfully established connection with the server"),
+                    Opened => debug!("successfully established connection with the server"),
                     Closed => warn!("connection with the server was closed"),
                     Error => alert!("failed to connect with the server"),
                 }
@@ -127,7 +130,7 @@ impl Component for Model {
 
             // Basic communication messages.
             Msg::Msg(s) => {
-                info!("{}", s);
+                debug!("{}", s);
                 false
             }
             Msg::Warn(s) => {

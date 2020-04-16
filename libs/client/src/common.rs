@@ -11,7 +11,7 @@ pub use std::{
 
 use lazy_static::lazy_static;
 
-pub use log::{error, info, warn};
+pub use log::{error, info, warn, debug};
 
 pub use stdweb::{js, Value as JsVal};
 
