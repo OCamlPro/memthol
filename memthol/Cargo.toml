@@ -8,13 +8,15 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+alloc_data = { path = "../libs/alloc_data" }
+base = { path = "../libs/base" }
+charts = { path = "../libs/charts" }
+
 gotham = "*"
 error-chain = "*"
 lazy_static = "*"
 websocket = "*"
 clap = "*"
-alloc_data = { path = "../libs/data" }
-charts = { path = "../libs/charts" }
 
 [build-dependencies]
 fs_extra = "*"

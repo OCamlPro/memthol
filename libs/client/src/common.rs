@@ -36,7 +36,7 @@ pub use charts::{Json, point::Point};
 pub use crate::{
     buttons::Button,
     chart,
-    // chart::Charts,
+    chart::Charts,
     cst,
     err,
     err::{bail, Res, ResExt},

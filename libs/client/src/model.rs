@@ -11,11 +11,11 @@ pub struct Model {
     /// Socket task for receiving/sending messages from/to the server.
     pub socket_task: Option<WebSocketTask>,
     /// Errors.
-    errors: Vec<err::Err>,
-    // /// Collection of charts.
-    // pub charts: Charts,
-    // /// Allocation filters.
-    // pub filters: filter::Filters,
+    pub errors: Vec<err::Err>,
+    /// Collection of charts.
+    pub charts: Charts,
+    /// Allocation filters.
+    pub filters: filter::Filters,
 
     /// Footer DOM element.
     pub footer: footer::Footer,
@@ -50,8 +50,8 @@ impl Model {
                 alert!("{}", msg);
                 Ok(false)
             }
-            Msg::Charts(msg) => todo!(), // self.charts.server_update(&self.filters, msg),
-            Msg::Filters(msg) => todo!(), // self.filters.server_update(msg),
+            Msg::Charts(msg) => self.charts.server_update(&self.filters, msg),
+            Msg::Filters(msg) => self.filters.server_update(msg),
         }
     }
 }
@@ -78,15 +78,15 @@ impl Component for Model {
             Ok(res) => (Some(res), vec![]),
             Err(e) => (None, vec![e]),
         };
-        // let charts = Charts::new(link.send_back(|msg: Msg| msg));
-        // let filters = filter::Filters::new(link.send_back(|msg: Msg| msg));
+        let charts = Charts::new(link.callback(|msg: Msg| msg));
+        let filters = filter::Filters::new(link.callback(|msg: Msg| msg));
         Model {
             link,
             socket,
             socket_task,
             errors,
-            // charts,
-            // filters,
+            charts,
+            filters,
             footer: footer::Footer::new(),
         }
     }
@@ -115,16 +115,15 @@ impl Component for Model {
             }
 
             // Internal operations.
-            Msg::Charts(msg) => todo!(),
-            // Msg::Charts(msg) => unwrap_or_send_err!(
-            //     self.charts.update(&self.filters, msg) => self default false
-            // ),
+            Msg::Charts(msg) => unwrap_or_send_err!(
+                self.charts.update(&self.filters, msg) => self default false
+            ),
             Msg::Footer(msg) => unwrap_or_send_err!(
                 self.footer.update(msg) => self default false
             ),
-        //     Msg::Filter(msg) => unwrap_or_send_err!(
-        //         self.filters.update(msg) => self default false
-        //     ),
+            Msg::Filter(msg) => unwrap_or_send_err!(
+                self.filters.update(msg) => self default false
+            ),
 
             // Basic communication messages.
             Msg::Msg(s) => {

@@ -38,7 +38,7 @@ mod client {
     use std::process::Command;
 
     /// Path to the client's crate.
-    const CLIENT_PATH: &str = "libs/client";
+    const CLIENT_PATH: &str = "../libs/client";
 
     /// Path to the UI's (this crate's) directory.
     const UI_PATH: &str = ".";
@@ -80,14 +80,14 @@ mod client {
     }
 
     /// Command to run to build the client.
-    pub static CMD: &str = "cargo";
+    pub static CMD: &str = "cargo-web";
 
     /// Options for the command to build the client.
     #[cfg(debug_assertions)]
-    pub static OPTIONS: [&str; 2] = ["web", "build"];
+    pub static OPTIONS: [&str; 1] = ["build"];
     /// Options for the command to build the client.
     #[cfg(not(debug_assertions))]
-    pub static OPTIONS: [&str; 3] = ["web", "build", "--release"];
+    pub static OPTIONS: [&str; 2] = ["build", "--release"];
 
     /// Outputs an error about building the client (includes the command) and exits with status `2`.
     fn error<T>() -> T {
@@ -125,7 +125,7 @@ mod client {
             CLIENT_PATH
         }
 
-        let _ = Command::new("rm").arg("!(\"Readme.md\")").output();
+        // let _ = Command::new("rm").arg("!(\"Readme.md\")").output();
 
         // Build the client.
         let res = build();

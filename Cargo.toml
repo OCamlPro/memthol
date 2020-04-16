@@ -1,17 +1,14 @@
 [workspace]
 members = [
     "libs/base",
+
     "libs/alloc_data",
     "libs/charts",
-    "client",
-    # "memthol",
-]
-# default-members = [
-#     "memthol"
-# ]
 
-exclude = [
     "memthol",
+]
+exclude = [
+    "libs/client",
 ]
 
 [profile.release]
