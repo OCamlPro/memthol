@@ -2,7 +2,7 @@
 
 pub use charts::chart::ChartSpec;
 
-use crate::base::*;
+use crate::common::*;
 
 pub mod axis;
 pub mod new;
@@ -50,6 +50,16 @@ impl Charts {
             }
         }
         bail!("unknown chart UID #{}", uid)
+    }
+
+    /// Destroys a chart.
+    fn destroy(&mut self, uid: ChartUid) -> Res<ShouldRender> {
+        let (index, _) = self
+            .get_mut(uid)
+            .chain_err(|| format!("while destroying chart"))?;
+        let chart = self.charts.remove(index);
+        chart.destroy();
+        Ok(true)
     }
 }
 
@@ -139,28 +149,19 @@ impl Charts {
         chart.toggle_visible();
         Ok(true)
     }
-
-    /// Destroys a chart.
-    fn destroy(&mut self, uid: ChartUid) -> Res<ShouldRender> {
-        let (index, _) = self
-            .get_mut(uid)
-            .chain_err(|| format!("while destroying chart"))?;
-        let chart = self.charts.remove(index);
-        chart.destroy();
-        Ok(true)
-    }
 }
 
 /// # Rendering
 impl Charts {
     /// Renders the charts.
-    pub fn render(&self) -> Html {
-        html! {
+    pub fn render(&self, model: &Model) -> Html {
+        let res = html! {
             <g class=style::class::chart::CONTAINER>
-                { for self.charts.iter().map(Chart::render) }
-                { self.new_chart.render() }
+                { for self.charts.iter().map(|chart| chart.render(model)) }
+                { self.new_chart.render(model) }
             </g>
-        }
+        };
+        res
     }
 }
 
@@ -175,7 +176,7 @@ impl Charts {
         use msg::from_server::{ChartMsg, ChartsMsg};
         let should_render = match action {
             ChartsMsg::NewChart(spec) => {
-                info!("received a chart-creation message from the server");
+                debug!("received a chart-creation message from the server");
                 let uid = spec.uid();
                 let chart = Chart::new(spec);
                 self.charts.push(chart);
@@ -187,7 +188,7 @@ impl Charts {
                 mut points,
                 refresh_filters,
             } => {
-                info!("received a overwrite-points message from the server");
+                debug!("received an overwrite-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
                         chart.overwrite_points(points)
@@ -199,7 +200,7 @@ impl Charts {
                 false
             }
             ChartsMsg::AddPoints(mut points) => {
-                info!("received a add-points message from the server");
+                debug!("received an add-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
                         chart.add_points(points)
@@ -209,17 +210,18 @@ impl Charts {
             }
 
             ChartsMsg::Chart { uid, msg } => {
-                info!("received a message specific to chart #{} from server", uid);
+                debug!("received a message specific to chart #{} from server", uid);
                 let (_index, chart) = self.get_mut(uid)?;
                 match msg {
                     ChartMsg::NewPoints(points) => chart.overwrite_points(points),
                     ChartMsg::Points(points) => chart.add_points(points),
                 }
                 true
-            } // msg => bail!(
-              //     "unsupported message from server: {}",
-              //     msg.as_json().unwrap_or_else(|_| format!("{:?}", msg))
-              // ),
+            }
+            // msg => bail!(
+            //     "unsupported message from server: {}",
+            //     msg.as_json().unwrap_or_else(|_| format!("{:?}", msg))
+            // ),
         };
         Ok(should_render)
     }
@@ -280,7 +282,7 @@ impl Chart {
         if on {
             js!(@(no_return)
                 var chart = @{chart};
-                if (chart.legend === undefined) {
+                if (chart.legend === undefined || chart.legend === null) {
                     chart.legend = new am4charts.Legend();
                     chart.legend.labels.template.text = "[bold {color}]{name}[/]";
                 }
@@ -304,9 +306,6 @@ impl Chart {
             return Ok(());
         };
 
-        // Remove the legend if there's no active filter, turn it on if there are some.
-        Self::toggle_legend(chart, filters.len() > 0);
-
         // Remove all series from the chart and DISPOSE. Otherwise they'll be orphaned.
         js!(@(no_return)
             var chart = @{chart};
@@ -323,6 +322,10 @@ impl Chart {
             filter.add_series_to(&self.spec, chart);
             Ok(())
         })?;
+
+        // Remove the legend if there's no active filter, turn it on if there are some.
+        Self::toggle_legend(chart, filters.len() > 0);
+
         Ok(())
     }
 
@@ -363,7 +366,7 @@ impl Chart {
         self.visible = true;
 
         self.replace_filters(filters)
-            .chain_err(|| format!("while build chart #{}", self.uid()))?;
+            .chain_err(|| format!("while building chart #{}", self.uid()))?;
 
         Ok(())
     }
@@ -422,6 +425,7 @@ impl Chart {
     where
         Key: JsExt + fmt::Display,
         Val: JsExt + fmt::Display,
+        charts::point::PointVal<Val>: fmt::Debug,
     {
         js!(@(no_return)
             let chart = @{chart};
@@ -434,21 +438,24 @@ impl Chart {
 /// # Rendering
 impl Chart {
     /// Renders the chart.
-    pub fn render(&self) -> Html {
+    pub fn render(&self, model: &Model) -> Html {
         let uid = self.uid();
         html! {
             <g>
                 <center class=style::class::chart::HEADER>
-                    { self.expand_or_collapse_button() }
+                    { self.expand_or_collapse_button(model) }
                     { Button::move_up(
+                        model,
                         "Move the chart up",
                         move |_| msg::ChartsMsg::move_up(uid)
                     ) }
                     { Button::move_down(
+                        model,
                         "Move the chart down",
                         move |_| msg::ChartsMsg::move_down(uid)
                     ) }
                     { Button::close(
+                        model,
                         "Close the chart",
                         move |_| msg::ChartsMsg::destroy(uid)
                     ) }
@@ -463,14 +470,14 @@ impl Chart {
     }
 
     /// Creates a collapse or expand button depending on whether the chart is visible.
-    fn expand_or_collapse_button(&self) -> Html {
+    fn expand_or_collapse_button(&self, model: &Model) -> Html {
         let uid = self.uid();
         if self.visible {
-            Button::collapse("Collapse the chart", move |_| {
+            Button::collapse(model, "Collapse the chart", move |_| {
                 msg::ChartsMsg::toggle_visible(uid)
             })
         } else {
-            Button::expand("Expand the chart", move |_| {
+            Button::expand(model, "Expand the chart", move |_| {
                 msg::ChartsMsg::toggle_visible(uid)
             })
         }

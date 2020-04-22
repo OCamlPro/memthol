@@ -126,6 +126,11 @@ impl Date {
         Date { date }
     }
 
+    /// Date accessor.
+    pub fn date(&self) -> &DateTime {
+        &self.date
+    }
+
     /// Timestamp version of a date.
     ///
     /// Returns a pair `(` timestamp's seconds `,` timestamp's subsec nanoseconds `)`.
@@ -204,34 +209,5 @@ impl Date {
             self.date.second(),
             self.date.nanosecond() / 1_000_000,
         )
-    }
-}
-
-swarkn::display! {
-    impl for SinceStart {
-        self, fmt => {
-            let mut nanos = format!(".{:>09}", self.duration.subsec_nanos());
-            // Remove trailing zeros.
-            loop {
-                match nanos.pop() {
-                    // Remove zeros.
-                    Some('0') => (),
-                    // There was nothing but zeros, remove dot as well (last character).
-                    Some('.') => break,
-                    // Otherwise it's a number, we must keep it and stop removing stuff.
-                    Some(c) => {
-                        nanos.push(c);
-                        break;
-                    }
-                    None => unreachable!(),
-                }
-            }
-            write!(fmt, "{}{}", self.duration.as_secs(), nanos)
-        }
-    }
-}
-swarkn::display! {
-    impl for Date {
-        self, fmt => write!(fmt, "{}", self.date)
     }
 }

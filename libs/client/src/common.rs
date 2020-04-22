@@ -11,7 +11,7 @@ pub use std::{
 
 use lazy_static::lazy_static;
 
-pub use log::{error, info, warn};
+pub use log::{error, info, warn, debug};
 
 pub use stdweb::{js, Value as JsVal};
 
@@ -29,7 +29,7 @@ pub use yew::{
 
 pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Uid as AllocUid};
 
-pub use charts::{base::Json, point::Point};
+pub use charts::{Json, point::Point};
 
 // Re-exports.
 
@@ -37,9 +37,11 @@ pub use crate::{
     buttons::Button,
     chart,
     chart::Charts,
-    cst, err,
+    cst,
+    err,
     err::{bail, Res, ResExt},
-    filter, footer,
+    filter,
+    footer,
     model::Model,
     msg,
     msg::Msg,
@@ -71,7 +73,7 @@ macro_rules! fail {
     });
 }
 
-/// Type of `onclick` actions.
+// /// Type of `onclick` actions.
 pub trait OnClick: Fn(yew::events::ClickEvent) -> Msg + 'static {}
 impl<Action> OnClick for Action where Action: Fn(yew::events::ClickEvent) -> Msg + 'static {}
 
@@ -92,7 +94,7 @@ pub fn get_server_addr() -> (String, usize) {
 }
 
 /// Type of HTML elements in the client.
-pub type Html = yew::Html<Model>;
+pub type Html = yew::Html;
 
 /// Extends yew's `ChangeData` with some helpers.
 pub trait ChangeDataExt {

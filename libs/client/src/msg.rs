@@ -1,6 +1,6 @@
 //! Messages of the client.
 
-use crate::base::*;
+use crate::common::*;
 
 pub use charts::msg::{to_client as from_server, to_server};
 

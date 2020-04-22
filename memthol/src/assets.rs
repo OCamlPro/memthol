@@ -223,7 +223,7 @@ var serverAddr = {{
                 pub static ref $id: &'static [u8] = {
                     include_bytes!(
                         concat!(
-                            "../../",
+                            "../",
                             $path,
                         )
                     )

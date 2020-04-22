@@ -1,6 +1,6 @@
 //! Point representation.
 
-use crate::base::*;
+use crate::common::*;
 
 pub use chart::time::TimePoints;
 

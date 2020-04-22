@@ -1,6 +1,6 @@
 //! Chart types and helpers.
 
-use crate::base::*;
+use crate::common::*;
 
 use axis::{XAxis, YAxis};
 

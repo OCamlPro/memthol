@@ -25,7 +25,7 @@ fn usize_validator(s: String) -> Result<(), String> {
 
 pub fn main() {
     let matches = clap_app!(memthol =>
-            (author: crate_authors!("\n"))
+            (author: crate_authors!())
             (version: crate_version!())
             (about: "Memthol's UI.")
             (@arg VERB:

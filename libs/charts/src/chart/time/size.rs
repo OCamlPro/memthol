@@ -1,6 +1,6 @@
 //! Total size over time chart.
 
-use crate::base::*;
+use crate::common::*;
 
 /// Initial size value.
 const INIT_SIZE_VALUE: usize = 0;

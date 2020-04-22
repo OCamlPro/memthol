@@ -1,6 +1,6 @@
 //! Client/server messages.
 
-use crate::base::*;
+use crate::common::*;
 use filter::*;
 
 /// Messages from the client to the server.
@@ -95,7 +95,7 @@ pub mod to_server {
         fn into(self) -> yew::format::Text {
             match self.as_json() {
                 Ok(res) => Ok(res),
-                Err(e) => failure::bail!("{}", e.pretty()),
+                Err(e) => anyhow::bail!("{}", e.pretty()),
             }
         }
     }
@@ -103,7 +103,7 @@ pub mod to_server {
         fn into(self) -> yew::format::Binary {
             match self.as_json() {
                 Ok(res) => Ok(res.into_bytes()),
-                Err(e) => failure::bail!("{}", e.pretty()),
+                Err(e) => anyhow::bail!("{}", e.pretty()),
             }
         }
     }

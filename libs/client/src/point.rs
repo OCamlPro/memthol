@@ -1,6 +1,6 @@
 //! Point-related stuff.
 
-use crate::base::*;
+use crate::common::*;
 
 pub use charts::point::{Point, Points};
 

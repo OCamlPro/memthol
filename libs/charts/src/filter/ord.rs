@@ -1,6 +1,6 @@
 //! Filter over ordered (number-like) quantities.
 
-use crate::base::*;
+use crate::common::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Kind {

@@ -8,23 +8,24 @@ edition = "2018"
 
 [profile.release]
 lto = true
-opt-level=3
+opt-level = 3
 
 [dependencies]
-log = "*"
-web_logger = "*"
-typed-html = { version = "*", features = ["stdweb"] }
-yew = "^0.8.0"
+alloc_data = { path = "../alloc_data" }
+base = { path = "../base" }
+charts = { path = "../charts" }
+
+chrono = "*"
+error-chain = "*"
 lazy_static = "*"
+log = "*"
+regex = "*"
+safe_index = "*"
+serde = "*"
 stdweb = "*"
 stdweb-derive = "*"
-serde = "*"
-failure = "*"
-safe_index = "*"
-chrono = "*"
-regex = "*"
-error-chain = "*"
-alloc_data = { path = "../data" }
-charts = { path = "../charts" }
 strum = "*"
 strum_macros = "*"
+typed-html = { version = "*", features = ["stdweb"] }
+web_logger = "*"
+yew = { version = "*", features = ["std_web"] }
