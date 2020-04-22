@@ -177,7 +177,8 @@ impl Filters {
     /// Remembers that an allocation is handled by some filter.
     fn remember(memory: &mut Map<AllocUid, FilterUid>, alloc: AllocUid, filter: FilterUid) {
         let prev = memory.insert(alloc, filter);
-        if prev.is_some() {
+        let collision = prev.map(|uid| uid != filter).unwrap_or(false);
+        if collision {
             panic!("filter memory collision")
         }
     }
