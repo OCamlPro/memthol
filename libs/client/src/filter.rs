@@ -6,6 +6,24 @@ use charts::filter::{Filter, FilterSpec};
 
 pub use charts::filter::{FilterUid, LineUid, SubFilter, SubFilterUid};
 
+/// Filter rendering info.
+pub struct FilterRenderInfo {
+    /// True if the filter has been edited *w.r.t.* the server version.
+    pub edited: bool,
+    /// True if the filter is the first in the list of match filters.
+    pub is_first: bool,
+    /// True if the filter is the last in the list of match filters.
+    pub is_last: bool,
+}
+impl FilterRenderInfo {
+    /// Constructs a non-match filter info.
+    /// 
+    /// *Non-match* filters are the *everything* and *catch-all* filters.
+    pub fn new_non_match() -> Self {
+        Self { edited: false, is_first: false, is_last: false }
+    }
+}
+
 /// Stores all the filters.
 pub struct Filters {
     /// Sends messages to the model.
@@ -345,7 +363,7 @@ impl Filters {
                         />
                     </li>
                     // Actual filters.
-                    { for self.filters.iter().rev().map(|filter| {
+                    { for self.filters.iter().rev().enumerate().map(|(idx, filter)| {
                         let active = Some(LineUid::Filter(filter.uid())) == active;
                         filter.spec().render_tab(model, active, filter.edited())
                     } ) }
@@ -364,11 +382,24 @@ impl Filters {
     /// Renders the active filter.
     pub fn render_filter(&self, model: &Model, active: LineUid) -> Html {
         let (settings, filter_opt) = match active {
-            LineUid::CatchAll => (self.catch_all.render_settings(model), None),
-            LineUid::Everything => (self.everything.render_settings(model), None),
+            LineUid::CatchAll => (
+                self.catch_all.render_settings(model, FilterRenderInfo::new_non_match()),
+                None,
+            ),
+            LineUid::Everything => (
+                self.everything.render_settings(model, FilterRenderInfo::new_non_match()),
+                None,
+            ),
             LineUid::Filter(uid) => {
-                if let Ok((_index, filter)) = self.get_filter(uid) {
-                    (filter.spec().render_settings(model), Some(filter))
+                if let Ok((idx, filter)) = self.get_filter(uid) {
+                    let (is_first, is_last) = (idx == 0, idx + 1 == self.filters.len());
+                    (
+                        filter.spec().render_settings(
+                            model,
+                            FilterRenderInfo { edited: filter.edited(), is_first, is_last },
+                        ),
+                        Some(filter),
+                    )
                 } else {
                     (html!(<a/>), None)
                 }
@@ -421,7 +452,7 @@ pub trait FilterSpecExt {
     fn add_series_to(&self, spec: &chart::ChartSpec, chart: &JsVal);
 
     /// Renders the settings of a filter specification.
-    fn render_settings(&self, model: &Model) -> Html;
+    fn render_settings(&self, model: &Model, info: FilterRenderInfo) -> Html;
 }
 
 impl FilterSpecExt for FilterSpec {
@@ -477,8 +508,58 @@ impl FilterSpecExt for FilterSpec {
         );
     }
 
-    fn render_settings(&self, model: &Model) -> Html {
+    fn render_settings(&self, model: &Model, info: FilterRenderInfo) -> Html {
         let uid = self.uid();
+
+        let mut priority = html!(<a/>);
+
+        if let Some(uid) = self.uid().filter_uid() {
+            if !info.is_first || !info.is_last {
+                priority = html! {
+                    <ul class = style::class::filter::LINE>
+                        <li class = style::class::filter::BUTTONS_LEFT/>
+
+                        <li class = style::class::filter::line::CELL>
+                            <a class = style::class::filter::line::SETTINGS_CELL>
+                                { "match priority" }
+                            </a>
+                        </li>
+
+                        <li class = style::class::filter::line::CELL>
+                            <a class = style::class::filter::line::VAL_CELL>
+                                {
+                                    if !info.is_first {
+                                        Button::text(
+                                            model,
+                                            "increase (move left)",
+                                            "try to match this filter BEFORE the one currently on its left",
+                                            move |_| msg::FiltersMsg::move_filter(uid, true),
+                                            style::class::filter::line::SETTINGS_BUTTON,
+                                        )
+                                    } else {
+                                        html!(<a/>)
+                                    }
+                                }
+                                {
+                                    if !info.is_last {
+                                        Button::text(
+                                            model,
+                                            "decrease (move right)",
+                                            "try to match this filter AFTER the one currently on its right",
+                                            move |_| msg::FiltersMsg::move_filter(uid, false),
+                                            style::class::filter::line::SETTINGS_BUTTON,
+                                        )
+                                    } else {
+                                        html!(<a/>)
+                                    }
+                                }
+                            </a>
+                        </li>
+                    </ul>
+                }
+            }
+        }
+
         html!(
             <>
                 <ul class = style::class::filter::LINE>
@@ -525,41 +606,7 @@ impl FilterSpecExt for FilterSpec {
                     </li>
                 </ul>
 
-                {
-                    if let Some(uid) = self.uid().filter_uid() {
-                        html! {
-                            <ul class = style::class::filter::LINE>
-                                <li class = style::class::filter::BUTTONS_LEFT/>
-
-                                <li class = style::class::filter::line::CELL>
-                                    <a class = style::class::filter::line::SETTINGS_CELL>
-                                        { "match priority" }
-                                    </a>
-                                </li>
-                                <li class = style::class::filter::line::CELL>
-                                    <a class = style::class::filter::line::VAL_CELL>
-                                        { Button::text(
-                                            model,
-                                            "increase (move left)",
-                                            "try to match this filter BEFORE the one currently on its left",
-                                            move |_| msg::FiltersMsg::move_filter(uid, true),
-                                            style::class::filter::line::SETTINGS_BUTTON,
-                                        ) }
-                                        { Button::text(
-                                            model,
-                                            "decrease (move right)",
-                                            "try to match this filter AFTER the one currently on its right",
-                                            move |_| msg::FiltersMsg::move_filter(uid, false),
-                                            style::class::filter::line::SETTINGS_BUTTON,
-                                        ) }
-                                    </a>
-                                </li>
-                            </ul>
-                        }
-                    } else {
-                        html!(<a/>)
-                    }
-                }
+                { priority }
             </>
         )
     }
