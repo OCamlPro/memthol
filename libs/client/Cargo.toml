@@ -28,4 +28,4 @@ strum = "*"
 strum_macros = "*"
 typed-html = { version = "*", features = ["stdweb"] }
 web_logger = "*"
-yew = { version = "*", features = ["std_web"] }
+yew = { version = "0.14.3", features = ["std_web"] }
