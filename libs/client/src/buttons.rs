@@ -28,11 +28,16 @@ macro_rules! mk_buttons {
             $(
                 $(#[$meta])*
                 pub fn $fn_name(model: &crate::Model, title: Title, action: Action) -> Html {
+                    let (class, title, onclick) = (
+                        style::class::button::$button_class,
+                        title.into(),
+                        model.link.callback(action),
+                    );
                     html! {
                         <img
-                            class = style::class::button::$button_class
-                            title = title.into()
-                            onclick = model.link.callback(action)
+                            class = class
+                            title = title
+                            onclick = onclick
                         />
                     }
                 }

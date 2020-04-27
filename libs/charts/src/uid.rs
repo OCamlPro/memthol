@@ -67,9 +67,8 @@ macro_rules! new_uid {
                 }
             }
 
-            /// Private module for the factory.
             lazy_static::lazy_static! {
-                /// Uid counter.
+                /// Uid factory.
                 static ref COUNTER: Mutex<usize> = Mutex::new(0);
             }
 
