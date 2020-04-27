@@ -333,11 +333,11 @@ impl Filter {
     /// Applies the filters to an allocation.
     pub fn apply(&self, alloc: &Alloc) -> bool {
         for filter in self.subs.values() {
-            if filter.apply(alloc) {
-                return true;
+            if !filter.apply(alloc) {
+                return false;
             }
         }
-        false
+        true
     }
 
     /// Removes a subfilter.
