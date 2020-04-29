@@ -236,7 +236,7 @@ pub struct Chart {
     /// DOM element containing the chart.
     container: String,
     /// Actual chart as a JS value.
-    chart: Option<JsVal>,
+    chart: Option<JsValue>,
     /// Points from the server that have not been treated yet.
     ///
     /// The boolean is true when the points should overwrite the existing points.
@@ -278,7 +278,7 @@ impl Chart {
     }
 
     /// Adds/remove a legend to/from the chart.
-    fn toggle_legend(chart: &JsVal, on: bool) {
+    fn toggle_legend(chart: &JsValue, on: bool) {
         if on {
             js!(@(no_return)
                 var chart = @{chart};
@@ -381,7 +381,7 @@ impl Chart {
     }
 
     /// Appends some points to the chart.
-    fn really_add_points(chart: &JsVal, points: point::Points) {
+    fn really_add_points(chart: &JsValue, points: point::Points) {
         match points {
             point::Points::Time(points) => match points {
                 charts::point::TimePoints::Size(points) => Self::inner_add_points(chart, points),
@@ -390,7 +390,7 @@ impl Chart {
     }
 
     /// Appends some points to the chart.
-    fn inner_add_points<Key, Val>(chart: &JsVal, points: Vec<point::Point<Key, Val>>)
+    fn inner_add_points<Key, Val>(chart: &JsValue, points: Vec<point::Point<Key, Val>>)
     where
         Key: JsExt + fmt::Display,
         Val: JsExt + fmt::Display,
@@ -410,7 +410,7 @@ impl Chart {
     }
 
     /// Overwrites the points in a chart.
-    fn really_overwrite_points(chart: &JsVal, points: point::Points) {
+    fn really_overwrite_points(chart: &JsValue, points: point::Points) {
         match points {
             point::Points::Time(points) => match points {
                 charts::point::TimePoints::Size(points) => {
@@ -421,7 +421,7 @@ impl Chart {
     }
 
     /// Overwrites the points in a chart.
-    fn inner_overwrite_points<Key, Val>(chart: &JsVal, points: Vec<Point<Key, Val>>)
+    fn inner_overwrite_points<Key, Val>(chart: &JsValue, points: Vec<Point<Key, Val>>)
     where
         Key: JsExt + fmt::Display,
         Val: JsExt + fmt::Display,
@@ -444,17 +444,17 @@ impl Chart {
             <g>
                 <center class=style::class::chart::HEADER>
                     { self.expand_or_collapse_button(model) }
-                    { Button::move_up(
+                    { buttons::move_up(
                         model,
                         "Move the chart up",
                         move |_| msg::ChartsMsg::move_up(uid)
                     ) }
-                    { Button::move_down(
+                    { buttons::move_down(
                         model,
                         "Move the chart down",
                         move |_| msg::ChartsMsg::move_down(uid)
                     ) }
-                    { Button::close(
+                    { buttons::close(
                         model,
                         "Close the chart",
                         move |_| msg::ChartsMsg::destroy(uid)
@@ -473,11 +473,11 @@ impl Chart {
     fn expand_or_collapse_button(&self, model: &Model) -> Html {
         let uid = self.uid();
         if self.visible {
-            Button::collapse(model, "Collapse the chart", move |_| {
+            buttons::collapse(model, "Collapse the chart", move |_| {
                 msg::ChartsMsg::toggle_visible(uid)
             })
         } else {
-            Button::expand(model, "Expand the chart", move |_| {
+            buttons::expand(model, "Expand the chart", move |_| {
                 msg::ChartsMsg::toggle_visible(uid)
             })
         }

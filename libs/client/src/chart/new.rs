@@ -59,7 +59,7 @@ impl NewChart {
         html! {
             <g>
                 <center class=style::class::chart::HEADER>
-                    { Button::add(
+                    { buttons::add(
                         model,
                         "Create a new chart",
                         move |_| msg::to_server::ChartsMsg::new(x_axis, y_axis).into()

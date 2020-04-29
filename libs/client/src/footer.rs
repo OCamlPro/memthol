@@ -42,7 +42,7 @@ impl Footer {
             <footer id = style::id::FOOTER>
                 <ul class = style::class::footer::TABS>
                     <li class = style::class::footer::tabs::LEFT>
-                        { Button::refresh(
+                        { buttons::refresh(
                             model,
                             "Reload all points in all charts",
                             |_| msg::to_server::ChartsMsg::reload().into()
@@ -61,7 +61,7 @@ impl Footer {
                         { filters.render_tabs(model, self.active.and_then(FooterTab::get_filter)) }
                     </li>
                     <li class = style::class::footer::tabs::RIGHT>
-                        { Button::add(
+                        { buttons::add(
                             model,
                             "Create a new filter",
                             |_| msg::to_server::FiltersMsg::request_new().into()
@@ -70,12 +70,12 @@ impl Footer {
                             if filters.edited() {
                                 html! {
                                     <>
-                                        { Button::save(
+                                        { buttons::save(
                                             model,
                                             "Save all changes",
                                             move |_| msg::FiltersMsg::save()
                                         ) }
-                                        { Button::undo(
+                                        { buttons::undo(
                                             model,
                                             "Undo all changes",
                                             move |_| msg::to_server::FiltersMsg::revert().into()

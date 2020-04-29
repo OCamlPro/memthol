@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["AdrienChampion <adrien.champion@email.com>"]
 edition = "2018"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.release]
@@ -22,10 +25,10 @@ log = "*"
 regex = "*"
 safe_index = "*"
 serde = "*"
-stdweb = "*"
-stdweb-derive = "*"
 strum = "*"
 strum_macros = "*"
-typed-html = { version = "*", features = ["stdweb"] }
+typed-html = { version = "*" }
 web_logger = "*"
-yew = { version = "0.14.3", features = ["std_web"] }
+wasm-bindgen = "*"
+web-sys = "*"
+yew = { version = "0.14.3", features = ["web_sys"] }

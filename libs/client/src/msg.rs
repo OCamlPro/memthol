@@ -26,7 +26,6 @@ pub enum Msg {
     Footer(FooterMsg),
     /// Filter operations.
     Filter(FiltersMsg),
-
     /// A message to print in the JS console.
     Msg(String),
     /// A warning to print in the JS console.
@@ -73,6 +72,7 @@ impl From<to_server::Msg> for Msg {
         Self::ToServer(msg)
     }
 }
+
 impl From<ChartsMsg> for Msg {
     fn from(msg: ChartsMsg) -> Self {
         Self::Charts(msg)

@@ -4,7 +4,7 @@
 //!     around a `std::time::Duration`.
 
 use serde_derive::{Deserialize, Serialize};
-use stdweb::{js, Value};
+// use stdweb::{js, Value};
 
 use crate::{Parser, Res};
 
@@ -85,10 +85,10 @@ impl SinceStart {
         Parser::parse_all(s.as_ref(), Parser::date, "date")
     }
 
-    /// JS representation of a duration.
-    pub fn as_js(&self) -> Value {
-        js!(return @{format!("{}.{}", self.as_secs(), self.subsec_millis())})
-    }
+    // /// JS representation of a duration.
+    // pub fn as_js(&self) -> Value {
+    //     js!(return @{format!("{}.{}", self.as_secs(), self.subsec_millis())})
+    // }
 }
 
 /// An actual, absolute date.
@@ -169,21 +169,21 @@ impl Date {
         date
     }
 
-    /// JS version of a date.
-    pub fn as_js(&self) -> Value {
-        use chrono::{Datelike, Timelike};
-        js!(
-            return new Date(Date.UTC(
-                @{self.date.year()},
-                @{self.date.month0()},
-                @{self.date.day()},
-                @{self.date.hour()},
-                @{self.date.minute()},
-                @{self.date.second()},
-                @{self.date.nanosecond() / 1_000_000},
-            ))
-        )
-    }
+    // /// JS version of a date.
+    // pub fn as_js(&self) -> Value {
+    //     use chrono::{Datelike, Timelike};
+    //     js!(
+    //         return new Date(Date.UTC(
+    //             @{self.date.year()},
+    //             @{self.date.month0()},
+    //             @{self.date.day()},
+    //             @{self.date.hour()},
+    //             @{self.date.minute()},
+    //             @{self.date.second()},
+    //             @{self.date.nanosecond() / 1_000_000},
+    //         ))
+    //     )
+    // }
 
     /// The hours/minutes/seconds/millis of a date.
     ///

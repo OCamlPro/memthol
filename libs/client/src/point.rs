@@ -11,7 +11,7 @@ where
     Key: JsExt + fmt::Display,
     Val: JsExt + fmt::Display,
 {
-    fn as_js(self) -> JsVal {
+    fn as_js(self) -> JsValue {
         let list = js!(return []);
         for point in self {
             js!(@(no_return)
@@ -27,7 +27,7 @@ where
     Key: JsExt + fmt::Display,
     Val: JsExt + fmt::Display,
 {
-    fn as_js(self) -> JsVal {
+    fn as_js(self) -> JsValue {
         let Point {
             key,
             vals: PointVal { map },
@@ -43,17 +43,27 @@ where
 }
 
 impl JsExt for usize {
-    fn as_js(self) -> JsVal {
+    fn as_js(self) -> JsValue {
         js!(return @{self.to_string()})
     }
 }
 impl JsExt for AllocDate {
-    fn as_js(self) -> JsVal {
-        AllocDate::as_js(&self)
+    fn as_js(self) -> JsValue {
+        js!(
+            return new Date(Date.UTC(
+                @{self.date.year()},
+                @{self.date.month0()},
+                @{self.date.day()},
+                @{self.date.hour()},
+                @{self.date.minute()},
+                @{self.date.second()},
+                @{self.date.nanosecond() / 1_000_000},
+            ))
+        )
     }
 }
 impl JsExt for SinceStart {
-    fn as_js(self) -> JsVal {
-        SinceStart::as_js(&self)
+    fn as_js(self) -> JsValue {
+        js!(return @{format!("{}.{}", self.as_secs(), self.subsec_millis())})
     }
 }

@@ -23,7 +23,10 @@ pub struct Model {
 
 impl Model {
     /// Activates the websocket to receive data from the server.
-    fn activate_ws(link: &mut ComponentLink<Self>, socket: &mut WebSocketService) -> Res<WebSocketTask> {
+    fn activate_ws(
+        link: &mut ComponentLink<Self>,
+        socket: &mut WebSocketService,
+    ) -> Res<WebSocketTask> {
         let (addr, port) = get_server_addr();
         let addr = format!("ws://{}:{}", addr, port + 1);
         let callback = link.callback(|msg| Msg::FromServer(msg));
@@ -53,8 +56,10 @@ impl Model {
             Msg::Charts(msg) => {
                 let res = self.charts.server_update(&self.filters, msg);
                 res
-            },
+            }
             Msg::Filters(msg) => self.filters.server_update(msg),
+            Msg::Charts(_) => todo!("chart msgs"),
+            Msg::Filters(_) => todo!("filter msgs"),
         }
     }
 }
@@ -149,8 +154,8 @@ impl Component for Model {
         html! {
             <>
                 <div class=crate::style::class::FULL_BODY>
-                    { self.charts.render(self) }
-                    { self.footer.render(self, &self.filters) }
+                    // { self.charts.render(self) }
+                    // { self.footer.render(self, &self.filters) }
                 </div>
             </>
         }

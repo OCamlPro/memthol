@@ -2,18 +2,18 @@
 
 use crate::common::*;
 
-/// Button constructor.
-///
-/// This type is never constructed, it's only purpose is to make writing button-creation functions
-/// simpler by factoring the generic types for the `onclick` action and the title.
-pub struct Button<Action, Title>
-where
-    Action: OnClick,
-    Title: Into<String>,
-{
-    _unused_action: Action,
-    _unused_title: Title,
-}
+// /// Button constructor.
+// ///
+// /// This type is never constructed, it's only purpose is to make writing button-creation functions
+// /// simpler by factoring the generic types for the `onclick` action and the title.
+// pub struct Button<A, Title>
+// where
+//     A: Action,
+//     Title: Into<String>,
+// {
+//     _unused_action: A,
+//     _unused_title: Title,
+// }
 
 /// Used below to create the button-creation functions.
 macro_rules! mk_buttons {
@@ -23,26 +23,27 @@ macro_rules! mk_buttons {
             class = $button_class:ident
         }
     )*) => {
-        impl<Action, Title> Button<Action, Title>
-        where Action: OnClick, Title: Into<String> {
-            $(
-                $(#[$meta])*
-                pub fn $fn_name(model: &crate::Model, title: Title, action: Action) -> Html {
-                    let (class, title, onclick) = (
-                        style::class::button::$button_class,
-                        title.into(),
-                        model.link.callback(action),
-                    );
-                    html! {
-                        <div
-                            class = class
-                            title = title
-                            onclick = onclick
-                        />
-                    }
+        $(
+            $(#[$meta])*
+            pub fn $fn_name(
+                model: &crate::Model,
+                title: impl Into<String>,
+                action: impl OnClick,
+            ) -> Html {
+                let (class, title, onclick) = (
+                    style::class::button::$button_class,
+                    title.into(),
+                    model.link.callback(action),
+                );
+                html! {
+                    <div
+                        class = class
+                        title = title
+                        onclick = onclick
+                    />
                 }
-            )*
-        }
+            }
+        )*
     }
 }
 
@@ -71,30 +72,21 @@ mk_buttons! {
     pub fn move_up(...) { class = MOVE_UP }
 }
 
-impl<Action, Title> Button<Action, Title>
-where
-    Action: OnClick,
-    Title: Into<String>,
-{
-    /// Creates a text button.
-    pub fn text<S>(
-        model: &Model,
-        text: S,
-        title: Title,
-        action: Action,
-        class: &'static str,
-    ) -> Html
-    where
-        S: Into<String>,
-    {
-        html! {
-            <a
-                class = class
-                onclick = model.link.callback(action)
-                title = title.into()
-            >
-                { text.into() }
-            </a>
-        }
+/// Creates a text button.
+pub fn text(
+    model: &Model,
+    text: impl Into<String>,
+    title: impl Into<String>,
+    action: impl OnClick,
+    class: &'static str,
+) -> Html {
+    html! {
+        <a
+            class = class
+            onclick = model.link.callback(action)
+            title = title.into()
+        >
+            { text.into() }
+        </a>
     }
 }

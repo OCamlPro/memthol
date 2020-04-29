@@ -5,12 +5,12 @@ use crate::common::*;
 pub use charts::chart::axis::{XAxis, YAxis};
 
 pub trait AxisExt {
-    fn chart_apply(&self, chart: &JsVal);
-    fn series_apply(&self, series: &JsVal, uid: filter::LineUid);
+    fn chart_apply(&self, chart: &JsValue);
+    fn series_apply(&self, series: &JsValue, uid: filter::LineUid);
 }
 
 impl AxisExt for XAxis {
-    fn chart_apply(&self, chart: &JsVal) {
+    fn chart_apply(&self, chart: &JsValue) {
         match self {
             XAxis::Time => js!(@(no_return)
                 var x_axis = @{chart}.xAxes.push(new am4charts.DateAxis());
@@ -32,7 +32,7 @@ impl AxisExt for XAxis {
         }
     }
 
-    fn series_apply(&self, series: &JsVal, _: filter::LineUid) {
+    fn series_apply(&self, series: &JsValue, _: filter::LineUid) {
         js!(@(no_return)
             @{series}.dataFields.dateX = "x";
         )
@@ -40,7 +40,7 @@ impl AxisExt for XAxis {
 }
 
 impl AxisExt for YAxis {
-    fn chart_apply(&self, chart: &JsVal) {
+    fn chart_apply(&self, chart: &JsValue) {
         match self {
             YAxis::TotalSize => js!(@(no_return)
                 var y_axis = @{chart}.yAxes.push(new am4charts.ValueAxis());
@@ -50,7 +50,7 @@ impl AxisExt for YAxis {
         }
     }
 
-    fn series_apply(&self, series: &JsVal, uid: filter::LineUid) {
+    fn series_apply(&self, series: &JsValue, uid: filter::LineUid) {
         let y_name = uid.y_axis_key();
         js!(@(no_return)
             let series = @{series};

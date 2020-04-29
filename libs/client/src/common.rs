@@ -11,9 +11,7 @@ pub use std::{
 
 use lazy_static::lazy_static;
 
-pub use log::{error, info, warn, debug};
-
-pub use stdweb::{js, Value as JsVal};
+pub use log::{debug, error, info, warn};
 
 pub use regex::Regex;
 
@@ -25,26 +23,25 @@ pub use yew::{
     Callback, Component, ComponentLink, Renderable, ShouldRender,
 };
 
+// pub use stdweb::{js, Value as JsVal};
+
 // Sub-crates.
 
 pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Uid as AllocUid};
 
-pub use charts::{Json, point::Point};
+pub use charts::{point::Point, Json};
 
 // Re-exports.
 
 pub use crate::{
-    buttons::Button,
-    chart,
-    chart::Charts,
+    buttons,
+    chart::{self, Charts},
     cst,
-    err,
-    err::{bail, Res, ResExt},
-    filter,
-    footer,
+    err::{self, bail, Res, ResExt},
+    filter, footer,
+    js::{self, JsValue},
     model::Model,
-    msg,
-    msg::Msg,
+    msg::{self, Msg},
     point, style,
 };
 
@@ -52,69 +49,73 @@ pub use crate::{
 #[macro_export]
 macro_rules! alert {
     ($msg:expr) => (
-        js!(@(no_return) alert(@{$msg});)
+        $crate::js::alert($msg)
     );
     ($($stuff:tt)*) => (
-        alert!(format!($($stuff)*))
+        $crate::js::alert(
+            &format_args!($($stuff)*).to_string()
+        )
     );
 }
 
-/// Issues an alert and then panics.
-#[macro_export]
-macro_rules! fail {
-    ($msg:expr) => ({
-        let blah = format!("{}\nin {} line {}", $msg, file!(), line!());
-        alert!(blah);
-        panic!("fatal error")
-    });
-    ($($stuff:tt)*) => ({
-        let blah = format!($($stuff)*);
-        fail!(blah)
-    });
+// /// Issues an alert.
+// #[macro_export]
+// macro_rules! alert {
+//     ($msg:expr) => (
+//         js!(@(no_return) alert(@{$msg});)
+//     );
+//     ($($stuff:tt)*) => (
+//         alert!(format!($($stuff)*))
+//     );
+// }
+
+// /// Issues an alert and then panics.
+// #[macro_export]
+// macro_rules! fail {
+//     ($msg:expr) => ({
+//         let blah = format!("{}\nin {} line {}", $msg, file!(), line!());
+//         alert!(blah);
+//         panic!("fatal error")
+//     });
+//     ($($stuff:tt)*) => ({
+//         let blah = format!($($stuff)*);
+//         fail!(blah)
+//     });
+// }
+
+/// Trait for conversion to JS.
+pub trait JsExt {
+    /// Conversion to JS.
+    fn as_js(self) -> JsValue;
 }
 
-// /// Type of `onclick` actions.
-pub trait OnClick: Fn(yew::events::ClickEvent) -> Msg + 'static {}
-impl<Action> OnClick for Action where Action: Fn(yew::events::ClickEvent) -> Msg + 'static {}
+/// Type of `onclick` actions.
+pub trait OnClick: Fn(yew::events::MouseEvent) -> Msg + 'static {}
+impl<Action> OnClick for Action where Action: Fn(yew::events::MouseEvent) -> Msg + 'static {}
+
+pub type Action = Callback<Model>;
 
 /// Retrieves the address and port of the server.
 pub fn get_server_addr() -> (String, usize) {
-    use stdweb::unstable::TryInto;
-    let addr: String = js! {
-        return serverAddr.get_addr();
-    }
-    .try_into()
-    .expect("addr");
-    let port: usize = js! {
-        return serverAddr.get_port();
-    }
-    .try_into()
-    .expect("port");
-    (addr, port)
+    js::server::addr_and_port()
 }
 
 /// Type of HTML elements in the client.
 pub type Html = yew::Html;
 
-/// Extends yew's `ChangeData` with some helpers.
-pub trait ChangeDataExt {
-    /// Retrieves a text input value or produces an error message.
-    fn text_value(self) -> Res<String>;
-}
-impl ChangeDataExt for ChangeData {
-    fn text_value(self) -> Res<String> {
-        match self {
-            ChangeData::Value(res) => Ok(res),
-            data => bail!("expected text input value, found {:?}", data),
-        }
-    }
-}
-
-/// Trait for conversion to JS.
-pub trait JsExt {
-    /// Conversion to JS.
-    fn as_js(self) -> JsVal;
-}
+// /// Extends yew's `ChangeData` with some helpers.
+// pub trait ChangeDataExt {
+//     /// Retrieves a text input value or produces an error message.
+//     fn text_value(self) -> Res<String>;
+// }
+// impl ChangeDataExt for ChangeData {
+//     fn text_value(self) -> Res<String> {
+//         match self {
+//             ChangeData::Value(res) => Ok(res),
+//             data => bail!("expected text input value, found {:?}", data),
+//         }
+//     }
+// }
 
 lazy_static! {
     /// Some lorem ipsum.
@@ -176,4 +177,10 @@ volutpat. Fusce lectus elit, dictum quis risus in, ultrices elementum ligula. Nu
 eget nisi feugiat mattis. Vivamus malesuada et enim ac condimentum.\
         ",
     ];
+}
+
+macro_rules! js {
+    ($($stuff:tt)*) => {
+        todo!("[{}:{}] interactions with javascript", file!(), line!())
+    };
 }

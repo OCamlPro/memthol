@@ -2,7 +2,7 @@
 
 pub use error_chain::bail;
 
-use crate::msg::Msg;
+use crate::common::msg::Msg;
 
 pub use charts::err::*;
 

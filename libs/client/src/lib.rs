@@ -3,10 +3,12 @@
 #![recursion_limit = "1024"]
 
 #[macro_use]
-mod common;
-pub mod err;
+pub mod common;
 
-mod model;
+pub mod err;
+pub mod js;
+
+pub mod model;
 
 pub mod buttons;
 pub mod chart;

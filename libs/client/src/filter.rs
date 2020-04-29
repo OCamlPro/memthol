@@ -17,10 +17,14 @@ pub struct FilterRenderInfo {
 }
 impl FilterRenderInfo {
     /// Constructs a non-match filter info.
-    /// 
+    ///
     /// *Non-match* filters are the *everything* and *catch-all* filters.
     pub fn new_non_match() -> Self {
-        Self { edited: false, is_first: false, is_last: false }
+        Self {
+            edited: false,
+            is_first: false,
+            is_last: false,
+        }
     }
 }
 
@@ -217,11 +221,10 @@ impl Filters {
 
     /// Changes the name of a filter.
     pub fn change_name(&mut self, uid: LineUid, new_name: ChangeData) -> Res<()> {
-        let new_name = match new_name.text_value() {
-            Ok(new_name) => new_name,
-            Err(e) => {
-                let e: err::Err = e.into();
-                bail!(e.chain_err(|| format!("while retrieving the new name of a filter")))
+        let new_name = match new_name {
+            yew::html::ChangeData::Value(txt) => txt,
+            err @ yew::html::ChangeData::Select(_) | err @ yew::html::ChangeData::Files(_) => {
+                bail!("unexpected text field update {:?}", err)
             }
         };
         if new_name.is_empty() {
@@ -238,12 +241,11 @@ impl Filters {
 
     /// Changes the color of a filter.
     pub fn change_color(&mut self, uid: LineUid, new_color: ChangeData) -> Res<()> {
-        let new_color = match new_color.text_value() {
-            Ok(new_color) => charts::color::Color::from_str(new_color)
+        let new_color = match new_color {
+            yew::html::ChangeData::Value(new_color) => charts::color::Color::from_str(new_color)
                 .chain_err(|| "while changing the color of a filter")?,
-            Err(e) => {
-                let e: err::Err = e.into();
-                bail!(e.chain_err(|| format!("while retrieving the new color of a filter")))
+            err @ yew::html::ChangeData::Select(_) | err @ yew::html::ChangeData::Files(_) => {
+                bail!("unexpected text field update {:?}", err)
             }
         };
 
@@ -383,11 +385,13 @@ impl Filters {
     pub fn render_filter(&self, model: &Model, active: LineUid) -> Html {
         let (settings, filter_opt) = match active {
             LineUid::CatchAll => (
-                self.catch_all.render_settings(model, FilterRenderInfo::new_non_match()),
+                self.catch_all
+                    .render_settings(model, FilterRenderInfo::new_non_match()),
                 None,
             ),
             LineUid::Everything => (
-                self.everything.render_settings(model, FilterRenderInfo::new_non_match()),
+                self.everything
+                    .render_settings(model, FilterRenderInfo::new_non_match()),
                 None,
             ),
             LineUid::Filter(uid) => {
@@ -396,7 +400,11 @@ impl Filters {
                     (
                         filter.spec().render_settings(
                             model,
-                            FilterRenderInfo { edited: filter.edited(), is_first, is_last },
+                            FilterRenderInfo {
+                                edited: filter.edited(),
+                                is_first,
+                                is_last,
+                            },
                         ),
                         Some(filter),
                     )
@@ -419,7 +427,7 @@ impl Filters {
                     <li class = style::class::filter::BUTTONS_RIGHT>
                         {
                             if let Some(uid) = active.filter_uid() {
-                                Button::close(
+                                buttons::close(
                                     model,
                                     "Delete the filter",
                                     move |_| msg::FiltersMsg::rm(uid)
@@ -449,7 +457,7 @@ pub trait FilterSpecExt {
     fn render_tab(&self, model: &Model, active: bool, edited: bool) -> Html;
 
     /// Adds itself as a series to a chart.
-    fn add_series_to(&self, spec: &chart::ChartSpec, chart: &JsVal);
+    fn add_series_to(&self, spec: &chart::ChartSpec, chart: &JsValue);
 
     /// Renders the settings of a filter specification.
     fn render_settings(&self, model: &Model, info: FilterRenderInfo) -> Html;
@@ -482,7 +490,7 @@ impl FilterSpecExt for FilterSpec {
         }
     }
 
-    fn add_series_to(&self, spec: &chart::ChartSpec, chart: &JsVal) {
+    fn add_series_to(&self, spec: &chart::ChartSpec, chart: &JsValue) {
         let series = js!(
             let color = @{self.color().to_string()};
             var series = new am4charts.LineSeries();
@@ -529,7 +537,7 @@ impl FilterSpecExt for FilterSpec {
                             <a class = style::class::filter::line::VAL_CELL>
                                 {
                                     if !info.is_first {
-                                        Button::text(
+                                        buttons::text(
                                             model,
                                             "increase (move left)",
                                             "try to match this filter BEFORE the one currently on its left",
@@ -542,7 +550,7 @@ impl FilterSpecExt for FilterSpec {
                                 }
                                 {
                                     if !info.is_last {
-                                        Button::text(
+                                        buttons::text(
                                             model,
                                             "decrease (move right)",
                                             "try to match this filter AFTER the one currently on its right",
@@ -653,7 +661,7 @@ fn render_subs(model: &Model, filter: &Filter) -> Html {
                 html!(
                     <ul class = style::class::filter::LINE>
                         <li class = style::class::filter::BUTTONS_LEFT>
-                            { Button::close(
+                            { buttons::close(
                                 model,
                                 "Remove the filter",
                                 move |_| msg::FilterMsg::rm_sub(uid, sub_uid)
@@ -694,7 +702,7 @@ fn render_subs(model: &Model, filter: &Filter) -> Html {
                 <li class = style::class::filter::BUTTONS_LEFT>
                     {{
                         let uid = filter.uid();
-                        Button::add(
+                        buttons::add(
                             model,
                             "Add a new subfilter",
                             move |_| msg::FilterMsg::add_new(uid)
@@ -779,8 +787,12 @@ mod sub {
 
         fn parse_text_data(data: ChangeData) -> Res<usize> {
             use alloc_data::Parseable;
-            data.text_value()
-                .and_then(|text| usize::parse(text).map_err(|e| e.into()))
+            match data {
+                yew::html::ChangeData::Value(txt) => usize::parse(txt).map_err(|e| e.into()),
+                err @ yew::html::ChangeData::Select(_) | err @ yew::html::ChangeData::Files(_) => {
+                    bail!("unexpected text field update {:?}", err)
+                }
+            }
         }
 
         fn kind_selector<Update>(model: &Model, filter: &SizeFilter, update: Update) -> Html
@@ -886,7 +898,6 @@ mod sub {
                 }
             }
         }
-
     }
 
     mod label {
@@ -1006,14 +1017,19 @@ mod sub {
                     class=style::class::filter::line::TEXT_VALUE
                     value=value
                     onchange=model.link.callback(move |data: ChangeData| update(
-                        data.text_value()
-                            .and_then(LabelSpec::new)
-                            .chain_err(|| "while parsing label")
+                        match data {
+                            yew::html::ChangeData::Value(txt) => LabelSpec::new(txt),
+                            err @ yew::html::ChangeData::Select(_) |
+                            err @ yew::html::ChangeData::Files(_) => {
+                                Err(err::Err::from(
+                                    format!("unexpected text field update {:?}", err)
+                                ))
+                            }
+                        }
                     ))
                 />
             }
         }
-
     }
 
     mod loc {
@@ -1094,7 +1110,12 @@ mod sub {
         }
 
         ///
-        pub fn add_new<Update>(model: &Model, filter: &LocFilter, update: Update, index: usize) -> Html
+        pub fn add_new<Update>(
+            model: &Model,
+            filter: &LocFilter,
+            update: Update,
+            index: usize,
+        ) -> Html
         where
             Update: Fn(Res<LocFilter>) -> Msg + Clone + 'static,
         {
@@ -1123,14 +1144,18 @@ mod sub {
                     class=style::class::filter::line::TEXT_VALUE
                     value=spec.to_string()
                     onchange=model.link.callback(move |data: ChangeData| update(
-                        data.text_value()
-                            .and_then(LocSpec::new)
-                            .chain_err(|| "while parsing label")
+                        match data {
+                            yew::html::ChangeData::Value(txt) => LocSpec::new(txt),
+                            err @ yew::html::ChangeData::Select(_) |
+                            err @ yew::html::ChangeData::Files(_) => {
+                                Err(err::Err::from(
+                                    format!("unexpected text field update {:?}", err)
+                                ))
+                            }
+                        }
                     ))
                 />
             }
         }
-
     }
-
 }
