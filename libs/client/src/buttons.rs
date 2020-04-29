@@ -34,7 +34,7 @@ macro_rules! mk_buttons {
                         model.link.callback(action),
                     );
                     html! {
-                        <img
+                        <div
                             class = class
                             title = title
                             onclick = onclick
@@ -82,7 +82,7 @@ where
         text: S,
         title: Title,
         action: Action,
-        class: &'static str
+        class: &'static str,
     ) -> Html
     where
         S: Into<String>,
