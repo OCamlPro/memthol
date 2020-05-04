@@ -2,9 +2,12 @@
 
 fn main() {
     if client::is_outdated() {
+        println!("client outdated, generating...");
         wasm_pack::check();
         client::deploy();
         client::copy_assets()
+    } else {
+        println!("client up-to-date, skipping");
     }
 }
 
@@ -16,8 +19,8 @@ mod client {
 
     /// True if the version of the client in this crate's asset directory is outdated.
     pub fn is_outdated() -> bool {
-        more_recently_modified(CLIENT_TARGET_JS_PATH.as_str(), CLIENT_SRC_PATH)
-            || more_recently_modified(CLIENT_TARGET_JS_PATH.as_str(), CLIENT_STATIC_PATH)
+        more_recently_modified(CLIENT_SRC_PATH, UI_JS_TARGET.as_str())
+            || more_recently_modified(CLIENT_STATIC_PATH, UI_JS_TARGET.as_str())
     }
 
     /// Path to the client's crate.
@@ -51,6 +54,15 @@ mod client {
         /// Path to the client's web assembly target files.
         static ref CLIENT_TARGET_WASM_PATH: String = format!(
             "{}{}", *CLIENT_TARGET_PATH, CLIENT_WASM_FILE
+        );
+
+        /// Path to the client's JS target files.
+        static ref UI_JS_TARGET: String = format!(
+            "{}{}", &*UI_ASSET_PATH, CLIENT_JS_FILE
+        );
+        /// Path to the client's web assembly target files.
+        static ref UI_WASM_TARGET: String = format!(
+            "{}{}", &*UI_ASSET_PATH, CLIENT_WASM_FILE
         );
     }
 
@@ -152,23 +164,23 @@ mod client {
             fs_extra::dir::copy(&*CLIENT_ASSET_PATH, &*UI_PATH, &dir_copy_option).map(|_| ()),
             "while copying `{}` to `{}`", &*CLIENT_ASSET_PATH, UI_PATH
         }
-        let ui_js_target = format!("{}{}", &*UI_ASSET_PATH, CLIENT_JS_FILE);
+
         unwrap! {
             fs_extra::file::copy(
                 &*CLIENT_TARGET_JS_PATH,
-                &ui_js_target,
+                &*UI_JS_TARGET,
                 &file_copy_option,
             ).map(|_| ()),
-            "while copying `{}` to `{}`", &*CLIENT_TARGET_JS_PATH, ui_js_target
+            "while copying `{}` to `{}`", &*CLIENT_TARGET_JS_PATH, &*UI_JS_TARGET
         }
-        let ui_wasm_target = format!("{}{}", &*UI_ASSET_PATH, CLIENT_WASM_FILE);
+
         unwrap! {
             fs_extra::file::copy(
                 &*CLIENT_TARGET_WASM_PATH,
-                &ui_wasm_target,
+                &*UI_WASM_TARGET,
                 &file_copy_option,
             ).map(|_| ()),
-            "while copying `{}` to `{}`", &*CLIENT_TARGET_WASM_PATH, ui_wasm_target
+            "while copying `{}` to `{}`", &*CLIENT_TARGET_WASM_PATH, &*UI_WASM_TARGET
         }
     }
 
@@ -181,12 +193,17 @@ mod client {
         P1: AsRef<std::path::Path>,
         P2: AsRef<std::path::Path>,
     {
+        println!(
+            "more_recently_modified({}, {})",
+            dir.as_ref().display(),
+            reference.as_ref().display()
+        );
+        let reference = reference.as_ref();
         let reference_last_mod =
             if let Ok(last_mod) = std::fs::metadata(reference).and_then(|meta| meta.modified()) {
                 last_mod
             } else {
-                panic!("1")
-                // return true;
+                return true;
             };
 
         for entry in walkdir::WalkDir::new(dir)
@@ -195,11 +212,15 @@ mod client {
         {
             if let Some(last_mod) = entry.metadata().ok().and_then(|meta| meta.modified().ok()) {
                 if last_mod > reference_last_mod {
+                    println!(
+                        "{:?} was modified more recently than {}",
+                        entry.file_name().to_string_lossy(),
+                        reference.display(),
+                    );
                     return true;
                 }
             } else {
-                panic!("2")
-                // return true;
+                return true;
             }
         }
 
