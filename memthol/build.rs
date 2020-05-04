@@ -1,8 +1,52 @@
 //! Builds memthol's client and copies the right things in the right place.
 
-/// Checks that `cargo-web` is installed.
-mod cargo_web {
+/// Checks that `wasm-pack` is installed.
+mod wasm_pack {
     use std::process::Command;
+
+    const CMD: &str = "wasm-pack";
+
+    const OPTIONS: [&str; 5] = ["build", "--target", "web", "--out-name", "client"];
+    #[cfg(release)]
+    const RLS_OPTIONS: [&str; 1] = ["--release"];
+
+    fn inner_cmd() -> Command {
+        let mut cmd = Command::new(CMD);
+        cmd.args(&OPTIONS);
+        cmd
+    }
+    #[cfg(release)]
+    pub fn cmd() -> Command {
+        let mut cmd = inner_cmd();
+        cmd.args(&RLS_OPTIONS);
+        cmd
+    }
+    #[cfg(not(release))]
+    pub fn cmd() -> Command {
+        inner_cmd()
+    }
+
+    fn inner_string_cmd() -> String {
+        let mut res = CMD.to_string();
+        for opt in &OPTIONS {
+            res.push(' ');
+            res.push_str(opt);
+        }
+        res
+    }
+    #[cfg(release)]
+    pub fn string_cmd() -> String {
+        let mut res = inner_string_cmd();
+        for opt in &RLS_OPTIONS {
+            res.push(' ');
+            res.push_str(opt)
+        }
+        res
+    }
+    #[cfg(not(release))]
+    pub fn string_cmd() -> String {
+        inner_string_cmd()
+    }
 
     pub fn check() {
         let fail = |msg, err| {
@@ -11,23 +55,20 @@ mod cargo_web {
                 println!("{}", e);
                 println!()
             }
-            println!("`cargo-web` is mandatory for the client side of memthol's UI,");
-            println!("please install it with");
+            println!("`wasm-pack` is mandatory for the client side of memthol's UI,");
+            println!("please install it from https://rustwasm.github.io/wasm-pack/installer");
             println!();
-            println!("```");
-            println!("cargo install cargo-web");
-            println!("```");
-            panic!("cargo-web is not installed")
+            panic!("wasm-pack is not installed")
         };
-        match Command::new("cargo").arg("web").arg("help").output() {
+        match Command::new(CMD).arg("help").output() {
             Ok(output) => {
                 if output.status.success() {
                     ()
                 } else {
-                    fail("`cargo-web` is not installed", None)
+                    fail("`wasm-pack` is not installed", None)
                 }
             }
-            Err(e) => fail("could not check for `cargo-web`", Some(e)),
+            Err(e) => fail("could not check for `wasm-pack`", Some(e)),
         }
     }
 }
@@ -35,7 +76,8 @@ mod cargo_web {
 /// Static stuff for building the client.
 mod client {
     use lazy_static::lazy_static;
-    use std::process::Command;
+
+    use super::*;
 
     /// Path to the client's crate.
     const CLIENT_PATH: &str = "../libs/client";
@@ -45,25 +87,13 @@ mod client {
     /// Path to the UI's (this crate's) asset files.
     const UI_ASSET_PATH: &str = "static";
 
-    #[cfg(debug_assertions)]
     lazy_static! {
         /// Path to the client's target files. (The result of compiling the client.)
-        static ref CLIENT_TARGET_PATH: String = format!(
-            "{}{}", CLIENT_PATH,
-            "/target/wasm32-unknown-unknown/debug"
-        );
-    }
-    #[cfg(not(debug_assertions))]
-    lazy_static! {
-        /// Path to the client's target files. (The result of compiling the client.)
-        static ref CLIENT_TARGET_PATH: String = format!(
-            "{}{}", CLIENT_PATH,
-            "/target/wasm32-unknown-unknown/release"
-        );
+        static ref CLIENT_TARGET_PATH: String = format!("{}{}", CLIENT_PATH, "/pkg");
     }
 
     const CLIENT_JS_FILE: &str = "/client.js";
-    const CLIENT_WASM_FILE: &str = "/client.wasm";
+    const CLIENT_WASM_FILE: &str = "/client_bg.wasm";
 
     lazy_static! {
         /// Path to the client's asset files.
@@ -79,23 +109,9 @@ mod client {
         );
     }
 
-    /// Command to run to build the client.
-    pub static CMD: &str = "cargo-web";
-
-    /// Options for the command to build the client.
-    #[cfg(debug_assertions)]
-    pub static OPTIONS: [&str; 1] = ["build"];
-    /// Options for the command to build the client.
-    #[cfg(not(debug_assertions))]
-    pub static OPTIONS: [&str; 2] = ["build", "--release"];
-
     /// Outputs an error about building the client (includes the command) and exits with status `2`.
     fn error<T>() -> T {
-        let mut cmd = CMD.to_string();
-        for option in &OPTIONS {
-            cmd.push_str(" ");
-            cmd.push_str(option)
-        }
+        let cmd = wasm_pack::string_cmd();
         println!("|===| while building memthol UI's client with");
         println!("| {}", cmd);
         println!("|===|");
@@ -141,10 +157,7 @@ mod client {
 
     /// This function is meant to run in `CLIENT_PATH`. Do not use directly.
     fn build() {
-        let mut proc = Command::new(CMD);
-        for option in &OPTIONS {
-            proc.arg(option);
-        }
+        let mut proc = wasm_pack::cmd();
 
         let output = match proc.output() {
             Ok(out) => out,
@@ -217,7 +230,7 @@ mod client {
 
 fn main() {
     println!("cargo:rerun-if-changed=\"static\"");
-    cargo_web::check();
+    wasm_pack::check();
     client::deploy();
     client::copy_assets()
 }
