@@ -4,7 +4,6 @@
 //!     around a `std::time::Duration`.
 
 use serde_derive::{Deserialize, Serialize};
-// use stdweb::{js, Value};
 
 use crate::{Parser, Res};
 

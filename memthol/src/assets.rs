@@ -64,12 +64,11 @@ pub mod content {
     use super::*;
 
     /// Sets up the assets for the UI.
-    pub fn setup(addr: &str, port: usize) -> Res<()> {
+    pub fn setup(_addr: &str, _port: usize) -> Res<()> {
         mk_asset_dirs()?;
         css::generate()?;
         pics::generate()?;
         top::generate()?;
-        more_js::generate(addr, port)?;
         Ok(())
     }
 
@@ -145,46 +144,6 @@ pub mod content {
         Ok(())
     }
 
-    /// Generates helper JS scripts.
-    mod more_js {
-        use super::*;
-
-        lazy_static::lazy_static! {
-            /// Script which returns the address of the server.
-            static ref JS_SERVER_PATH: PathBuf = {
-                let mut target = ASSET_DIR.clone();
-                target.push("serverAddr.js");
-                target
-            };
-        }
-
-        /// Generates the helper to resolve the address
-        fn js_server<W: Write>(writer: &mut W, addr: &str, port: usize) -> Res<()> {
-            write!(
-                writer,
-                r#"
-var serverAddr = {{
-    get_addr: function() {{
-        return `{}`;
-    }},
-    get_port: function() {{
-        return {};
-    }}
-}}
-            "#,
-                addr, port
-            )
-            .chain_err(|| "while writing `js_server` file for SSE")?;
-            Ok(())
-        }
-
-        pub fn generate(addr: &str, port: usize) -> Res<()> {
-            let mut writer = writer_of_file(&*JS_SERVER_PATH)?;
-            js_server(&mut writer, addr, port)?;
-            Ok(())
-        }
-    }
-
     /// Builds a `generate` function that generates asset files.
     ///
     /// All asset file paths are relative from the client's crate directory.
@@ -248,7 +207,7 @@ var serverAddr = {{
             /// Memthol client's js script.
             MEMTHOL_JS: asset_file!(root / "client.js"),
             /// Memthol client's wasm code.
-            MEMTHOL_WASM: asset_file!(root / "client.wasm"),
+            MEMTHOL_WASM: asset_file!(root / "client_bg.wasm"),
         }
     }
 

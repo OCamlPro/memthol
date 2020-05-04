@@ -27,8 +27,8 @@ impl Model {
         link: &mut ComponentLink<Self>,
         socket: &mut WebSocketService,
     ) -> Res<WebSocketTask> {
-        let (addr, port) = get_server_addr();
-        let addr = format!("ws://{}:{}", addr, port + 1);
+        let addr = js::server::address()?;
+        let addr = format!("ws://{}1", addr);
         let callback = link.callback(|msg| Msg::FromServer(msg));
         let notification = link.callback(|status| Msg::ConnectionStatus(status));
         let task = socket.connect(&addr, callback, notification)?;
@@ -154,6 +154,7 @@ impl Component for Model {
         html! {
             <>
                 <div class=crate::style::class::FULL_BODY>
+                    { "FUCK" }
                     // { self.charts.render(self) }
                     // { self.footer.render(self, &self.filters) }
                 </div>

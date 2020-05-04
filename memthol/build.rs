@@ -1,75 +1,10 @@
 //! Builds memthol's client and copies the right things in the right place.
 
-/// Checks that `wasm-pack` is installed.
-mod wasm_pack {
-    use std::process::Command;
-
-    const CMD: &str = "wasm-pack";
-
-    const OPTIONS: [&str; 5] = ["build", "--target", "web", "--out-name", "client"];
-    #[cfg(release)]
-    const RLS_OPTIONS: [&str; 1] = ["--release"];
-
-    fn inner_cmd() -> Command {
-        let mut cmd = Command::new(CMD);
-        cmd.args(&OPTIONS);
-        cmd
-    }
-    #[cfg(release)]
-    pub fn cmd() -> Command {
-        let mut cmd = inner_cmd();
-        cmd.args(&RLS_OPTIONS);
-        cmd
-    }
-    #[cfg(not(release))]
-    pub fn cmd() -> Command {
-        inner_cmd()
-    }
-
-    fn inner_string_cmd() -> String {
-        let mut res = CMD.to_string();
-        for opt in &OPTIONS {
-            res.push(' ');
-            res.push_str(opt);
-        }
-        res
-    }
-    #[cfg(release)]
-    pub fn string_cmd() -> String {
-        let mut res = inner_string_cmd();
-        for opt in &RLS_OPTIONS {
-            res.push(' ');
-            res.push_str(opt)
-        }
-        res
-    }
-    #[cfg(not(release))]
-    pub fn string_cmd() -> String {
-        inner_string_cmd()
-    }
-
-    pub fn check() {
-        let fail = |msg, err| {
-            println!("Error: {}.", msg);
-            if let Some(e) = err {
-                println!("{}", e);
-                println!()
-            }
-            println!("`wasm-pack` is mandatory for the client side of memthol's UI,");
-            println!("please install it from https://rustwasm.github.io/wasm-pack/installer");
-            println!();
-            panic!("wasm-pack is not installed")
-        };
-        match Command::new(CMD).arg("help").output() {
-            Ok(output) => {
-                if output.status.success() {
-                    ()
-                } else {
-                    fail("`wasm-pack` is not installed", None)
-                }
-            }
-            Err(e) => fail("could not check for `wasm-pack`", Some(e)),
-        }
+fn main() {
+    if client::is_outdated() {
+        wasm_pack::check();
+        client::deploy();
+        client::copy_assets()
     }
 }
 
@@ -79,8 +14,18 @@ mod client {
 
     use super::*;
 
+    /// True if the version of the client in this crate's asset directory is outdated.
+    pub fn is_outdated() -> bool {
+        more_recently_modified(CLIENT_TARGET_JS_PATH.as_str(), CLIENT_SRC_PATH)
+            || more_recently_modified(CLIENT_TARGET_JS_PATH.as_str(), CLIENT_STATIC_PATH)
+    }
+
     /// Path to the client's crate.
-    const CLIENT_PATH: &str = "../libs/client";
+    pub const CLIENT_PATH: &str = "../libs/client";
+    /// Path to the client's sources.
+    pub const CLIENT_SRC_PATH: &str = "../libs/client/src";
+    /// Path to the client's static files.
+    pub const CLIENT_STATIC_PATH: &str = "../libs/client/static";
 
     /// Path to the UI's (this crate's) directory.
     const UI_PATH: &str = ".";
@@ -226,11 +171,114 @@ mod client {
             "while copying `{}` to `{}`", &*CLIENT_TARGET_WASM_PATH, ui_wasm_target
         }
     }
+
+    /// False if `reference` was modified more recently than **all** files in `dir`.
+    ///
+    /// **NB:** returns `true` if the date of last modification for `reference` or any file in `dir`
+    /// could not be retrieved.
+    fn more_recently_modified<P1, P2>(dir: P1, reference: P2) -> bool
+    where
+        P1: AsRef<std::path::Path>,
+        P2: AsRef<std::path::Path>,
+    {
+        let reference_last_mod =
+            if let Ok(last_mod) = std::fs::metadata(reference).and_then(|meta| meta.modified()) {
+                last_mod
+            } else {
+                panic!("1")
+                // return true;
+            };
+
+        for entry in walkdir::WalkDir::new(dir)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            if let Some(last_mod) = entry.metadata().ok().and_then(|meta| meta.modified().ok()) {
+                if last_mod > reference_last_mod {
+                    return true;
+                }
+            } else {
+                panic!("2")
+                // return true;
+            }
+        }
+
+        false
+    }
 }
 
-fn main() {
-    println!("cargo:rerun-if-changed=\"static\"");
-    wasm_pack::check();
-    client::deploy();
-    client::copy_assets()
+/// Contains helpers related to `wasm-pack`.
+///
+/// - `cmd` and `string_cmd` generate the command to call `wasm-pack` with;
+/// - `check` will produce an error if `wasm-pack` is not installed.
+mod wasm_pack {
+    use std::process::Command;
+
+    const CMD: &str = "wasm-pack";
+
+    const OPTIONS: [&str; 5] = ["build", "--target", "web", "--out-name", "client"];
+    #[cfg(release)]
+    const RLS_OPTIONS: [&str; 1] = ["--release"];
+
+    fn inner_cmd() -> Command {
+        let mut cmd = Command::new(CMD);
+        cmd.args(&OPTIONS);
+        cmd
+    }
+    #[cfg(release)]
+    pub fn cmd() -> Command {
+        let mut cmd = inner_cmd();
+        cmd.args(&RLS_OPTIONS);
+        cmd
+    }
+    #[cfg(not(release))]
+    pub fn cmd() -> Command {
+        inner_cmd()
+    }
+
+    fn inner_string_cmd() -> String {
+        let mut res = CMD.to_string();
+        for opt in &OPTIONS {
+            res.push(' ');
+            res.push_str(opt);
+        }
+        res
+    }
+    #[cfg(release)]
+    pub fn string_cmd() -> String {
+        let mut res = inner_string_cmd();
+        for opt in &RLS_OPTIONS {
+            res.push(' ');
+            res.push_str(opt)
+        }
+        res
+    }
+    #[cfg(not(release))]
+    pub fn string_cmd() -> String {
+        inner_string_cmd()
+    }
+
+    pub fn check() {
+        let fail = |msg, err| {
+            println!("Error: {}.", msg);
+            if let Some(e) = err {
+                println!("{}", e);
+                println!()
+            }
+            println!("`wasm-pack` is mandatory for the client side of memthol's UI,");
+            println!("please install it from https://rustwasm.github.io/wasm-pack/installer");
+            println!();
+            panic!("wasm-pack is not installed")
+        };
+        match Command::new(CMD).arg("help").output() {
+            Ok(output) => {
+                if output.status.success() {
+                    ()
+                } else {
+                    fail("`wasm-pack` is not installed", None)
+                }
+            }
+            Err(e) => fail("could not check for `wasm-pack`", Some(e)),
+        }
+    }
 }

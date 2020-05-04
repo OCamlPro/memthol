@@ -2,6 +2,8 @@
 
 #![recursion_limit = "1024"]
 
+use wasm_bindgen::prelude::*;
+
 #[macro_use]
 pub mod common;
 
@@ -20,3 +22,9 @@ pub mod point;
 pub mod style;
 
 pub use model::Model;
+
+#[wasm_bindgen(start)]
+pub fn main() {
+    web_logger::init();
+    yew::start_app::<Model>();
+}

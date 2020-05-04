@@ -14,20 +14,20 @@ extern "C" {
 
 /// Server info.
 pub mod server {
-    use super::*;
+    use crate::common::*;
 
-    #[wasm_bindgen]
-    extern "C" {
-        /// Retrieves the address of the server.
-        #[wasm_bindgen(js_namespace = serverAddr, js_name = get_addr)]
-        pub fn get_addr_only() -> String;
-        /// Retrieves the port of the server.
-        #[wasm_bindgen(js_namespace = serverAddr, js_name = get_port)]
-        pub fn get_port_only() -> usize;
+    fn location() -> Res<web_sys::Location> {
+        web_sys::window()
+            .map(|w| w.location())
+            .ok_or_else(|| err::Err::from("could not retrieve (window) JS location"))
     }
 
-    /// Retrieves the address and port of the server.
-    pub fn addr_and_port() -> (String, usize) {
-        (get_addr_only(), get_port_only())
+    pub fn address() -> Res<String> {
+        location()
+            .and_then(|loc| {
+                loc.host()
+                    .map_err(|js_val| err::Err::from(format!("{:?}", js_val)))
+            })
+            .chain_err(|| "while retrieving server's address and port")
     }
 }

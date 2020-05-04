@@ -940,6 +940,7 @@ dependencies = [
  "fs_extra",
  "gotham",
  "lazy_static",
+ "walkdir",
  "websocket",
 ]
 

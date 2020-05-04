@@ -23,8 +23,6 @@ pub use yew::{
     Callback, Component, ComponentLink, Renderable, ShouldRender,
 };
 
-// pub use stdweb::{js, Value as JsVal};
-
 // Sub-crates.
 
 pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Uid as AllocUid};
@@ -94,11 +92,6 @@ pub trait OnClick: Fn(yew::events::MouseEvent) -> Msg + 'static {}
 impl<Action> OnClick for Action where Action: Fn(yew::events::MouseEvent) -> Msg + 'static {}
 
 pub type Action = Callback<Model>;
-
-/// Retrieves the address and port of the server.
-pub fn get_server_addr() -> (String, usize) {
-    js::server::addr_and_port()
-}
 
 /// Type of HTML elements in the client.
 pub type Html = yew::Html;
