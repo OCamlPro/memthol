@@ -49,6 +49,15 @@ macro_rules! asset_file {
     };
 }
 
+macro_rules! asset_source {
+    (build_dir $key:tt / $path:expr) => {
+        concat!("", base::client_get_build_dir!(), "/", $path)
+    };
+    (lib $key:tt / $path:expr) => {
+        concat!("../../libs/client/", asset_file!($key / $path))
+    };
+}
+
 lazy_static::lazy_static! {
     /// Path to the asset directory.
     static ref ASSET_DIR: PathBuf = asset_dir!(root).into();
@@ -166,13 +175,13 @@ pub mod content {
     /// the client's static directory to `"static/path/to/<file>"`.
     macro_rules! make_generator_for {
         (
-            $($(#[$doc:meta])*$id:ident : $path:expr),* $(,)*
+            $($(#[$doc:meta])*$id:ident : $path:tt / $name:expr, from $src_kind:tt),* $(,)*
         ) => {
             /// Paths to the assets.
             pub mod path {
                 lazy_static::lazy_static! {$(
                     $(#[$doc])*
-                    pub static ref $id: std::path::PathBuf = $path.into();
+                    pub static ref $id: std::path::PathBuf = asset_file!($path / $name).into();
                 )*}
             }
 
@@ -181,10 +190,7 @@ pub mod content {
                 $(#[$doc])*
                 pub static ref $id: &'static [u8] = {
                     include_bytes!(
-                        concat!(
-                            "../",
-                            $path,
-                        )
+                        asset_source!($src_kind $path / $name)
                     )
                 };
             )*}
@@ -201,13 +207,13 @@ pub mod content {
     pub mod top {
         make_generator_for! {
             /// Main HTML file.
-            HTML: asset_file!(root / "index.html"),
+            HTML: root / "index.html", from lib,
             /// Favicon.
-            FAVICON: asset_file!(root / "favicon.png"),
+            FAVICON: root / "favicon.png", from lib,
             /// Memthol client's js script.
-            MEMTHOL_JS: asset_file!(root / "client.js"),
+            MEMTHOL_JS: root / "client.js", from build_dir,
             /// Memthol client's wasm code.
-            MEMTHOL_WASM: asset_file!(root / "client_bg.wasm"),
+            MEMTHOL_WASM: root / "client_bg.wasm", from build_dir,
         }
     }
 
@@ -215,9 +221,9 @@ pub mod content {
     pub mod css {
         make_generator_for! {
             /// Main CSS file.
-            MAIN_CSS: asset_file!(css / "style.css"),
+            MAIN_CSS: css / "style.css", from lib,
             /// Main CSS file map.
-            MAIN_CSS_MAP: asset_file!(css / "style.css.map"),
+            MAIN_CSS_MAP: css / "style.css.map", from lib,
         }
     }
 
@@ -225,29 +231,29 @@ pub mod content {
     pub mod pics {
         make_generator_for! {
             /// Close.
-            CLOSE: asset_file!(pics / "close.png"),
+            CLOSE: pics / "close.png", from lib,
             /// Add.
-            ADD: asset_file!(pics / "add.png"),
+            ADD: pics / "add.png", from lib,
             /// Arrow up.
-            ARROW_UP: asset_file!(pics / "arrow_up.png"),
+            ARROW_UP: pics / "arrow_up.png", from lib,
             /// Arrow down.
-            ARROW_DOWN: asset_file!(pics / "arrow_down.png"),
+            ARROW_DOWN: pics / "arrow_down.png", from lib,
             /// Expand.
-            EXPAND: asset_file!(pics / "expand.png"),
+            EXPAND: pics / "expand.png", from lib,
             /// Collapse.
-            COLLAPSE: asset_file!(pics / "collapse.png"),
+            COLLAPSE: pics / "collapse.png", from lib,
 
             /// Refresh.
-            REFRESH: asset_file!(pics / "refresh.png"),
+            REFRESH: pics / "refresh.png", from lib,
             /// Refresh.
-            SAVE: asset_file!(pics / "save.png"),
+            SAVE: pics / "save.png", from lib,
             /// Undo.
-            UNDO: asset_file!(pics / "undo.png"),
+            UNDO: pics / "undo.png", from lib,
 
             /// Tick, inactive.
-            TICK_INACTIVE: asset_file!(pics / "tick_inactive.png"),
+            TICK_INACTIVE: pics / "tick_inactive.png", from lib,
             /// Tick, active.
-            TICK_ACTIVE: asset_file!(pics / "tick_active.png"),
+            TICK_ACTIVE: pics / "tick_active.png", from lib,
         }
     }
 }

@@ -9,6 +9,7 @@ members = [
 ]
 exclude = [
     "libs/client",
+    "target"
 ]
 
 [profile.release]

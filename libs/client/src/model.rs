@@ -154,9 +154,8 @@ impl Component for Model {
         html! {
             <>
                 <div class=crate::style::class::FULL_BODY>
-                    { "TEST" }
-                    // { self.charts.render(self) }
-                    // { self.footer.render(self, &self.filters) }
+                    { self.charts.render(self) }
+                    { self.footer.render(self, &self.filters) }
                 </div>
             </>
         }
