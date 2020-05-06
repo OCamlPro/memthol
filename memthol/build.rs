@@ -1,11 +1,14 @@
 //! Builds memthol's client and copies the right things in the right place.
 
+use std::path::Path;
+
 fn main() {
+    paths::show();
     let changed = client::copy_client_and_libs();
-    if changed {
+    if changed || !paths::client_build_dir_exists() {
         client::build();
     }
-    emit_env_var();
+    emit_env_var()
 }
 
 /// Outputs an error about building the client (includes the command) and exits with status `2`.
@@ -38,6 +41,8 @@ pub fn emit_env_var() {
 }
 
 mod paths {
+    use super::*;
+
     lazy_static::lazy_static! {
         /// Output directory.
         pub static ref BUILD: String = unwrap! {
@@ -61,6 +66,34 @@ mod paths {
         /// Path to the `charts` crate.
         pub static ref CHARTS_CRATE: &'static str = "../libs/charts";
         pub static ref CHARTS_TARGET: String = format!("{}/charts", *BUILD);
+    }
+
+    pub fn client_build_dir_exists() -> bool {
+        let dir: &Path = CLIENT_BUILD.as_ref();
+        dir.exists()
+    }
+
+    pub fn show() {
+        macro_rules! dups {
+            ($($id:ident),* $(,)?) => (
+                vec![$((stringify!($id), $id.to_string())),*]
+            );
+        }
+        println!("paths:");
+        for (id, val) in dups![
+            CLIENT_CRATE,
+            CLIENT_TARGET,
+            CLIENT_BUILD,
+            BASE_CRATE,
+            BASE_TARGET,
+            ALLOC_DATA_CRATE,
+            ALLOC_DATA_TARGET,
+            CHARTS_CRATE,
+            CHARTS_TARGET,
+        ] {
+            println!("| {:<30} | {}", id, val)
+        }
+        println!()
     }
 }
 
@@ -115,35 +148,78 @@ mod client {
         ];
         let mut changed = false;
         for (src, tgt) in &to_copy {
-            let new_changed = copy_if_modified(src, tgt);
+            let new_changed = copy_to_build_if_modified(src, tgt);
             changed = changed || new_changed;
         }
         changed
     }
 
-    fn copy_if_modified<P1, P2>(src: P1, tgt: P2) -> bool
+    fn copy_to_build_if_modified<P1, P2>(src: P1, tgt: P2) -> bool
     where
-        P1: AsRef<std::path::Path>,
-        P2: AsRef<std::path::Path>,
+        P1: AsRef<Path>,
+        P2: AsRef<Path>,
     {
         let (src, tgt) = (src.as_ref(), tgt.as_ref());
+
+        println!("checking {}...", src.display());
+
         if more_recently_modified(src, tgt) {
-            println!("copying {} to {}", src.display(), tgt.display());
+            println!("- out of date");
+            if tgt.exists() {
+                println!("- cleaning target directory {}", tgt.display());
+                remove_all_but_target_in(tgt);
+            }
+            let copy_tgt = &*paths::BUILD;
+            println!("- copying {} to {}", src.display(), copy_tgt);
             unwrap! {
-                fs_extra::dir::copy(src, tgt, &fs_extra::dir::CopyOptions {
+                fs_extra::dir::copy(src, copy_tgt, &fs_extra::dir::CopyOptions {
                     overwrite: true,
                     skip_exist: false,
                     buffer_size: 64_000,
                     copy_inside: true,
                     depth: 0,
                 }),
-                "while copying the client's sources from {} to {}",
-                &*paths::CLIENT_CRATE,
-                &*paths::CLIENT_BUILD,
+                "while copying the client's sources from {} to {}", src.display(), copy_tgt,
             };
+            assert!(!more_recently_modified(src, tgt));
             true
         } else {
             false
+        }
+    }
+
+    fn remove_all_but_target_in<P>(dir: P)
+    where
+        P: AsRef<Path>,
+    {
+        let dir = dir.as_ref();
+        let ignore_name: &'static std::ffi::OsStr = "target".as_ref();
+        for entry in walkdir::WalkDir::new(dir)
+            .min_depth(1)
+            .max_depth(1)
+            .into_iter()
+        {
+            let entry = unwrap! {
+                entry,
+                "error while iterating on the descendents of {}", dir.display()
+            };
+            let entry = entry.path();
+
+            if entry.file_name() != Some(ignore_name) {
+                if entry.is_file() {
+                    println!("  removing file {}", entry.display());
+                    unwrap! {
+                        fs_extra::file::remove(entry),
+                        "while removing target file {}", entry.display()
+                    }
+                } else {
+                    println!("  removing directory {}", entry.display());
+                    unwrap! {
+                        fs_extra::dir::remove(entry),
+                        "while removing target directory {}", entry.display()
+                    }
+                }
+            }
         }
     }
 
@@ -157,14 +233,14 @@ mod client {
     /// - on sys-time/duration conversion error
     fn more_recently_modified<P1, P2>(dir: P1, reference: P2) -> bool
     where
-        P1: AsRef<std::path::Path>,
-        P2: AsRef<std::path::Path>,
+        P1: AsRef<Path>,
+        P2: AsRef<Path>,
     {
-        println!(
-            "more_recently_modified({}, {})",
-            dir.as_ref().display(),
-            reference.as_ref().display()
-        );
+        // println!(
+        //     "more_recently_modified({}, {})",
+        //     dir.as_ref().display(),
+        //     reference.as_ref().display()
+        // );
 
         let reference = reference.as_ref();
         if !reference.exists() {
@@ -173,11 +249,11 @@ mod client {
 
         let reference_last_mod = last_mod(reference);
 
-        println!(
-            "|===| {:>10} ({})",
-            display_time(reference_last_mod),
-            reference.display()
-        );
+        // println!(
+        //     "|===| {:>10} ({})",
+        //     display_time(reference_last_mod),
+        //     reference.display()
+        // );
 
         for entry in walkdir::WalkDir::new(dir)
             .into_iter()
@@ -185,17 +261,19 @@ mod client {
         {
             let entry = entry.path();
             let last_mod = last_mod(entry);
-            println!(
-                "    | {:>10} ({}, {})",
-                display_time(last_mod),
-                entry.display(),
-                last_mod > reference_last_mod
-            );
+            // println!(
+            //     "    | {:>10} ({}, {})",
+            //     display_time(last_mod),
+            //     entry.display(),
+            //     last_mod > reference_last_mod
+            // );
             if last_mod > reference_last_mod {
                 println!(
-                    "{:?} was modified more recently than {}",
+                    "{} was modified more recently than {} ({}/{})",
                     entry.display(),
                     reference.display(),
+                    display_time(last_mod),
+                    display_time(reference_last_mod),
                 );
                 return true;
             }
@@ -207,7 +285,7 @@ mod client {
     /// Retrieves the date of last modification as a duration since EPOCH.
     fn last_mod<P>(file: P) -> std::time::Duration
     where
-        P: AsRef<std::path::Path>,
+        P: AsRef<Path>,
     {
         let file = file.as_ref();
         let epoch = std::time::UNIX_EPOCH;
@@ -221,6 +299,7 @@ mod client {
         }
     }
 
+    #[allow(dead_code)]
     fn display_time(d: std::time::Duration) -> String {
         let mut s = format!("{}", d.as_secs());
         if s.len() > 0 {

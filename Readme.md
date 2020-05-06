@@ -18,26 +18,23 @@ Memthol is a memory profiler for [OCaml]. This repository contains the **B**rows
 ## Pre-requisites
 
 Since memthol's UI is browser-based, it has a client written in [Rust] that compiles to [web
-assembly]. To do this, you need to have the [rust toolchain]. If it's installed already, run
+assembly] (wasm). To do this, you need to have the [rust toolchain].
 
-```
-rustup update stable
-```
+- add the wasm target for rustup:
 
-to make sure it's up to date.
+    ```bash
+    rustup target add wasm32-unknown-unknown
+    ```
 
-Second, for the client, you will need [cargo web] so that cargo can compile it to web assembly. With
-rust/cargo installed, simply run
+- make sure everything is up to date with
 
-```
-cargo install cargo-web
-```
+    ```bash
+    rustup update
+    ```
 
-to install it. Also make sure you have the web assembly target with
+- make sure you have [wasm-pack] installed so that Rust can compile the client
 
-```
-rustup target add wasm32-unknown-unknown
-```
+    installation instructions [here][install wasm-pack]
 
 ## From sources
 
@@ -72,6 +69,7 @@ cargo install --force --git <memthol's BUI repository>
 [web assembly]: https://webassembly.org/ (Web Assembly official page)
 [Rust]: https://www.rust-lang.org/ (Rust official page)
 [rust toolchain]: https://www.rust-lang.org/tools/install (Rust installation instructions)
-[cargo web]: https://crates.io/crates/cargo-web (Cargo-web on crates.io)
+[wasm-pack]: https://crates.io/crates/cargo-web (Cargo-web on crates.io)
 [browser compatibility]: ./docs/compatibility.md (Browser compatibility discussion)
 [todo list]: ./todo.md (Todo list)
+[install wasm-pack]: https://rustwasm.github.io/wasm-pack/installer (wasm-pack install instructions)

@@ -9,10 +9,6 @@ crate-type = ["cdylib", "rlib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[profile.release]
-lto = true
-opt-level = 3
-
 [dependencies]
 alloc_data = { path = "../alloc_data" }
 base = { path = "../base" }
