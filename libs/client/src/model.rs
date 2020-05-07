@@ -151,10 +151,9 @@ impl Component for Model {
         }
     }
     fn view(&self) -> Html {
-        js::alert("aaaaa");
+        // js::alert("aaaaa");
         html! {
             <>
-                { "BLAH" }
                 <div class=crate::style::class::FULL_BODY>
                     { self.charts.render(self) }
                     { self.footer.render(self, &self.filters) }

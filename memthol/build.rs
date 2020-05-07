@@ -1,14 +1,10 @@
 //! Builds memthol's client and copies the right things in the right place.
 
-use std::path::Path;
-
 fn main() {
     paths::show();
-    let changed = client::copy_client_and_libs();
-    if changed || !paths::client_build_dir_exists() {
-        client::build();
-    }
-    emit_env_var()
+    client::build();
+    emit_env_var();
+    emit_rerun();
 }
 
 /// Outputs an error about building the client (includes the command) and exits with status `2`.
@@ -17,7 +13,7 @@ fn error<T>() -> T {
     println!("|===| while building memthol UI's client with");
     println!("| {}", cmd);
     println!("|===|");
-    std::process::exit(2)
+    panic!("a fatal error occured")
 }
 
 macro_rules! unwrap {
@@ -36,41 +32,33 @@ pub fn emit_env_var() {
     println!(
         "cargo:rustc-env={}={}",
         base::build_dir_env_var!(),
-        *paths::CLIENT_BUILD,
+        *paths::BUILD,
     )
 }
 
-mod paths {
-    use super::*;
+/// Emits the re-run instructions for cargo.
+pub fn emit_rerun() {
+    for entry in walkdir::WalkDir::new(*paths::CLIENT_CRATE)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        println!("cargo:rerun-if-changed={}", entry.path().display())
+    }
+}
 
+mod paths {
     lazy_static::lazy_static! {
         /// Output directory.
-        pub static ref BUILD: String = unwrap! {
-            std::env::var("OUT_DIR"),
-            "while retrieving cargo build directory"
+        pub static ref BUILD: String = {
+            let parent = unwrap! {
+                std::fs::canonicalize(".."),
+                "during the extraction of the canonical version of path `..`",
+            };
+            format!("{}/{}", parent.display(), base::client::WASM_TARGET_DIR)
         };
 
         /// Path to the client's crate.
         pub static ref CLIENT_CRATE: &'static str = "../libs/client";
-        /// Client build directory.
-        pub static ref CLIENT_TARGET: String = format!("{}/client", *BUILD);
-        /// Client target directory.
-        pub static ref CLIENT_BUILD: String = format!("{}/target", *BUILD);
-
-        /// Path to the `base` crate.
-        pub static ref BASE_CRATE: &'static str = "../libs/base";
-        pub static ref BASE_TARGET: String = format!("{}/base", *BUILD);
-        /// Path to the `alloc_data` crate.
-        pub static ref ALLOC_DATA_CRATE: &'static str = "../libs/alloc_data";
-        pub static ref ALLOC_DATA_TARGET: String = format!("{}/alloc_data", *BUILD);
-        /// Path to the `charts` crate.
-        pub static ref CHARTS_CRATE: &'static str = "../libs/charts";
-        pub static ref CHARTS_TARGET: String = format!("{}/charts", *BUILD);
-    }
-
-    pub fn client_build_dir_exists() -> bool {
-        let dir: &Path = CLIENT_BUILD.as_ref();
-        dir.exists()
     }
 
     pub fn show() {
@@ -80,17 +68,7 @@ mod paths {
             );
         }
         println!("paths:");
-        for (id, val) in dups![
-            CLIENT_CRATE,
-            CLIENT_TARGET,
-            CLIENT_BUILD,
-            BASE_CRATE,
-            BASE_TARGET,
-            ALLOC_DATA_CRATE,
-            ALLOC_DATA_TARGET,
-            CHARTS_CRATE,
-            CHARTS_TARGET,
-        ] {
+        for (id, val) in dups![BUILD, CLIENT_CRATE,] {
             println!("| {:<30} | {}", id, val)
         }
         println!()
@@ -138,181 +116,6 @@ mod client {
             duration.subsec_millis()
         );
     }
-
-    pub fn copy_client_and_libs() -> bool {
-        let to_copy = [
-            (&*paths::CLIENT_CRATE, &*paths::CLIENT_TARGET),
-            (&*paths::BASE_CRATE, &*paths::BASE_TARGET),
-            (&*paths::ALLOC_DATA_CRATE, &*paths::ALLOC_DATA_TARGET),
-            (&*paths::CHARTS_CRATE, &*paths::CHARTS_TARGET),
-        ];
-        let mut changed = false;
-        for (src, tgt) in &to_copy {
-            let new_changed = copy_to_build_if_modified(src, tgt);
-            changed = changed || new_changed;
-        }
-        changed
-    }
-
-    fn copy_to_build_if_modified<P1, P2>(src: P1, tgt: P2) -> bool
-    where
-        P1: AsRef<Path>,
-        P2: AsRef<Path>,
-    {
-        let (src, tgt) = (src.as_ref(), tgt.as_ref());
-
-        println!("checking {}...", src.display());
-
-        if more_recently_modified(src, tgt) {
-            println!("- out of date");
-            if tgt.exists() {
-                println!("- cleaning target directory {}", tgt.display());
-                remove_all_but_target_in(tgt);
-            }
-            let copy_tgt = &*paths::BUILD;
-            println!("- copying {} to {}", src.display(), copy_tgt);
-            unwrap! {
-                fs_extra::dir::copy(src, copy_tgt, &fs_extra::dir::CopyOptions {
-                    overwrite: true,
-                    skip_exist: false,
-                    buffer_size: 64_000,
-                    copy_inside: true,
-                    depth: 0,
-                }),
-                "while copying the client's sources from {} to {}", src.display(), copy_tgt,
-            };
-            assert!(!more_recently_modified(src, tgt));
-            true
-        } else {
-            false
-        }
-    }
-
-    fn remove_all_but_target_in<P>(dir: P)
-    where
-        P: AsRef<Path>,
-    {
-        let dir = dir.as_ref();
-        let ignore_name: &'static std::ffi::OsStr = "target".as_ref();
-        for entry in walkdir::WalkDir::new(dir)
-            .min_depth(1)
-            .max_depth(1)
-            .into_iter()
-        {
-            let entry = unwrap! {
-                entry,
-                "error while iterating on the descendents of {}", dir.display()
-            };
-            let entry = entry.path();
-
-            if entry.file_name() != Some(ignore_name) {
-                if entry.is_file() {
-                    println!("  removing file {}", entry.display());
-                    unwrap! {
-                        fs_extra::file::remove(entry),
-                        "while removing target file {}", entry.display()
-                    }
-                } else {
-                    println!("  removing directory {}", entry.display());
-                    unwrap! {
-                        fs_extra::dir::remove(entry),
-                        "while removing target directory {}", entry.display()
-                    }
-                }
-            }
-        }
-    }
-
-    /// False if `reference` was modified more recently than **all** files/dirs in `dir`.
-    ///
-    /// **NB:** returns `true` if `reference` does not exist.
-    ///
-    /// # Panics
-    ///
-    /// - on date-of-last-mod retrieval error on any file/dir
-    /// - on sys-time/duration conversion error
-    fn more_recently_modified<P1, P2>(dir: P1, reference: P2) -> bool
-    where
-        P1: AsRef<Path>,
-        P2: AsRef<Path>,
-    {
-        // println!(
-        //     "more_recently_modified({}, {})",
-        //     dir.as_ref().display(),
-        //     reference.as_ref().display()
-        // );
-
-        let reference = reference.as_ref();
-        if !reference.exists() {
-            return true;
-        }
-
-        let reference_last_mod = last_mod(reference);
-
-        // println!(
-        //     "|===| {:>10} ({})",
-        //     display_time(reference_last_mod),
-        //     reference.display()
-        // );
-
-        for entry in walkdir::WalkDir::new(dir)
-            .into_iter()
-            .filter_map(|e| e.ok())
-        {
-            let entry = entry.path();
-            let last_mod = last_mod(entry);
-            // println!(
-            //     "    | {:>10} ({}, {})",
-            //     display_time(last_mod),
-            //     entry.display(),
-            //     last_mod > reference_last_mod
-            // );
-            if last_mod > reference_last_mod {
-                println!(
-                    "{} was modified more recently than {} ({}/{})",
-                    entry.display(),
-                    reference.display(),
-                    display_time(last_mod),
-                    display_time(reference_last_mod),
-                );
-                return true;
-            }
-        }
-
-        false
-    }
-
-    /// Retrieves the date of last modification as a duration since EPOCH.
-    fn last_mod<P>(file: P) -> std::time::Duration
-    where
-        P: AsRef<Path>,
-    {
-        let file = file.as_ref();
-        let epoch = std::time::UNIX_EPOCH;
-        let sys_time = unwrap! {
-            std::fs::metadata(file).and_then(|meta| meta.modified()),
-            "while retrieving the date of last modification for `{}`", file.display()
-        };
-        unwrap! {
-            sys_time.duration_since(epoch),
-            "during conversion from system time to duration since epoch"
-        }
-    }
-
-    #[allow(dead_code)]
-    fn display_time(d: std::time::Duration) -> String {
-        let mut s = format!("{}", d.as_secs());
-        if s.len() > 0 {
-            let mut curr = s.len() - 1;
-            let mut dec = 2;
-            while curr > 3 {
-                curr -= dec;
-                s.insert(curr, '.');
-                dec = 3;
-            }
-        }
-        s
-    }
 }
 
 /// Contains helpers related to `wasm-pack`.
@@ -332,12 +135,12 @@ mod wasm_pack {
             "build",
             "--target", "web",
             "--out-name", "client",
-            "--out-dir", &*paths::CLIENT_BUILD,
-            &*paths::CLIENT_TARGET,
+            "--out-dir", &*paths::BUILD,
+            &*paths::CLIENT_CRATE,
         ];
 
         // #[cfg(release)]
-        // static ref RLS_OPTIONS: Vec<String> = vec!["--release"];
+        static ref RLS_OPTIONS: Vec<&'static str> = vec!["--release"];
     }
 
     fn inner_cmd() -> Command {

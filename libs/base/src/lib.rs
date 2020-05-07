@@ -25,4 +25,6 @@ pub mod client {
             env!($crate::build_dir_env_var!())
         };
     }
+
+    pub const WASM_TARGET_DIR: &str = "target/client.wasm";
 }

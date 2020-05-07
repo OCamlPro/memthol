@@ -1,3 +1,5 @@
 **/target
 libs/client/static/css/package-lock.json
 .DS_Store
+static
+memthol/static
