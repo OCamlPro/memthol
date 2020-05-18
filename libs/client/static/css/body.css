@@ -129,6 +129,10 @@ body .body_header_footer .memthol_chart_container .chart_style {
   width: 100%;
   height: 500px;
 }
+body .body_header_footer .memthol_chart_container .chart_style .chart_canvas_style {
+  width: 100%;
+  height: 100%;
+}
 body .body_header_footer .memthol_chart_container .hidden_chart_style {
   width: 100%;
   height: 500px;

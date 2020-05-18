@@ -32,6 +32,10 @@ impl Charts {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.charts.len()
+    }
+
     /// Sends a message to the model.
     pub fn send(&self, msg: Msg) {
         self.to_model.emit(msg)
@@ -85,6 +89,15 @@ impl Charts {
             NewChartSetX(x_axis) => self.new_chart.set_x_axis(x_axis),
             NewChartSetY(y_axis) => self.new_chart.set_y_axis(y_axis),
         }
+    }
+
+    pub fn mounted(&mut self) -> ShouldRender {
+        let mut res = false;
+        for chart in &mut self.charts {
+            let should_render = chart.mounted();
+            res = res || should_render
+        }
+        res
     }
 
     /// Refreshes all filters in all charts.
@@ -238,6 +251,8 @@ pub struct Chart {
     visible: bool,
     /// DOM element containing the chart.
     container: String,
+    /// Actual DOM chart canvas.
+    canvas: String,
     /// Actual chart as a JS value.
     chart: Option<JsValue>,
     /// Points from the server that have not been treated yet.
@@ -251,10 +266,12 @@ impl Chart {
     /// Constructor.
     pub fn new(spec: ChartSpec) -> Self {
         let container = style::class::chart::class(spec.uid());
+        let canvas = style::class::chart::canvas(spec.uid());
         Self {
             spec,
-            visible: false,
+            visible: true,
             container,
+            canvas,
             chart: None,
             points: vec![],
         }
@@ -268,6 +285,13 @@ impl Chart {
     /// Toggles the visibility of the chart.
     pub fn toggle_visible(&mut self) {
         self.visible = !self.visible
+    }
+
+    pub fn div_container(&self) -> &str {
+        &self.container
+    }
+    pub fn canvas(&self) -> &str {
+        &self.canvas
     }
 }
 
@@ -344,8 +368,13 @@ impl Chart {
             bail!("asked to build and bind a chart that's already built and binded")
         }
 
+        self.mounted();
+
         let backend =
-            plotters::prelude::CanvasBackend::new(&self.container).expect("could not find canvas");
+            plotters::prelude::CanvasBackend::new(&self.canvas).expect("could not find canvas");
+
+        let (width, height) = backend.get_size();
+        info!("backend size: {}, {}", width, height);
 
         let root = backend.into_drawing_area();
         root.fill(&WHITE).unwrap();
@@ -505,6 +534,52 @@ impl Chart {
 
 /// # Rendering
 impl Chart {
+    pub fn mounted(&mut self) -> ShouldRender {
+        let document = web_sys::window()
+            .expect("could not retrieve document window")
+            .document()
+            .expect("could not retrieve document from window");
+        let canvas = document
+            .get_element_by_id(&self.canvas)
+            .expect("could not retrieve chart canvas");
+
+        let (width, height) = (
+            match canvas.client_width() {
+                n if n >= 0 => n as u32,
+                _ => {
+                    alert!("An error occured while resizing a chart's canvas: negative width.");
+                    panic!("fatal")
+                }
+            },
+            match canvas.client_height() {
+                n if n >= 0 => n as u32,
+                _ => {
+                    alert!("An error occured while resizing a chart's canvas: negative height.");
+                    panic!("fatal")
+                }
+            },
+        );
+
+        info!("canvas size: {}, {}", width, height);
+
+        use wasm_bindgen::JsCast;
+        let html_canvas: web_sys::HtmlCanvasElement = canvas.clone().dyn_into().unwrap();
+
+        info!(
+            "html_canvas size: {}, {}",
+            html_canvas.width(),
+            html_canvas.height()
+        );
+
+        if html_canvas.width() != width {
+            html_canvas.set_width(width)
+        }
+        if html_canvas.height() != height {
+            html_canvas.set_height(height)
+        }
+
+        false
+    }
     /// Renders the chart.
     pub fn render(&self, model: &Model) -> Html {
         let uid = self.uid();
@@ -530,9 +605,15 @@ impl Chart {
 
                     <h2> { self.spec.desc() } </h2>
                 </center>
-                <canvas id={&self.container}
+                <div
                     class=style::class::chart::style(self.visible)
-                />
+                    id={&self.container}
+                >
+                    <canvas
+                        id={&self.canvas}
+                        class=style::class::chart::canvas::style()
+                    />
+                </div>
             </g>
         }
     }

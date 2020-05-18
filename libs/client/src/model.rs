@@ -154,6 +154,7 @@ impl Component for Model {
         }
     }
     fn view(&self) -> Html {
+        info!("rendering model with {} charts", self.charts.len());
         html! {
             <>
                 <div class=crate::style::class::FULL_BODY>
@@ -162,5 +163,10 @@ impl Component for Model {
                 </div>
             </>
         }
+    }
+
+    fn mounted(&mut self) -> ShouldRender {
+        info!("running mounted on {} charts", self.charts.len());
+        self.charts.mounted()
     }
 }
