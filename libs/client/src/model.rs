@@ -27,8 +27,10 @@ impl Model {
         link: &mut ComponentLink<Self>,
         socket: &mut WebSocketService,
     ) -> Res<WebSocketTask> {
-        let addr = js::server::address()?;
-        let addr = format!("ws://{}1", addr);
+        info!("activate_ws");
+        let (addr, port) = js::server::address()?;
+        let addr = format!("ws://{}:{}", addr, port + 1);
+        info!("addr: {:?}", addr);
         let callback = link.callback(|msg| Msg::FromServer(msg));
         let notification = link.callback(|status| Msg::ConnectionStatus(status));
         let task = socket.connect(&addr, callback, notification)?;
@@ -45,6 +47,7 @@ impl Model {
 
     /// Handles a message from the server.
     pub fn handle_server_msg(&mut self, msg: Res<msg::from_server::Msg>) -> Res<ShouldRender> {
+        info!("handling message from the server");
         use msg::from_server::*;
         let msg = msg?;
         match msg {
@@ -151,7 +154,6 @@ impl Component for Model {
         }
     }
     fn view(&self) -> Html {
-        // js::alert("aaaaa");
         html! {
             <>
                 <div class=crate::style::class::FULL_BODY>

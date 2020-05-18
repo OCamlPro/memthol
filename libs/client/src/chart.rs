@@ -1,5 +1,7 @@
 //! Charts.
 
+use plotters::{chart::ChartState, prelude::*};
+
 pub use charts::chart::ChartSpec;
 
 use crate::common::*;
@@ -174,6 +176,7 @@ impl Charts {
         action: msg::from_server::ChartsMsg,
     ) -> Res<ShouldRender> {
         use msg::from_server::{ChartMsg, ChartsMsg};
+
         let should_render = match action {
             ChartsMsg::NewChart(spec) => {
                 debug!("received a chart-creation message from the server");
@@ -241,6 +244,8 @@ pub struct Chart {
     ///
     /// The boolean is true when the points should overwrite the existing points.
     points: Vec<(point::Points, bool)>,
+    // /// Chart HTML backend and state.
+    // nu_chart: Option<(CanvasBackend, ChartState<CanvasBackend>)>,
 }
 impl Chart {
     /// Constructor.
@@ -333,40 +338,103 @@ impl Chart {
     ///
     /// Also, makes the chart visible.
     pub fn build_chart(&mut self, filters: &filter::Filters) -> Res<()> {
-        use axis::AxisExt;
+        // use axis::AxisExt;
 
         if self.chart.is_some() {
             bail!("asked to build and bind a chart that's already built and binded")
         }
 
-        let chart = js!(
-            am4core.useTheme(am4themes_animated);
-            var chart = am4core.create(@{&self.container}, am4charts.XYChart);
-            chart.data = [];
-            // Cosmetic stuff.
-            chart.scrollbarX = new am4charts.XYChartScrollbar();
-            chart.scrollbarX.parent = chart.bottomAxesContainer;
-            chart.cursor = new am4charts.XYCursor();
+        let backend =
+            plotters::prelude::CanvasBackend::new(&self.container).expect("could not find canvas");
 
-            return chart
-        );
+        let root = backend.into_drawing_area();
+        root.fill(&WHITE).unwrap();
 
-        self.spec.x_axis().chart_apply(&chart);
-        self.spec.y_axis().chart_apply(&chart);
+        let mut chart = ChartBuilder::on(&root)
+            .margin(20)
+            .x_label_area_size(10)
+            .y_label_area_size(10)
+            .build_ranged(-2.1..0.6, -1.2..1.2)
+            .unwrap();
 
-        for (points, overwrite) in self.points.drain(0..) {
-            if overwrite {
-                Self::really_overwrite_points(&chart, points)
+        chart
+            .configure_mesh()
+            .disable_x_mesh()
+            .disable_y_mesh()
+            .draw()
+            .unwrap();
+
+        fn mandelbrot_set(
+            real: std::ops::Range<f64>,
+            complex: std::ops::Range<f64>,
+            samples: (usize, usize),
+            max_iter: usize,
+        ) -> impl Iterator<Item = (f64, f64, usize)> {
+            let step = (
+                (real.end - real.start) / samples.0 as f64,
+                (complex.end - complex.start) / samples.1 as f64,
+            );
+            return (0..(samples.0 * samples.1)).map(move |k| {
+                let c = (
+                    real.start + step.0 * (k % samples.0) as f64,
+                    complex.start + step.1 * (k / samples.0) as f64,
+                );
+                let mut z = (0.0, 0.0);
+                let mut cnt = 0;
+                while cnt < max_iter && z.0 * z.0 + z.1 * z.1 <= 1e10 {
+                    z = (z.0 * z.0 - z.1 * z.1 + c.0, 2.0 * z.0 * z.1 + c.1);
+                    cnt += 1;
+                }
+                return (c.0, c.1, cnt);
+            });
+        }
+
+        let plotting_area = chart.plotting_area();
+
+        let range = plotting_area.get_pixel_range();
+        let (pw, ph) = (range.0.end - range.0.start, range.1.end - range.1.start);
+        let (xr, yr) = (chart.x_range(), chart.y_range());
+
+        for (x, y, c) in mandelbrot_set(xr, yr, (pw as usize, ph as usize), 100) {
+            if c != 100 {
+                plotting_area
+                    .draw_pixel((x, y), &HSLColor(c as f64 / 100.0, 1.0, 0.5))
+                    .unwrap();
             } else {
-                Self::really_add_points(&chart, points)
+                plotting_area.draw_pixel((x, y), &BLACK).unwrap();
             }
         }
 
-        self.chart = Some(chart);
-        self.visible = true;
+        root.present().unwrap();
 
-        self.replace_filters(filters)
-            .chain_err(|| format!("while building chart #{}", self.uid()))?;
+        // let chart = js!(
+        //     am4core.useTheme(am4themes_animated);
+        //     var chart = am4core.create(@{&self.container}, am4charts.XYChart);
+        //     chart.data = [];
+        //     // Cosmetic stuff.
+        //     chart.scrollbarX = new am4charts.XYChartScrollbar();
+        //     chart.scrollbarX.parent = chart.bottomAxesContainer;
+        //     chart.cursor = new am4charts.XYCursor();
+
+        //     return chart
+        // );
+
+        // self.spec.x_axis().chart_apply(&chart);
+        // self.spec.y_axis().chart_apply(&chart);
+
+        // for (points, overwrite) in self.points.drain(0..) {
+        //     if overwrite {
+        //         Self::really_overwrite_points(&chart, points)
+        //     } else {
+        //         Self::really_add_points(&chart, points)
+        //     }
+        // }
+
+        // self.chart = Some(chart);
+        // self.visible = true;
+
+        // self.replace_filters(filters)
+        //     .chain_err(|| format!("while building chart #{}", self.uid()))?;
 
         Ok(())
     }
@@ -462,7 +530,7 @@ impl Chart {
 
                     <h2> { self.spec.desc() } </h2>
                 </center>
-                <div id={&self.container}
+                <canvas id={&self.container}
                     class=style::class::chart::style(self.visible)
                 />
             </g>

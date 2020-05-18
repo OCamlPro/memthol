@@ -12,6 +12,9 @@ extern "C" {
     pub fn alert(s: &str);
 }
 
+#[wasm_bindgen(module = "../static/js/core.js")]
+extern "C" {}
+
 /// Server info.
 pub mod server {
     use crate::common::*;
@@ -22,11 +25,19 @@ pub mod server {
             .ok_or_else(|| err::Err::from("could not retrieve (window) JS location"))
     }
 
-    pub fn address() -> Res<String> {
+    pub fn address() -> Res<(String, usize)> {
         location()
             .and_then(|loc| {
-                loc.host()
-                    .map_err(|js_val| err::Err::from(format!("{:?}", js_val)))
+                Ok((
+                    loc.hostname()
+                        .map_err(|js_val| err::Err::from(format!("{:?}", js_val)))?,
+                    usize::from_str_radix(
+                        &loc.port()
+                            .map_err(|js_val| err::Err::from(format!("{:?}", js_val)))?,
+                        10,
+                    )
+                    .map_err(|e| e.to_string())?,
+                ))
             })
             .chain_err(|| "while retrieving server's address and port")
     }
