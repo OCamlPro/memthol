@@ -12,9 +12,6 @@ extern "C" {
     pub fn alert(s: &str);
 }
 
-#[wasm_bindgen(module = "../static/js/core.js")]
-extern "C" {}
-
 /// Server info.
 pub mod server {
     use crate::common::*;
