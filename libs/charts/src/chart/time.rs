@@ -4,31 +4,7 @@ use crate::common::*;
 
 pub mod size;
 
-pub use size::{TimeSize, TimeSizePoint, TimeSizePoints};
-
-/// A point for a time chart.
-pub type TimePoint<Val> = Point<Date, Val>;
-
-/// Some points for a time chart.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TimePoints {
-    Size(size::TimeSizePoints),
-}
-
-impl TimePoints {
-    /// True if there are no points.
-    pub fn is_empty(&self) -> bool {
-        match self {
-            Self::Size(points) => points.is_empty(),
-        }
-    }
-}
-
-impl From<size::TimeSizePoints> for TimePoints {
-    fn from(points: size::TimeSizePoints) -> Self {
-        Self::Size(points)
-    }
-}
+pub use size::TimeSize;
 
 /// A time chart.
 #[derive(Debug, Serialize, Deserialize)]

@@ -2,13 +2,10 @@
 
 use crate::common::*;
 
+use point::TimeSizePoints;
+
 /// Initial size value.
 const INIT_SIZE_VALUE: usize = 0;
-
-/// A total-size-over-time point.
-pub type TimeSizePoint = super::TimePoint<usize>;
-/// Some total-size-over-time points.
-pub type TimeSizePoints = Vec<TimeSizePoint>;
 
 /// Total size over time chart.
 #[derive(Debug, Serialize, Deserialize)]

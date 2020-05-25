@@ -2,8 +2,6 @@
 
 use crate::common::*;
 
-pub use chart::time::TimePoints;
-
 /// A point value.
 ///
 /// Stores a value for each filter, and the value for the catch-all filter.
@@ -87,6 +85,49 @@ where
     }
 }
 
+/// A total-size-over-time point.
+pub type TimeSizePoint = TimePoint<usize>;
+/// Some total-size-over-time points.
+pub type TimeSizePoints = Vec<TimeSizePoint>;
+
+/// A point for a time chart.
+pub type TimePoint<Val> = Point<Date, Val>;
+
+/// Some points for a time chart.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TimePoints {
+    Size(TimeSizePoints),
+}
+
+impl TimePoints {
+    /// True if there are no points.
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::Size(points) => points.is_empty(),
+        }
+    }
+
+    /// Extends some points with other points, returns `true` iff new points were added.
+    ///
+    /// Fails if the two kinds of points are not compatible.
+    pub fn extend(&mut self, other: &mut Self) -> Res<bool> {
+        let new_stuff = match (self, other) {
+            (Self::Size(self_points), Self::Size(points)) => {
+                let new_stuff = !points.is_empty();
+                self_points.extend(points.drain(0..));
+                new_stuff
+            }
+        };
+        Ok(new_stuff)
+    }
+}
+
+impl From<TimeSizePoints> for TimePoints {
+    fn from(points: TimeSizePoints) -> Self {
+        Self::Size(points)
+    }
+}
+
 /// Some points for a particular chart type.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Points {
@@ -99,6 +140,15 @@ impl Points {
     pub fn is_empty(&self) -> bool {
         match self {
             Self::Time(points) => points.is_empty(),
+        }
+    }
+
+    /// Extends some points with other points, returns `true` iff new points were added.
+    ///
+    /// Fails if the two kinds of points are not compatible.
+    pub fn extend(&mut self, other: &mut Self) -> Res<bool> {
+        match (self, other) {
+            (Self::Time(self_points), Self::Time(points)) => self_points.extend(points),
         }
     }
 }

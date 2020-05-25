@@ -1,6 +1,6 @@
 //! Charts.
 
-use plotters::{chart::ChartState, prelude::*};
+use plotters::prelude::*;
 
 pub use charts::chart::ChartSpec;
 
@@ -79,7 +79,7 @@ impl Charts {
     ) -> Res<ShouldRender> {
         use msg::ChartsMsg::*;
         match action {
-            Build(uid) => self.build(uid, filters),
+            Build(uid) => self.build(uid),
             Move { uid, up } => self.move_chart(uid, up),
             ToggleVisible(uid) => self.toggle_visible(uid),
             Destroy(uid) => self.destroy(uid),
@@ -102,7 +102,7 @@ impl Charts {
 
     /// Refreshes all filters in all charts.
     fn refresh_filters(&mut self, filters: &filter::Filters) -> Res<ShouldRender> {
-        for chart in &self.charts {
+        for chart in &mut self.charts {
             chart.replace_filters(filters)?
         }
 
@@ -147,12 +147,12 @@ impl Charts {
         Ok(true)
     }
 
-    /// Forces a chart to build its actual (JS) graph and bind it to its container.
-    fn build(&mut self, uid: ChartUid, filters: &filter::Filters) -> Res<ShouldRender> {
+    /// Forces a chart to build and bind itself to its container.
+    fn build(&mut self, uid: ChartUid) -> Res<ShouldRender> {
         let (_, chart) = self
             .get_mut(uid)
             .chain_err(|| format!("while building and binding chart #{}", uid))?;
-        chart.build_chart(filters)?;
+        chart.build_chart()?;
         Ok(true)
     }
 
@@ -182,7 +182,7 @@ impl Charts {
 
 /// # Server message handling.
 impl Charts {
-    /// Alies an operation from the server.
+    /// Applies an operation from the server.
     pub fn server_update(
         &mut self,
         filters: &filter::Filters,
@@ -194,7 +194,7 @@ impl Charts {
             ChartsMsg::NewChart(spec) => {
                 debug!("received a chart-creation message from the server");
                 let uid = spec.uid();
-                let chart = Chart::new(spec);
+                let chart = Chart::new(spec, filters)?;
                 self.charts.push(chart);
                 self.send(msg::ChartsMsg::build(uid));
                 true
@@ -207,7 +207,7 @@ impl Charts {
                 debug!("received an overwrite-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
-                        chart.overwrite_points(points)
+                        chart.overwrite_points(points)?
                     }
                 }
                 if refresh_filters {
@@ -219,7 +219,7 @@ impl Charts {
                 debug!("received an add-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
-                        chart.add_points(points)
+                        chart.add_points(points)?
                     }
                 }
                 false
@@ -229,8 +229,8 @@ impl Charts {
                 debug!("received a message specific to chart #{} from server", uid);
                 let (_index, chart) = self.get_mut(uid)?;
                 match msg {
-                    ChartMsg::NewPoints(points) => chart.overwrite_points(points),
-                    ChartMsg::Points(points) => chart.add_points(points),
+                    ChartMsg::NewPoints(points) => chart.overwrite_points(points)?,
+                    ChartMsg::Points(points) => chart.add_points(points)?,
                 }
                 true
             }
@@ -253,28 +253,38 @@ pub struct Chart {
     container: String,
     /// Actual DOM chart canvas.
     canvas: String,
-    /// Actual chart as a JS value.
-    chart: Option<JsValue>,
-    /// Points from the server that have not been treated yet.
-    ///
-    /// The boolean is true when the points should overwrite the existing points.
-    points: Vec<(point::Points, bool)>,
-    // /// Chart HTML backend and state.
-    // nu_chart: Option<(CanvasBackend, ChartState<CanvasBackend>)>,
+    /// Chart drawing area.
+    chart: Option<DrawingArea<CanvasBackend, plotters::coord::Shift>>,
+    /// The points.
+    points: Option<point::Points>,
+    /// The filters, used to color the series and hide what the user asks to hide.
+    filters: Map<charts::uid::LineUid, (charts::filter::FilterSpec, bool)>,
+    /// Previous filter map, used when updating filters to keep track of those that are hidden.
+    prev_filters: Map<charts::uid::LineUid, (charts::filter::FilterSpec, bool)>,
 }
 impl Chart {
     /// Constructor.
-    pub fn new(spec: ChartSpec) -> Self {
+    pub fn new(spec: ChartSpec, all_filters: &filter::Filters) -> Res<Self> {
         let container = style::class::chart::class(spec.uid());
         let canvas = style::class::chart::canvas(spec.uid());
-        Self {
+
+        let mut filters = Map::new();
+        all_filters.specs_apply(|spec| {
+            let prev = filters.insert(spec.uid(), (spec.clone(), true));
+            debug_assert!(prev.is_none());
+            Ok(())
+        })?;
+
+        Ok(Self {
             spec,
             visible: true,
             container,
             canvas,
             chart: None,
-            points: vec![],
-        }
+            points: None,
+            filters,
+            prev_filters: Map::new(),
+        })
     }
 
     /// UID accessor.
@@ -298,237 +308,243 @@ impl Chart {
 /// # Functions for message-handling.
 impl Chart {
     /// Destroys the chart.
-    pub fn destroy(self) {
-        if let Some(chart) = self.chart {
-            js!(@(no_return)
-                @{chart}.dispose();
-            )
-        }
-    }
-
-    /// Adds/remove a legend to/from the chart.
-    fn toggle_legend(chart: &JsValue, on: bool) {
-        if on {
-            js!(@(no_return)
-                var chart = @{chart};
-                if (chart.legend === undefined || chart.legend === null) {
-                    chart.legend = new am4charts.Legend();
-                    chart.legend.labels.template.text = "[bold {color}]{name}[/]";
-                }
-            )
-        } else {
-            js!(@(no_return)
-                var chart = @{chart};
-                if (chart.legend !== undefined) {
-                    chart.legend.dispose();
-                    chart.legend = undefined
-                }
-            )
-        }
-    }
+    pub fn destroy(self) {}
 
     /// Replaces the filters of the chart.
-    pub fn replace_filters(&self, filters: &filter::Filters) -> Res<()> {
-        let chart = if let Some(chart) = self.chart.as_ref() {
-            chart
-        } else {
-            return Ok(());
-        };
+    pub fn replace_filters(&mut self, filters: &filter::Filters) -> Res<()> {
+        self.prev_filters.clear();
+        std::mem::swap(&mut self.filters, &mut self.prev_filters);
 
-        // Remove all series from the chart and DISPOSE. Otherwise they'll be orphaned.
-        js!(@(no_return)
-            var chart = @{chart};
-            // if (chart.legend !== undefined) {
-            //     chart.legend.dispose();
-            // }
-            // chart.legend = undefined;
-            while (chart.series.length > 0) {
-                chart.series.pop().dispose()
+        debug_assert!(self.filters.is_empty());
+
+        filters.specs_apply(|spec| {
+            let visible = self
+                .prev_filters
+                .remove(&spec.uid())
+                .map(|(_spec, visible)| visible)
+                .unwrap_or(true);
+            let prev = self.filters.insert(spec.uid(), (spec.clone(), visible));
+            if prev.is_some() {
+                bail!(
+                    "collision, found two filters with uid #{} while replacing filters",
+                    spec.uid(),
+                )
             }
-        );
-        filters.specs_apply(|filter| {
-            use crate::filter::FilterSpecExt;
-            filter.add_series_to(&self.spec, chart);
             Ok(())
         })?;
-
-        // Remove the legend if there's no active filter, turn it on if there are some.
-        Self::toggle_legend(chart, filters.len() > 0);
-
-        Ok(())
+        self.draw()
     }
 
-    /// Builds the actual JS chart and attaches it to the right container.
+    /// Builds the actual JS chart and attaches it to its container.
     ///
     /// Also, makes the chart visible.
-    pub fn build_chart(&mut self, filters: &filter::Filters) -> Res<()> {
-        // use axis::AxisExt;
-
+    pub fn build_chart(&mut self) -> Res<()> {
         if self.chart.is_some() {
             bail!("asked to build and bind a chart that's already built and binded")
         }
 
         self.mounted();
 
-        let backend =
+        let backend: CanvasBackend =
             plotters::prelude::CanvasBackend::new(&self.canvas).expect("could not find canvas");
-
         let (width, height) = backend.get_size();
-        info!("backend size: {}, {}", width, height);
 
-        let root = backend.into_drawing_area();
-        root.fill(&WHITE).unwrap();
+        let chart: DrawingArea<CanvasBackend, plotters::coord::Shift> = backend.into_drawing_area();
+        chart.fill(&WHITE).unwrap();
 
-        let mut chart = ChartBuilder::on(&root)
-            .margin(20)
-            .x_label_area_size(10)
-            .y_label_area_size(10)
-            .build_ranged(-2.1..0.6, -1.2..1.2)
-            .unwrap();
+        self.chart = Some(chart);
 
-        chart
-            .configure_mesh()
-            .disable_x_mesh()
-            .disable_y_mesh()
-            .draw()
-            .unwrap();
+        // let root: DrawingArea<CanvasBackend, plotters::coord::Shift> = backend.into_drawing_area();
 
-        fn mandelbrot_set(
-            real: std::ops::Range<f64>,
-            complex: std::ops::Range<f64>,
-            samples: (usize, usize),
-            max_iter: usize,
-        ) -> impl Iterator<Item = (f64, f64, usize)> {
-            let step = (
-                (real.end - real.start) / samples.0 as f64,
-                (complex.end - complex.start) / samples.1 as f64,
-            );
-            return (0..(samples.0 * samples.1)).map(move |k| {
-                let c = (
-                    real.start + step.0 * (k % samples.0) as f64,
-                    complex.start + step.1 * (k / samples.0) as f64,
-                );
-                let mut z = (0.0, 0.0);
-                let mut cnt = 0;
-                while cnt < max_iter && z.0 * z.0 + z.1 * z.1 <= 1e10 {
-                    z = (z.0 * z.0 - z.1 * z.1 + c.0, 2.0 * z.0 * z.1 + c.1);
-                    cnt += 1;
-                }
-                return (c.0, c.1, cnt);
-            });
-        }
-
-        let plotting_area = chart.plotting_area();
-
-        let range = plotting_area.get_pixel_range();
-        let (pw, ph) = (range.0.end - range.0.start, range.1.end - range.1.start);
-        let (xr, yr) = (chart.x_range(), chart.y_range());
-
-        for (x, y, c) in mandelbrot_set(xr, yr, (pw as usize, ph as usize), 100) {
-            if c != 100 {
-                plotting_area
-                    .draw_pixel((x, y), &HSLColor(c as f64 / 100.0, 1.0, 0.5))
-                    .unwrap();
-            } else {
-                plotting_area.draw_pixel((x, y), &BLACK).unwrap();
-            }
-        }
-
-        root.present().unwrap();
-
-        // let chart = js!(
-        //     am4core.useTheme(am4themes_animated);
-        //     var chart = am4core.create(@{&self.container}, am4charts.XYChart);
-        //     chart.data = [];
-        //     // Cosmetic stuff.
-        //     chart.scrollbarX = new am4charts.XYChartScrollbar();
-        //     chart.scrollbarX.parent = chart.bottomAxesContainer;
-        //     chart.cursor = new am4charts.XYCursor();
-
-        //     return chart
-        // );
-
-        // self.spec.x_axis().chart_apply(&chart);
-        // self.spec.y_axis().chart_apply(&chart);
-
-        // for (points, overwrite) in self.points.drain(0..) {
-        //     if overwrite {
-        //         Self::really_overwrite_points(&chart, points)
-        //     } else {
-        //         Self::really_add_points(&chart, points)
-        //     }
+        // macro_rules! draw {
+        //     ($chart:expr, $color:expr, $data:expr) => {{
+        //         $chart
+        //             .draw_series(AreaSeries::new($data.clone(), 0, &$color.mix(0.05)))
+        //             .unwrap();
+        //         $chart
+        //             .draw_series(LineSeries::new($data, $color.stroke_width(500)))
+        //             .unwrap();
+        //     }};
         // }
 
-        // self.chart = Some(chart);
-        // self.visible = true;
+        // {
+        //     root.fill(&WHITE).unwrap();
 
-        // self.replace_filters(filters)
-        //     .chain_err(|| format!("while building chart #{}", self.uid()))?;
+        //     let mut chart: ChartContext<
+        //         CanvasBackend,
+        //         RangedCoord<RangedCoordi32, RangedCoordi32>,
+        //     > = ChartBuilder::on(&root)
+        //         .margin(5 * width / 100)
+        //         .x_label_area_size(10)
+        //         .y_label_area_size(10)
+        //         .build_ranged(0..1001, 0..30)
+        //         .unwrap();
+
+        //     chart
+        //         .configure_mesh()
+        //         .disable_x_mesh()
+        //         .disable_y_mesh()
+        //         .draw()
+        //         .unwrap();
+
+        //     fn point(x: i32, factor: i32) -> (i32, i32) {
+        //         (x, (x * factor) % 31)
+        //     }
+
+        //     draw!(chart, BLUE, (0..=100).map(|x| point(x * 10, 7)));
+        //     draw!(chart, RED, (0..=100).map(|x| point(x * 10, 3)));
+        //     draw!(chart, GREEN, (0..=100).map(|x| point(x * 10, 5)));
+
+        //     root.present().unwrap();
+        // }
 
         Ok(())
     }
 
-    /// Appends some points to the chart.
-    pub fn add_points(&mut self, points: point::Points) {
-        if let Some(chart) = self.chart.as_ref() {
-            Self::really_add_points(chart, points)
-        } else {
-            self.points.push((points, false))
-        }
-    }
+    /// Draws the chart.
+    pub fn draw(&mut self) -> Res<()> {
+        self.mounted();
+        let filters = &self.filters;
+        if let Some(chart) = &mut self.chart {
+            if let Some(points) = &self.points {
+                match points {
+                    charts::point::Points::Time(charts::point::TimePoints::Size(points)) => {
+                        let (mut min_x, mut max_x, mut min_y, mut max_y) = (None, None, None, None);
 
-    /// Appends some points to the chart.
-    fn really_add_points(chart: &JsValue, points: point::Points) {
-        match points {
-            point::Points::Time(points) => match points {
-                charts::point::TimePoints::Size(points) => Self::inner_add_points(chart, points),
-            },
-        }
-    }
+                        for point in points.iter() {
+                            if min_x.is_none() {
+                                min_x = Some(&point.key)
+                            }
+                            max_x = Some(&point.key);
 
-    /// Appends some points to the chart.
-    fn inner_add_points<Key, Val>(chart: &JsValue, points: Vec<point::Point<Key, Val>>)
-    where
-        Key: JsExt + fmt::Display,
-        Val: JsExt + fmt::Display,
-    {
-        js!(@(no_return)
-            @{chart}.addData(@{points.as_js()});
-        )
-    }
+                            let (new_min_y, new_max_y) = point.vals.map.iter().fold(
+                                (min_y, max_y),
+                                |(mut min_y, mut max_y), (uid, val)| {
+                                    let visible = filters
+                                        .get(uid)
+                                        .map(|(_spec, visible)| *visible)
+                                        .unwrap_or(false);
+                                    if visible {
+                                        if let Some(min_y) = &mut min_y {
+                                            if val < min_y {
+                                                *min_y = *val
+                                            }
+                                        } else {
+                                            min_y = Some(*val)
+                                        }
+                                        if let Some(max_y) = &mut max_y {
+                                            if val > max_y {
+                                                *max_y = *val
+                                            }
+                                        } else {
+                                            max_y = Some(*val)
+                                        }
+                                        (min_y, max_y)
+                                    } else {
+                                        (min_y, max_y)
+                                    }
+                                },
+                            );
+                            min_y = new_min_y;
+                            max_y = new_max_y;
+                        }
 
-    /// Overwrites the points in a chart.
-    pub fn overwrite_points(&mut self, points: point::Points) {
-        if let Some(chart) = self.chart.as_ref() {
-            Self::really_overwrite_points(chart, points)
-        } else {
-            self.points.push((points, true))
-        }
-    }
+                        let (min_x, max_x, min_y, max_y) = match (min_x, max_x, min_y, max_y) {
+                            (Some(min_x), Some(max_x), Some(min_y), Some(max_y)) => {
+                                (*min_x, *max_x, min_y as u32, max_y as u32)
+                            }
+                            (min_x, max_x, min_y, max_y) => {
+                                warn!(
+                                    "could not retrieve chart min/max values for chart #{} \
+                                    ({:?}, {:?}, {:?}, {:?})",
+                                    self.spec.uid(),
+                                    min_x,
+                                    max_x,
+                                    min_y,
+                                    max_y,
+                                );
+                                return Ok(());
+                            }
+                        };
 
-    /// Overwrites the points in a chart.
-    fn really_overwrite_points(chart: &JsValue, points: point::Points) {
-        match points {
-            point::Points::Time(points) => match points {
-                charts::point::TimePoints::Size(points) => {
-                    Self::inner_overwrite_points(chart, points)
+                        chart.fill(&WHITE).unwrap();
+
+                        let (width, _height) = chart.get_base_pixel();
+
+                        let mut chart_cxt: ChartContext<
+                            CanvasBackend,
+                            RangedCoord<RangedDateTime<chrono::offset::Utc>, RangedCoordu32>,
+                        > = ChartBuilder::on(&chart)
+                            .margin(5 * width / 100)
+                            .x_label_area_size(10)
+                            .y_label_area_size(10)
+                            .build_ranged(
+                                RangedDateTime::from(std::ops::Range {
+                                    start: min_x.date().clone(),
+                                    end: max_x.date().clone(),
+                                }),
+                                min_y..max_y,
+                            )
+                            .unwrap();
+
+                        chart_cxt
+                            .configure_mesh()
+                            .disable_x_mesh()
+                            .disable_y_mesh()
+                            .draw()
+                            .unwrap();
+
+                        for (uid, (spec, visible)) in filters {
+                            if !visible {
+                                continue;
+                            }
+
+                            let points = points.iter().filter_map(|point| {
+                                point
+                                    .vals
+                                    .map
+                                    .get(uid)
+                                    .map(|val| (point.key.date().clone(), *val as u32))
+                            });
+                            let &charts::color::Color { r, g, b } = spec.color();
+                            let color: palette::rgb::Rgb<palette::encoding::srgb::Srgb, _> =
+                                palette::rgb::Rgb::new(r, g, b);
+                            chart_cxt
+                                .draw_series(LineSeries::new(points, color.stroke_width(5)))
+                                .map_err(|e| e.to_string())?;
+                        }
+
+                        chart
+                            .present()
+                            .map_err(|e| format!("error while presenting chart: {}", e))?
+                    }
                 }
-            },
+            }
+        }
+        Ok(())
+    }
+
+    /// Appends some points to the chart.
+    pub fn add_points(&mut self, mut points: point::Points) -> Res<()> {
+        if let Some(my_points) = &mut self.points {
+            let changed = my_points.extend(&mut points)?;
+            if changed {
+                self.draw()?
+            }
+            Ok(())
+        } else if !points.is_empty() {
+            self.points = Some(points);
+            self.draw()?;
+            Ok(())
+        } else {
+            Ok(())
         }
     }
 
     /// Overwrites the points in a chart.
-    fn inner_overwrite_points<Key, Val>(chart: &JsValue, points: Vec<Point<Key, Val>>)
-    where
-        Key: JsExt + fmt::Display,
-        Val: JsExt + fmt::Display,
-        charts::point::PointVal<Val>: fmt::Debug,
-    {
-        js!(@(no_return)
-            let chart = @{chart};
-            chart.data = @{points.as_js()};
-            chart.invalidateRawData();
-        )
+    pub fn overwrite_points(&mut self, points: point::Points) -> Res<()> {
+        self.points = Some(points);
+        self.draw()
     }
 }
 
@@ -560,16 +576,8 @@ impl Chart {
             },
         );
 
-        info!("canvas size: {}, {}", width, height);
-
         use wasm_bindgen::JsCast;
         let html_canvas: web_sys::HtmlCanvasElement = canvas.clone().dyn_into().unwrap();
-
-        info!(
-            "html_canvas size: {}, {}",
-            html_canvas.width(),
-            html_canvas.height()
-        );
 
         if html_canvas.width() != width {
             html_canvas.set_width(width)

@@ -27,13 +27,14 @@ impl Model {
         link: &mut ComponentLink<Self>,
         socket: &mut WebSocketService,
     ) -> Res<WebSocketTask> {
-        info!("activate_ws");
+        info!("fetching server's websocket info");
         let (addr, port) = js::server::address()?;
         let addr = format!("ws://{}:{}", addr, port + 1);
-        info!("addr: {:?}", addr);
+        info!("websocket: {:?}", addr);
         let callback = link.callback(|msg| Msg::FromServer(msg));
         let notification = link.callback(|status| Msg::ConnectionStatus(status));
         let task = socket.connect(&addr, callback, notification)?;
+        info!("connection established successfully");
         Ok(task)
     }
 }
@@ -47,7 +48,7 @@ impl Model {
 
     /// Handles a message from the server.
     pub fn handle_server_msg(&mut self, msg: Res<msg::from_server::Msg>) -> Res<ShouldRender> {
-        info!("handling message from the server");
+        info!("handling incoming message from server");
         use msg::from_server::*;
         let msg = msg?;
         match msg {
@@ -61,8 +62,8 @@ impl Model {
                 res
             }
             Msg::Filters(msg) => self.filters.server_update(msg),
-            Msg::Charts(_) => todo!("chart msgs"),
-            Msg::Filters(_) => todo!("filter msgs"),
+            // Msg::Charts(_) => todo!("chart msgs"),
+            // Msg::Filters(_) => todo!("filter msgs"),
         }
     }
 }
@@ -103,6 +104,7 @@ impl Component for Model {
     }
 
     fn update(&mut self, msg: Msg) -> ShouldRender {
+        info!("handling internal message");
         match msg {
             // Messages to/from the server.
             Msg::FromServer(msg) => {
@@ -110,6 +112,7 @@ impl Component for Model {
                 unwrap_or_send_err!(self.handle_server_msg(msg) => self default false)
             }
             Msg::ToServer(msg) => {
+                info!("sending message to server");
                 self.server_send(msg);
                 false
             }
