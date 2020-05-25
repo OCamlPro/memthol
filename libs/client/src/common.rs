@@ -171,9 +171,3 @@ eget nisi feugiat mattis. Vivamus malesuada et enim ac condimentum.\
         ",
     ];
 }
-
-macro_rules! js {
-    ($($stuff:tt)*) => {
-        todo!("[{}:{}] interactions with javascript", file!(), line!())
-    };
-}

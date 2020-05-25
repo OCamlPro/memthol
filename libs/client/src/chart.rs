@@ -9,7 +9,7 @@ use crate::common::*;
 pub mod axis;
 pub mod new;
 
-pub use axis::{XAxis, YAxis};
+// pub use axis::{XAxis, YAxis};
 pub use charts::chart::ChartUid;
 
 /// The collection of charts.
@@ -347,61 +347,22 @@ impl Chart {
 
         let backend: CanvasBackend =
             plotters::prelude::CanvasBackend::new(&self.canvas).expect("could not find canvas");
-        let (width, height) = backend.get_size();
 
         let chart: DrawingArea<CanvasBackend, plotters::coord::Shift> = backend.into_drawing_area();
         chart.fill(&WHITE).unwrap();
 
         self.chart = Some(chart);
 
-        // let root: DrawingArea<CanvasBackend, plotters::coord::Shift> = backend.into_drawing_area();
-
-        // macro_rules! draw {
-        //     ($chart:expr, $color:expr, $data:expr) => {{
-        //         $chart
-        //             .draw_series(AreaSeries::new($data.clone(), 0, &$color.mix(0.05)))
-        //             .unwrap();
-        //         $chart
-        //             .draw_series(LineSeries::new($data, $color.stroke_width(500)))
-        //             .unwrap();
-        //     }};
-        // }
-
-        // {
-        //     root.fill(&WHITE).unwrap();
-
-        //     let mut chart: ChartContext<
-        //         CanvasBackend,
-        //         RangedCoord<RangedCoordi32, RangedCoordi32>,
-        //     > = ChartBuilder::on(&root)
-        //         .margin(5 * width / 100)
-        //         .x_label_area_size(10)
-        //         .y_label_area_size(10)
-        //         .build_ranged(0..1001, 0..30)
-        //         .unwrap();
-
-        //     chart
-        //         .configure_mesh()
-        //         .disable_x_mesh()
-        //         .disable_y_mesh()
-        //         .draw()
-        //         .unwrap();
-
-        //     fn point(x: i32, factor: i32) -> (i32, i32) {
-        //         (x, (x * factor) % 31)
-        //     }
-
-        //     draw!(chart, BLUE, (0..=100).map(|x| point(x * 10, 7)));
-        //     draw!(chart, RED, (0..=100).map(|x| point(x * 10, 3)));
-        //     draw!(chart, GREEN, (0..=100).map(|x| point(x * 10, 5)));
-
-        //     root.present().unwrap();
-        // }
-
         Ok(())
     }
 
     /// Draws the chart.
+    ///
+    /// # TODO
+    ///
+    /// - this function contains code that's highly specific to the kind of points we are drawing.
+    ///   It should be exported, probably in the `charts` crate, to keep this function focused on
+    ///   what it does.
     pub fn draw(&mut self) -> Res<()> {
         self.mounted();
         let filters = &self.filters;

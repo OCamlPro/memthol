@@ -456,8 +456,8 @@ pub trait FilterSpecExt {
     /// Renders a spec as a tab.
     fn render_tab(&self, model: &Model, active: bool, edited: bool) -> Html;
 
-    /// Adds itself as a series to a chart.
-    fn add_series_to(&self, spec: &chart::ChartSpec, chart: &JsValue);
+    // /// Adds itself as a series to a chart.
+    // fn add_series_to(&self, spec: &chart::ChartSpec, chart: &JsValue);
 
     /// Renders the settings of a filter specification.
     fn render_settings(&self, model: &Model, info: FilterRenderInfo) -> Html;
@@ -490,31 +490,31 @@ impl FilterSpecExt for FilterSpec {
         }
     }
 
-    fn add_series_to(&self, spec: &chart::ChartSpec, chart: &JsValue) {
-        let series = js!(
-            let color = @{self.color().to_string()};
-            var series = new am4charts.LineSeries();
-            series.interpolationDuration = @{cst::charts::INTERP_DURATION};
-            series.defaultState.transitionDuration = 200;
-            series.hiddenState.transitionDuration = 200;
-            series.stroke = color;
-            series.strokeWidth = 1;
-            series.name = @{self.name()};
-            series.fill = color;
-            series.fillOpacity = 0.01;
-            return series;
-        );
-        use chart::axis::AxisExt;
-        spec.x_axis().series_apply(&series, self.uid());
-        spec.y_axis().series_apply(&series, self.uid());
-        js!(@(no_return)
-            var chart = @{chart};
-            var series = @{series};
-            chart.series.push(series);
-            chart.scrollbarX.series.push(series);
-            chart.invalidateRawData();
-        );
-    }
+    // fn add_series_to(&self, spec: &chart::ChartSpec, chart: &JsValue) {
+    //     let series = js!(
+    //         let color = @{self.color().to_string()};
+    //         var series = new am4charts.LineSeries();
+    //         series.interpolationDuration = @{cst::charts::INTERP_DURATION};
+    //         series.defaultState.transitionDuration = 200;
+    //         series.hiddenState.transitionDuration = 200;
+    //         series.stroke = color;
+    //         series.strokeWidth = 1;
+    //         series.name = @{self.name()};
+    //         series.fill = color;
+    //         series.fillOpacity = 0.01;
+    //         return series;
+    //     );
+    //     use chart::axis::AxisExt;
+    //     spec.x_axis().series_apply(&series, self.uid());
+    //     spec.y_axis().series_apply(&series, self.uid());
+    //     js!(@(no_return)
+    //         var chart = @{chart};
+    //         var series = @{series};
+    //         chart.series.push(series);
+    //         chart.scrollbarX.series.push(series);
+    //         chart.invalidateRawData();
+    //     );
+    // }
 
     fn render_settings(&self, model: &Model, info: FilterRenderInfo) -> Html {
         let uid = self.uid();

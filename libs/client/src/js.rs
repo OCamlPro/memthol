@@ -4,8 +4,6 @@ use wasm_bindgen::prelude::*;
 
 pub use wasm_bindgen::JsValue;
 
-pub mod amcharts;
-
 #[wasm_bindgen]
 extern "C" {
     /// Issues an alert.
