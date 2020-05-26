@@ -9,7 +9,6 @@ use crate::common::*;
 pub mod axis;
 pub mod new;
 
-// pub use axis::{XAxis, YAxis};
 pub use charts::chart::ChartUid;
 
 /// The collection of charts.
@@ -48,7 +47,7 @@ impl Charts {
                 .iter()
                 .filter(|chart| chart.uid() == uid)
                 .count(),
-            1
+            1,
         );
         for (index, chart) in self.charts.iter_mut().enumerate() {
             if chart.uid() == uid {
@@ -339,6 +338,7 @@ impl Chart {
     ///
     /// Also, makes the chart visible.
     pub fn build_chart(&mut self) -> Res<()> {
+        info!("building chart");
         if self.chart.is_some() {
             bail!("asked to build and bind a chart that's already built and binded")
         }
@@ -347,6 +347,9 @@ impl Chart {
 
         let backend: CanvasBackend =
             plotters::prelude::CanvasBackend::new(&self.canvas).expect("could not find canvas");
+
+        // let (width, height) = backend.get_size();
+        // info!("backend: {}/{}", width, height);
 
         let chart: DrawingArea<CanvasBackend, plotters::coord::Shift> = backend.into_drawing_area();
         chart.fill(&WHITE).unwrap();
@@ -428,22 +431,27 @@ impl Chart {
                             }
                         };
 
+                        info!("chart size: {}/{}, {}/{}", min_x, max_x, min_y, max_y);
+
+                        // chart.fill(&BLACK.mix(0.5)).unwrap();
                         chart.fill(&WHITE).unwrap();
 
-                        let (width, _height) = chart.get_base_pixel();
+                        // let (width, height) = chart.dim_in_pixel();
+                        // let margin = height * 2 / 100;
+                        let (x_label_area, y_label_area) = (30, 60);
+                        let (margin_top, margin_right) = (x_label_area / 3, y_label_area / 3);
 
                         let mut chart_cxt: ChartContext<
                             CanvasBackend,
-                            RangedCoord<RangedDateTime<chrono::offset::Utc>, RangedCoordu32>,
+                            RangedCoord<RangedDuration, RangedCoordu32>,
                         > = ChartBuilder::on(&chart)
-                            .margin(5 * width / 100)
-                            .x_label_area_size(10)
-                            .y_label_area_size(10)
+                            .margin_top(margin_top)
+                            .margin_right(margin_right)
+                            .x_label_area_size(x_label_area)
+                            .y_label_area_size(y_label_area)
                             .build_ranged(
-                                RangedDateTime::from(std::ops::Range {
-                                    start: min_x.date().clone(),
-                                    end: max_x.date().clone(),
-                                }),
+                                chrono::Duration::from_std(Duration::from_millis(0)).unwrap()
+                                    ..(max_x.date().clone() - min_x.date().clone()),
                                 min_y..max_y,
                             )
                             .unwrap();
@@ -451,7 +459,27 @@ impl Chart {
                         chart_cxt
                             .configure_mesh()
                             .disable_x_mesh()
-                            .disable_y_mesh()
+                            .label_style(("sans-serif", 15).into_font())
+                            .x_label_formatter(&|date| {
+                                let mut secs = date.to_std().unwrap().as_secs();
+                                println!("secs: {}", secs);
+                                let mut mins = secs / 60;
+                                secs = secs - mins * 60;
+                                println!("- {}:{}", mins, secs);
+                                let hours = mins / 60;
+                                mins = mins - hours * 60;
+                                println!("- {}:{}:{}", hours, mins, secs);
+                                let mut s = String::with_capacity(10);
+                                use std::fmt::Write;
+                                if hours > 0 {
+                                    write!(&mut s, "{}h", hours).unwrap()
+                                }
+                                if mins > 0 {
+                                    write!(&mut s, "{}m", mins).unwrap()
+                                }
+                                write!(&mut s, "{}s", secs).unwrap();
+                                s
+                            })
                             .draw()
                             .unwrap();
 
@@ -459,19 +487,18 @@ impl Chart {
                             if !visible {
                                 continue;
                             }
-
-                            let points = points.iter().filter_map(|point| {
-                                point
-                                    .vals
-                                    .map
-                                    .get(uid)
-                                    .map(|val| (point.key.date().clone(), *val as u32))
-                            });
                             let &charts::color::Color { r, g, b } = spec.color();
                             let color: palette::rgb::Rgb<palette::encoding::srgb::Srgb, _> =
                                 palette::rgb::Rgb::new(r, g, b);
+
+                            let point_iter = points.iter().filter_map(|point| {
+                                point.vals.map.get(uid).map(|val| {
+                                    (point.key.date().clone() - min_x.date().clone(), *val as u32)
+                                })
+                            });
+
                             chart_cxt
-                                .draw_series(LineSeries::new(points, color.stroke_width(5)))
+                                .draw_series(LineSeries::new(point_iter, color.stroke_width(5)))
                                 .map_err(|e| e.to_string())?;
                         }
 
