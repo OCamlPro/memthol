@@ -1,6 +1,6 @@
 body {
   font: 16px SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif;
-  background-color: black;
+  background-color: white;
 }
 body code {
   color: #d77500;
@@ -116,6 +116,40 @@ body .body_header_footer .memthol_chart_container .active_tick_button {
   content: url("../pics/tick_active.png");
 }
 body .body_header_footer .memthol_chart_container .active_tick_button:hover {
+  cursor: pointer;
+}
+body .body_header_footer .memthol_chart_container .chart_filter_button_active {
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  opacity: 1;
+}
+body .body_header_footer .memthol_chart_container .chart_filter_button_active:hover, body .body_header_footer .memthol_chart_container .chart_filter_button_active:active {
+  text-decoration: underline;
+  cursor: pointer;
+}
+body .body_header_footer .memthol_chart_container .chart_filter_button_inactive {
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  display: block;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  float: center;
+  text-align: center;
+  border-radius: 5px;
+  padding: 14px 16px;
+  text-decoration: none;
+  opacity: 0.5;
+}
+body .body_header_footer .memthol_chart_container .chart_filter_button_inactive:hover, body .body_header_footer .memthol_chart_container .chart_filter_button_inactive:active {
+  text-decoration: underline;
   cursor: pointer;
 }
 body .body_header_footer .memthol_chart_container .chart_header {

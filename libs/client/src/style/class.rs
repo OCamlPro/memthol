@@ -29,6 +29,10 @@ pub mod tabs {
                 RIGHT
             }
         }
+
+        pub fn get_center() -> &'static str {
+            CENTER
+        }
     }
 
     /// Active tab.
@@ -135,6 +139,23 @@ pub mod chart {
         /// Class of a chart canvas.
         pub fn style() -> &'static str {
             CLASS
+        }
+    }
+
+    /// Active filter button.
+    pub static ACTIVE: &str = "chart_filter_button_active";
+    /// Inactive filter button.
+    pub static INACTIVE: &str = "chart_filter_button_inactive";
+
+    /// Class/style pair for an (in)active filter button.
+    pub fn filter_button_get(
+        is_active: bool,
+        color: &charts::color::Color,
+    ) -> (&'static str, String) {
+        if is_active {
+            (ACTIVE, format!("background-color: {};", color))
+        } else {
+            (INACTIVE, format!("background-color: {};", color))
         }
     }
 }

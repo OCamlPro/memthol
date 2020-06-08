@@ -5,10 +5,14 @@
 use wasm_bindgen::prelude::*;
 
 #[macro_use]
+pub mod macros;
+
 pub mod common;
 
 pub mod err;
 pub mod js;
+pub mod layout;
+pub mod style;
 
 pub mod model;
 
@@ -19,7 +23,6 @@ pub mod filter;
 pub mod footer;
 pub mod msg;
 pub mod point;
-pub mod style;
 
 pub use model::Model;
 

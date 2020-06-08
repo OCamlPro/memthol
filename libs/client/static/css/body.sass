@@ -8,7 +8,7 @@
 body
     @include body_code
     font: $font_size $font_stack
-    background-color: black
+    background-color: white
 
     code
         font: $font_size $font_code_stack
@@ -32,6 +32,7 @@ body
 
         .memthol_chart_container
             @include buttons
+            @include chart_filter_buttons
 
             .chart_header
                 margin: 0 $layout_left_right_margin

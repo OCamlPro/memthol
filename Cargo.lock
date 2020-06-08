@@ -390,6 +390,7 @@ dependencies = [
  "regex",
  "safe_index",
  "serde",
+ "smallvec 0.6.13",
  "strum 0.18.0",
  "strum_macros 0.18.0",
  "typed-html",

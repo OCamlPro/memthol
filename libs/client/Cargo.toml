@@ -23,11 +23,14 @@ plotters = "*"
 regex = "*"
 safe_index = "*"
 serde = "*"
+smallvec = "*"
 strum = "*"
 strum_macros = "*"
 typed-html = { version = "*" }
 wasm-logger = "*"
 wasm-bindgen = "*"
-web-sys = { version = "*", features = ["HtmlCanvasElement", "Element", "NamedNodeMap", "Attr"] }
+web-sys = { version = "*", features = [
+    "HtmlCanvasElement", "Element", "NamedNodeMap", "Attr", "HtmlSelectElement"
+] }
 wee_alloc = "*"
 yew = { version = "0.14.3", features = ["web_sys"] }

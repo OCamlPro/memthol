@@ -11,6 +11,8 @@ pub use std::{
 
 use lazy_static::lazy_static;
 
+pub use smallvec::smallvec;
+
 pub use log::{debug, error, info, warn};
 
 pub use regex::Regex;
@@ -38,23 +40,13 @@ pub use crate::{
     err::{self, bail, Res, ResExt},
     filter, footer,
     js::{self, JsValue},
+    layout,
     model::Model,
     msg::{self, Msg},
     point, style,
 };
 
-/// Issues an alert.
-#[macro_export]
-macro_rules! alert {
-    ($msg:expr) => (
-        $crate::js::alert($msg)
-    );
-    ($($stuff:tt)*) => (
-        $crate::js::alert(
-            &format_args!($($stuff)*).to_string()
-        )
-    );
-}
+pub type SVec<T> = smallvec::SmallVec<T>;
 
 // /// Issues an alert.
 // #[macro_export]
@@ -86,6 +78,9 @@ pub trait JsExt {
     /// Conversion to JS.
     fn as_js(self) -> JsValue;
 }
+
+pub type OnClickAction = Callback<yew::events::MouseEvent>;
+pub type OnChangeAction = Callback<yew::events::ChangeData>;
 
 /// Type of `onclick` actions.
 pub trait OnClick: Fn(yew::events::MouseEvent) -> Msg + 'static {}

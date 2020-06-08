@@ -576,6 +576,44 @@ impl Chart {
 
         false
     }
+
+    /// Renders the filters as buttons.
+    pub fn render_filters(&self, _model: &Model) -> Html {
+        let inner = if self.filters.len() <= 1 {
+            html! {<> </>}
+        } else {
+            html! {
+                <>
+                    {
+                        for self.filters.values().map(
+                            |(filter, active)| {
+                                let (class, colorize) = style::class::chart::filter_button_get(
+                                    *active, filter.color()
+                                );
+                                html! {
+                                    <li>
+                                        <a
+                                            class = class
+                                            style = colorize
+                                        >
+                                            { filter.name().to_string() }
+                                        </a>
+                                    </li>
+                                }
+                            }
+                        )
+                    }
+                </>
+            }
+        };
+
+        html! {
+            <center><li class = style::class::tabs::li::get_center()>
+            { inner }
+            </li></center>
+        }
+    }
+
     /// Renders the chart.
     pub fn render(&self, model: &Model) -> Html {
         let uid = self.uid();
@@ -610,6 +648,10 @@ impl Chart {
                         class=style::class::chart::canvas::style()
                     />
                 </div>
+                { self.render_filters(model) }
+                <br/>
+                <br/>
+                <br/>
             </g>
         }
     }

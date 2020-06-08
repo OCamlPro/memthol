@@ -60,6 +60,19 @@ impl FilterSpec {
         }
     }
 
+    /// True if the specification describes the *everything* filter.
+    pub fn is_everything(&self) -> bool {
+        self.uid == LineUid::Everything
+    }
+    /// True if the specification describes the *catch-all* filter.
+    pub fn is_catch_all(&self) -> bool {
+        self.uid == LineUid::CatchAll
+    }
+    /// True if the filter is user-provided.
+    pub fn is_user_provided(&self) -> bool {
+        !(self.is_everything() || self.is_catch_all())
+    }
+
     /// UID accessor.
     pub fn uid(&self) -> LineUid {
         self.uid

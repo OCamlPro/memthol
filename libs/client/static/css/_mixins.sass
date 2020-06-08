@@ -189,3 +189,14 @@
     .li_center
         @include menu_tabs
         float: center
+
+@mixin chart_filter_buttons
+
+    .chart_filter_button_active
+        @include font_black_shadow
+        @include menu_tab
+        opacity: 1.0
+    .chart_filter_button_inactive
+        @include font_black_shadow
+        @include menu_tab
+        opacity: 0.5

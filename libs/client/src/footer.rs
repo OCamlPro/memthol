@@ -4,7 +4,7 @@ use crate::common::*;
 
 pub struct Footer {
     /// Active footer tab, if any.
-    active: Option<FooterTab>,
+    pub active: Option<FooterTab>,
 }
 
 impl Footer {
@@ -38,6 +38,11 @@ impl Footer {
 
     /// Renders itself.
     pub fn render(&self, model: &Model, filters: &filter::Filters) -> Html {
+        layout::nu_footer::render(model, self, filters)
+    }
+
+    /// Renders itself.
+    pub fn old_render(&self, model: &Model, filters: &filter::Filters) -> Html {
         html! {
             <footer id = style::id::FOOTER>
                 <ul class = style::class::footer::TABS>

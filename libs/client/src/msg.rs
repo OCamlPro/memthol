@@ -254,7 +254,7 @@ impl FilterMsg {
     }
     /// Updates a subfilter.
     pub fn update_sub(uid: FilterUid, sub: filter::SubFilter) -> Msg {
-        FiltersMsg::filter(uid, Self::Sub(sub))
+        FiltersMsg::filter(uid, Self::Sub(sub.into()))
     }
     /// Removes a subfilter.
     pub fn rm_sub(uid: FilterUid, sub_uid: filter::SubFilterUid) -> Msg {

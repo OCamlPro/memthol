@@ -2,7 +2,7 @@
 
 use crate::common::*;
 
-use charts::filter::{Filter, FilterSpec};
+pub use charts::filter::{Filter, FilterSpec};
 
 pub use charts::filter::{FilterUid, LineUid, SubFilter, SubFilterUid};
 
@@ -33,11 +33,11 @@ pub struct Filters {
     /// Sends messages to the model.
     to_model: Callback<Msg>,
     /// Catch-all filter.
-    catch_all: FilterSpec,
+    pub catch_all: FilterSpec,
     /// Everything filter.
-    everything: FilterSpec,
+    pub everything: FilterSpec,
     /// Actual filters.
-    filters: Vec<Filter>,
+    pub filters: Vec<Filter>,
     /// True if a filter was (re)moved and the server was not notified.
     edited: bool,
 }
@@ -68,7 +68,7 @@ impl Filters {
     }
 
     /// Retrieves a filter from its UID.
-    fn get_filter(&self, uid: FilterUid) -> Res<(usize, &Filter)> {
+    pub fn get_filter(&self, uid: FilterUid) -> Res<(usize, &Filter)> {
         for (index, filter) in self.filters.iter().enumerate() {
             if filter.uid() == uid {
                 return Ok((index, filter));
@@ -95,6 +95,15 @@ impl Filters {
             LineUid::Filter(uid) => self
                 .get_filter_mut(uid)
                 .map(|(_index, filter)| filter.spec_mut()),
+        }
+    }
+
+    /// Gives mutable access to a filter specification.
+    pub fn get_spec(&self, uid: LineUid) -> Res<&FilterSpec> {
+        match uid {
+            LineUid::CatchAll => Ok(&self.catch_all),
+            LineUid::Everything => Ok(&self.everything),
+            LineUid::Filter(uid) => self.get_filter(uid).map(|(_index, filter)| filter.spec()),
         }
     }
 
@@ -133,6 +142,23 @@ impl Filters {
             f(&self.catch_all)?
         }
         Ok(())
+    }
+
+    /// True if there are no filters besides the built-in ones.
+    pub fn has_user_filters(&self) -> bool {
+        !self.filters.is_empty()
+    }
+
+    /// The filters to render.
+    pub fn filters_to_render(&self) -> (&FilterSpec, Option<(&FilterSpec, &[Filter])>) {
+        (
+            &self.everything,
+            if self.has_user_filters() {
+                Some((&self.catch_all, &self.filters))
+            } else {
+                None
+            },
+        )
     }
 }
 
@@ -271,6 +297,7 @@ impl Filters {
                 filters,
                 catch_all,
             } => {
+                self.edited = false;
                 self.catch_all = catch_all;
                 self.everything = everything;
                 for filter in &self.filters {

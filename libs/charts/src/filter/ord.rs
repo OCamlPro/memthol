@@ -86,6 +86,24 @@ where
         }
     }
 
+    pub fn change_cmp_kind(self, kind: Kind) -> Self
+    where
+        Num: Default + Clone,
+    {
+        match self {
+            Self::Cmp { val, .. } => match kind {
+                Kind::Eq => Self::cmp(Cmp::Eq, val),
+                Kind::Ge => Self::cmp(Cmp::Ge, val),
+                Kind::Le => Self::cmp(Cmp::Le, val),
+                Kind::In => Self::In {
+                    lb: val.clone(),
+                    ub: val,
+                },
+            },
+            Self::In { .. } => Self::default_of_cmp(kind),
+        }
+    }
+
     pub fn cmp_kind(&self) -> Kind {
         match self {
             Self::Cmp { cmp: Cmp::Eq, .. } => Kind::Eq,
