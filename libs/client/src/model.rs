@@ -162,7 +162,8 @@ impl Component for Model {
             <>
                 <div class=crate::style::class::FULL_BODY>
                     { self.charts.render(self) }
-                    { self.footer.render(self, &self.filters) }
+                    { layout::footer::nu_footer::render_footer(&self.footer, self, &self.filters) }
+                    // { self.footer.render(self, &self.filters) }
                 </div>
             </>
         }

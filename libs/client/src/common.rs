@@ -46,7 +46,7 @@ pub use crate::{
     point, style,
 };
 
-pub type SVec<T> = smallvec::SmallVec<T>;
+pub type SVec<T> = smallvec::SmallVec<[T; 8]>;
 
 // /// Issues an alert.
 // #[macro_export]

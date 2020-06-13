@@ -56,10 +56,6 @@ mk_buttons! {
     pub fn expand(...) { class = EXPAND }
     /// Creates a refresh button.
     pub fn refresh(...) { class = REFRESH }
-    /// Creates a undo button.
-    pub fn undo(...) { class = UNDO }
-    /// Creates a save button.
-    pub fn save(...) { class = SAVE }
     /// Creates a collapse button.
     pub fn collapse(...) { class= COLLAPSE }
     /// Creates an inactive tickbox button.
