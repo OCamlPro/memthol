@@ -3,7 +3,7 @@
 
 use crate::common::*;
 
-pub mod footer;
+pub mod foot;
 
 pub mod table {
     use super::*;
@@ -59,11 +59,15 @@ pub mod table {
         };
         VALUE_CONTAINER_STYLE = {
             extends(cell_style),
-            width(min 10%)
+            width(min 10%),
+        };
+        TINY_VALUE_CONTAINER_STYLE = {
+            extends(cell_style),
+            width(3%),
         };
         SINGLE_VALUE_CONTAINER_STYLE = {
             extends(cell_style),
-            width(100%)
+            width(100%),
         };
         SEP_CONTAINER_STYLE = {
             extends(cell_style),
@@ -206,6 +210,15 @@ pub mod table {
             self.rgt.push(html! {
                 <div
                     style = VALUE_CONTAINER_STYLE
+                >
+                    {Self::new_cell(value)}
+                </div>
+            })
+        }
+        pub fn push_tiny_value(&mut self, value: Html) {
+            self.rgt.push(html! {
+                <div
+                    style = TINY_VALUE_CONTAINER_STYLE
                 >
                     {Self::new_cell(value)}
                 </div>

@@ -35,6 +35,11 @@ impl Footer {
             }
         }
     }
+
+    /// Renders itself.
+    pub fn render(&self, model: &Model, filters: &filter::Filters) -> Html {
+        layout::foot::render(self, model, filters)
+    }
 }
 
 /// Normal footer tab, *e.g.* not a filter tab.
