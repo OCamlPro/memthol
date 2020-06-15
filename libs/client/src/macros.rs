@@ -238,6 +238,18 @@ macro_rules! css {
         write!($str, "{}", $crate::css!(@arg $val));
         write!($str, concat!(stringify!($unit), "; "));
     }};
+    (@($str:expr) height(min $val:tt $unit:tt)) => {{
+        write!($str, "min-");
+        $crate::css!(@($str) height($val $unit))
+    }};
+    (@($str:expr) height(max $val:tt $unit:tt)) => {{
+        write!($str, "max-");
+        $crate::css!(@($str) height($val $unit))
+    }};
+    (@($str:expr) height(between $min_val:tt $min_unit:tt and $max_val:tt $max_unit:tt)) => {{
+        $crate::css!(@($str) height(min $min_val $min_unit));
+        $crate::css!(@($str) height(max $max_val $max_unit));
+    }};
 
     // #width
     (@($str:expr) width(auto)) => {

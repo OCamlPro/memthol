@@ -5,6 +5,43 @@ use crate::common::*;
 
 pub mod foot;
 
+define_style! {
+    body_style! = {
+        margin(0 px),
+        height(min 100 vh),
+        bg(white),
+        fg(black),
+        border_radius(20 px, 20 px, 0 px, 0 px),
+    };
+
+    COLLAPSED_FOOTER_BODY_STYLE = {
+        extends(body_style),
+        padding(2%, 0%, {foot::collapsed_height_wrt_full}%, 0%),
+    };
+    EXPANDED_FOOTER_BODY_STYLE = {
+        extends(body_style),
+        padding(2%, 0%, {foot::expanded_height_wrt_full}%, 0%),
+    };
+}
+
+pub fn render(model: &Model) -> Html {
+    html! {
+        <>
+            <div
+                class = crate::style::class::FULL_BODY
+                style = if model.footer.is_expanded() {
+                    &*EXPANDED_FOOTER_BODY_STYLE
+                } else {
+                    &*COLLAPSED_FOOTER_BODY_STYLE
+                }
+            >
+                { model.charts.render(model) }
+            </div>
+            { model.footer.render(model, &model.filters) }
+        </>
+    }
+}
+
 pub mod table {
     use super::*;
 

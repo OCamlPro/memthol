@@ -36,6 +36,11 @@ impl Footer {
         }
     }
 
+    /// True if the footer is expanded.
+    pub fn is_expanded(&self) -> bool {
+        self.active.is_some()
+    }
+
     /// Renders itself.
     pub fn render(&self, model: &Model, filters: &filter::Filters) -> Html {
         layout::foot::render(self, model, filters)

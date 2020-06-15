@@ -157,15 +157,7 @@ impl Component for Model {
         }
     }
     fn view(&self) -> Html {
-        info!("rendering model with {} charts", self.charts.len());
-        html! {
-            <>
-                <div class=crate::style::class::FULL_BODY>
-                    { self.charts.render(self) }
-                    { self.footer.render(self, &self.filters) }
-                </div>
-            </>
-        }
+        layout::render(self)
     }
 
     fn mounted(&mut self) -> ShouldRender {
