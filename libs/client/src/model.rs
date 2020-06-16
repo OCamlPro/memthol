@@ -22,6 +22,12 @@ pub struct Model {
 }
 
 impl Model {
+    pub fn filters(&self) -> &filter::Filters {
+        &self.filters
+    }
+}
+
+impl Model {
     /// Activates the websocket to receive data from the server.
     fn activate_ws(
         link: &mut ComponentLink<Self>,

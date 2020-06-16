@@ -37,8 +37,225 @@ pub fn render(model: &Model) -> Html {
             >
                 { model.charts.render(model) }
             </div>
-            { model.footer.render(model, &model.filters) }
+            { model.footer.render(model) }
         </>
+    }
+}
+
+pub mod chart {
+    use super::*;
+
+    const width: usize = 98;
+    const height: usize = 100;
+    const container_height_px: usize = 600;
+
+    const tiles_height_px: usize = 50;
+
+    define_style! {
+        chart_container_style! = {
+            width(100%),
+            height({container_height_px} px),
+            text_align(center),
+        };
+
+        VISIBLE_CHART_CONTAINER_STYLE = {
+            extends(chart_container_style),
+        };
+        HIDDEN_CHART_CONTAINER_STYLE = {
+            extends(chart_container_style),
+            display(none),
+        };
+
+        CHART_STYLE = {
+            width({width}%),
+            height({height}%),
+            border_radius(20 px),
+            border(2 px, black),
+        };
+        CANVAS_STYLE = {
+            width(100%),
+            height(100%)
+        };
+    }
+
+    pub fn render(model: &Model, chart: &Chart) -> Html {
+        html! {
+            <>
+                {tiles::render(model, chart)}
+                {render_chart(model, chart.is_visible(), chart.canvas_id())}
+            </>
+        }
+    }
+
+    pub fn render_chart(_model: &Model, visible: bool, id: &str) -> Html {
+        html! {
+            <div
+                id = "chart container"
+                style = if visible {
+                    &*VISIBLE_CHART_CONTAINER_STYLE
+                } else {
+                    &*HIDDEN_CHART_CONTAINER_STYLE
+                }
+            >
+                <canvas
+                    id = id
+                    style = CHART_STYLE
+                />
+            </div>
+        }
+    }
+
+    pub mod tiles {
+        use super::*;
+        use tabs::{Tabs, NOT_ACTIVE};
+
+        const tab_color: &str = "#accbff";
+        const title_color: &str = "#00b1ff";
+
+        pub fn render(model: &Model, chart: &Chart) -> Html {
+            const left_tile_width: usize = 20;
+            const right_tile_width: usize = left_tile_width;
+            const center_tile_width: usize = 100 - (left_tile_width + right_tile_width);
+
+            define_style! {
+                TOP_TILES = {
+                    height({tiles_height_px} px),
+                    width(100%),
+                };
+
+                LEFT_TILE = {
+                    height(100%),
+                    width({left_tile_width}%),
+                    float(left),
+                    // bg(red)
+                };
+                RIGHT_TILE = {
+                    height(100%),
+                    width({right_tile_width}%),
+                    float(left),
+                    // bg(green)
+                };
+                CENTER_TILE = {
+                    height(100%),
+                    width({center_tile_width}%),
+                    float(left),
+                    // bg(blue)
+                };
+            }
+
+            html! {
+                <div
+                    id = "chart_top_tiles"
+                    style = TOP_TILES
+                >
+                    <div
+                        id = "chart_top_left_tile"
+                        style = LEFT_TILE
+                    >
+                        {render_left_tabs(model, chart)}
+                    </div>
+                    <div
+                        id = "chart_top_center_tile"
+                        style = CENTER_TILE
+                    >
+                        {render_center_tabs(model, chart)}
+                    </div>
+                    <div
+                        id = "chart_top_right_tile"
+                        style = RIGHT_TILE
+                    >
+                        {render_right_tabs(model, chart)}
+                    </div>
+                </div>
+            }
+        }
+
+        pub fn render_center_tabs(model: &Model, chart: &Chart) -> Html {
+            let chart_uid = chart.uid();
+            let mut tabs = Tabs::new();
+
+            tabs.push_tab(
+                model,
+                &chart.spec().desc(),
+                &&*title_color,
+                NOT_ACTIVE,
+                false,
+                model
+                    .link
+                    .callback(move |_| msg::ChartsMsg::toggle_visible(chart_uid)),
+            );
+
+            define_style! {
+                TABS_CONTAINER = {
+                    height(100%),
+                    font_size(150%),
+                };
+            }
+            html! {
+                <center
+                    style = TABS_CONTAINER
+                >
+                    {tabs.render()}
+                </center>
+            }
+        }
+
+        pub fn render_left_tabs(model: &Model, chart: &Chart) -> Html {
+            let chart_uid = chart.uid();
+            let mut tabs = Tabs::new();
+
+            tabs.push_tab(
+                model,
+                "move up",
+                &&*tab_color,
+                NOT_ACTIVE,
+                false,
+                model
+                    .link
+                    .callback(move |_| msg::ChartsMsg::move_down(chart_uid)),
+            );
+            tabs.push_tab(
+                model,
+                "move down",
+                &&*tab_color,
+                NOT_ACTIVE,
+                false,
+                model
+                    .link
+                    .callback(move |_| msg::ChartsMsg::move_up(chart_uid)),
+            );
+
+            define_style! {
+                TABS_CONTAINER = {
+                    height(100%),
+                    float(right),
+                };
+            }
+            html! {
+                <div
+                    style = TABS_CONTAINER
+                >
+                    {tabs.render()}
+                </div>
+            }
+        }
+
+        pub fn render_right_tabs(model: &Model, chart: &Chart) -> Html {
+            let chart_uid = chart.uid();
+
+            let mut tabs = Tabs::new();
+            tabs.push_tab(
+                model,
+                "remove",
+                &&*tab_color,
+                NOT_ACTIVE,
+                false,
+                model
+                    .link
+                    .callback(move |_| msg::ChartsMsg::destroy(chart_uid)),
+            );
+            tabs.render()
+        }
     }
 }
 
@@ -372,6 +589,8 @@ pub mod tabs {
             table cell,
         };
     }
+
+    pub const NOT_ACTIVE: IsActive = IsActive::No;
 
     #[derive(Clone)]
     pub enum IsActive {

@@ -291,6 +291,21 @@ impl Chart {
         self.spec.uid()
     }
 
+    /// True if the chart is visible.
+    pub fn is_visible(&self) -> bool {
+        self.visible
+    }
+
+    /// Chart specification.
+    pub fn spec(&self) -> &ChartSpec {
+        &self.spec
+    }
+
+    /// ID of the chart canvas.
+    pub fn canvas_id(&self) -> &str {
+        &self.canvas
+    }
+
     /// Toggles the visibility of the chart.
     pub fn toggle_visible(&mut self) {
         self.visible = !self.visible
@@ -616,57 +631,14 @@ impl Chart {
 
     /// Renders the chart.
     pub fn render(&self, model: &Model) -> Html {
-        let uid = self.uid();
         html! {
             <g>
-                <center class=style::class::chart::HEADER>
-                    { self.expand_or_collapse_button(model) }
-                    { buttons::move_up(
-                        model,
-                        "Move the chart up",
-                        move |_| msg::ChartsMsg::move_up(uid)
-                    ) }
-                    { buttons::move_down(
-                        model,
-                        "Move the chart down",
-                        move |_| msg::ChartsMsg::move_down(uid)
-                    ) }
-                    { buttons::close(
-                        model,
-                        "Close the chart",
-                        move |_| msg::ChartsMsg::destroy(uid)
-                    ) }
-
-                    <h2> { self.spec.desc() } </h2>
-                </center>
-                <div
-                    class=style::class::chart::style(self.visible)
-                    id={&self.container}
-                >
-                    <canvas
-                        id={&self.canvas}
-                        class=style::class::chart::canvas::style()
-                    />
-                </div>
+                {layout::chart::render(model, self)}
                 { self.render_filters(model) }
                 <br/>
                 <br/>
                 <br/>
             </g>
-        }
-    }
-
-    /// Creates a collapse or expand button depending on whether the chart is visible.
-    fn expand_or_collapse_button(&self, model: &Model) -> Html {
-        let uid = self.uid();
-        if self.visible {
-            buttons::collapse(model, "Collapse the chart", move |_| {
-                msg::ChartsMsg::toggle_visible(uid)
-            })
-        } else {
-            buttons::expand(model, "Expand the chart", move |_| {
-                msg::ChartsMsg::toggle_visible(uid)
-            })
         }
     }
 }

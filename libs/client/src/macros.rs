@@ -92,12 +92,14 @@ macro_rules! css {
     (@display(table row)) => ("table-row");
     (@display(inline block)) => ("inline-block");
     (@display(list item)) => ("list-item");
+    (@display(none)) => ("none");
     (@($str:expr) block) => ($crate::css!(@($str) display(block)));
     (@($str:expr) table) => ($crate::css!(@($str) display(table)));
     (@($str:expr) table cell) => ($crate::css!(@($str) display(table cell)));
     (@($str:expr) table row) => ($crate::css!(@($str) display(table row)));
     (@($str:expr) inline block) => ($crate::css!(@($str) display(inline block)));
     (@($str:expr) list item) => ($crate::css!(@($str) display(list item)));
+    (@($str:expr) none) => ($crate::css!(@($str) display(none)));
 
     // #visi
     (@($str:expr) visi($($args:tt)*)) => {{

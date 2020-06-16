@@ -166,7 +166,7 @@ define_style! {
 }
 
 /// Renders the footer.
-pub fn render(footer: &footer::Footer, model: &Model, filters: &filter::Filters) -> Html {
+pub fn render(footer: &footer::Footer, model: &Model) -> Html {
     match footer.active {
         None => html! {
             <footer
@@ -177,7 +177,7 @@ pub fn render(footer: &footer::Footer, model: &Model, filters: &filter::Filters)
                     id = "collapsed_tabs_tile"
                     style = COLLAPSED_TABS_STYLE
                 >
-                    { tabs::render(model, filters, None) }
+                    { tabs::render(model, None) }
                 </div>
                 <div
                     id = "collapsed_menu_tile"
@@ -196,15 +196,15 @@ pub fn render(footer: &footer::Footer, model: &Model, filters: &filter::Filters)
                         id = "expanded_tabs_tile"
                         style = EXPANDED_TABS_STYLE
                     >
-                        { tabs::render(model, filters, Some(filter_uid)) }
+                        { tabs::render(model, Some(filter_uid)) }
                     </div>
                     <div
                         id = "expanded_menu_tile"
                         style = EXPANDED_MENU_STYLE
                     >
                         {
-                            if let Ok(filter) = filters.get_spec(filter_uid) {
-                                menu::render_filter(model, filter, filters)
+                            if let Ok(filter) = model.filters().get_spec(filter_uid) {
+                                menu::render_filter(model, filter)
                             } else {
                                 html!(<></>)
                             }
@@ -264,11 +264,7 @@ pub mod menu {
         // };
     }
 
-    pub fn render_filter(
-        model: &Model,
-        filter: &filter::FilterSpec,
-        filters: &filter::Filters,
-    ) -> Html {
+    pub fn render_filter(model: &Model, filter: &filter::FilterSpec) -> Html {
         let center = html! {
             <>
                 {settings::render(model, filter)}
@@ -279,7 +275,7 @@ pub mod menu {
                         filter::LineUid::Everything => empty(),
                         filter::LineUid::Filter(uid) => if let Ok(
                             (_index, filter)
-                        ) = filters.get_filter(uid) {
+                        ) = model.filters().get_filter(uid) {
                             subfilters::render(model, filter)
                         } else {
                             empty()
@@ -292,7 +288,7 @@ pub mod menu {
             <>
                 { render_left_tile() }
                 { render_center_tile(center) }
-                { render_right_tile(filter_right_tile::render(model, filter.uid(), filters)) }
+                { render_right_tile(filter_right_tile::render(model, filter.uid())) }
             </>
         }
     }
@@ -340,8 +336,8 @@ pub mod menu {
             };
         }
 
-        pub fn render(model: &Model, uid: filter::LineUid, filters: &filter::Filters) -> Html {
-            let edited = filters.edited();
+        pub fn render(model: &Model, uid: filter::LineUid) -> Html {
+            let edited = model.filters().edited();
             html! {
                 <>
                     <br/><br/>
@@ -819,15 +815,11 @@ pub mod tabs {
     pub const width: usize = 100;
     pub const height: usize = 100;
 
-    pub fn render(
-        model: &Model,
-        filters: &filter::Filters,
-        active: Option<filter::LineUid>,
-    ) -> Html {
+    pub fn render(model: &Model, active: Option<filter::LineUid>) -> Html {
         html! {
             <>
                 { tabs_left::render() }
-                { tabs_center::render(model, filters, active) }
+                { tabs_center::render(model, active) }
                 { tabs_right::render(model) }
             </>
         }
@@ -869,7 +861,7 @@ pub mod tabs {
                 model,
                 "add filter",
                 &"white",
-                layout::tabs::IsActive::No,
+                layout::tabs::NOT_ACTIVE,
                 false,
                 model
                     .link
@@ -905,12 +897,8 @@ pub mod tabs {
             };
         }
 
-        pub fn render(
-            model: &Model,
-            filters: &filter::Filters,
-            active: Option<filter::LineUid>,
-        ) -> Html {
-            let (everything, others) = filters.filters_to_render();
+        pub fn render(model: &Model, active: Option<filter::LineUid>) -> Html {
+            let (everything, others) = model.filters().filters_to_render();
 
             let is_active = |filter: &filter::FilterSpec| {
                 IsActive::of_bool(active.map(|uid| uid == filter.uid()).unwrap_or(false))
@@ -936,7 +924,11 @@ pub mod tabs {
             let push_filter =
                 |tabs: &mut layout::tabs::Tabs, index: usize, filter: &filter::Filter| {
                     let active = is_active(filter.spec()).with_first_last_uid(|| {
-                        (0 < index, index + 1 < filters.filters.len(), filter.uid())
+                        (
+                            0 < index,
+                            index + 1 < model.filters().filters.len(),
+                            filter.uid(),
+                        )
                     });
                     tabs.push_tab(
                         model,

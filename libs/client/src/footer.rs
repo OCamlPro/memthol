@@ -42,8 +42,8 @@ impl Footer {
     }
 
     /// Renders itself.
-    pub fn render(&self, model: &Model, filters: &filter::Filters) -> Html {
-        layout::foot::render(self, model, filters)
+    pub fn render(&self, model: &Model) -> Html {
+        layout::foot::render(self, model)
     }
 }
 
