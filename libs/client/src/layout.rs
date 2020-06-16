@@ -48,35 +48,9 @@ pub mod chart {
     const width: usize = 98;
     const height: usize = 100;
     const container_height_px: usize = 600;
+    const hidden_container_height_px: usize = 42;
 
     const tiles_height_px: usize = 50;
-
-    define_style! {
-        chart_container_style! = {
-            width(100%),
-            height({container_height_px} px),
-            text_align(center),
-        };
-
-        VISIBLE_CHART_CONTAINER_STYLE = {
-            extends(chart_container_style),
-        };
-        HIDDEN_CHART_CONTAINER_STYLE = {
-            extends(chart_container_style),
-            display(none),
-        };
-
-        CHART_STYLE = {
-            width({width}%),
-            height({height}%),
-            border_radius(20 px),
-            border(2 px, black),
-        };
-        CANVAS_STYLE = {
-            width(100%),
-            height(100%)
-        };
-    }
 
     pub fn render(model: &Model, chart: &Chart) -> Html {
         html! {
@@ -88,18 +62,55 @@ pub mod chart {
     }
 
     pub fn render_chart(_model: &Model, visible: bool, id: &str) -> Html {
+        define_style! {
+            chart_container_style! = {
+                width(100%),
+                text_align(center),
+            };
+
+            CHART_CONTAINER_STYLE = {
+                extends(chart_container_style),
+                height({container_height_px} px),
+            };
+            HIDDEN_CHART_CONTAINER_STYLE = {
+                extends(chart_container_style),
+                height({hidden_container_height_px} px),
+            };
+
+            chart_style! = {
+                border_radius(20 px),
+                border(2 px, black),
+                width({width}%),
+                height({height}%),
+            };
+            CHART_STYLE = {
+                extends(chart_style),
+            };
+            HIDDEN_CHART_STYLE = {
+                extends(chart_style),
+            };
+        }
+
         html! {
             <div
                 id = "chart container"
                 style = if visible {
-                    &*VISIBLE_CHART_CONTAINER_STYLE
+                    &*CHART_CONTAINER_STYLE
                 } else {
                     &*HIDDEN_CHART_CONTAINER_STYLE
                 }
             >
                 <canvas
-                    id = id
-                    style = CHART_STYLE
+                    id = if visible {
+                        id.to_string()
+                    } else {
+                        format!("{}_inactive", id)
+                    }
+                    style = if visible {
+                        &*CHART_STYLE
+                    } else {
+                        &*HIDDEN_CHART_STYLE
+                    }
                 />
             </div>
         }
@@ -206,16 +217,6 @@ pub mod chart {
 
             tabs.push_tab(
                 model,
-                "move up",
-                &&*tab_color,
-                NOT_ACTIVE,
-                false,
-                model
-                    .link
-                    .callback(move |_| msg::ChartsMsg::move_down(chart_uid)),
-            );
-            tabs.push_tab(
-                model,
                 "move down",
                 &&*tab_color,
                 NOT_ACTIVE,
@@ -223,6 +224,19 @@ pub mod chart {
                 model
                     .link
                     .callback(move |_| msg::ChartsMsg::move_up(chart_uid)),
+            );
+
+            tabs.push_sep();
+
+            tabs.push_tab(
+                model,
+                "move up",
+                &&*tab_color,
+                NOT_ACTIVE,
+                false,
+                model
+                    .link
+                    .callback(move |_| msg::ChartsMsg::move_down(chart_uid)),
             );
 
             define_style! {

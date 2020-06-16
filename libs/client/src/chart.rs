@@ -353,23 +353,26 @@ impl Chart {
     ///
     /// Also, makes the chart visible.
     pub fn build_chart(&mut self) -> Res<()> {
-        info!("building chart");
-        if self.chart.is_some() {
-            bail!("asked to build and bind a chart that's already built and binded")
+        if self.visible {
+            info!("building chart");
+            if self.chart.is_some() {
+                bail!("asked to build and bind a chart that's already built and binded")
+            }
+
+            self.mounted();
+
+            let backend: CanvasBackend =
+                plotters::prelude::CanvasBackend::new(&self.canvas).expect("could not find canvas");
+
+            // let (width, height) = backend.get_size();
+            // info!("backend: {}/{}", width, height);
+
+            let chart: DrawingArea<CanvasBackend, plotters::coord::Shift> =
+                backend.into_drawing_area();
+            chart.fill(&WHITE).unwrap();
+
+            self.chart = Some(chart);
         }
-
-        self.mounted();
-
-        let backend: CanvasBackend =
-            plotters::prelude::CanvasBackend::new(&self.canvas).expect("could not find canvas");
-
-        // let (width, height) = backend.get_size();
-        // info!("backend: {}/{}", width, height);
-
-        let chart: DrawingArea<CanvasBackend, plotters::coord::Shift> = backend.into_drawing_area();
-        chart.fill(&WHITE).unwrap();
-
-        self.chart = Some(chart);
 
         Ok(())
     }
@@ -554,39 +557,44 @@ impl Chart {
 /// # Rendering
 impl Chart {
     pub fn mounted(&mut self) -> ShouldRender {
-        let document = web_sys::window()
-            .expect("could not retrieve document window")
-            .document()
-            .expect("could not retrieve document from window");
-        let canvas = document
-            .get_element_by_id(&self.canvas)
-            .expect("could not retrieve chart canvas");
+        if self.visible {
+            let document = web_sys::window()
+                .expect("could not retrieve document window")
+                .document()
+                .expect("could not retrieve document from window");
 
-        let (width, height) = (
-            match canvas.client_width() {
-                n if n >= 0 => n as u32,
-                _ => {
-                    alert!("An error occured while resizing a chart's canvas: negative width.");
-                    panic!("fatal")
-                }
-            },
-            match canvas.client_height() {
-                n if n >= 0 => n as u32,
-                _ => {
-                    alert!("An error occured while resizing a chart's canvas: negative height.");
-                    panic!("fatal")
-                }
-            },
-        );
+            let canvas = document
+                .get_element_by_id(&self.canvas)
+                .expect("could not retrieve chart canvas");
 
-        use wasm_bindgen::JsCast;
-        let html_canvas: web_sys::HtmlCanvasElement = canvas.clone().dyn_into().unwrap();
+            let (width, height) = (
+                match canvas.client_width() {
+                    n if n >= 0 => n as u32,
+                    _ => {
+                        alert!("An error occured while resizing a chart's canvas: negative width.");
+                        panic!("fatal")
+                    }
+                },
+                match canvas.client_height() {
+                    n if n >= 0 => n as u32,
+                    _ => {
+                        alert!(
+                            "An error occured while resizing a chart's canvas: negative height."
+                        );
+                        panic!("fatal")
+                    }
+                },
+            );
 
-        if html_canvas.width() != width {
-            html_canvas.set_width(width)
-        }
-        if html_canvas.height() != height {
-            html_canvas.set_height(height)
+            use wasm_bindgen::JsCast;
+            let html_canvas: web_sys::HtmlCanvasElement = canvas.clone().dyn_into().unwrap();
+
+            if html_canvas.width() != width {
+                html_canvas.set_width(width)
+            }
+            if html_canvas.height() != height {
+                html_canvas.set_height(height)
+            }
         }
 
         false
