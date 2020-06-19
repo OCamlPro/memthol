@@ -98,14 +98,14 @@ pub mod input {
 
 pub const width_wrt_full: usize = 100;
 
-pub const collapsed_height_wrt_full: usize = 4;
-pub const expanded_height_wrt_full: usize = 40;
+pub const collapsed_height_px: usize = 50;
+pub const expanded_height_px: usize = 500;
 
-pub const expanded_tabs_height: usize = expanded_height_wrt_full / collapsed_height_wrt_full;
-pub const expanded_menu_height: usize = 100 - expanded_tabs_height;
+pub const expanded_tabs_height_px: usize = collapsed_height_px;
+pub const expanded_menu_height_px: usize = expanded_height_px - expanded_tabs_height_px;
 
-pub const collapsed_tabs_height: usize = 100;
-pub const collapsed_menu_height: usize = 0;
+pub const collapsed_tabs_height_px: usize = collapsed_height_px;
+pub const collapsed_menu_height_px: usize = collapsed_height_px - collapsed_tabs_height_px;
 
 pub const center_tile_width: usize = 70;
 pub const left_tile_width: usize = (width_wrt_full - center_tile_width) / 2;
@@ -115,7 +115,7 @@ define_style! {
     footer_style! = {
         font(default),
         fg(black),
-        bg(white),
+        bg(transparent),
         fixed(bottom),
         z_index(600),
         width({width_wrt_full}%),
@@ -124,12 +124,12 @@ define_style! {
 
     COLLAPSED_STYLE = {
         extends(footer_style),
-        height({collapsed_height_wrt_full}%)
+        height({collapsed_height_px}px)
     };
 
     EXPANDED_STYLE = {
         extends(footer_style),
-        height({expanded_height_wrt_full}%)
+        height({expanded_height_px}px)
     };
 
     tabs_style! = {
@@ -138,11 +138,11 @@ define_style! {
     };
     COLLAPSED_TABS_STYLE = {
         extends(tabs_style),
-        height({collapsed_tabs_height}%),
+        height({collapsed_tabs_height_px}px),
     };
     EXPANDED_TABS_STYLE = {
         extends(tabs_style),
-        height({expanded_tabs_height}%),
+        height({expanded_tabs_height_px}px),
     };
 
     menu_style! = {
@@ -161,7 +161,7 @@ define_style! {
     };
     EXPANDED_MENU_STYLE = {
         extends(menu_style),
-        height({expanded_menu_height}%),
+        height({expanded_menu_height_px}px),
     };
 }
 
@@ -203,7 +203,7 @@ pub fn render(footer: &footer::Footer, model: &Model) -> Html {
                         style = EXPANDED_MENU_STYLE
                     >
                         {
-                            if let Ok(filter) = model.filters().get_spec(filter_uid) {
+                            if let Ok(filter) = model.footer_filters().get_spec(filter_uid) {
                                 menu::render_filter(model, filter)
                             } else {
                                 html!(<></>)
@@ -275,7 +275,7 @@ pub mod menu {
                         filter::LineUid::Everything => empty(),
                         filter::LineUid::Filter(uid) => if let Ok(
                             (_index, filter)
-                        ) = model.filters().get_filter(uid) {
+                        ) = model.footer_filters().get_filter(uid) {
                             subfilters::render(model, filter)
                         } else {
                             empty()
@@ -337,7 +337,7 @@ pub mod menu {
         }
 
         pub fn render(model: &Model, uid: filter::LineUid) -> Html {
-            let edited = model.filters().edited();
+            let edited = model.footer_filters().edited();
             html! {
                 <>
                     <br/><br/>
@@ -811,6 +811,7 @@ pub mod menu {
 
 pub mod tabs {
     use super::*;
+    use layout::tabs::TabProps;
 
     pub const width: usize = 100;
     pub const height: usize = 100;
@@ -860,9 +861,7 @@ pub mod tabs {
             tabs.push_tab(
                 model,
                 "add filter",
-                &"white",
-                layout::tabs::NOT_ACTIVE,
-                false,
+                TabProps::new("white"),
                 model
                     .link
                     .callback(move |_| msg::to_server::FiltersMsg::request_new()),
@@ -881,8 +880,6 @@ pub mod tabs {
     pub mod tabs_center {
         use super::*;
 
-        use layout::tabs::IsActive;
-
         define_style! {
             CENTER_STYLE = {
                 extends(tile_style),
@@ -898,10 +895,10 @@ pub mod tabs {
         }
 
         pub fn render(model: &Model, active: Option<filter::LineUid>) -> Html {
-            let (everything, others) = model.filters().filters_to_render();
+            let (everything, others) = model.footer_filters().filters_to_render();
 
             let is_active = |filter: &filter::FilterSpec| {
-                IsActive::of_bool(active.map(|uid| uid == filter.uid()).unwrap_or(false))
+                active.map(|uid| uid == filter.uid()).unwrap_or(false)
             };
             let callback = |uid: filter::LineUid| {
                 model
@@ -914,28 +911,28 @@ pub mod tabs {
                     tabs.push_tab(
                         model,
                         filter.name(),
-                        filter.color(),
-                        is_active(filter),
-                        edited || filter.edited(),
+                        TabProps::new(filter.color().to_string())
+                            .set_active(is_active(filter))
+                            .set_edited(edited || filter.edited()),
                         callback(filter.uid()),
                     )
                 };
 
             let push_filter =
                 |tabs: &mut layout::tabs::Tabs, index: usize, filter: &filter::Filter| {
-                    let active = is_active(filter.spec()).with_first_last_uid(|| {
-                        (
-                            0 < index,
-                            index + 1 < model.filters().filters.len(),
-                            filter.uid(),
-                        )
-                    });
                     tabs.push_tab(
                         model,
                         filter.spec().name(),
-                        filter.spec().color(),
-                        active,
-                        filter.edited() || filter.spec().edited(),
+                        TabProps::new(filter.spec().color().to_string())
+                            .set_active(is_active(filter.spec()))
+                            .with_first_last_uid(|| {
+                                (
+                                    0 < index,
+                                    index + 1 < model.footer_filters().filters.len(),
+                                    filter.uid(),
+                                )
+                            })
+                            .set_edited(filter.edited() || filter.spec().edited()),
                         callback(filter.spec().uid()),
                     )
                 };

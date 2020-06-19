@@ -28,8 +28,11 @@ impl FilterRenderInfo {
     }
 }
 
+pub type ReferenceFilters = FiltersExt<()>;
+pub type Filters = FiltersExt<ReferenceFilters>;
+
 /// Stores all the filters.
-pub struct Filters {
+pub struct FiltersExt<Reference> {
     /// Sends messages to the model.
     to_model: Callback<Msg>,
     /// Catch-all filter.
@@ -40,20 +43,44 @@ pub struct Filters {
     pub filters: Vec<Filter>,
     /// True if a filter was (re)moved and the server was not notified.
     edited: bool,
+    /// Reference filters, if any.
+    reference: Reference,
+}
+
+impl ReferenceFilters {
+    /// Constructor.
+    fn new_reference(to_model: Callback<Msg>) -> Self {
+        FiltersExt {
+            to_model,
+            catch_all: FilterSpec::new_catch_all(),
+            everything: FilterSpec::new_everything(),
+            filters: Vec::new(),
+            edited: false,
+            reference: (),
+        }
+    }
 }
 
 impl Filters {
     /// Constructor.
     pub fn new(to_model: Callback<Msg>) -> Self {
         Filters {
-            to_model,
+            to_model: to_model.clone(),
             catch_all: FilterSpec::new_catch_all(),
             everything: FilterSpec::new_everything(),
             filters: Vec::new(),
             edited: false,
+            reference: ReferenceFilters::new_reference(to_model),
         }
     }
 
+    /// Reference filters.
+    pub fn reference_filters(&self) -> &ReferenceFilters {
+        &self.reference
+    }
+}
+
+impl<T> FiltersExt<T> {
     /// True if at least one filter was edited.
     pub fn edited(&self) -> bool {
         if self.edited || self.everything.edited() || self.catch_all.edited() {
@@ -162,18 +189,28 @@ impl Filters {
     }
 }
 
-/// # Internal message handling
 impl Filters {
+    /// Propagates all filters to the reference filters.
+    fn save_all(&mut self) {
+        let reference = &mut self.reference;
+        reference.everything = self.everything.clone();
+        reference.catch_all = self.catch_all.clone();
+        reference.filters = self.filters.clone();
+    }
+
     /// Applies a filter operation.
     pub fn update(&mut self, msg: msg::FiltersMsg) -> Res<ShouldRender> {
         use msg::{FilterSpecMsg::*, FiltersMsg::*};
         match msg {
             Save => {
                 self.edited = false;
+
                 let catch_all = self.catch_all.clone();
                 self.catch_all.unset_edited();
+
                 let everything = self.everything.clone();
                 self.everything.unset_edited();
+
                 let mut filters = Vec::with_capacity(self.filters.len());
 
                 for filter in &mut self.filters {
@@ -184,6 +221,11 @@ impl Filters {
                 self.to_model.emit(
                     msg::to_server::FiltersMsg::update_all(everything, filters, catch_all).into(),
                 );
+
+                self.save_all();
+
+                self.to_model.emit(msg::ChartsMsg::refresh_filters());
+
                 Ok(true)
             }
 
@@ -239,7 +281,10 @@ impl Filters {
             }
         }
     }
+}
 
+/// # Internal message handling
+impl<T> FiltersExt<T> {
     /// Sends a message to the model to refresh the filters of all charts.
     pub fn send_refresh_filters(&self) {
         self.to_model.emit(msg::ChartsMsg::refresh_filters())
@@ -315,7 +360,9 @@ impl Filters {
             UpdateSpecs(specs) => self.update_specs(specs),
         }
     }
+}
 
+impl<T> FiltersExt<T> {
     /// Adds a filter in the map.
     ///
     /// - makes the new filter active;

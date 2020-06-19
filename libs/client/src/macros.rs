@@ -93,6 +93,7 @@ macro_rules! css {
     (@display(inline block)) => ("inline-block");
     (@display(list item)) => ("list-item");
     (@display(none)) => ("none");
+    (@display(flex)) => ("flex");
     (@($str:expr) block) => ($crate::css!(@($str) display(block)));
     (@($str:expr) table) => ($crate::css!(@($str) display(table)));
     (@($str:expr) table cell) => ($crate::css!(@($str) display(table cell)));
@@ -100,6 +101,7 @@ macro_rules! css {
     (@($str:expr) inline block) => ($crate::css!(@($str) display(inline block)));
     (@($str:expr) list item) => ($crate::css!(@($str) display(list item)));
     (@($str:expr) none) => ($crate::css!(@($str) display(none)));
+    (@($str:expr) flex) => ($crate::css!(@($str) display(flex)));
 
     // #visi
     (@($str:expr) visi($($args:tt)*)) => {{
@@ -373,6 +375,7 @@ macro_rules! css {
             $spread:tt $spread_unit:tt,
             $color:tt
             $(, inset $($dont_care:ident)?)?
+            $(,)?
         );* $(;)?
     )) => {{
         write!(
@@ -399,6 +402,16 @@ macro_rules! css {
         )*
         write!($str, "; ");
     }};
+
+    // #justify_content
+    (@($str:expr) justify_content($pos:tt)) => (
+        write!($str, "justify-content: ");
+        write!($str, "{}", $crate::css!(@text_align($pos)));
+        write!($str, "; ");
+    );
+    (@justify_content(center)) => ("center");
+    (@justify_content(left)) => ("left");
+    (@justify_content(right)) => ("right");
 
     // #text_align
     (@($str:expr) text_align($pos:tt)) => (

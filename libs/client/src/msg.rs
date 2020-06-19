@@ -52,6 +52,23 @@ impl Msg {
     }
 }
 
+impl fmt::Display for Msg {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::FromServer(_) => write!(fmt, "from the server"),
+            Self::ToServer(_) => write!(fmt, "for the server"),
+            Self::ConnectionStatus(_) => write!(fmt, "connection status"),
+            Self::Charts(charts_msg) => write!(fmt, "charts, {}", charts_msg),
+            Self::Footer(footer_msg) => write!(fmt, "footer, {}", footer_msg),
+            Self::Filter(filter_msg) => write!(fmt, "filter, {}", filter_msg),
+            Self::Msg(_) => write!(fmt, "info"),
+            Self::Warn(_) => write!(fmt, "warning"),
+            Self::Err(_) => write!(fmt, "error"),
+            Self::Noop => write!(fmt, "noop"),
+        }
+    }
+}
+
 impl From<String> for Msg {
     fn from(s: String) -> Self {
         Self::Msg(s)
@@ -106,6 +123,9 @@ pub enum ChartsMsg {
     },
     /// Toggles the visibility of a chart.
     ToggleVisible(ChartUid),
+    /// Toggles the visibility of a filter for a chart.
+    FilterToggleVisible(ChartUid, LineUid),
+
     /// Destroys a chart.
     Destroy(ChartUid),
 
@@ -128,11 +148,15 @@ impl ChartsMsg {
     }
     /// Constructs a message to move a chart down.
     pub fn move_down(uid: ChartUid) -> Msg {
-        Self::Move { uid, up: true }.into()
+        Self::Move { uid, up: false }.into()
     }
     /// Constructs a message to toggle the visibility of a chart.
     pub fn toggle_visible(uid: ChartUid) -> Msg {
         Self::ToggleVisible(uid).into()
+    }
+    /// Constructs a message to toggle the visibility of filter for a chart.
+    pub fn filter_toggle_visible(chart_uid: ChartUid, filter_uid: LineUid) -> Msg {
+        Self::FilterToggleVisible(chart_uid, filter_uid).into()
     }
     /// Constructs a message to destroy a chart.
     pub fn destroy(uid: ChartUid) -> Msg {
@@ -154,6 +178,23 @@ impl ChartsMsg {
     }
 }
 
+impl fmt::Display for ChartsMsg {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Build(uid) => write!(fmt, "build {}", uid),
+            Self::Move { uid, up } => write!(fmt, "move {}/{}", uid, up),
+            Self::ToggleVisible(c_uid) => write!(fmt, "toggle visible {}", c_uid),
+            Self::FilterToggleVisible(c_uid, l_uid) => {
+                write!(fmt, "filter toggle visible {} for chart {}", l_uid, c_uid)
+            }
+            Self::Destroy(c_uid) => write!(fmt, "destroy {}", c_uid),
+            Self::RefreshFilters => write!(fmt, "refresh filters"),
+            Self::NewChartSetX(_) => write!(fmt, "new-chart-set-x"),
+            Self::NewChartSetY(_) => write!(fmt, "new-chart-set-y"),
+        }
+    }
+}
+
 /// Footer operation.
 #[derive(Debug)]
 pub enum FooterMsg {
@@ -170,6 +211,15 @@ impl FooterMsg {
     /// Lets the footer know a filter was removed.
     pub fn removed(uid: FilterUid) -> Msg {
         Self::Removed(uid).into()
+    }
+}
+
+impl fmt::Display for FooterMsg {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::ToggleTab(_) => write!(fmt, "toggle tab"),
+            Self::Removed(f_uid) => write!(fmt, "remove {}", f_uid),
+        }
     }
 }
 
@@ -196,6 +246,18 @@ pub enum FiltersMsg {
     },
     /// Moves a filter left or right.
     Move { uid: FilterUid, left: bool },
+}
+
+impl fmt::Display for FiltersMsg {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Save => write!(fmt, "save"),
+            Self::Rm(f_uid) => write!(fmt, "rm {}", f_uid),
+            Self::FilterSpec { uid, msg } => write!(fmt, "filter spec {}, {}", uid, msg),
+            Self::Filter { uid, msg } => write!(fmt, "filter {}, {}", uid, msg),
+            Self::Move { uid, left } => write!(fmt, "move {} ({})", uid, left),
+        }
+    }
 }
 impl FiltersMsg {
     /// Updates a filter on the server.
@@ -238,6 +300,15 @@ impl FilterSpecMsg {
     }
 }
 
+impl fmt::Display for FilterSpecMsg {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::ChangeName(_) => write!(fmt, "change name"),
+            Self::ChangeColor(_) => write!(fmt, "change color"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum FilterMsg {
     /// Adds a new subfilter.
@@ -259,5 +330,15 @@ impl FilterMsg {
     /// Removes a subfilter.
     pub fn rm_sub(uid: FilterUid, sub_uid: filter::SubFilterUid) -> Msg {
         FiltersMsg::filter(uid, Self::RmSub(sub_uid))
+    }
+}
+
+impl fmt::Display for FilterMsg {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::AddNew => write!(fmt, "add new"),
+            Self::Sub(_) => write!(fmt, "subfilter update"),
+            Self::RmSub(_) => write!(fmt, "remove subfilter"),
+        }
     }
 }

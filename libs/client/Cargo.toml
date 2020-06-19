@@ -26,7 +26,7 @@ serde = "*"
 smallvec = "*"
 strum = "*"
 strum_macros = "*"
-typed-html = { version = "*" }
+typed-html = { git = "https://github.com/bodil/typed-html" }
 wasm-logger = "*"
 wasm-bindgen = "*"
 web-sys = { version = "*", features = [

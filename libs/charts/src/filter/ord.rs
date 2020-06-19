@@ -36,7 +36,7 @@ impl Cmp {
         match self {
             Self::Eq => lhs == rhs,
             Self::Ge => lhs >= rhs,
-            Self::Le => lhs <= lhs,
+            Self::Le => lhs <= rhs,
         }
     }
 

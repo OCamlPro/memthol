@@ -22,8 +22,14 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn filters(&self) -> &filter::Filters {
+    pub fn filters(&self) -> &filter::ReferenceFilters {
+        self.filters.reference_filters()
+    }
+    pub fn footer_filters(&self) -> &filter::Filters {
         &self.filters
+    }
+    pub fn charts(&self) -> &Charts {
+        &self.charts
     }
 }
 
@@ -54,9 +60,9 @@ impl Model {
 
     /// Handles a message from the server.
     pub fn handle_server_msg(&mut self, msg: Res<msg::from_server::Msg>) -> Res<ShouldRender> {
-        info!("handling incoming message from server");
         use msg::from_server::*;
         let msg = msg?;
+        info!("handling incoming message from server");
         match msg {
             Msg::Info => Ok(false),
             Msg::Alert { msg } => {
@@ -68,8 +74,6 @@ impl Model {
                 res
             }
             Msg::Filters(msg) => self.filters.server_update(msg),
-            // Msg::Charts(_) => todo!("chart msgs"),
-            // Msg::Filters(_) => todo!("filter msgs"),
         }
     }
 }
@@ -110,7 +114,7 @@ impl Component for Model {
     }
 
     fn update(&mut self, msg: Msg) -> ShouldRender {
-        info!("handling internal message");
+        info!("handling internal message ({})", msg);
         match msg {
             // Messages to/from the server.
             Msg::FromServer(msg) => {

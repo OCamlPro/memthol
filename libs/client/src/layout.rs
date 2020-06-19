@@ -16,11 +16,11 @@ define_style! {
 
     COLLAPSED_FOOTER_BODY_STYLE = {
         extends(body_style),
-        padding(2%, 0%, {foot::collapsed_height_wrt_full}%, 0%),
+        padding(2%, 0%, {foot::collapsed_height_px}px, 0%),
     };
     EXPANDED_FOOTER_BODY_STYLE = {
         extends(body_style),
-        padding(2%, 0%, {foot::expanded_height_wrt_full}%, 0%),
+        padding(2%, 0%, {foot::expanded_height_px}px, 0%),
     };
 }
 
@@ -35,7 +35,11 @@ pub fn render(model: &Model) -> Html {
                     &*COLLAPSED_FOOTER_BODY_STYLE
                 }
             >
-                { model.charts.render(model) }
+                <g
+                    id = model.charts().dom_node_id()
+                >
+                    { model.charts.render(model) }
+                </g>
             </div>
             { model.footer.render(model) }
         </>
@@ -45,71 +49,92 @@ pub fn render(model: &Model) -> Html {
 pub mod chart {
     use super::*;
 
+    const border_size_px: usize = 2;
+
     const width: usize = 98;
-    const height: usize = 100;
-    const container_height_px: usize = 600;
-    const hidden_container_height_px: usize = 42;
+    const chart_height_px: usize = 500;
+    const collapsed_chart_height_px: usize = 40;
 
     const tiles_height_px: usize = 50;
+    const filter_toggles_height_px: usize = 30;
 
     pub fn render(model: &Model, chart: &Chart) -> Html {
+        info!(
+            "rendering chart {}, visible: {}",
+            chart.uid(),
+            chart.is_visible()
+        );
         html! {
-            <>
+            <g
+                id = chart.container_id()
+            >
                 {tiles::render(model, chart)}
-                {render_chart(model, chart.is_visible(), chart.canvas_id())}
-            </>
+                {render_chart(model, chart)}
+                {filter_toggles::render(model, chart)}
+            </g>
         }
     }
+    define_style! {
+        CHART_CONTAINER_STYLE = {
+            width(100%),
+            justify_content(center),
+            display(flex),
+        };
 
-    pub fn render_chart(_model: &Model, visible: bool, id: &str) -> Html {
-        define_style! {
-            chart_container_style! = {
-                width(100%),
-                text_align(center),
-            };
+        generic_chart_style! = {
+            border_radius(20 px),
+            border({border_size_px} px, black),
+            width({width}%),
+        };
+        chart_style! = {
+            extends(generic_chart_style),
+            height({chart_height_px} px),
+        };
+        CHART_STYLE = {
+            extends(chart_style),
+        };
+        HIDDEN_CHART_STYLE = {
+            extends(chart_style),
+            display(none),
+        };
 
-            CHART_CONTAINER_STYLE = {
-                extends(chart_container_style),
-                height({container_height_px} px),
-            };
-            HIDDEN_CHART_CONTAINER_STYLE = {
-                extends(chart_container_style),
-                height({hidden_container_height_px} px),
-            };
+        collapsed_chart_style! = {
+            extends(generic_chart_style),
+            height({collapsed_chart_height_px} px),
+            bg({"#777777"})
+        };
+        COLLAPSED_CHART_STYLE = {
+            extends(collapsed_chart_style),
+        };
+        HIDDEN_COLLAPSED_CHART_STYLE = {
+            extends(collapsed_chart_style),
+            display(none),
+        };
+    }
 
-            chart_style! = {
-                border_radius(20 px),
-                border(2 px, black),
-                width({width}%),
-                height({height}%),
-            };
-            CHART_STYLE = {
-                extends(chart_style),
-            };
-            HIDDEN_CHART_STYLE = {
-                extends(chart_style),
-            };
-        }
-
+    pub fn render_chart(_model: &Model, chart: &chart::Chart) -> Html {
+        let visible = chart.is_visible();
+        let canvas_id = chart.canvas_id();
+        let collapsed_canvas_id = chart.collapsed_canvas_id();
         html! {
             <div
-                id = "chart container"
-                style = if visible {
-                    &*CHART_CONTAINER_STYLE
-                } else {
-                    &*HIDDEN_CHART_CONTAINER_STYLE
-                }
+                id = "chart_canvas_container"
+                style = CHART_CONTAINER_STYLE
             >
                 <canvas
-                    id = if visible {
-                        id.to_string()
-                    } else {
-                        format!("{}_inactive", id)
-                    }
+                    id = canvas_id
                     style = if visible {
                         &*CHART_STYLE
                     } else {
                         &*HIDDEN_CHART_STYLE
+                    }
+                />
+                <canvas
+                    id = collapsed_canvas_id
+                    style = if visible {
+                        &*HIDDEN_COLLAPSED_CHART_STYLE
+                    } else {
+                        &*COLLAPSED_CHART_STYLE
                     }
                 />
             </div>
@@ -118,7 +143,7 @@ pub mod chart {
 
     pub mod tiles {
         use super::*;
-        use tabs::{Tabs, NOT_ACTIVE};
+        use tabs::{TabProps, Tabs};
 
         const tab_color: &str = "#accbff";
         const title_color: &str = "#00b1ff";
@@ -188,9 +213,7 @@ pub mod chart {
             tabs.push_tab(
                 model,
                 &chart.spec().desc(),
-                &&*title_color,
-                NOT_ACTIVE,
-                false,
+                TabProps::new(&*title_color),
                 model
                     .link
                     .callback(move |_| msg::ChartsMsg::toggle_visible(chart_uid)),
@@ -218,12 +241,10 @@ pub mod chart {
             tabs.push_tab(
                 model,
                 "move down",
-                &&*tab_color,
-                NOT_ACTIVE,
-                false,
+                TabProps::new(&*tab_color),
                 model
                     .link
-                    .callback(move |_| msg::ChartsMsg::move_up(chart_uid)),
+                    .callback(move |_| msg::ChartsMsg::move_down(chart_uid)),
             );
 
             tabs.push_sep();
@@ -231,12 +252,10 @@ pub mod chart {
             tabs.push_tab(
                 model,
                 "move up",
-                &&*tab_color,
-                NOT_ACTIVE,
-                false,
+                TabProps::new(&*tab_color),
                 model
                     .link
-                    .callback(move |_| msg::ChartsMsg::move_down(chart_uid)),
+                    .callback(move |_| msg::ChartsMsg::move_up(chart_uid)),
             );
 
             define_style! {
@@ -261,14 +280,103 @@ pub mod chart {
             tabs.push_tab(
                 model,
                 "remove",
-                &&*tab_color,
-                NOT_ACTIVE,
-                false,
+                TabProps::new(&*tab_color),
                 model
                     .link
                     .callback(move |_| msg::ChartsMsg::destroy(chart_uid)),
             );
             tabs.render()
+        }
+    }
+
+    pub mod filter_toggles {
+        use super::*;
+        use tabs::{TabProps, Tabs};
+
+        pub fn render(model: &Model, chart: &Chart) -> Html {
+            define_style! {
+                TOGGLE_BAR = {
+                    width(100%),
+                    height({filter_toggles_height_px} px),
+                    text_align(center),
+                    // bg(red),
+                };
+                TOGGLE_CONTAINER = {
+                    height(100%),
+                };
+            }
+
+            let chart_uid = chart.uid();
+
+            info!("filter visiblity:");
+            for (uid, visible) in chart.filter_visibility() {
+                info!("- {}: {}", uid, visible)
+            }
+
+            let is_active = |spec: &filter::FilterSpec| {
+                chart
+                    .filter_visibility()
+                    .get(&spec.uid())
+                    .cloned()
+                    .unwrap_or(false)
+            };
+            let callback = |spec: &filter::FilterSpec| {
+                let uid = spec.uid();
+                model
+                    .link
+                    .callback(move |_| msg::ChartsMsg::filter_toggle_visible(chart_uid, uid))
+            };
+
+            let mut tabs = Tabs::new();
+
+            let (everything, other_opt) = model.filters().filters_to_render();
+
+            if let Some((catch_all, others)) = other_opt {
+                tabs.push_tab(
+                    model,
+                    everything.name(),
+                    TabProps::new(everything.color().to_string())
+                        .set_dimmed(!is_active(everything))
+                        .set_rev(),
+                    callback(everything),
+                );
+
+                tabs.push_sep();
+
+                for filter in others {
+                    let spec = filter.spec();
+                    tabs.push_tab(
+                        model,
+                        spec.name(),
+                        TabProps::new(spec.color().to_string())
+                            .set_dimmed(!is_active(spec))
+                            .set_rev(),
+                        callback(spec),
+                    );
+                }
+
+                tabs.push_sep();
+                tabs.push_tab(
+                    model,
+                    catch_all.name(),
+                    TabProps::new(catch_all.color().to_string())
+                        .set_dimmed(!is_active(catch_all))
+                        .set_rev(),
+                    callback(catch_all),
+                );
+            }
+
+            html! {
+                <div
+                    style = TOGGLE_BAR
+                >
+                    <center
+                        style = TOGGLE_CONTAINER
+                    >
+                        {tabs.render()}
+                    </center>
+                </div>
+            }
         }
     }
 }
@@ -554,21 +662,42 @@ pub mod tabs {
             table_layout(fixed),
         };
 
-        no_color_tab_style! = {
+        raw_tab_style! = {
             height(100%),
             width(auto),
             table,
             text_align(center),
+        };
+
+        no_color_tab_style! = {
+            extends(raw_tab_style),
             border_radius(5 px, 5 px, 0 px, 0 px),
             border(left, 1 px, black),
             border(right, 1 px, black),
             border(top, 1 px, black),
         };
-        no_color_active_tab_style! = {
-            extends(no_color_tab_style),
+        no_color_rev_tab_style! = {
+            extends(raw_tab_style),
+            border_radius(0 px, 0 px, 5 px, 5 px),
+            border(left, 1 px, black),
+            border(right, 1 px, black),
+            border(bottom, 1 px, black),
+        };
+
+        raw_active_tab_style! = {
             pos(relative),
             z_index(650),
         };
+
+        no_color_active_tab_style! = {
+            extends(no_color_tab_style),
+            extends(raw_active_tab_style),
+        };
+        no_color_active_rev_tab_style! = {
+            extends(no_color_rev_tab_style),
+            extends(raw_active_tab_style),
+        };
+
         edited_tab_style! = {
             italic,
         };
@@ -580,16 +709,23 @@ pub mod tabs {
             pointer,
         };
 
-        CONTENT_STYLE = {
+        content_style! = {
             font_size(120%),
-            fg(white),
             font_outline(black),
             vertical_align(middle),
             table cell,
             padding(0%, 10 px),
             underline,
-            z_index(650),
             pos(relative),
+        };
+
+        CONTENT_STYLE = {
+            extends(content_style),
+            fg(white),
+        };
+        DIMMED_CONTENT_STYLE = {
+            extends(content_style),
+            fg("#8a8a8a"),
         };
 
         SEP = {
@@ -604,9 +740,71 @@ pub mod tabs {
         };
     }
 
+    #[derive(Clone)]
+    pub struct TabProps {
+        color: String,
+        active: IsActive,
+        edited: bool,
+        dimmed: bool,
+        rev: bool,
+    }
+    impl TabProps {
+        pub fn new(color: impl Into<String>) -> Self {
+            Self {
+                color: color.into(),
+                active: IsActive::from_bool(false),
+                edited: false,
+                dimmed: false,
+                rev: false,
+            }
+        }
+        pub fn new_active(color: impl Into<String>) -> Self {
+            Self {
+                color: color.into(),
+                active: IsActive::from_bool(true),
+                edited: false,
+                dimmed: false,
+                rev: false,
+            }
+        }
+        pub fn new_inactive(color: impl Into<String>) -> Self {
+            Self {
+                color: color.into(),
+                active: IsActive::from_bool(false),
+                edited: false,
+                dimmed: false,
+                rev: false,
+            }
+        }
+
+        pub fn set_active(mut self, is_active: bool) -> Self {
+            self.active = IsActive::from_bool(is_active);
+            self
+        }
+        pub fn with_first_last_uid(
+            mut self,
+            get: impl FnOnce() -> (bool, bool, filter::FilterUid),
+        ) -> Self {
+            self.active = self.active.with_first_last_uid(get);
+            self
+        }
+        pub fn set_edited(mut self, is_edited: bool) -> Self {
+            self.edited = is_edited;
+            self
+        }
+        pub fn set_dimmed(mut self, is_dimmed: bool) -> Self {
+            self.dimmed = is_dimmed;
+            self
+        }
+        pub fn set_rev(mut self) -> Self {
+            self.rev = true;
+            self
+        }
+    }
+
     pub const NOT_ACTIVE: IsActive = IsActive::No;
 
-    #[derive(Clone)]
+    #[derive(Clone, Copy)]
     pub enum IsActive {
         No,
         Yes,
@@ -623,7 +821,7 @@ pub mod tabs {
                 Self::Yes | Self::YesWith { .. } => true,
             }
         }
-        pub fn of_bool(active: bool) -> Self {
+        pub fn from_bool(active: bool) -> Self {
             if active {
                 Self::Yes
             } else {
@@ -648,23 +846,50 @@ pub mod tabs {
         }
     }
 
-    pub fn style(color: &impl fmt::Display, active: bool, edited: bool) -> String {
+    pub fn style(props: &TabProps) -> String {
+        let active = props.active.to_bool();
+        let rev = props.rev;
+
+        let shadow_h_off = 4;
+        let shadow_v_off = if rev { 2 } else { -2 };
+        let (shadow_blur, shadow_spread) = if active { (34, 7) } else { (20, 1) };
+
         inline_css!(
             if(
                 active,
-                extends(no_color_active_tab_style),
-                else extends(no_color_tab_style),
+                if(
+                    rev,
+                    extends(no_color_active_rev_tab_style),
+                    else
+                    extends(no_color_active_tab_style),
+                ),
+                else if(
+                    rev,
+                    extends(no_color_rev_tab_style),
+                    else
+                    extends(no_color_tab_style)
+                ),
             ),
-            if (
-                active,
-                box_shadow(4 px, {-2} px, 34 px, 7 px, {color}),
-                else box_shadow(4 px, {-2} px, 20 px, 1 px, {color}),
-            ),
+
             if(
-                edited,
+                props.edited,
                 extends(edited_tab_style),
             ),
-            bg(gradient {color} to black),
+
+            if(
+                props.rev,
+                bg(gradient black to {&props.color}),
+                else
+                bg(gradient {&props.color} to black),
+            ),
+
+            box_shadow(
+                {shadow_h_off} px,
+                {shadow_v_off} px,
+                {shadow_blur} px,
+                {shadow_spread} px,
+                {&props.color},
+            ),
         )
     }
 
@@ -681,13 +906,7 @@ pub mod tabs {
             }
         }
 
-        fn raw_tab(
-            color: &impl fmt::Display,
-            active: bool,
-            edited: bool,
-            onclick: OnClickAction,
-            content: Html,
-        ) -> Html {
+        fn raw_tab(props: &TabProps, onclick: OnClickAction, content: Html) -> Html {
             html! {
                 <div
                     id = "filter_tab_cell"
@@ -696,11 +915,15 @@ pub mod tabs {
                 >
                     <div
                         id = "filter_tab"
-                        style = style(color, active, edited)
+                        style = style(props)
                     >
                         <div
                             id = "filter_content"
-                            style = CONTENT_STYLE
+                            style = if props.dimmed {
+                                &*DIMMED_CONTENT_STYLE
+                            } else {
+                                &*CONTENT_STYLE
+                            }
                         >
                             {content}
                         </div>
@@ -713,14 +936,23 @@ pub mod tabs {
             &mut self,
             model: &Model,
             text: &str,
-            color: &impl fmt::Display,
-            active: IsActive,
-            edited: bool,
+            props: TabProps,
             onclick: OnClickAction,
         ) {
+            self.inner_push_tab(model, text, props, onclick)
+        }
+
+        fn inner_push_tab(
+            &mut self,
+            model: &Model,
+            text: &str,
+            props: TabProps,
+            onclick: OnClickAction,
+        ) {
+            let edited = props.edited;
             let mut res = html! {
                 {Self::raw_tab(
-                    color, active.to_bool(), edited, onclick, html! {
+                    &props, onclick, html! {
                         {if edited { format!("*{}*", text) } else { text.into() }}
                     }
                 )}
@@ -729,13 +961,13 @@ pub mod tabs {
                 can_move_left,
                 can_move_right,
                 uid,
-            } = active
+            } = props.active
             {
                 if can_move_left {
                     res = html! {
                         <>
                             {Self::raw_tab(
-                                color, false, false,
+                                &props,
                                 model.link.callback(
                                     move |_| msg::FiltersMsg::move_filter(uid, true)
                                 ),
@@ -750,7 +982,7 @@ pub mod tabs {
                         <>
                             {res}
                             {Self::raw_tab(
-                                color, false, false,
+                                &props,
                                 model.link.callback(
                                     move |_| msg::FiltersMsg::move_filter(uid, false)
                                 ),

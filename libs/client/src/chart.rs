@@ -19,6 +19,8 @@ pub struct Charts {
     to_model: Callback<Msg>,
     /// Chart constructor element.
     new_chart: new::NewChart,
+    /// Name of the DOM node containing all the charts.
+    dom_node_id: String,
 }
 
 impl Charts {
@@ -28,7 +30,13 @@ impl Charts {
             charts: vec![],
             to_model,
             new_chart: new::NewChart::new(),
+            dom_node_id: "charts_list".into(),
         }
+    }
+
+    /// Name of the DOM node containing all the charts.
+    pub fn dom_node_id(&self) -> &str {
+        &self.dom_node_id
     }
 
     pub fn len(&self) -> usize {
@@ -77,11 +85,18 @@ impl Charts {
         action: msg::ChartsMsg,
     ) -> Res<ShouldRender> {
         use msg::ChartsMsg::*;
+
+        let filters = filters.reference_filters();
+
         match action {
             Build(uid) => self.build(uid),
             Move { uid, up } => self.move_chart(uid, up),
             ToggleVisible(uid) => self.toggle_visible(uid),
             Destroy(uid) => self.destroy(uid),
+
+            FilterToggleVisible(uid, filter_uid) => {
+                self.filter_toggle_visible(filters, uid, filter_uid)
+            }
 
             RefreshFilters => self.refresh_filters(filters),
 
@@ -100,7 +115,7 @@ impl Charts {
     }
 
     /// Refreshes all filters in all charts.
-    fn refresh_filters(&mut self, filters: &filter::Filters) -> Res<ShouldRender> {
+    fn refresh_filters(&mut self, filters: &filter::ReferenceFilters) -> Res<ShouldRender> {
         for chart in &mut self.charts {
             chart.replace_filters(filters)?
         }
@@ -160,7 +175,20 @@ impl Charts {
         let (_, chart) = self
             .get_mut(uid)
             .chain_err(|| format!("while changing chart visibility"))?;
-        chart.toggle_visible();
+        chart.toggle_visible()
+    }
+
+    /// Toggles the visibility of a chart.
+    fn filter_toggle_visible(
+        &mut self,
+        filters: &filter::ReferenceFilters,
+        uid: ChartUid,
+        filter_uid: charts::uid::LineUid,
+    ) -> Res<ShouldRender> {
+        let (_, chart) = self
+            .get_mut(uid)
+            .chain_err(|| format!("while changing chart visibility"))?;
+        chart.filter_toggle_visible(filter_uid, filters)?;
         Ok(true)
     }
 }
@@ -189,6 +217,8 @@ impl Charts {
     ) -> Res<ShouldRender> {
         use msg::from_server::{ChartMsg, ChartsMsg};
 
+        let filters = filters.reference_filters();
+
         let should_render = match action {
             ChartsMsg::NewChart(spec) => {
                 debug!("received a chart-creation message from the server");
@@ -206,19 +236,19 @@ impl Charts {
                 debug!("received an overwrite-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
-                        chart.overwrite_points(points)?
+                        chart.overwrite_points(points, filters)?
                     }
                 }
                 if refresh_filters {
                     self.refresh_filters(filters)?;
                 }
-                false
+                true
             }
             ChartsMsg::AddPoints(mut points) => {
                 debug!("received an add-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
-                        chart.add_points(points)?
+                        chart.add_points(points, filters)?
                     }
                 }
                 false
@@ -228,8 +258,8 @@ impl Charts {
                 debug!("received a message specific to chart #{} from server", uid);
                 let (_index, chart) = self.get_mut(uid)?;
                 match msg {
-                    ChartMsg::NewPoints(points) => chart.overwrite_points(points)?,
-                    ChartMsg::Points(points) => chart.add_points(points)?,
+                    ChartMsg::NewPoints(points) => chart.overwrite_points(points, filters)?,
+                    ChartMsg::Points(points) => chart.add_points(points, filters)?,
                 }
                 true
             }
@@ -250,26 +280,29 @@ pub struct Chart {
     visible: bool,
     /// DOM element containing the chart.
     container: String,
-    /// Actual DOM chart canvas.
+    /// Id of the actual DOM chart canvas.
     canvas: String,
+    /// Id of the collapsed version of the chart canvas.
+    collapsed_canvas: String,
     /// Chart drawing area.
     chart: Option<DrawingArea<CanvasBackend, plotters::coord::Shift>>,
     /// The points.
     points: Option<point::Points>,
     /// The filters, used to color the series and hide what the user asks to hide.
-    filters: Map<charts::uid::LineUid, (charts::filter::FilterSpec, bool)>,
+    filters: Map<charts::uid::LineUid, bool>,
     /// Previous filter map, used when updating filters to keep track of those that are hidden.
-    prev_filters: Map<charts::uid::LineUid, (charts::filter::FilterSpec, bool)>,
+    prev_filters: Map<charts::uid::LineUid, bool>,
 }
 impl Chart {
     /// Constructor.
-    pub fn new(spec: ChartSpec, all_filters: &filter::Filters) -> Res<Self> {
+    pub fn new(spec: ChartSpec, all_filters: &filter::ReferenceFilters) -> Res<Self> {
         let container = style::class::chart::class(spec.uid());
         let canvas = style::class::chart::canvas(spec.uid());
+        let collapsed_canvas = format!("{}_collapsed", canvas);
 
         let mut filters = Map::new();
         all_filters.specs_apply(|spec| {
-            let prev = filters.insert(spec.uid(), (spec.clone(), true));
+            let prev = filters.insert(spec.uid(), true);
             debug_assert!(prev.is_none());
             Ok(())
         })?;
@@ -279,6 +312,7 @@ impl Chart {
             visible: true,
             container,
             canvas,
+            collapsed_canvas,
             chart: None,
             points: None,
             filters,
@@ -301,21 +335,73 @@ impl Chart {
         &self.spec
     }
 
+    pub fn container_id(&self) -> &str {
+        &self.container
+    }
     /// ID of the chart canvas.
     pub fn canvas_id(&self) -> &str {
         &self.canvas
     }
+    /// ID of the collapsed canvas.
+    pub fn collapsed_canvas_id(&self) -> &str {
+        &self.collapsed_canvas
+    }
 
     /// Toggles the visibility of the chart.
-    pub fn toggle_visible(&mut self) {
-        self.visible = !self.visible
+    pub fn toggle_visible(&mut self) -> Res<ShouldRender> {
+        self.visible = !self.visible;
+
+        let document = web_sys::window()
+            .expect("could not retrieve document window")
+            .document()
+            .expect("could not retrieve document from window");
+
+        let canvas = document
+            .get_element_by_id(&self.canvas)
+            .ok_or_else(|| format!("could not retrieve chart canvas {:?}", self.canvas))?;
+        let collapsed_canvas = document
+            .get_element_by_id(&self.collapsed_canvas)
+            .ok_or_else(|| {
+                format!(
+                    "could not retrieve chart collapsed canvas, {:?}",
+                    self.collapsed_canvas
+                )
+            })?;
+
+        if self.visible {
+            canvas
+                .set_attribute("style", &*layout::chart::CHART_STYLE)
+                .map_err(|e| format!("{:?}", e))?;
+            collapsed_canvas
+                .set_attribute("style", &*layout::chart::HIDDEN_COLLAPSED_CHART_STYLE)
+                .map_err(|e| format!("{:?}", e))?;
+        } else {
+            canvas
+                .set_attribute("style", &*layout::chart::HIDDEN_CHART_STYLE)
+                .map_err(|e| format!("{:?}", e))?;
+            collapsed_canvas
+                .set_attribute("style", &*layout::chart::COLLAPSED_CHART_STYLE)
+                .map_err(|e| format!("{:?}", e))?;
+        }
+        Ok(false)
+    }
+    /// Toggles the visibility of a filter for the chart.
+    pub fn filter_toggle_visible(
+        &mut self,
+        uid: charts::uid::LineUid,
+        filters: &filter::ReferenceFilters,
+    ) -> Res<()> {
+        if let Some(is_visible) = self.filters.get_mut(&uid) {
+            *is_visible = !*is_visible;
+            self.draw(filters)?;
+            Ok(())
+        } else {
+            bail!("cannot toggle visibility of unknown filter {}", uid)
+        }
     }
 
-    pub fn div_container(&self) -> &str {
-        &self.container
-    }
-    pub fn canvas(&self) -> &str {
-        &self.canvas
+    pub fn filter_visibility(&self) -> &Map<charts::uid::LineUid, bool> {
+        &self.filters
     }
 }
 
@@ -325,28 +411,21 @@ impl Chart {
     pub fn destroy(self) {}
 
     /// Replaces the filters of the chart.
-    pub fn replace_filters(&mut self, filters: &filter::Filters) -> Res<()> {
+    pub fn replace_filters(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
         self.prev_filters.clear();
         std::mem::swap(&mut self.filters, &mut self.prev_filters);
 
         debug_assert!(self.filters.is_empty());
 
         filters.specs_apply(|spec| {
-            let visible = self
-                .prev_filters
-                .remove(&spec.uid())
-                .map(|(_spec, visible)| visible)
-                .unwrap_or(true);
-            let prev = self.filters.insert(spec.uid(), (spec.clone(), visible));
-            if prev.is_some() {
-                bail!(
-                    "collision, found two filters with uid #{} while replacing filters",
-                    spec.uid(),
-                )
-            }
+            let spec_uid = spec.uid();
+            let visible = self.prev_filters.get(&spec_uid).cloned().unwrap_or(true);
+            let prev = self.filters.insert(spec_uid, visible);
+            debug_assert!(prev.is_none());
             Ok(())
         })?;
-        self.draw()
+
+        self.draw(filters)
     }
 
     /// Builds the actual JS chart and attaches it to its container.
@@ -384,14 +463,15 @@ impl Chart {
     /// - this function contains code that's highly specific to the kind of points we are drawing.
     ///   It should be exported, probably in the `charts` crate, to keep this function focused on
     ///   what it does.
-    pub fn draw(&mut self) -> Res<()> {
+    pub fn draw(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
         self.mounted();
-        let filters = &self.filters;
+        let visible_filters = &self.filters;
+
         if let Some(chart) = &mut self.chart {
             if let Some(points) = &self.points {
                 match points {
                     charts::point::Points::Time(charts::point::TimePoints::Size(points)) => {
-                        let (mut min_x, mut max_x, mut min_y, mut max_y) = (None, None, None, None);
+                        let (mut min_x, mut max_x, mut max_y) = (None, None, 5);
 
                         for point in points.iter() {
                             if min_x.is_none() {
@@ -399,51 +479,28 @@ impl Chart {
                             }
                             max_x = Some(&point.key);
 
-                            let (new_min_y, new_max_y) = point.vals.map.iter().fold(
-                                (min_y, max_y),
-                                |(mut min_y, mut max_y), (uid, val)| {
-                                    let visible = filters
-                                        .get(uid)
-                                        .map(|(_spec, visible)| *visible)
-                                        .unwrap_or(false);
-                                    if visible {
-                                        if let Some(min_y) = &mut min_y {
-                                            if val < min_y {
-                                                *min_y = *val
-                                            }
-                                        } else {
-                                            min_y = Some(*val)
-                                        }
-                                        if let Some(max_y) = &mut max_y {
-                                            if val > max_y {
-                                                *max_y = *val
-                                            }
-                                        } else {
-                                            max_y = Some(*val)
-                                        }
-                                        (min_y, max_y)
-                                    } else {
-                                        (min_y, max_y)
-                                    }
-                                },
-                            );
-                            min_y = new_min_y;
-                            max_y = new_max_y;
+                            max_y = point.vals.map.iter().fold(max_y, |max_y, (uid, val)| {
+                                let visible = visible_filters.get(uid).cloned().unwrap_or(false);
+                                if visible && *val > max_y {
+                                    *val
+                                } else {
+                                    max_y
+                                }
+                            });
                         }
 
-                        let (min_x, max_x, min_y, max_y) = match (min_x, max_x, min_y, max_y) {
-                            (Some(min_x), Some(max_x), Some(min_y), Some(max_y)) => {
-                                (*min_x, *max_x, min_y as u32, max_y as u32)
-                            }
-                            (min_x, max_x, min_y, max_y) => {
+                        let min_y = 0;
+                        let max_y = (max_y + std::cmp::max(1, max_y / 20)) as u32;
+
+                        let (min_x, max_x) = match (min_x, max_x) {
+                            (Some(min_x), Some(max_x)) => (*min_x, *max_x),
+                            (min_x, max_x) => {
                                 warn!(
-                                    "could not retrieve chart min/max values for chart #{} \
-                                    ({:?}, {:?}, {:?}, {:?})",
+                                    "could not retrieve chart min/max x-values for chart #{} \
+                                    ({:?}, {:?})",
                                     self.spec.uid(),
                                     min_x,
                                     max_x,
-                                    min_y,
-                                    max_y,
                                 );
                                 return Ok(());
                             }
@@ -472,7 +529,7 @@ impl Chart {
                                     ..(max_x.date().clone() - min_x.date().clone()),
                                 min_y..max_y,
                             )
-                            .unwrap();
+                            .map_err(|e| err::Err::from(e.to_string()))?;
 
                         chart_cxt
                             .configure_mesh()
@@ -501,24 +558,29 @@ impl Chart {
                             .draw()
                             .unwrap();
 
-                        for (uid, (spec, visible)) in filters {
-                            if !visible {
-                                continue;
+                        filters.specs_apply(|spec| {
+                            let uid = spec.uid();
+
+                            if visible_filters.get(&uid).cloned().unwrap_or(false) {
+                                let &charts::color::Color { r, g, b } = spec.color();
+                                let color: palette::rgb::Rgb<palette::encoding::srgb::Srgb, _> =
+                                    palette::rgb::Rgb::new(r, g, b);
+
+                                let point_iter = points.iter().filter_map(|point| {
+                                    point.vals.map.get(&uid).map(|val| {
+                                        (
+                                            point.key.date().clone() - min_x.date().clone(),
+                                            *val as u32,
+                                        )
+                                    })
+                                });
+
+                                chart_cxt
+                                    .draw_series(LineSeries::new(point_iter, color.stroke_width(1)))
+                                    .map_err(|e| e.to_string())?;
                             }
-                            let &charts::color::Color { r, g, b } = spec.color();
-                            let color: palette::rgb::Rgb<palette::encoding::srgb::Srgb, _> =
-                                palette::rgb::Rgb::new(r, g, b);
-
-                            let point_iter = points.iter().filter_map(|point| {
-                                point.vals.map.get(uid).map(|val| {
-                                    (point.key.date().clone() - min_x.date().clone(), *val as u32)
-                                })
-                            });
-
-                            chart_cxt
-                                .draw_series(LineSeries::new(point_iter, color.stroke_width(5)))
-                                .map_err(|e| e.to_string())?;
-                        }
+                            Ok(())
+                        })?;
 
                         chart
                             .present()
@@ -527,20 +589,25 @@ impl Chart {
                 }
             }
         }
+
         Ok(())
     }
 
     /// Appends some points to the chart.
-    pub fn add_points(&mut self, mut points: point::Points) -> Res<()> {
+    pub fn add_points(
+        &mut self,
+        mut points: point::Points,
+        filters: &filter::ReferenceFilters,
+    ) -> Res<()> {
         if let Some(my_points) = &mut self.points {
             let changed = my_points.extend(&mut points)?;
             if changed {
-                self.draw()?
+                self.draw(filters)?
             }
             Ok(())
         } else if !points.is_empty() {
             self.points = Some(points);
-            self.draw()?;
+            self.draw(filters)?;
             Ok(())
         } else {
             Ok(())
@@ -548,9 +615,13 @@ impl Chart {
     }
 
     /// Overwrites the points in a chart.
-    pub fn overwrite_points(&mut self, points: point::Points) -> Res<()> {
+    pub fn overwrite_points(
+        &mut self,
+        points: point::Points,
+        filters: &filter::ReferenceFilters,
+    ) -> Res<()> {
         self.points = Some(points);
-        self.draw()
+        self.draw(filters)
     }
 }
 
@@ -600,49 +671,11 @@ impl Chart {
         false
     }
 
-    /// Renders the filters as buttons.
-    pub fn render_filters(&self, _model: &Model) -> Html {
-        let inner = if self.filters.len() <= 1 {
-            html! {<> </>}
-        } else {
-            html! {
-                <>
-                    {
-                        for self.filters.values().map(
-                            |(filter, active)| {
-                                let (class, colorize) = style::class::chart::filter_button_get(
-                                    *active, filter.color()
-                                );
-                                html! {
-                                    <li>
-                                        <a
-                                            class = class
-                                            style = colorize
-                                        >
-                                            { filter.name().to_string() }
-                                        </a>
-                                    </li>
-                                }
-                            }
-                        )
-                    }
-                </>
-            }
-        };
-
-        html! {
-            <center><li class = style::class::tabs::li::get_center()>
-            { inner }
-            </li></center>
-        }
-    }
-
     /// Renders the chart.
     pub fn render(&self, model: &Model) -> Html {
         html! {
             <g>
                 {layout::chart::render(model, self)}
-                { self.render_filters(model) }
                 <br/>
                 <br/>
                 <br/>
