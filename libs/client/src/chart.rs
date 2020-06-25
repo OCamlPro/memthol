@@ -333,6 +333,10 @@ impl Chart {
         self.spec.uid()
     }
 
+    pub fn has_canvas(&self) -> bool {
+        self.chart.is_some()
+    }
+
     /// True if the chart is visible.
     pub fn is_visible(&self) -> bool {
         self.visible
@@ -507,7 +511,7 @@ impl Chart {
     }
 
     pub fn rebind_canvas(&mut self) -> Res<()> {
-        self.unbind_canvas()?;
+        self.try_unbind_canvas()?;
         self.bind_canvas()
     }
 
@@ -710,7 +714,7 @@ impl Chart {
 /// # Rendering
 impl Chart {
     pub fn rendered(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
-        self.bind_canvas()?;
+        self.rebind_canvas()?;
 
         if self.chart.is_none() {
             self.build_chart()?;
@@ -718,13 +722,15 @@ impl Chart {
         }
 
         if self.redraw {
-            self.draw(filters)?
+            self.draw(filters)?;
+            self.redraw = false;
         }
         Ok(())
     }
 
     /// Renders the chart.
     pub fn render(&self, model: &Model) -> Html {
+        self.try_unbind_canvas().unwrap();
         layout::chart::render(model, self)
     }
 }

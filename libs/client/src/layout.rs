@@ -87,6 +87,11 @@ pub mod chart {
             justify_content(center),
             display(flex),
         };
+        COLLAPSED_CHART_CONTAINER_STYLE = {
+            width(100%),
+            justify_content(center),
+            display(none),
+        };
 
         generic_chart_style! = {
             border_radius(20 px),
@@ -122,12 +127,13 @@ pub mod chart {
     pub fn render_chart(_model: &Model, chart: &chart::Chart) -> Html {
         let visible = chart.is_visible();
         let canvas_id = chart.canvas_id();
-        let collapsed_canvas_id = chart.collapsed_canvas_id();
-        html! {
-            <div
-                id = chart.container_id()
-                style = CHART_CONTAINER_STYLE
-            >
+        // let collapsed_canvas_id = chart.collapsed_canvas_id();
+        let inner = if chart.has_canvas() {
+            html! {
+                <></>
+            }
+        } else {
+            html! {
                 <canvas
                     id = canvas_id
                     style = if visible {
@@ -136,14 +142,34 @@ pub mod chart {
                         &*HIDDEN_CHART_STYLE
                     }
                 />
-                <canvas
-                    id = collapsed_canvas_id
-                    style = if visible {
-                        &*HIDDEN_COLLAPSED_CHART_STYLE
-                    } else {
-                        &*COLLAPSED_CHART_STYLE
-                    }
-                />
+            }
+        };
+        html! {
+            <div
+                id = chart.container_id()
+                style = if visible {
+                    &*CHART_CONTAINER_STYLE
+                } else {
+                    &*COLLAPSED_CHART_CONTAINER_STYLE
+                }
+            >
+                {inner}
+                // <canvas
+                //     id = canvas_id
+                //     style = if visible {
+                //         &*CHART_STYLE
+                //     } else {
+                //         &*HIDDEN_CHART_STYLE
+                //     }
+                // />
+                // <canvas
+                //     id = collapsed_canvas_id
+                //     style = if visible {
+                //         &*HIDDEN_COLLAPSED_CHART_STYLE
+                //     } else {
+                //         &*COLLAPSED_CHART_STYLE
+                //     }
+                // />
             </div>
         }
     }
