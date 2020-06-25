@@ -50,7 +50,6 @@ pub mod chart {
 
     const border_size_px: usize = 2;
 
-    const width: usize = 98;
     const chart_height_px: usize = 500;
     const collapsed_chart_height_px: usize = 40;
 
@@ -66,7 +65,13 @@ pub mod chart {
         define_style! {
             CONTAINER_STYLE = {
                 block,
-                margin_bottom(2%),
+                margin(0%, 1%, 2%, 1%),
+            };
+            MAIN_CONTAINER_STYLE = {
+                block,
+                width(100%),
+                border_radius(20 px),
+                border({border_size_px} px, black),
             };
         }
         html! {
@@ -74,8 +79,12 @@ pub mod chart {
                 id = chart.top_container_id()
                 style = CONTAINER_STYLE
             >
-                {tiles::render(model, chart)}
-                {render_chart(model, chart)}
+                <div
+                    style = MAIN_CONTAINER_STYLE
+                >
+                    {tiles::render(model, chart)}
+                    {render_chart(model, chart)}
+                </div>
                 {filter_toggles::render(model, chart)}
             </div>
         }
@@ -94,9 +103,8 @@ pub mod chart {
         };
 
         generic_chart_style! = {
-            border_radius(20 px),
-            border({border_size_px} px, black),
-            width({width}%),
+            width(99%),
+            margin(0%, 0%, 1%, 0%),
         };
         chart_style! = {
             extends(generic_chart_style),
@@ -154,22 +162,6 @@ pub mod chart {
                 }
             >
                 {inner}
-                // <canvas
-                //     id = canvas_id
-                //     style = if visible {
-                //         &*CHART_STYLE
-                //     } else {
-                //         &*HIDDEN_CHART_STYLE
-                //     }
-                // />
-                // <canvas
-                //     id = collapsed_canvas_id
-                //     style = if visible {
-                //         &*HIDDEN_COLLAPSED_CHART_STYLE
-                //     } else {
-                //         &*COLLAPSED_CHART_STYLE
-                //     }
-                // />
             </div>
         }
     }
@@ -187,9 +179,17 @@ pub mod chart {
             const center_tile_width: usize = 100 - (left_tile_width + right_tile_width);
 
             define_style! {
-                TOP_TILES = {
+                top_tiles! = {
                     height({tiles_height_px} px),
                     width(100%),
+                };
+
+                TOP_TILES = {
+                    extends(top_tiles),
+                    border(bottom, 2 px, black),
+                };
+                COLLAPSED_TOP_TILES = {
+                    extends(top_tiles),
                 };
 
                 LEFT_TILE = {
@@ -215,7 +215,11 @@ pub mod chart {
             html! {
                 <div
                     id = "chart_top_tiles"
-                    style = TOP_TILES
+                    style = if chart.is_visible() {
+                        &*TOP_TILES
+                    } else {
+                        &*COLLAPSED_TOP_TILES
+                    }
                 >
                     <div
                         id = "chart_top_left_tile"

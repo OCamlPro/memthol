@@ -222,6 +222,21 @@ macro_rules! css {
     )) => {{
         write!($str, "margin-bottom: {}{};", $crate::css!(@arg $margin), stringify!($unit));
     }};
+    (@($str:expr) margin_top(
+        $margin:tt $unit:tt $(,)*
+    )) => {{
+        write!($str, "margin-top: {}{};", $crate::css!(@arg $margin), stringify!($unit));
+    }};
+    (@($str:expr) margin_left(
+        $margin:tt $unit:tt $(,)*
+    )) => {{
+        write!($str, "margin-left: {}{};", $crate::css!(@arg $margin), stringify!($unit));
+    }};
+    (@($str:expr) margin_right(
+        $margin:tt $unit:tt $(,)*
+    )) => {{
+        write!($str, "margin-right: {}{};", $crate::css!(@arg $margin), stringify!($unit));
+    }};
 
     // #padding
     (@($str:expr) padding(none)) => {{
