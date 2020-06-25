@@ -20,7 +20,7 @@ pub struct Charts {
     /// Chart constructor element.
     new_chart: new::NewChart,
     /// Name of the DOM node containing all the charts.
-    dom_node_id: String,
+    dom_node_id: &'static str,
 }
 
 impl Charts {
@@ -30,7 +30,7 @@ impl Charts {
             charts: vec![],
             to_model,
             new_chart: new::NewChart::new(),
-            dom_node_id: "charts_list".into(),
+            dom_node_id: "charts_list",
         }
     }
 
@@ -89,14 +89,11 @@ impl Charts {
         let filters = filters.reference_filters();
 
         match action {
-            Build(uid) => self.build(uid),
             Move { uid, up } => self.move_chart(uid, up),
             ToggleVisible(uid) => self.toggle_visible(uid),
             Destroy(uid) => self.destroy(uid),
 
-            FilterToggleVisible(uid, filter_uid) => {
-                self.filter_toggle_visible(filters, uid, filter_uid)
-            }
+            FilterToggleVisible(uid, filter_uid) => self.filter_toggle_visible(uid, filter_uid),
 
             RefreshFilters => self.refresh_filters(filters),
 
@@ -105,13 +102,12 @@ impl Charts {
         }
     }
 
-    pub fn mounted(&mut self) -> ShouldRender {
-        let mut res = false;
+    pub fn rendered(&mut self, filters: &filter::ReferenceFilters) {
         for chart in &mut self.charts {
-            let should_render = chart.mounted();
-            res = res || should_render
+            if let Err(e) = chart.rendered(filters) {
+                alert!("error while running `rendered`: {}", e)
+            }
         }
-        res
     }
 
     /// Refreshes all filters in all charts.
@@ -132,42 +128,38 @@ impl Charts {
                 index = Some(idx)
             }
         }
-
         let index = if let Some(index) = index {
             index
         } else {
             bail!("cannot move chart with unknown UID #{}", uid)
         };
 
-        let other_index = if up {
-            // Move up.
-            if index > 0 {
-                index - 1
-            } else {
-                return Ok(false);
-            }
+        let changed = if up {
+            self.try_move_chart_up(index)
         } else {
-            let other_index = index + 1;
-            // Move down.
-            if other_index < self.charts.len() {
-                other_index
-            } else {
-                return Ok(false);
-            }
-        };
+            self.try_move_chart_up(index + 1)
+        }
+        .chain_err(|| {
+            format!(
+                "while moving chart {} {}",
+                uid,
+                if up { "up" } else { "down" }
+            )
+        })?;
 
-        self.charts.swap(index, other_index);
-
-        Ok(true)
+        Ok(changed)
     }
 
-    /// Forces a chart to build and bind itself to its container.
-    fn build(&mut self, uid: ChartUid) -> Res<ShouldRender> {
-        let (_, chart) = self
-            .get_mut(uid)
-            .chain_err(|| format!("while building and binding chart #{}", uid))?;
-        chart.build_chart()?;
-        Ok(true)
+    /// Tries to move a chart. If the move is illegal, returns `false`.
+    fn try_move_chart_up(&mut self, index: usize) -> Res<bool> {
+        // Make sure the move is legal.
+        let did_something = if index == 0 || index >= self.charts.len() {
+            false
+        } else {
+            self.charts.swap(index, index - 1);
+            true
+        };
+        Ok(did_something)
     }
 
     /// Toggles the visibility of a chart.
@@ -181,29 +173,34 @@ impl Charts {
     /// Toggles the visibility of a chart.
     fn filter_toggle_visible(
         &mut self,
-        filters: &filter::ReferenceFilters,
         uid: ChartUid,
         filter_uid: charts::uid::LineUid,
     ) -> Res<ShouldRender> {
         let (_, chart) = self
             .get_mut(uid)
             .chain_err(|| format!("while changing chart visibility"))?;
-        chart.filter_toggle_visible(filter_uid, filters)?;
+        chart.filter_toggle_visible(filter_uid)?;
         Ok(true)
     }
 }
 
 /// # Rendering
 impl Charts {
-    /// Renders the charts.
     pub fn render(&self, model: &Model) -> Html {
-        let res = html! {
-            <g class=style::class::chart::CONTAINER>
-                { for self.charts.iter().map(|chart| chart.render(model)) }
+        info!("rendering charts");
+        for chart in &self.charts {
+            info!("- {}", chart.uid())
+        }
+        html! {
+            <>
+                <div
+                    id = model.charts().dom_node_id()
+                >
+                    { for self.charts.iter().map(|chart| chart.render(model)) }
+                </div>
                 { self.new_chart.render(model) }
-            </g>
-        };
-        res
+            </>
+        }
     }
 }
 
@@ -222,10 +219,10 @@ impl Charts {
         let should_render = match action {
             ChartsMsg::NewChart(spec) => {
                 debug!("received a chart-creation message from the server");
-                let uid = spec.uid();
+                // let uid = spec.uid();
                 let chart = Chart::new(spec, filters)?;
                 self.charts.push(chart);
-                self.send(msg::ChartsMsg::build(uid));
+                // self.send(msg::ChartsMsg::build(uid));
                 true
             }
 
@@ -236,7 +233,7 @@ impl Charts {
                 debug!("received an overwrite-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
-                        chart.overwrite_points(points, filters)?
+                        chart.overwrite_points(points)?
                     }
                 }
                 if refresh_filters {
@@ -258,7 +255,7 @@ impl Charts {
                 debug!("received a message specific to chart #{} from server", uid);
                 let (_index, chart) = self.get_mut(uid)?;
                 match msg {
-                    ChartMsg::NewPoints(points) => chart.overwrite_points(points, filters)?,
+                    ChartMsg::NewPoints(points) => chart.overwrite_points(points)?,
                     ChartMsg::Points(points) => chart.add_points(points, filters)?,
                 }
                 true
@@ -278,26 +275,35 @@ pub struct Chart {
     spec: ChartSpec,
     /// True if the chart is expanded.
     visible: bool,
-    /// DOM element containing the chart.
+    /// DOM element containing the chart and its tabs.
+    top_container: String,
+    /// DOM element containing the canvas.
     container: String,
     /// Id of the actual DOM chart canvas.
     canvas: String,
     /// Id of the collapsed version of the chart canvas.
     collapsed_canvas: String,
     /// Chart drawing area.
-    chart: Option<DrawingArea<CanvasBackend, plotters::coord::Shift>>,
+    // chart: Option<DrawingArea<CanvasBackend, plotters::coord::Shift>>,
+    chart: Option<(
+        DrawingArea<CanvasBackend, plotters::coord::Shift>,
+        web_sys::Element,
+    )>,
     /// The points.
     points: Option<point::Points>,
     /// The filters, used to color the series and hide what the user asks to hide.
     filters: Map<charts::uid::LineUid, bool>,
     /// Previous filter map, used when updating filters to keep track of those that are hidden.
     prev_filters: Map<charts::uid::LineUid, bool>,
+
+    redraw: bool,
 }
 impl Chart {
     /// Constructor.
     pub fn new(spec: ChartSpec, all_filters: &filter::ReferenceFilters) -> Res<Self> {
-        let container = style::class::chart::class(spec.uid());
-        let canvas = style::class::chart::canvas(spec.uid());
+        let top_container = format!("chart_container_{}", spec.uid().get());
+        let container = format!("chart_canvas_container_{}", spec.uid().get());
+        let canvas = format!("chart_canvas_{}", spec.uid().get());
         let collapsed_canvas = format!("{}_collapsed", canvas);
 
         let mut filters = Map::new();
@@ -310,6 +316,7 @@ impl Chart {
         Ok(Self {
             spec,
             visible: true,
+            top_container,
             container,
             canvas,
             collapsed_canvas,
@@ -317,6 +324,7 @@ impl Chart {
             points: None,
             filters,
             prev_filters: Map::new(),
+            redraw: true,
         })
     }
 
@@ -335,6 +343,9 @@ impl Chart {
         &self.spec
     }
 
+    pub fn top_container_id(&self) -> &str {
+        &self.top_container
+    }
     pub fn container_id(&self) -> &str {
         &self.container
     }
@@ -350,65 +361,29 @@ impl Chart {
     /// Toggles the visibility of the chart.
     pub fn toggle_visible(&mut self) -> Res<ShouldRender> {
         self.visible = !self.visible;
-
-        let document = web_sys::window()
-            .expect("could not retrieve document window")
-            .document()
-            .expect("could not retrieve document from window");
-
-        let canvas = document
-            .get_element_by_id(&self.canvas)
-            .ok_or_else(|| format!("could not retrieve chart canvas {:?}", self.canvas))?;
-        let collapsed_canvas = document
-            .get_element_by_id(&self.collapsed_canvas)
-            .ok_or_else(|| {
-                format!(
-                    "could not retrieve chart collapsed canvas, {:?}",
-                    self.collapsed_canvas
-                )
-            })?;
-
-        if self.visible {
-            canvas
-                .set_attribute("style", &*layout::chart::CHART_STYLE)
-                .map_err(|e| format!("{:?}", e))?;
-            collapsed_canvas
-                .set_attribute("style", &*layout::chart::HIDDEN_COLLAPSED_CHART_STYLE)
-                .map_err(|e| format!("{:?}", e))?;
-        } else {
-            canvas
-                .set_attribute("style", &*layout::chart::HIDDEN_CHART_STYLE)
-                .map_err(|e| format!("{:?}", e))?;
-            collapsed_canvas
-                .set_attribute("style", &*layout::chart::COLLAPSED_CHART_STYLE)
-                .map_err(|e| format!("{:?}", e))?;
-        }
-        Ok(false)
-    }
-    /// Toggles the visibility of a filter for the chart.
-    pub fn filter_toggle_visible(
-        &mut self,
-        uid: charts::uid::LineUid,
-        filters: &filter::ReferenceFilters,
-    ) -> Res<()> {
-        if let Some(is_visible) = self.filters.get_mut(&uid) {
-            *is_visible = !*is_visible;
-            self.draw(filters)?;
-            Ok(())
-        } else {
-            bail!("cannot toggle visibility of unknown filter {}", uid)
-        }
+        Ok(true)
     }
 
     pub fn filter_visibility(&self) -> &Map<charts::uid::LineUid, bool> {
         &self.filters
     }
-}
 
-/// # Functions for message-handling.
-impl Chart {
     /// Destroys the chart.
     pub fn destroy(self) {}
+}
+
+/// # Features that (can) trigger a re-draw.
+impl Chart {
+    /// Toggles the visibility of a filter for the chart.
+    pub fn filter_toggle_visible(&mut self, uid: charts::uid::LineUid) -> Res<()> {
+        if let Some(is_visible) = self.filters.get_mut(&uid) {
+            *is_visible = !*is_visible;
+            self.redraw = true;
+            Ok(())
+        } else {
+            bail!("cannot toggle visibility of unknown filter {}", uid)
+        }
+    }
 
     /// Replaces the filters of the chart.
     pub fn replace_filters(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
@@ -425,7 +400,115 @@ impl Chart {
             Ok(())
         })?;
 
-        self.draw(filters)
+        self.redraw = true;
+        Ok(())
+    }
+
+    /// Appends some points to the chart.
+    pub fn add_points(
+        &mut self,
+        mut points: point::Points,
+        filters: &filter::ReferenceFilters,
+    ) -> Res<()> {
+        let mut redraw = false;
+        if let Some(my_points) = &mut self.points {
+            let changed = my_points.extend(&mut points)?;
+            if changed {
+                self.draw(filters)?
+            }
+            redraw = true;
+        } else if !points.is_empty() {
+            self.points = Some(points);
+            self.draw(filters)?;
+            redraw = true;
+        }
+
+        self.redraw = self.redraw || redraw;
+        Ok(())
+    }
+
+    /// Overwrites the points in a chart.
+    pub fn overwrite_points(&mut self, points: point::Points) -> Res<()> {
+        self.points = Some(points);
+        self.redraw = true;
+        Ok(())
+    }
+}
+
+/// # Functions for message-handling.
+impl Chart {
+    /// Retrieves the canvas associated with a chart.
+    fn get_canvas_container(&self) -> Res<web_sys::Element> {
+        js::get_element_by_id(&self.container)
+            .chain_err(|| format!("while retrieving canvas container for chart {}", self.uid()))
+    }
+
+    /// Retrieves the canvas associated with a chart.
+    fn get_canvas(&self) -> Res<web_sys::Element> {
+        js::get_element_by_id(&self.canvas)
+            .chain_err(|| format!("while retrieving canvas for chart {}", self.uid()))
+    }
+
+    fn try_unbind_canvas(&self) -> Res<bool> {
+        debug!("try_unbind_canvas {}", self.spec.uid());
+
+        if let Some((_chart, canvas)) = self.chart.as_ref() {
+            info!("canvas id: {}", canvas.id());
+
+            if let Some(parent) = canvas.parent_element() {
+                info!(
+                    "unbinding canvas {} to container {}",
+                    canvas.id(),
+                    parent.id()
+                );
+                parent.remove_child(&canvas).map_err(err::from_js_val)?;
+            } else {
+                return Ok(false);
+            }
+        } else {
+            debug!("no canvas to unbind")
+        }
+
+        Ok(true)
+    }
+    fn unbind_canvas(&self) -> Res<()> {
+        debug!("unbind_canvas {}", self.spec.uid());
+
+        let okay = self.try_unbind_canvas()?;
+
+        if !okay {
+            bail!("failed to unbind canvas for chart {}", self.uid())
+        }
+        Ok(())
+    }
+
+    /// Binds the canvas backend to the right DOM element.
+    ///
+    /// Creates the chart if needed.
+    fn bind_canvas(&mut self) -> Res<()> {
+        debug!("bind_canvas {}", self.spec.uid());
+
+        if let Some((_chart, canvas)) = self.chart.as_ref() {
+            let canvas_container = self.get_canvas_container()?;
+            info!(
+                "binding canvas {} to container {}",
+                canvas.id(),
+                canvas_container.id()
+            );
+
+            canvas_container
+                .append_child(canvas)
+                .map_err(err::from_js_val)?;
+        } else {
+            debug!("no canvas to bind")
+        }
+
+        Ok(())
+    }
+
+    pub fn rebind_canvas(&mut self) -> Res<()> {
+        self.unbind_canvas()?;
+        self.bind_canvas()
     }
 
     /// Builds the actual JS chart and attaches it to its container.
@@ -438,8 +521,6 @@ impl Chart {
                 bail!("asked to build and bind a chart that's already built and binded")
             }
 
-            self.mounted();
-
             let backend: CanvasBackend =
                 plotters::prelude::CanvasBackend::new(&self.canvas).expect("could not find canvas");
 
@@ -450,7 +531,9 @@ impl Chart {
                 backend.into_drawing_area();
             chart.fill(&WHITE).unwrap();
 
-            self.chart = Some(chart);
+            let canvas = self.get_canvas()?;
+
+            self.chart = Some((chart, canvas));
         }
 
         Ok(())
@@ -464,10 +547,40 @@ impl Chart {
     ///   It should be exported, probably in the `charts` crate, to keep this function focused on
     ///   what it does.
     pub fn draw(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
-        self.mounted();
         let visible_filters = &self.filters;
 
-        if let Some(chart) = &mut self.chart {
+        debug!("drawing {}", self.spec.uid());
+
+        if let Some((chart, canvas)) = &mut self.chart {
+            let (width, height) = (
+                match canvas.client_width() {
+                    n if n >= 0 => n as u32,
+                    _ => {
+                        alert!("An error occured while resizing a chart's canvas: negative width.");
+                        panic!("fatal")
+                    }
+                },
+                match canvas.client_height() {
+                    n if n >= 0 => n as u32,
+                    _ => {
+                        alert!(
+                            "An error occured while resizing a chart's canvas: negative height."
+                        );
+                        panic!("fatal")
+                    }
+                },
+            );
+
+            use wasm_bindgen::JsCast;
+            let html_canvas: web_sys::HtmlCanvasElement = canvas.clone().dyn_into().unwrap();
+
+            if html_canvas.width() != width {
+                html_canvas.set_width(width)
+            }
+            if html_canvas.height() != height {
+                html_canvas.set_height(height)
+            }
+
             if let Some(points) = &self.points {
                 match points {
                     charts::point::Points::Time(charts::point::TimePoints::Size(points)) => {
@@ -592,94 +705,26 @@ impl Chart {
 
         Ok(())
     }
-
-    /// Appends some points to the chart.
-    pub fn add_points(
-        &mut self,
-        mut points: point::Points,
-        filters: &filter::ReferenceFilters,
-    ) -> Res<()> {
-        if let Some(my_points) = &mut self.points {
-            let changed = my_points.extend(&mut points)?;
-            if changed {
-                self.draw(filters)?
-            }
-            Ok(())
-        } else if !points.is_empty() {
-            self.points = Some(points);
-            self.draw(filters)?;
-            Ok(())
-        } else {
-            Ok(())
-        }
-    }
-
-    /// Overwrites the points in a chart.
-    pub fn overwrite_points(
-        &mut self,
-        points: point::Points,
-        filters: &filter::ReferenceFilters,
-    ) -> Res<()> {
-        self.points = Some(points);
-        self.draw(filters)
-    }
 }
 
 /// # Rendering
 impl Chart {
-    pub fn mounted(&mut self) -> ShouldRender {
-        if self.visible {
-            let document = web_sys::window()
-                .expect("could not retrieve document window")
-                .document()
-                .expect("could not retrieve document from window");
+    pub fn rendered(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
+        self.bind_canvas()?;
 
-            let canvas = document
-                .get_element_by_id(&self.canvas)
-                .expect("could not retrieve chart canvas");
-
-            let (width, height) = (
-                match canvas.client_width() {
-                    n if n >= 0 => n as u32,
-                    _ => {
-                        alert!("An error occured while resizing a chart's canvas: negative width.");
-                        panic!("fatal")
-                    }
-                },
-                match canvas.client_height() {
-                    n if n >= 0 => n as u32,
-                    _ => {
-                        alert!(
-                            "An error occured while resizing a chart's canvas: negative height."
-                        );
-                        panic!("fatal")
-                    }
-                },
-            );
-
-            use wasm_bindgen::JsCast;
-            let html_canvas: web_sys::HtmlCanvasElement = canvas.clone().dyn_into().unwrap();
-
-            if html_canvas.width() != width {
-                html_canvas.set_width(width)
-            }
-            if html_canvas.height() != height {
-                html_canvas.set_height(height)
-            }
+        if self.chart.is_none() {
+            self.build_chart()?;
+            self.redraw = true;
         }
 
-        false
+        if self.redraw {
+            self.draw(filters)?
+        }
+        Ok(())
     }
 
     /// Renders the chart.
     pub fn render(&self, model: &Model) -> Html {
-        html! {
-            <g>
-                {layout::chart::render(model, self)}
-                <br/>
-                <br/>
-                <br/>
-            </g>
-        }
+        layout::chart::render(model, self)
     }
 }

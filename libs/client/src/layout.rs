@@ -7,6 +7,7 @@ pub mod foot;
 
 define_style! {
     body_style! = {
+        block,
         margin(0 px),
         height(min 100 vh),
         bg(white),
@@ -28,20 +29,18 @@ pub fn render(model: &Model) -> Html {
     html! {
         <>
             <div
-                class = crate::style::class::FULL_BODY
                 style = if model.footer.is_expanded() {
                     &*EXPANDED_FOOTER_BODY_STYLE
                 } else {
                     &*COLLAPSED_FOOTER_BODY_STYLE
                 }
             >
-                <g
-                    id = model.charts().dom_node_id()
-                >
-                    { model.charts.render(model) }
-                </g>
+                { model.charts.render(model) }
             </div>
             { model.footer.render(model) }
+            <br/>
+            <br/>
+            <br/>
         </>
     }
 }
@@ -64,16 +63,24 @@ pub mod chart {
             chart.uid(),
             chart.is_visible()
         );
+        define_style! {
+            CONTAINER_STYLE = {
+                block,
+                margin_bottom(2%),
+            };
+        }
         html! {
-            <g
-                id = chart.container_id()
+            <div
+                id = chart.top_container_id()
+                style = CONTAINER_STYLE
             >
                 {tiles::render(model, chart)}
                 {render_chart(model, chart)}
                 {filter_toggles::render(model, chart)}
-            </g>
+            </div>
         }
     }
+
     define_style! {
         CHART_CONTAINER_STYLE = {
             width(100%),
@@ -118,7 +125,7 @@ pub mod chart {
         let collapsed_canvas_id = chart.collapsed_canvas_id();
         html! {
             <div
-                id = "chart_canvas_container"
+                id = chart.container_id()
                 style = CHART_CONTAINER_STYLE
             >
                 <canvas
@@ -212,7 +219,7 @@ pub mod chart {
 
             tabs.push_tab(
                 model,
-                &chart.spec().desc(),
+                &format!("{} ({})", chart.spec().desc(), chart.uid()),
                 TabProps::new(&*title_color),
                 model
                     .link
@@ -308,11 +315,6 @@ pub mod chart {
 
             let chart_uid = chart.uid();
 
-            info!("filter visiblity:");
-            for (uid, visible) in chart.filter_visibility() {
-                info!("- {}: {}", uid, visible)
-            }
-
             let is_active = |spec: &filter::FilterSpec| {
                 chart
                     .filter_visibility()
@@ -368,6 +370,7 @@ pub mod chart {
 
             html! {
                 <div
+                    id = format!("toggle_bar_for_chart{}", chart.uid())
                     style = TOGGLE_BAR
                 >
                     <center

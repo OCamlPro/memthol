@@ -30,7 +30,9 @@ typed-html = { git = "https://github.com/bodil/typed-html" }
 wasm-logger = "*"
 wasm-bindgen = "*"
 web-sys = { version = "*", features = [
-    "HtmlCanvasElement", "Element", "NamedNodeMap", "Attr", "HtmlSelectElement"
+    "Element", "NamedNodeMap", "Attr",
+    "HtmlCanvasElement", "HtmlSelectElement", "HtmlCollection"
 ] }
 wee_alloc = "*"
-yew = { version = "0.14.3", features = ["web_sys"] }
+yew = { git = "https://github.com/yewstack/yew" }
+yew-components = { git = "https://github.com/yewstack/yew" }

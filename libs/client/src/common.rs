@@ -18,12 +18,12 @@ pub use log::{debug, error, info, warn};
 pub use regex::Regex;
 
 pub use yew::{
-    components::Select,
     html,
     html::ChangeData,
     services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask},
     Callback, Component, ComponentLink, Renderable, ShouldRender,
 };
+pub use yew_components::Select;
 
 // Sub-crates.
 

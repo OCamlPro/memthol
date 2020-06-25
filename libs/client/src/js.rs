@@ -10,6 +10,23 @@ extern "C" {
     pub fn alert(s: &str);
 }
 
+/// Retrieves a DOM element from its id.
+pub fn try_get_element_by_id(id: &str) -> crate::common::Res<Option<web_sys::Element>> {
+    let document = web_sys::window()
+        .ok_or("could not retrieve window")?
+        .document()
+        .ok_or("could not retrieve document from window")?;
+
+    Ok(document.get_element_by_id(id))
+}
+
+/// Retrieves a DOM element from its id.
+pub fn get_element_by_id(id: &str) -> crate::common::Res<web_sys::Element> {
+    let res =
+        try_get_element_by_id(id)?.ok_or_else(|| format!("unknown DOM element id {:?}", id))?;
+    Ok(res)
+}
+
 /// Server info.
 pub mod server {
     use crate::common::*;

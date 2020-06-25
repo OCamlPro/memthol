@@ -217,6 +217,11 @@ macro_rules! css {
         )*
         write!($str, "; ");
     }};
+    (@($str:expr) margin_bottom(
+        $margin:tt $unit:tt $(,)*
+    )) => {{
+        write!($str, "margin-bottom: {}{};", $crate::css!(@arg $margin), stringify!($unit));
+    }};
 
     // #padding
     (@($str:expr) padding(none)) => {{

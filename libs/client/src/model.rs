@@ -6,8 +6,6 @@ use crate::common::*;
 pub struct Model {
     /// Component link.
     pub link: ComponentLink<Self>,
-    /// Socket service with the server.
-    pub socket: WebSocketService,
     /// Socket task for receiving/sending messages from/to the server.
     pub socket_task: Option<WebSocketTask>,
     /// Errors.
@@ -35,17 +33,14 @@ impl Model {
 
 impl Model {
     /// Activates the websocket to receive data from the server.
-    fn activate_ws(
-        link: &mut ComponentLink<Self>,
-        socket: &mut WebSocketService,
-    ) -> Res<WebSocketTask> {
+    fn activate_ws(link: &mut ComponentLink<Self>) -> Res<WebSocketTask> {
         info!("fetching server's websocket info");
         let (addr, port) = js::server::address()?;
         let addr = format!("ws://{}:{}", addr, port + 1);
         info!("websocket: {:?}", addr);
         let callback = link.callback(|msg| Msg::FromServer(msg));
         let notification = link.callback(|status| Msg::ConnectionStatus(status));
-        let task = socket.connect(&addr, callback, notification)?;
+        let task = WebSocketService::connect(&addr, callback, notification)?;
         info!("connection established successfully");
         Ok(task)
     }
@@ -95,8 +90,7 @@ impl Component for Model {
     type Properties = ();
 
     fn create(_: Self::Properties, mut link: ComponentLink<Self>) -> Self {
-        let mut socket = WebSocketService::new();
-        let (socket_task, errors) = match Self::activate_ws(&mut link, &mut socket) {
+        let (socket_task, errors) = match Self::activate_ws(&mut link) {
             Ok(res) => (Some(res), vec![]),
             Err(e) => (None, vec![e]),
         };
@@ -104,7 +98,6 @@ impl Component for Model {
         let filters = filter::Filters::new(link.callback(|msg: Msg| msg));
         Model {
             link,
-            socket,
             socket_task,
             errors,
             charts,
@@ -170,8 +163,12 @@ impl Component for Model {
         layout::render(self)
     }
 
-    fn mounted(&mut self) -> ShouldRender {
-        info!("running mounted on {} charts", self.charts.len());
-        self.charts.mounted()
+    fn rendered(&mut self, _first_render: bool) {
+        info!("rendered, {} charts", self.charts.len());
+        self.charts.rendered(self.filters.reference_filters())
+    }
+
+    fn change(&mut self, _props: ()) -> bool {
+        false
     }
 }

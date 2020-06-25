@@ -588,7 +588,7 @@ pub mod menu {
                 <Select<SubKey>
                     options = options
                     selected = selected
-                    onchange = model.link.callback(
+                    on_change = model.link.callback(
                         move |sub_key| match sub_key {
                             SubKey::Change(kind) => {
                                 let mut sub = sub_clone.clone();
@@ -624,7 +624,7 @@ pub mod menu {
                         <Select<Kind>
                             selected = selected
                             options = Kind::all()
-                            onchange = model.link.callback(
+                            on_change = model.link.callback(
                                 move |kind| {
                                     let sub = sub_clone.clone().change_cmp_kind(kind);
                                     msg(Ok(sub))
@@ -697,7 +697,7 @@ pub mod menu {
                         <Select<LabelPred>
                             selected = selected
                             options = LabelPred::all()
-                            onchange = model.link.callback(
+                            on_change = model.link.callback(
                                 move |new_pred| msg(Ok(
                                     LabelFilter::new(new_pred, specs.clone())
                                 ))
@@ -772,7 +772,7 @@ pub mod menu {
                         <Select<LocPred>
                             selected = selected
                             options = LocPred::all()
-                            onchange = model.link.callback(
+                            on_change = model.link.callback(
                                 move |pred| msg(Ok(LocFilter::new(pred, specs.clone())))
                             )
                         />

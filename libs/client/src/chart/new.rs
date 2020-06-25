@@ -7,9 +7,9 @@ use crate::common::{
 
 pub struct NewChart {
     /// X-axis selection.
-    x_axis: XAxis,
+    pub x_axis: XAxis,
     /// Y-axis selection.
-    y_axis: YAxis,
+    pub y_axis: YAxis,
 }
 
 impl NewChart {
@@ -55,31 +55,42 @@ impl NewChart {
 
     /// Renders itself.
     pub fn render(&self, model: &Model) -> Html {
-        let (x_axis, y_axis) = (self.x_axis, self.y_axis);
-        html! {
-            <g>
-                <center class=style::class::chart::HEADER>
-                    { buttons::add(
-                        model,
-                        "Create a new chart",
-                        move |_| msg::to_server::ChartsMsg::new(x_axis, y_axis).into()
-                    ) }
+        define_style! {
+            HEADER_STYLE = {
+                font_size(120%),
+            };
+            CREATE_STYLE = {
+                pointer,
+                underline,
+            };
+        }
 
-                    <h2>
-                        <Select<XAxis>
-                            selected = Some(x_axis)
-                            options = XAxis::all()
-                            onchange = model.link.callback(msg::ChartsMsg::new_chart_set_x)
-                        />
-                        { "    /    " }
-                        <Select<YAxis>
-                            selected = Some(y_axis)
-                            options = x_axis.y_axes()
-                            onchange = model.link.callback(msg::ChartsMsg::new_chart_set_y)
-                        />
-                    </h2>
-                </center>
-            </g>
+        let (x_axis, y_axis) = (self.x_axis, self.y_axis);
+
+        html! {
+            <center class=style::class::chart::HEADER>
+                <h2>
+                    <div
+                        style = CREATE_STYLE
+                        onclick = model.link.callback(
+                            move |_| msg::to_server::ChartsMsg::new(x_axis, y_axis)
+                        )
+                    >
+                        {"create chart"}
+                    </div>
+                    <Select<XAxis>
+                        selected = Some(x_axis)
+                        options = XAxis::all()
+                        on_change = model.link.callback(msg::ChartsMsg::new_chart_set_x)
+                    />
+                    { "    /    " }
+                    <Select<YAxis>
+                        selected = Some(y_axis)
+                        options = x_axis.y_axes()
+                        on_change = model.link.callback(msg::ChartsMsg::new_chart_set_y)
+                    />
+                </h2>
+            </center>
         }
     }
 }

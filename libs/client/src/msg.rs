@@ -109,11 +109,6 @@ impl From<FiltersMsg> for Msg {
 /// Operations over charts.
 #[derive(Debug)]
 pub enum ChartsMsg {
-    /// Builds a chart and attaches it to its container.
-    ///
-    /// This is typically sent after a chart is first render, thus creating the chart container. The
-    /// message forces to build and bind the chart once the container exists.
-    Build(ChartUid),
     /// Moves a chart up or down.
     Move {
         /// UID of the chart.
@@ -138,10 +133,6 @@ pub enum ChartsMsg {
     NewChartSetY(chart::axis::YAxis),
 }
 impl ChartsMsg {
-    /// Constructs a `Build` message.
-    pub fn build(uid: ChartUid) -> Msg {
-        Self::Build(uid).into()
-    }
     /// Constructs a message to move a chart up.
     pub fn move_up(uid: ChartUid) -> Msg {
         Self::Move { uid, up: true }.into()
@@ -181,7 +172,6 @@ impl ChartsMsg {
 impl fmt::Display for ChartsMsg {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Build(uid) => write!(fmt, "build {}", uid),
             Self::Move { uid, up } => write!(fmt, "move {}/{}", uid, up),
             Self::ToggleVisible(c_uid) => write!(fmt, "toggle visible {}", c_uid),
             Self::FilterToggleVisible(c_uid, l_uid) => {
