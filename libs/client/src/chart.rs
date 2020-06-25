@@ -475,16 +475,6 @@ impl Chart {
 
         Ok(true)
     }
-    fn unbind_canvas(&self) -> Res<()> {
-        debug!("unbind_canvas {}", self.spec.uid());
-
-        let okay = self.try_unbind_canvas()?;
-
-        if !okay {
-            bail!("failed to unbind canvas for chart {}", self.uid())
-        }
-        Ok(())
-    }
 
     /// Binds the canvas backend to the right DOM element.
     ///

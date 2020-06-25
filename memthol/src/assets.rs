@@ -4,7 +4,7 @@
 //!
 //! - the html pages, typically `index.html`;
 //! - the wasm/js code for the client (generated from `client`);
-//! - the css and pictures used for styling.
+//! - the pictures used for styling.
 //!
 //! Basically, everything depends on whether we're compiling in `release` mode or not.
 //!
@@ -34,9 +34,6 @@ macro_rules! asset_dir {
     (root) => {
         "static"
     };
-    (css) => {
-        concat!(asset_dir!(root), "/css")
-    };
     (pics) => {
         concat!(asset_dir!(root), "/pics")
     };
@@ -61,8 +58,6 @@ macro_rules! asset_source {
 lazy_static::lazy_static! {
     /// Path to the asset directory.
     static ref ASSET_DIR: PathBuf = asset_dir!(root).into();
-    /// Path to the css directory.
-    static ref CSS_DIR: PathBuf = asset_dir!(css).into();
     /// Path to the picture directory.
     static ref PICS_DIR: PathBuf = asset_dir!(pics).into();
 }
@@ -75,7 +70,6 @@ pub mod content {
     /// Sets up the assets for the UI.
     pub fn setup(_addr: &str, _port: usize) -> Res<()> {
         mk_asset_dirs()?;
-        css::generate()?;
         pics::generate()?;
         top::generate()?;
         Ok(())
@@ -88,7 +82,6 @@ pub mod content {
 
         // Let's create stuff now.
         mk_asset_dir(&*ASSET_DIR)?;
-        mk_asset_dir(&*CSS_DIR)?;
         mk_asset_dir(&*PICS_DIR)?;
         Ok(())
     }
@@ -164,8 +157,6 @@ pub mod content {
     ///     make_generator_for! {
     ///         /// Main HTML file.
     ///         HTML: "static/path/to/index.html",
-    ///         /// Main CSS file.
-    ///         CSS: "static/path/to/style.css",
     ///     }
     /// }
     /// ```
@@ -214,16 +205,6 @@ pub mod content {
             MEMTHOL_JS: root / "client.js", from build_dir,
             /// Memthol client's wasm code.
             MEMTHOL_WASM: root / "client_bg.wasm", from build_dir,
-        }
-    }
-
-    /// Generates CSS-related files.
-    pub mod css {
-        make_generator_for! {
-            /// Main CSS file.
-            MAIN_CSS: css / "style.css", from lib,
-            /// Main CSS file map.
-            MAIN_CSS_MAP: css / "style.css.map", from lib,
         }
     }
 

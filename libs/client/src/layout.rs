@@ -7,6 +7,7 @@ pub mod foot;
 
 define_style! {
     body_style! = {
+        font(default),
         block,
         margin(0 px),
         height(min 100 vh),
