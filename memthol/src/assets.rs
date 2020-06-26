@@ -2,7 +2,7 @@
 //!
 //! The "assets" are stored in the `static` directory, and include
 //!
-//! - the html pages, typically `index.html`;
+//! - the html page(s), typically `index.html`;
 //! - the wasm/js code for the client (generated from `client`);
 //! - the pictures used for styling.
 //!

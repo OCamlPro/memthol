@@ -1,6 +1,6 @@
 //! Model of the client.
 
-use crate::common::*;
+prelude! {}
 
 /// Model of the client.
 pub struct Model {

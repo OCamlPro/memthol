@@ -1,100 +1,7 @@
 //! HTML builders.
 #![allow(non_upper_case_globals)]
 
-use crate::common::*;
-
-pub mod input {
-    use super::*;
-
-    define_style! {
-        input_style! = {
-            width(85%),
-            height(70%),
-            border_radius(5 px),
-            text_align(center),
-            margin(none),
-            padding(0%, 1%),
-            border(none),
-            bg({"#3a3a3a"}),
-        };
-
-        TEXT_INPUT_STYLE = {
-            extends(input_style),
-            fg(orange),
-            font(code),
-        };
-        COLOR_INPUT_STYLE = {
-            extends(input_style),
-        };
-    }
-
-    pub fn text_input(value: &str, onchange: OnChangeAction) -> Html {
-        html! {
-            <input
-                type = "text"
-                id = "text_input"
-                style = TEXT_INPUT_STYLE
-                value = value
-                onchange = onchange
-            />
-        }
-    }
-
-    fn parse_text_data(data: ChangeData) -> Res<String> {
-        match data {
-            yew::html::ChangeData::Value(txt) => Ok(txt),
-            err @ yew::html::ChangeData::Select(_) | err @ yew::html::ChangeData::Files(_) => {
-                bail!("unexpected text field update {:?}", err)
-            }
-        }
-    }
-
-    pub fn string_input(
-        model: &Model,
-        value: &str,
-        msg: impl Fn(Res<String>) -> Msg + 'static,
-    ) -> Html {
-        text_input(
-            value,
-            model.link.callback(move |data| {
-                msg(parse_text_data(data)
-                    .map_err(err::Err::from)
-                    .chain_err(|| "while parsing string value"))
-            }),
-        )
-    }
-
-    fn parse_usize_data(data: ChangeData) -> Res<usize> {
-        use alloc_data::Parseable;
-        parse_text_data(data).and_then(|txt| usize::parse(txt).map_err(|e| e.into()))
-    }
-    pub fn usize_input(
-        model: &Model,
-        value: usize,
-        msg: impl Fn(Res<usize>) -> Msg + 'static,
-    ) -> Html {
-        text_input(
-            &value.to_string(),
-            model.link.callback(move |data| {
-                msg(parse_usize_data(data)
-                    .map_err(|e| err::Err::from(e))
-                    .chain_err(|| "while parsing integer value"))
-            }),
-        )
-    }
-
-    pub fn color_input(value: &impl fmt::Display, onchange: OnChangeAction) -> Html {
-        html! {
-            <input
-                type = "color"
-                id = "color_input"
-                style = COLOR_INPUT_STYLE
-                value = value
-                onchange = onchange
-            />
-        }
-    }
-}
+prelude! {}
 
 pub const width_wrt_full: usize = 100;
 
@@ -316,26 +223,6 @@ pub mod menu {
     pub mod filter_right_tile {
         use super::*;
 
-        define_style! {
-            link_box! = {
-                width(70%),
-                height(10%),
-                bg(gradient {"#8e8e8e"} to black),
-                border_radius(5 px),
-                border(1 px, white),
-                margin(auto),
-                table,
-            };
-            LINK_BOX = {
-                extends(link_box),
-                pointer,
-            };
-            HIDDEN_LINK_BOX = {
-                extends(link_box),
-                visi(hidden),
-            };
-        }
-
         pub fn render(model: &Model, uid: filter::LineUid) -> Html {
             let edited = model.footer_filters().edited();
             html! {
@@ -351,31 +238,30 @@ pub mod menu {
             }
         }
 
-        pub fn button(id: &str, txt: &str, onclick: Option<OnClickAction>) -> Html {
-            if let Some(onclick) = onclick {
-                html! {
-                    <div
-                        id = id
-                        style = LINK_BOX
-                        onclick = onclick
-                    >
-                        <a
-                            style = layout::tabs::CONTENT_STYLE
-                        >
-                            {txt}
-                        </a>
-                    </div>
-                }
-            } else {
-                html! {
-                    <div
-                        id = id
-                        style = HIDDEN_LINK_BOX
-                    >
-                    </div>
-                }
+        pub fn button(id: &str, txt: impl fmt::Display, onclick: Option<OnClickAction>) -> Html {
+            define_style! {
+                BUTTON_CONTAINER = {
+                    width(70%),
+                    height(10%),
+                    margin(auto),
+                };
+            }
+
+            html! {
+                <div
+                    id = format!("{}_container", id)
+                    style = BUTTON_CONTAINER
+                >
+                    {layout::button::text::render_default_button(
+                        id,
+                        txt,
+                        onclick,
+                        false,
+                    )}
+                </div>
             }
         }
+
         pub fn save_button(model: &Model, edited: bool) -> Html {
             let action = if edited {
                 Some(model.link.callback(move |_| msg::FiltersMsg::save()))
@@ -450,7 +336,7 @@ pub mod menu {
         }
 
         pub fn render_name_row(model: &Model, filter: &filter::FilterSpec) -> Html {
-            let mut table_row = layout::table::TableRow::new_menu(true, html! { "name" });
+            let mut table_row = table::TableRow::new_menu(true, html! { "name" });
             table_row.push_single_value({
                 let uid = filter.uid();
                 input::text_input(
@@ -463,7 +349,7 @@ pub mod menu {
             table_row.render()
         }
         pub fn render_color_row(model: &Model, filter: &filter::FilterSpec) -> Html {
-            let mut table_row = layout::table::TableRow::new_menu(false, html! { "color" });
+            let mut table_row = table::TableRow::new_menu(false, html! { "color" });
             table_row.push_single_value({
                 let uid = filter.uid();
                 input::color_input(
@@ -515,7 +401,7 @@ pub mod menu {
             sub: &filter::SubFilter,
         ) -> Html {
             let key = render_key(model, uid, sub);
-            let mut table_row = layout::table::TableRow::new_menu(is_first, key);
+            let mut table_row = table::TableRow::new_menu(is_first, key);
             let sub_uid = sub.uid();
             match sub.raw() {
                 RawSubFilter::Size(sub) => {
@@ -609,7 +495,7 @@ pub mod menu {
             use charts::filter::ord::Kind;
 
             pub fn render<Update>(
-                table_row: &mut layout::table::TableRow,
+                table_row: &mut table::TableRow,
                 model: &Model,
                 sub: &SizeFilter,
                 msg: Update,
@@ -667,7 +553,7 @@ pub mod menu {
             };
 
             pub fn render<Update>(
-                table_row: &mut layout::table::TableRow,
+                table_row: &mut table::TableRow,
                 model: &Model,
                 sub: &LabelFilter,
                 msg: Update,
@@ -742,7 +628,7 @@ pub mod menu {
             };
 
             pub fn render<Update>(
-                table_row: &mut layout::table::TableRow,
+                table_row: &mut table::TableRow,
                 model: &Model,
                 sub: &LocFilter,
                 msg: Update,
@@ -961,6 +847,364 @@ pub mod tabs {
                     {tabs.render()}
                 </div>
             }
+        }
+    }
+}
+
+pub mod table {
+    use super::*;
+
+    pub const LEFT_COL_WIDTH: usize = 15;
+    pub const RIGHT_COL_WIDTH: usize = 100 - LEFT_COL_WIDTH - 1;
+
+    define_style! {
+        row_style! = {
+            width(100%),
+            height(10%),
+            block,
+        };
+        FIRST_ROW_STYLE = {
+            extends(row_style),
+        };
+        NON_FIRST_ROW_STYLE = {
+            extends(row_style),
+            border(top, 2 px, white),
+        };
+
+        LEFT_COL = {
+            block,
+            height(100%),
+            width({LEFT_COL_WIDTH}%),
+            text_align(center),
+            float(left),
+            padding(none),
+            margin(none),
+            border(right, 2 px, white),
+        };
+        RIGHT_COL = {
+            block,
+            height(100%),
+            width({RIGHT_COL_WIDTH}%),
+            float(left),
+            padding(none),
+            margin(none),
+            overflow(auto),
+        };
+        table_cell_style! = {
+            table cell,
+            vertical_align(middle),
+        };
+    }
+
+    define_style! {
+        cell_style! = {
+            height(100%),
+            display(table),
+            float(left),
+            text_align(center),
+        };
+        VALUE_CONTAINER_STYLE = {
+            extends(cell_style),
+            width(min 10%),
+        };
+        TINY_VALUE_CONTAINER_STYLE = {
+            extends(cell_style),
+            width(3%),
+        };
+        SINGLE_VALUE_CONTAINER_STYLE = {
+            extends(cell_style),
+            width(100%),
+        };
+        SEP_CONTAINER_STYLE = {
+            extends(cell_style),
+            width(2%),
+        };
+        SELECTOR_CONTAINER_STYLE = {
+            extends(cell_style),
+            width(10%),
+        };
+        SINGLE_VALUE_WITH_SELECTOR_CONTAINER_STYLE = {
+            extends(cell_style),
+            width(90%)
+        };
+
+        value_cell_style! = {
+            extends(table_cell_style),
+            height(100%),
+            width(auto),
+            // width(min 15%),
+        };
+        CELL_STYLE = {
+            extends(value_cell_style),
+        };
+        VALUE_STYLE = {
+            extends(value_cell_style),
+            // margin(0%, 1%),
+        };
+        SEP_STYLE = {
+            extends(value_cell_style),
+            // padding(0%, 1%),
+            // width(5%),
+            font(code),
+        };
+        ADD_STYLE = {
+            // extends(value_cell_style),
+            // width(5%),
+            font(code),
+            pointer,
+        };
+
+        SELECTOR_STYLE = {
+            extends(value_cell_style),
+            // margin(0%, 1%),
+        };
+
+        BUTTON_STYLE = {
+            font(code),
+            pointer,
+        };
+    }
+
+    pub struct TableRow {
+        style: &'static str,
+        lft_style: &'static str,
+        lft: Html,
+        rgt_style: &'static str,
+        rgt: SVec<Html>,
+    }
+
+    impl TableRow {
+        fn new(
+            is_first: bool,
+            lft_style: &'static str,
+            lft: Html,
+            rgt_style: &'static str,
+        ) -> Self {
+            let style = if is_first {
+                &*FIRST_ROW_STYLE
+            } else {
+                &*NON_FIRST_ROW_STYLE
+            };
+            let lft = html! {
+                <div
+                    style = SINGLE_VALUE_CONTAINER_STYLE
+                >
+                    {Self::new_cell(lft)}
+                </div>
+            };
+            Self {
+                style,
+                lft_style,
+                lft,
+                rgt_style,
+                rgt: SVec::new(),
+            }
+        }
+
+        pub fn new_menu(is_first: bool, lft: Html) -> Self {
+            Self::new(is_first, &*LEFT_COL, lft, &*RIGHT_COL)
+        }
+
+        pub fn render(self) -> Html {
+            html! {
+                <div
+                    style = self.style
+                >
+                    <div
+                        style = self.lft_style
+                    >
+                        {self.lft}
+                    </div>
+                    <div
+                        style = self.rgt_style
+                    >
+                        { for self.rgt.into_iter() }
+                    </div>
+                </div>
+            }
+        }
+
+        fn new_cell(inner: Html) -> Html {
+            html! {
+                <div
+                    style = CELL_STYLE
+                >
+                    {inner}
+                </div>
+            }
+        }
+
+        pub fn push_selector(&mut self, selector: Html) {
+            self.rgt.push(html! {
+                <div
+                    style = SELECTOR_CONTAINER_STYLE
+                >
+                    {Self::new_cell(selector)}
+                </div>
+            })
+        }
+        pub fn push_sep(&mut self, sep: Html) {
+            self.rgt.push(html! {
+                <div
+                    style = SEP_CONTAINER_STYLE
+                >
+                    {Self::new_cell(sep)}
+                </div>
+            })
+        }
+        pub fn push_value(&mut self, value: Html) {
+            self.rgt.push(html! {
+                <div
+                    style = VALUE_CONTAINER_STYLE
+                >
+                    {Self::new_cell(value)}
+                </div>
+            })
+        }
+        pub fn push_tiny_value(&mut self, value: Html) {
+            self.rgt.push(html! {
+                <div
+                    style = TINY_VALUE_CONTAINER_STYLE
+                >
+                    {Self::new_cell(value)}
+                </div>
+            })
+        }
+        pub fn push_single_value(&mut self, value: Html) {
+            self.rgt.push(html! {
+                <div
+                    style = SINGLE_VALUE_CONTAINER_STYLE
+                >
+                    {Self::new_cell(value)}
+                </div>
+            })
+        }
+
+        pub fn push_single_selector_and_value(&mut self, selector: Html, value: Html) {
+            self.rgt.push(html! {
+                <div
+                    style = SELECTOR_CONTAINER_STYLE
+                >
+                    {Self::new_cell(selector)}
+                </div>
+            });
+            self.rgt.push(html! {
+                <div
+                    style = VALUE_CONTAINER_STYLE
+                >
+                    {Self::new_cell(value)}
+                </div>
+            })
+        }
+
+        pub fn push_button(&mut self, txt: &str, action: OnClickAction) {
+            self.rgt.push(html! {
+                <div
+                    style = SEP_CONTAINER_STYLE
+                >
+                    {Self::new_cell(html! {
+                        <div
+                            style = BUTTON_STYLE
+                            onclick = action
+                        >
+                            {txt}
+                        </div>
+                    })}
+                </div>
+            })
+        }
+    }
+}
+
+pub mod input {
+    use super::*;
+
+    define_style! {
+        input_style! = {
+            width(85%),
+            height(70%),
+            border_radius(5 px),
+            text_align(center),
+            margin(none),
+            padding(0%, 1%),
+            border(none),
+            bg({"#3a3a3a"}),
+        };
+
+        TEXT_INPUT_STYLE = {
+            extends(input_style),
+            fg(orange),
+            font(code),
+        };
+        COLOR_INPUT_STYLE = {
+            extends(input_style),
+        };
+    }
+
+    pub fn text_input(value: &str, onchange: OnChangeAction) -> Html {
+        html! {
+            <input
+                type = "text"
+                id = "text_input"
+                style = TEXT_INPUT_STYLE
+                value = value
+                onchange = onchange
+            />
+        }
+    }
+
+    fn parse_text_data(data: ChangeData) -> Res<String> {
+        match data {
+            yew::html::ChangeData::Value(txt) => Ok(txt),
+            err @ yew::html::ChangeData::Select(_) | err @ yew::html::ChangeData::Files(_) => {
+                bail!("unexpected text field update {:?}", err)
+            }
+        }
+    }
+
+    pub fn string_input(
+        model: &Model,
+        value: &str,
+        msg: impl Fn(Res<String>) -> Msg + 'static,
+    ) -> Html {
+        text_input(
+            value,
+            model.link.callback(move |data| {
+                msg(parse_text_data(data)
+                    .map_err(err::Err::from)
+                    .chain_err(|| "while parsing string value"))
+            }),
+        )
+    }
+
+    fn parse_usize_data(data: ChangeData) -> Res<usize> {
+        use alloc_data::Parseable;
+        parse_text_data(data).and_then(|txt| usize::parse(txt).map_err(|e| e.into()))
+    }
+    pub fn usize_input(
+        model: &Model,
+        value: usize,
+        msg: impl Fn(Res<usize>) -> Msg + 'static,
+    ) -> Html {
+        text_input(
+            &value.to_string(),
+            model.link.callback(move |data| {
+                msg(parse_usize_data(data)
+                    .map_err(|e| err::Err::from(e))
+                    .chain_err(|| "while parsing integer value"))
+            }),
+        )
+    }
+
+    pub fn color_input(value: &impl fmt::Display, onchange: OnChangeAction) -> Html {
+        html! {
+            <input
+                type = "color"
+                id = "color_input"
+                style = COLOR_INPUT_STYLE
+                value = value
+                onchange = onchange
+            />
         }
     }
 }

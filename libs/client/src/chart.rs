@@ -669,9 +669,7 @@ impl Chart {
                             let uid = spec.uid();
 
                             if visible_filters.get(&uid).cloned().unwrap_or(false) {
-                                let &charts::color::Color { r, g, b } = spec.color();
-                                let color: palette::rgb::Rgb<palette::encoding::srgb::Srgb, _> =
-                                    palette::rgb::Rgb::new(r, g, b);
+                                let color = color::to_plotters(spec.color());
 
                                 let point_iter = points.iter().filter_map(|point| {
                                     point.vals.map.get(&uid).map(|val| {

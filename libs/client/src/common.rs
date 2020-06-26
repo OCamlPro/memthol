@@ -31,6 +31,17 @@ pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Ui
 
 pub use charts::{point::Point, Json};
 
+pub mod color {
+    pub use charts::color::Color;
+    pub use plotters::palette::rgb::Rgb;
+
+    use plotters::palette::encoding::srgb::Srgb;
+
+    pub fn to_plotters(&Color { r, g, b }: &Color) -> Rgb<Srgb, u8> {
+        Rgb::new(r, g, b)
+    }
+}
+
 // Re-exports.
 
 pub use crate::{

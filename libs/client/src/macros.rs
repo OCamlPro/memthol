@@ -1,5 +1,12 @@
 //! Macros.
 
+/// Opens the prelude.
+macro_rules! prelude {
+    () => {
+        use crate::common::*;
+    };
+}
+
 /// Issues an alert.
 #[macro_export]
 macro_rules! alert {
@@ -16,6 +23,22 @@ macro_rules! alert {
 /// Generates inline-CSS styles.
 #[macro_export]
 macro_rules! css {
+    (fmt: $fmt:expr,
+        $(
+            $($id:ident)+ $(
+                ($($args:tt)*)
+            )?
+        ),*
+        $(,)?
+    ) => {{
+        #![allow(unused_must_use)]
+        $(
+            $crate::css!(@($fmt)
+                $($id)+ $( ($($args)*) )?
+            );
+        )*
+    }};
+
     ($str:expr,
         $(
             $($id:ident)+ $(
@@ -48,6 +71,19 @@ macro_rules! css {
     ) => {{
         if $e {
             $crate::css!($str, $($thn_id)+ $(($($thn_args)*))?)
+        }
+    }};
+    (@($str:expr)
+        if(
+            $e:expr,
+            {
+                $($thn_args:tt)*
+            }
+            $(,)?
+        )
+    ) => {{
+        if $e {
+            $crate::css!($str, $($thn_args)*)
         }
     }};
     (@($str:expr)
@@ -668,6 +704,19 @@ macro_rules! define_style {
     (
         $(#[$meta:meta])*
         $name:ident = { $($stuff:tt)* };
+
+        $($tail:tt)*
+    ) => {
+        lazy_static::lazy_static! {
+            $(#[$meta])*
+            static ref $name: String = $crate::inline_css!($($stuff)*);
+        }
+
+        $crate::define_style! { $($tail)* }
+    };
+    (
+        $(#[$meta:meta])*
+        pub $name:ident = { $($stuff:tt)* };
 
         $($tail:tt)*
     ) => {
