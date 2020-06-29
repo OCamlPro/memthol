@@ -65,6 +65,10 @@ cargo install --force --git <memthol's BUI repository>
 - [browser compatibility]
 - [todo list]
 
+# Icons
+
+All icons come from the [bootstrap library][bootstrap].
+
 [OCaml]: https://ocaml.org/ (OCaml official page)
 [web assembly]: https://webassembly.org/ (Web Assembly official page)
 [Rust]: https://www.rust-lang.org/ (Rust official page)
@@ -73,3 +77,4 @@ cargo install --force --git <memthol's BUI repository>
 [browser compatibility]: ./docs/compatibility.md (Browser compatibility discussion)
 [todo list]: ./todo.md (Todo list)
 [install wasm-pack]: https://rustwasm.github.io/wasm-pack/installer (wasm-pack install instructions)
+[bootstrap]: https://icons.getbootstrap.com (the bootstrap library)

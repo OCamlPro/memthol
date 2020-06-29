@@ -10,7 +10,21 @@ const collapsed_chart_height_px: usize = 40;
 const tiles_height_px: usize = 50;
 const filter_toggles_height_px: usize = 30;
 
-pub fn render(model: &Model, chart: &Chart) -> Html {
+#[derive(Clone, Copy)]
+pub struct ChartPos {
+    is_first: bool,
+    is_last: bool,
+}
+impl ChartPos {
+    pub fn from_pos_and_len(pos: usize, len: usize) -> Self {
+        Self {
+            is_first: pos == 0,
+            is_last: pos + 1 == len,
+        }
+    }
+}
+
+pub fn render(model: &Model, chart: &Chart, pos: ChartPos) -> Html {
     info!(
         "rendering chart {}, visible: {}",
         chart.uid(),
@@ -26,6 +40,13 @@ pub fn render(model: &Model, chart: &Chart) -> Html {
             width(100%),
             border_radius(20 px),
             border({border_size_px} px, black),
+            box_shadow(
+                4 px,
+                {-2} px,
+                20 px,
+                1 px,
+                black,
+            ),
         };
     }
     html! {
@@ -36,7 +57,7 @@ pub fn render(model: &Model, chart: &Chart) -> Html {
             <div
                 style = MAIN_CONTAINER_STYLE
             >
-                {tiles::render(model, chart)}
+                {tiles::render(model, chart, pos)}
                 {render_chart(model, chart)}
             </div>
             {filter_toggles::render(model, chart)}
@@ -122,12 +143,8 @@ pub fn render_chart(_model: &Model, chart: &Chart) -> Html {
 
 pub mod tiles {
     use super::*;
-    use layout::tabs::{TabProps, Tabs};
 
-    const tab_color: &str = "#accbff";
-    const title_color: &str = "#00b1ff";
-
-    pub fn render(model: &Model, chart: &Chart) -> Html {
+    pub fn render(model: &Model, chart: &Chart, pos: ChartPos) -> Html {
         const left_tile_width: usize = 20;
         const right_tile_width: usize = left_tile_width;
         const center_tile_width: usize = 100 - (left_tile_width + right_tile_width);
@@ -150,19 +167,16 @@ pub mod tiles {
                 height(100%),
                 width({left_tile_width}%),
                 float(left),
-                // bg(red)
             };
             RIGHT_TILE = {
                 height(100%),
                 width({right_tile_width}%),
                 float(left),
-                // bg(green)
             };
             CENTER_TILE = {
                 height(100%),
                 width({center_tile_width}%),
                 float(left),
-                // bg(blue)
             };
         }
 
@@ -179,7 +193,7 @@ pub mod tiles {
                     id = "chart_top_left_tile"
                     style = LEFT_TILE
                 >
-                    {render_left_tabs(model, chart)}
+                    {render_left(model, chart, pos)}
                 </div>
                 <div
                     id = "chart_top_center_tile"
@@ -191,92 +205,164 @@ pub mod tiles {
                     id = "chart_top_right_tile"
                     style = RIGHT_TILE
                 >
-                    {render_right_tabs(model, chart)}
+                    {render_right(model, chart)}
                 </div>
             </div>
         }
     }
 
-    pub fn render_center_tabs(model: &Model, chart: &Chart) -> Html {
-        let chart_uid = chart.uid();
-        let mut tabs = Tabs::new();
-
-        tabs.push_tab(
-            model,
-            &format!("{} ({})", chart.spec().desc(), chart.uid()),
-            TabProps::new(&*title_color),
-            model
-                .link
-                .callback(move |_| msg::ChartsMsg::toggle_visible(chart_uid)),
-        );
+    pub fn render_center_tabs(_model: &Model, chart: &Chart) -> Html {
+        // let chart_uid = chart.uid();
 
         define_style! {
-            TABS_CONTAINER = {
+            TITLE_CONTAINER = {
                 height(100%),
-                font_size(150%),
+                width(100%),
+                font_size(170%),
+                table,
+            };
+            TITLE_CELL = {
+                vertical_align(middle),
+                table cell,
             };
         }
         html! {
             <center
-                style = TABS_CONTAINER
+                style = TITLE_CONTAINER
             >
-                {tabs.render()}
+                <div
+                    style = TITLE_CELL
+                >
+                    {chart.spec().desc()}
+                </div>
             </center>
         }
     }
 
-    pub fn render_left_tabs(model: &Model, chart: &Chart) -> Html {
+    define_style! {
+        button_container! = {
+            height(100%),
+            width({tiles_height_px} px),
+        };
+    }
+
+    pub fn render_left(model: &Model, chart: &Chart, pos: ChartPos) -> Html {
         let chart_uid = chart.uid();
-        let mut tabs = Tabs::new();
-
-        tabs.push_tab(
-            model,
-            "move down",
-            TabProps::new(&*tab_color),
-            model
-                .link
-                .callback(move |_| msg::ChartsMsg::move_down(chart_uid)),
-        );
-
-        tabs.push_sep();
-
-        tabs.push_tab(
-            model,
-            "move up",
-            TabProps::new(&*tab_color),
-            model
-                .link
-                .callback(move |_| msg::ChartsMsg::move_up(chart_uid)),
-        );
 
         define_style! {
-            TABS_CONTAINER = {
-                height(100%),
+            BUTTON_CONTAINER = {
+                extends(button_container),
                 float(right),
             };
         }
+
+        let move_up = layout::button::img::arrow_up(
+            tiles_height_px,
+            "move_chart_up",
+            if pos.is_first {
+                None
+            } else {
+                Some(
+                    model
+                        .link
+                        .callback(move |_| msg::ChartsMsg::move_up(chart_uid)),
+                )
+            },
+            "move this chart up",
+        );
+        let move_down = layout::button::img::arrow_down(
+            tiles_height_px,
+            "move_chart_down",
+            if pos.is_last {
+                None
+            } else {
+                Some(
+                    model
+                        .link
+                        .callback(move |_| msg::ChartsMsg::move_down(chart_uid)),
+                )
+            },
+            "move this chart down",
+        );
+
         html! {
-            <div
-                style = TABS_CONTAINER
-            >
-                {tabs.render()}
-            </div>
+            <>
+                <div
+                    id = "move_up_chart_button_container"
+                    style = BUTTON_CONTAINER
+                >
+                    {move_up}
+                </div>
+                <div
+                    id = "move_down_chart_button_container"
+                    style = BUTTON_CONTAINER
+                >
+                    {move_down}
+                </div>
+            </>
         }
     }
 
-    pub fn render_right_tabs(model: &Model, chart: &Chart) -> Html {
+    pub fn render_right(model: &Model, chart: &Chart) -> Html {
         let chart_uid = chart.uid();
 
-        let mut tabs = Tabs::new();
-        tabs.push_tab(
-            model,
-            "remove",
-            TabProps::new(&*tab_color),
-            model
-                .link
-                .callback(move |_| msg::ChartsMsg::destroy(chart_uid)),
+        define_style! {
+            BUTTON_CONTAINER = {
+                extends(button_container),
+                float(left),
+            };
+        }
+
+        let close_button = layout::button::img::close(
+            tiles_height_px,
+            "close_chart_button",
+            Some(
+                model
+                    .link
+                    .callback(move |_| msg::ChartsMsg::destroy(chart_uid)),
+            ),
+            "delete this chart",
         );
-        tabs.render()
+        let collapse_expand_button = if chart.is_visible() {
+            layout::button::img::collapse(
+                tiles_height_px,
+                "collapse_chart_button",
+                Some(
+                    model
+                        .link
+                        .callback(move |_| msg::ChartsMsg::toggle_visible(chart_uid)),
+                ),
+                "collapse this chart",
+            )
+        } else {
+            layout::button::img::expand(
+                tiles_height_px,
+                "expand_chart_button",
+                Some(
+                    model
+                        .link
+                        .callback(move |_| msg::ChartsMsg::toggle_visible(chart_uid)),
+                ),
+                "expand this chart",
+            )
+        };
+
+        html! {
+            <>
+                <div
+                    id = "collapse_expand_chart_button_container"
+                    style = BUTTON_CONTAINER
+                >
+                    {collapse_expand_button}
+                </div>
+                <div
+                    id = "close_chart_button_container"
+                    style = BUTTON_CONTAINER
+                >
+                    {close_button}
+                </div>
+            </>
+        }
     }
 }
 

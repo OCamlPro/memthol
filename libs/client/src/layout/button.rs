@@ -183,10 +183,10 @@ pub mod text {
         onclick: Option<OnClickAction>,
         dimmed: bool,
     ) -> Html {
-        nu_render(Some(*DEFAULT_BUTTON_BOX_PROPS), id, txt, onclick, dimmed)
+        render(Some(*DEFAULT_BUTTON_BOX_PROPS), id, txt, onclick, dimmed)
     }
 
-    pub fn nu_render(
+    pub fn render(
         props: Option<BoxProps<'_>>,
         id: &str,
         txt: impl fmt::Display,
@@ -224,68 +224,202 @@ pub mod text {
             }
         }
     }
+}
 
-    pub fn render(
-        id: &str,
-        txt: impl fmt::Display,
-        onclick: Option<OnClickAction>,
-        dimmed: bool,
-    ) -> Html {
-        let inner = centered_text(txt, dimmed);
+pub mod img {
+    use super::*;
+
+    define_style! {
+        link_box! = {
+            width(100%),
+            height(100%),
+            border(none),
+            margin(none),
+            bg(transparent),
+        };
+        LINK_BOX = {
+            extends(link_box),
+            pointer,
+        };
+        HIDDEN_LINK_BOX = {
+            extends(link_box),
+            visi(hidden),
+        };
+    }
+
+    fn render(id: &str, inner: Html, onclick: Option<OnClickAction>, desc: &str) -> Html {
         if let Some(onclick) = onclick {
             html! {
-                <div
-                    id = id
+                <button
                     style = LINK_BOX
                     onclick = onclick
+                    title = desc
                 >
                     {inner}
-                </div>
+                </button>
             }
         } else {
             html! {
-                <div
+                <button
                     id = id
                     style = HIDDEN_LINK_BOX
+                    disabled = true
                 >
                     {inner}
-                </div>
+                </button>
             }
         }
     }
 
-    // pub fn render_normal(id: &str, txt: impl fmt::Display, onclick: Option<OnClickAction>) -> Html {
-    //     render(id, txt, onclick, false)
-    // }
-    // pub fn render_dimmed(id: &str, txt: impl fmt::Display, onclick: Option<OnClickAction>) -> Html {
-    //     render(id, txt, onclick, false)
-    // }
+    /// Close button.
+    ///
+    /// Inline SVG for https://icons.getbootstrap.com/icons/x.
+    pub fn close(size_px: usize, id: &str, onclick: Option<OnClickAction>, desc: &str) -> Html {
+        render(id, close_img(size_px), onclick, desc)
+    }
+    fn close_img(size_px: usize) -> Html {
+        html! {
+            <svg
+                width=size_px
+                height=size_px
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <path
+                    fill-rule="evenodd"
+                    d="\
+                        M11.854 4.146a.5.5 0 0 1 0 .708l-7 7a.5.5 \
+                        0 0 1-.708-.708l7-7a.5.5 0 0 1 .708 0z\
+                    "
+                />
+                <path
+                    fill-rule="evenodd"
+                    d="\
+                        M4.146 4.146a.5.5 0 0 0 0 .708l7 \
+                        7a.5.5 0 0 0 .708-.708l-7-7a.5.5 0 0 0-.708 0z\
+                    "
+                />
+            </svg>
+        }
+    }
 
-    // define_style! {
-    //     link_box! = {
-    //         width(70%),
-    //         height(10%),
-    //         bg(gradient {"#8e8e8e"} to black),
-    //         border_radius(5 px),
-    //         border(1 px, white),
-    //         margin(auto),
-    //         table,
-    //     };
-    //     LINK_BOX = {
-    //         extends(link_box),
-    //         pointer,
-    //     };
-    //     HIDDEN_LINK_BOX = {
-    //         extends(link_box),
-    //         visi(hidden),
-    //     };
-    // }
+    /// Collapse button.
+    ///
+    /// Inline SVG for https://icons.getbootstrap.com/icons/chevron-bar-up.
+    pub fn collapse(size_px: usize, id: &str, onclick: Option<OnClickAction>, desc: &str) -> Html {
+        render(id, collapse_img(size_px), onclick, desc)
+    }
+    fn collapse_img(size_px: usize) -> Html {
+        html! {
+            <svg
+                width=size_px
+                height=size_px
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <path
+                    fill-rule="evenodd"
+                    d="\
+                        M3.646 11.854a.5.5 0 0 0 .708 0L8 8.207l3.646 3.647a.5.5 0 0 0 \
+                        .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708zM2.4 5.2c0 \
+                        .22.18.4.4.4h10.4a.4.4 0 0 0 0-.8H2.8a.4.4 0 0 0-.4.4z\
+                    "
+                />
+            </svg>
+        }
+    }
 
-    // pub fn render_boxed(
-    //     id: &str,
-    //     txt: impl fmt::Display,
-    //     onclick: Option<OnClickAction>,
-    //     dimmed: bool,
-    // ) -> Html {
-    // }
+    /// Expand button.
+    ///
+    /// Inline SVG for https://icons.getbootstrap.com/icons/chevron-bar-down.
+    pub fn expand(size_px: usize, id: &str, onclick: Option<OnClickAction>, desc: &str) -> Html {
+        render(id, expand_img(size_px), onclick, desc)
+    }
+    fn expand_img(size_px: usize) -> Html {
+        html! {
+            <svg
+                width=size_px
+                height=size_px
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <path
+                    fill-rule="evenodd"
+                    d="\
+                        M3.646 4.146a.5.5 0 0 1 .708 0L8 7.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 \
+                        4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708zM1 11.5a.5.5 0 0 1 \
+                        .5-.5h13a.5.5 0 0 1 0 1h-13a.5.5 0 0 1-.5-.5z\
+                    "
+                />
+            </svg>
+        }
+    }
+
+    /// Expand button.
+    ///
+    /// Inline SVG for https://icons.getbootstrap.com/icons/arrow-bar-up.
+    pub fn arrow_up(size_px: usize, id: &str, onclick: Option<OnClickAction>, desc: &str) -> Html {
+        render(id, arrow_up_img(size_px), onclick, desc)
+    }
+    fn arrow_up_img(size_px: usize) -> Html {
+        html! {
+            <svg
+                width=size_px
+                height=size_px
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <path
+                    fill-rule="evenodd"
+                    d="\
+                        M11.354 5.854a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 \
+                        .708.708L8 3.207l2.646 2.647a.5.5 0 0 0 .708 0z\
+                    "
+                />
+                <path
+                    fill-rule="evenodd"
+                    d="\
+                        M8 10a.5.5 0 0 0 .5-.5V3a.5.5 0 0 0-1 0v6.5a.5.5 0 0 0 .5.5zm-4.8 \
+                        1.6c0-.22.18-.4.4-.4h8.8a.4.4 0 0 1 0 .8H3.6a.4.4 0 0 1-.4-.4z\
+                    "
+                />
+            </svg>
+        }
+    }
+
+    /// Expand button.
+    ///
+    /// Inline SVG for https://icons.getbootstrap.com/icons/arrow-bar-down.
+    pub fn arrow_down(
+        size_px: usize,
+        id: &str,
+        onclick: Option<OnClickAction>,
+        desc: &str,
+    ) -> Html {
+        render(id, arrow_down_img(size_px), onclick, desc)
+    }
+    fn arrow_down_img(size_px: usize) -> Html {
+        html! {
+            <svg
+                width=size_px
+                height=size_px
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <path
+                    fill-rule="evenodd"
+                        d="M11.354 10.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 \
+                        0l-3-3a.5.5 0 0 1 .708-.708L8 12.793l2.646-2.647a.5.5 0 0 1 .708 0z\
+                    "
+                />
+                <path
+                    fill-rule="evenodd"
+                    d="\
+                        M8 6a.5.5 0 0 1 .5.5V13a.5.5 0 0 1-1 0V6.5A.5.5 0 0 1 8 6zM2 \
+                        3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z\
+                    "
+                />
+            </svg>
+        }
+    }
 }

@@ -187,16 +187,19 @@ impl Charts {
 /// # Rendering
 impl Charts {
     pub fn render(&self, model: &Model) -> Html {
-        info!("rendering charts");
-        for chart in &self.charts {
-            info!("- {}", chart.uid())
-        }
+        let charts_len = self.charts.len();
+
         html! {
             <>
                 <div
                     id = model.charts().dom_node_id()
                 >
-                    { for self.charts.iter().map(|chart| chart.render(model)) }
+                    { for self.charts.iter().enumerate().map(
+                        |(pos, chart)| chart.render(
+                            model,
+                            layout::chart::ChartPos::from_pos_and_len(pos, charts_len)
+                        )
+                    ) }
                 </div>
                 { self.new_chart.render(model) }
             </>
@@ -218,7 +221,7 @@ impl Charts {
 
         let should_render = match action {
             ChartsMsg::NewChart(spec) => {
-                debug!("received a chart-creation message from the server");
+                // debug!("received a chart-creation message from the server");
                 // let uid = spec.uid();
                 let chart = Chart::new(spec, filters)?;
                 self.charts.push(chart);
@@ -230,7 +233,7 @@ impl Charts {
                 mut points,
                 refresh_filters,
             } => {
-                debug!("received an overwrite-points message from the server");
+                // debug!("received an overwrite-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
                         chart.overwrite_points(points)?
@@ -242,7 +245,7 @@ impl Charts {
                 true
             }
             ChartsMsg::AddPoints(mut points) => {
-                debug!("received an add-points message from the server");
+                // debug!("received an add-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
                         chart.add_points(points, filters)?
@@ -252,7 +255,7 @@ impl Charts {
             }
 
             ChartsMsg::Chart { uid, msg } => {
-                debug!("received a message specific to chart #{} from server", uid);
+                // debug!("received a message specific to chart #{} from server", uid);
                 let (_index, chart) = self.get_mut(uid)?;
                 match msg {
                     ChartMsg::NewPoints(points) => chart.overwrite_points(points)?,
@@ -454,23 +457,12 @@ impl Chart {
     }
 
     fn try_unbind_canvas(&self) -> Res<bool> {
-        debug!("try_unbind_canvas {}", self.spec.uid());
-
         if let Some((_chart, canvas)) = self.chart.as_ref() {
-            info!("canvas id: {}", canvas.id());
-
             if let Some(parent) = canvas.parent_element() {
-                info!(
-                    "unbinding canvas {} to container {}",
-                    canvas.id(),
-                    parent.id()
-                );
                 parent.remove_child(&canvas).map_err(err::from_js_val)?;
             } else {
                 return Ok(false);
             }
-        } else {
-            debug!("no canvas to unbind")
         }
 
         Ok(true)
@@ -480,21 +472,11 @@ impl Chart {
     ///
     /// Creates the chart if needed.
     fn bind_canvas(&mut self) -> Res<()> {
-        debug!("bind_canvas {}", self.spec.uid());
-
         if let Some((_chart, canvas)) = self.chart.as_ref() {
             let canvas_container = self.get_canvas_container()?;
-            info!(
-                "binding canvas {} to container {}",
-                canvas.id(),
-                canvas_container.id()
-            );
-
             canvas_container
                 .append_child(canvas)
                 .map_err(err::from_js_val)?;
-        } else {
-            debug!("no canvas to bind")
         }
 
         Ok(())
@@ -510,7 +492,6 @@ impl Chart {
     /// Also, makes the chart visible.
     pub fn build_chart(&mut self) -> Res<()> {
         if self.visible {
-            info!("building chart");
             if self.chart.is_some() {
                 bail!("asked to build and bind a chart that's already built and binded")
             }
@@ -542,8 +523,6 @@ impl Chart {
     ///   what it does.
     pub fn draw(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
         let visible_filters = &self.filters;
-
-        debug!("drawing {}", self.spec.uid());
 
         if let Some((chart, canvas)) = &mut self.chart {
             let (width, height) = (
@@ -612,8 +591,6 @@ impl Chart {
                                 return Ok(());
                             }
                         };
-
-                        info!("chart size: {}/{}, {}/{}", min_x, max_x, min_y, max_y);
 
                         // chart.fill(&BLACK.mix(0.5)).unwrap();
                         chart.fill(&WHITE).unwrap();
@@ -717,8 +694,8 @@ impl Chart {
     }
 
     /// Renders the chart.
-    pub fn render(&self, model: &Model) -> Html {
+    pub fn render(&self, model: &Model, pos: layout::chart::ChartPos) -> Html {
         self.try_unbind_canvas().unwrap();
-        layout::chart::render(model, self)
+        layout::chart::render(model, self, pos)
     }
 }

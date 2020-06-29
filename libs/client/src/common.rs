@@ -45,7 +45,6 @@ pub mod color {
 // Re-exports.
 
 pub use crate::{
-    buttons,
     chart::{self, Chart, Charts},
     cst,
     err::{self, bail, Res, ResExt},

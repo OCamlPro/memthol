@@ -34,9 +34,6 @@ macro_rules! asset_dir {
     (root) => {
         "static"
     };
-    (pics) => {
-        concat!(asset_dir!(root), "/pics")
-    };
 }
 
 /// String version of the path to a file in a main asset directory.
@@ -58,8 +55,6 @@ macro_rules! asset_source {
 lazy_static::lazy_static! {
     /// Path to the asset directory.
     static ref ASSET_DIR: PathBuf = asset_dir!(root).into();
-    /// Path to the picture directory.
-    static ref PICS_DIR: PathBuf = asset_dir!(pics).into();
 }
 
 pub mod content {
@@ -70,7 +65,6 @@ pub mod content {
     /// Sets up the assets for the UI.
     pub fn setup(_addr: &str, _port: usize) -> Res<()> {
         mk_asset_dirs()?;
-        pics::generate()?;
         top::generate()?;
         Ok(())
     }
@@ -82,7 +76,6 @@ pub mod content {
 
         // Let's create stuff now.
         mk_asset_dir(&*ASSET_DIR)?;
-        mk_asset_dir(&*PICS_DIR)?;
         Ok(())
     }
 
@@ -205,36 +198,6 @@ pub mod content {
             MEMTHOL_JS: root / "client.js", from build_dir,
             /// Memthol client's wasm code.
             MEMTHOL_WASM: root / "client_bg.wasm", from build_dir,
-        }
-    }
-
-    /// Generates pictures.
-    pub mod pics {
-        make_generator_for! {
-            /// Close.
-            CLOSE: pics / "close.png", from lib,
-            /// Add.
-            ADD: pics / "add.png", from lib,
-            /// Arrow up.
-            ARROW_UP: pics / "arrow_up.png", from lib,
-            /// Arrow down.
-            ARROW_DOWN: pics / "arrow_down.png", from lib,
-            /// Expand.
-            EXPAND: pics / "expand.png", from lib,
-            /// Collapse.
-            COLLAPSE: pics / "collapse.png", from lib,
-
-            /// Refresh.
-            REFRESH: pics / "refresh.png", from lib,
-            /// Refresh.
-            SAVE: pics / "save.png", from lib,
-            /// Undo.
-            UNDO: pics / "undo.png", from lib,
-
-            /// Tick, inactive.
-            TICK_INACTIVE: pics / "tick_inactive.png", from lib,
-            /// Tick, active.
-            TICK_ACTIVE: pics / "tick_active.png", from lib,
         }
     }
 }

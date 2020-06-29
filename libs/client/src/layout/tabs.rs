@@ -186,7 +186,7 @@ impl Tabs {
                     id = "filter_tab"
                     style = style(props)
                 >
-                    {layout::button::text::nu_render(
+                    {layout::button::text::render(
                         Some(props.to_box_props()),
                         "filter_content",
                         content,

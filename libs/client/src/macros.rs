@@ -626,30 +626,39 @@ macro_rules! css {
 
     // #bg
     (@($str:expr) bg($color:tt)) => {{
-        write!($str, "background-color: ");
-        write!($str, "{}", $crate::css!(@arg $color));
-        write!($str, ";");
+        write!(
+            $str,
+            "background-color: {}; ",
+            $crate::css!(@color($color)),
+        );
     }};
     (@($str:expr) bg(gradient $color_src:tt to $color_tgt:tt)) => {{
-        write!($str, "background-image: linear-gradient(");
-        write!($str, "{}", $crate::css!(@color($color_src)));
-        write!($str, ", ");
-        write!($str, "{}", $crate::css!(@color($color_tgt)));
-        write!($str, "); ")
+        write!(
+            $str,
+            "background-image: linear-gradient({}, {}); ",
+            $crate::css!(@color($color_src)),
+            $crate::css!(@color($color_tgt)),
+        );
     }};
-    // (@($str:expr) bg(radial gradient $($color:tt)) => {{
-    //     write!($str, "background-image: radial-gradient(circle, ");
-    //     write!($str, "{}", $crate::css!(@color($color_src)));
-    //     write!($str, ", ");
-    //     write!($str, "{}", $crate::css!(@color($color_tgt)));
-    //     write!($str, "); ")
-    // }};
+    (@($str:expr) bg(url $url:tt)) => {{
+        write!(
+            $str,
+            "background: url({}); ",
+            $crate::css!(@arg $url),
+        );
+    }};
+    (@($str:expr) bg(size $size:tt $unit:tt)) => {{
+        write!(
+            $str,
+            "background-size: {}{}; ",
+            $crate::css!(@arg $size),
+            stringify!($unit),
+        );
+    }};
 
     // #fg
     (@($str:expr) fg($color:tt)) => {{
-        write!($str, "color: ");
-        write!($str, "{}", $crate::css!(@arg $color));
-        write!($str, ";");
+        write!($str, "color: {}; ", $crate::css!(@arg $color));
     }};
 
     // #color

@@ -16,7 +16,6 @@ pub mod style;
 
 pub mod model;
 
-pub mod buttons;
 pub mod chart;
 pub mod cst;
 pub mod filter;
