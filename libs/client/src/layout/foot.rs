@@ -747,7 +747,7 @@ pub mod tabs {
             tabs.push_tab(
                 model,
                 "add filter",
-                TabProps::new("white"),
+                TabProps::new_footer("white"),
                 model
                     .link
                     .callback(move |_| msg::to_server::FiltersMsg::request_new()),
@@ -797,7 +797,7 @@ pub mod tabs {
                     tabs.push_tab(
                         model,
                         filter.name(),
-                        TabProps::new(filter.color().to_string())
+                        TabProps::new_footer(filter.color().to_string())
                             .set_active(is_active(filter))
                             .set_edited(edited || filter.edited()),
                         callback(filter.uid()),
@@ -809,7 +809,7 @@ pub mod tabs {
                     tabs.push_tab(
                         model,
                         filter.spec().name(),
-                        TabProps::new(filter.spec().color().to_string())
+                        TabProps::new_footer(filter.spec().color().to_string())
                             .set_active(is_active(filter.spec()))
                             .with_first_last_uid(|| {
                                 (

@@ -4,15 +4,16 @@ prelude! {}
 
 #[derive(Clone, Copy)]
 pub struct BoxProps<'color> {
+    border_color: &'color str,
+    gradient_top: &'color str,
+    gradient_bot: &'color str,
     radius_px: u8,
     stroke_px: u8,
     tl_rounded: bool,
     tr_rounded: bool,
     bl_rounded: bool,
     br_rounded: bool,
-    border_color: &'color str,
-    gradient_top: &'color str,
-    gradient_bot: &'color str,
+    top: bool,
 }
 
 impl<'color> BoxProps<'color> {
@@ -25,6 +26,7 @@ impl<'color> BoxProps<'color> {
             tr_rounded: false,
             bl_rounded: false,
             br_rounded: false,
+            top: false,
             gradient_top: "white",
             gradient_bot: "black",
         }
@@ -39,6 +41,7 @@ impl<'color> BoxProps<'color> {
             tr_rounded: true,
             bl_rounded: true,
             br_rounded: true,
+            top: false,
             gradient_top: "white",
             gradient_bot: "black",
         }
@@ -53,6 +56,7 @@ impl<'color> BoxProps<'color> {
             tr_rounded: true,
             bl_rounded: false,
             br_rounded: false,
+            top: false,
             gradient_top: "white",
             gradient_bot: "black",
         }
@@ -84,6 +88,10 @@ impl<'color> BoxProps<'color> {
     }
     pub const fn with_gradient_bot(mut self, color: &'color str) -> Self {
         self.gradient_bot = color;
+        self
+    }
+    pub const fn for_footer(mut self, top: bool) -> Self {
+        self.top = top;
         self
     }
 }
@@ -154,7 +162,7 @@ pub mod text {
             padding(0%, 10 px),
             underline,
             pos(relative),
-            z_index(800),
+            z_index(400),
         };
 
         CONTENT_STYLE = {
@@ -165,12 +173,41 @@ pub mod text {
             extends(content_style),
             fg("#8a8a8a"),
         };
+
+        top_content_style! = {
+            font_size(120%),
+            font_outline(black),
+            vertical_align(middle),
+            table cell,
+            padding(0%, 10 px),
+            underline,
+            pos(relative),
+            z_index(800),
+        };
+
+        TOP_CONTENT_STYLE = {
+            extends(top_content_style),
+            fg(white),
+        };
+        TOP_DIMMED_CONTENT_STYLE = {
+            extends(top_content_style),
+            fg("#8a8a8a"),
+        };
     }
 
     fn centered_text(txt: impl fmt::Display, dimmed: bool) -> Html {
         html! {
             <a
                 style = if dimmed { &*DIMMED_CONTENT_STYLE } else { &*CONTENT_STYLE }
+            >
+                {txt}
+            </a>
+        }
+    }
+    fn top_centered_text(txt: impl fmt::Display, dimmed: bool) -> Html {
+        html! {
+            <a
+                style = if dimmed { &*TOP_DIMMED_CONTENT_STYLE } else { &*TOP_CONTENT_STYLE }
             >
                 {txt}
             </a>
@@ -193,7 +230,11 @@ pub mod text {
         onclick: Option<OnClickAction>,
         dimmed: bool,
     ) -> Html {
-        let mut inner = centered_text(txt, dimmed);
+        let mut inner = if props.as_ref().map(|props| props.top).unwrap_or(false) {
+            top_centered_text(txt, dimmed)
+        } else {
+            centered_text(txt, dimmed)
+        };
         if let Some(props) = props {
             inner = html! {
                 <div

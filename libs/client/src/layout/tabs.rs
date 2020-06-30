@@ -24,6 +24,11 @@ pub struct TabProps {
     edited: bool,
     dimmed: bool,
     rev: bool,
+    /// Used to generate the z-index.
+    ///
+    /// Footer tabs have a higher z-index than tabs that appear in the body. So they should
+    /// respectively set this `top` field to `true` and `false`.
+    top: bool,
 }
 impl TabProps {
     pub fn new(color: impl Into<String>) -> Self {
@@ -33,24 +38,17 @@ impl TabProps {
             edited: false,
             dimmed: false,
             rev: false,
+            top: false,
         }
     }
-    pub fn new_active(color: impl Into<String>) -> Self {
-        Self {
-            color: color.into(),
-            active: IsActive::from_bool(true),
-            edited: false,
-            dimmed: false,
-            rev: false,
-        }
-    }
-    pub fn new_inactive(color: impl Into<String>) -> Self {
+    pub fn new_footer(color: impl Into<String>) -> Self {
         Self {
             color: color.into(),
             active: IsActive::from_bool(false),
             edited: false,
             dimmed: false,
             rev: false,
+            top: true,
         }
     }
 
@@ -61,12 +59,14 @@ impl TabProps {
             .with_stroke_px(1)
             .with_radius_px(5)
             .revert_if(self.rev)
+            .for_footer(self.top)
     }
 
     pub fn set_active(mut self, is_active: bool) -> Self {
         self.active = IsActive::from_bool(is_active);
         self
     }
+
     pub fn with_first_last_uid(
         mut self,
         get: impl FnOnce() -> (bool, bool, filter::FilterUid),
@@ -74,16 +74,25 @@ impl TabProps {
         self.active = self.active.with_first_last_uid(get);
         self
     }
+
     pub fn set_edited(mut self, is_edited: bool) -> Self {
         self.edited = is_edited;
         self
     }
+
     pub fn set_dimmed(mut self, is_dimmed: bool) -> Self {
         self.dimmed = is_dimmed;
         self
     }
+
     pub fn set_rev(mut self) -> Self {
         self.rev = true;
+        self
+    }
+
+    /// Makes sure the z-index of the tab-text is higher than everything else.
+    pub fn footer_tab(mut self) -> Self {
+        self.top = true;
         self
     }
 }
@@ -148,7 +157,9 @@ pub fn style(props: &TabProps) -> String {
             active,
             {
                 pos(relative),
-                z_index(650),
+                z_index({
+                    if props.top { 650 } else { 400 }
+                }),
             },
         ),
 
