@@ -293,6 +293,12 @@ pub struct Chart {
     /// Previous filter map, used when updating filters to keep track of those that are hidden.
     prev_filters: Map<charts::uid::LineUid, bool>,
 
+    /// This flag indicates whether the chart should be redrawn after HTML rendering.
+    ///
+    /// Note that only function [`draw`](#method.draw) is allowed to set this flag to false. This is
+    /// because no drawing takes place when the chart is not visible. Hence, `draw` does **not**
+    /// unset this flag so that its value is preserved until the chart is visible again. At that
+    /// point the chart will be redrawn.
     redraw: bool,
 }
 impl Chart {
@@ -380,10 +386,10 @@ impl Chart {
         if let Some(is_visible) = self.filters.get_mut(&uid) {
             *is_visible = !*is_visible;
             self.redraw = true;
-            Ok(())
         } else {
             bail!("cannot toggle visibility of unknown filter {}", uid)
         }
+        Ok(())
     }
 
     /// Replaces the filters of the chart.
@@ -452,9 +458,7 @@ impl Chart {
 
     fn try_unbind_canvas(&self) -> Res<bool> {
         if let Some((_chart, canvas)) = self.chart.as_ref() {
-            info!("unbinding {}", canvas.id());
             if let Some(parent) = canvas.parent_element() {
-                info!("unbinding from parent {}", parent.id());
                 parent.remove_child(&canvas).map_err(err::from_js_val)?;
             } else {
                 return Ok(false);
@@ -470,6 +474,12 @@ impl Chart {
     fn bind_canvas(&mut self) -> Res<()> {
         if let Some((_chart, canvas)) = self.chart.as_ref() {
             let canvas_container = self.get_canvas_container()?;
+            let kids = canvas_container.children();
+            for index in 0..kids.length() {
+                if let Some(kid) = kids.item(index) {
+                    kid.remove()
+                }
+            }
             canvas_container
                 .append_child(canvas)
                 .map_err(err::from_js_val)?;
@@ -499,7 +509,7 @@ impl Chart {
                 backend.into_drawing_area();
             chart.fill(&WHITE).unwrap();
 
-            let canvas = self.get_canvas()?;
+            let canvas = self.get_canvas()?.clone();
 
             self.chart = Some((chart, canvas));
         }
@@ -507,7 +517,10 @@ impl Chart {
         Ok(())
     }
 
-    /// Draws the chart.
+    /// Draws the chart, **takes care of updating `self.redraw`**.
+    ///
+    /// If the chart is not visible, drawing is postponed until the chart becomes visible. Meaning
+    /// that this function does nothing if the chart is not visible.
     ///
     /// # TODO
     ///
@@ -515,6 +528,12 @@ impl Chart {
     ///   It should be exported, probably in the `charts` crate, to keep this function focused on
     ///   what it does.
     pub fn draw(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
+        // If the chart's not visible, do nothing. We will draw once the chart becomes visible
+        // again.
+        if !self.visible {
+            return Ok(());
+        }
+
         let visible_filters = &self.filters;
 
         if let Some((chart, canvas)) = &mut self.chart {
@@ -672,7 +691,6 @@ impl Chart {
 /// # Rendering
 impl Chart {
     pub fn rendered(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
-        debug!("rendered chart {}, rebinding canvas", self.uid());
         self.rebind_canvas()?;
 
         if self.chart.is_none() {
@@ -681,16 +699,14 @@ impl Chart {
         }
 
         if self.redraw {
+            // Do **not** unset `self.redraw` here, function `draw` is in charge of that.
             self.draw(filters)?;
-            self.redraw = false;
         }
         Ok(())
     }
 
     /// Renders the chart.
     pub fn render(&self, model: &Model, pos: layout::chart::ChartPos) -> Html {
-        debug!("rendering chart {}", self.uid());
-        self.try_unbind_canvas().unwrap();
         layout::chart::render(model, self, pos)
     }
 }
