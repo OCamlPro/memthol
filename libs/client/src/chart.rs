@@ -221,11 +221,8 @@ impl Charts {
 
         let should_render = match action {
             ChartsMsg::NewChart(spec) => {
-                // debug!("received a chart-creation message from the server");
-                // let uid = spec.uid();
                 let chart = Chart::new(spec, filters)?;
                 self.charts.push(chart);
-                // self.send(msg::ChartsMsg::build(uid));
                 true
             }
 
@@ -233,7 +230,6 @@ impl Charts {
                 mut points,
                 refresh_filters,
             } => {
-                // debug!("received an overwrite-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
                         chart.overwrite_points(points)?
@@ -245,7 +241,6 @@ impl Charts {
                 true
             }
             ChartsMsg::AddPoints(mut points) => {
-                // debug!("received an add-points message from the server");
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
                         chart.add_points(points, filters)?
@@ -255,7 +250,6 @@ impl Charts {
             }
 
             ChartsMsg::Chart { uid, msg } => {
-                // debug!("received a message specific to chart #{} from server", uid);
                 let (_index, chart) = self.get_mut(uid)?;
                 match msg {
                     ChartMsg::NewPoints(points) => chart.overwrite_points(points)?,
@@ -458,7 +452,9 @@ impl Chart {
 
     fn try_unbind_canvas(&self) -> Res<bool> {
         if let Some((_chart, canvas)) = self.chart.as_ref() {
+            info!("unbinding {}", canvas.id());
             if let Some(parent) = canvas.parent_element() {
+                info!("unbinding from parent {}", parent.id());
                 parent.remove_child(&canvas).map_err(err::from_js_val)?;
             } else {
                 return Ok(false);
@@ -498,9 +494,6 @@ impl Chart {
 
             let backend: CanvasBackend =
                 plotters::prelude::CanvasBackend::new(&self.canvas).expect("could not find canvas");
-
-            // let (width, height) = backend.get_size();
-            // info!("backend: {}/{}", width, height);
 
             let chart: DrawingArea<CanvasBackend, plotters::coord::Shift> =
                 backend.into_drawing_area();
@@ -679,6 +672,7 @@ impl Chart {
 /// # Rendering
 impl Chart {
     pub fn rendered(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
+        debug!("rendered chart {}, rebinding canvas", self.uid());
         self.rebind_canvas()?;
 
         if self.chart.is_none() {
@@ -695,6 +689,7 @@ impl Chart {
 
     /// Renders the chart.
     pub fn render(&self, model: &Model, pos: layout::chart::ChartPos) -> Html {
+        debug!("rendering chart {}", self.uid());
         self.try_unbind_canvas().unwrap();
         layout::chart::render(model, self, pos)
     }

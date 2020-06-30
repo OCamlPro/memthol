@@ -2,6 +2,21 @@
 
 prelude! {}
 
+/// Button box properties.
+///
+/// Includes information about
+///
+/// - the border: color and strokewidth
+///     - [`with_border_color`](#method.with_border_color)
+///     - [`with_stroke_px`](#method.with_stroke_px)
+/// - the border rounded corners: radius and which corner is rounded
+///     - [`with_radius_px`](#method.with_radius_px)
+/// - background color gradient: top and bottom
+///     - [`with_gradient_top`](#method.with_gradient_top)
+///     - [`with_gradient_bot`](#method.with_gradient_bot)
+/// - z-index: whether the text in the box is on top or not (*top* here really means that the button
+///   is part of the footer)
+///     - [`for_footer`](#method.for_footer)
 #[derive(Clone, Copy)]
 pub struct BoxProps<'color> {
     border_color: &'color str,
@@ -62,6 +77,7 @@ impl<'color> BoxProps<'color> {
         }
     }
 
+    /// Inverts rounded corner flags and gradient top and bottom.
     pub fn revert_if(mut self, rev: bool) -> Self {
         if rev {
             self.tl_rounded = !self.tl_rounded;
@@ -73,23 +89,36 @@ impl<'color> BoxProps<'color> {
         self
     }
 
-    pub const fn with_radius_px(mut self, radius_px: u8) -> Self {
-        self.radius_px = radius_px;
+    /// Sets the color of the border.
+    pub const fn with_border_color(mut self, border_color: &'color str) -> Self {
+        self.border_color = border_color;
         self
     }
+
+    /// Sets the strokewidth of the border, in pixels.
     pub const fn with_stroke_px(mut self, stroke_px: u8) -> Self {
         self.stroke_px = stroke_px;
         self
     }
 
+    /// Sets the radius of the rounded corners of the border, in pixels.
+    pub const fn with_radius_px(mut self, radius_px: u8) -> Self {
+        self.radius_px = radius_px;
+        self
+    }
+
+    /// Sets the top color of the gradient.
     pub const fn with_gradient_top(mut self, color: &'color str) -> Self {
         self.gradient_top = color;
         self
     }
+    /// Sets the bottom color of the gradient.
     pub const fn with_gradient_bot(mut self, color: &'color str) -> Self {
         self.gradient_bot = color;
         self
     }
+
+    /// Indicates whether the button should be "on top", *i.e.* is a footer button.
     pub const fn for_footer(mut self, top: bool) -> Self {
         self.top = top;
         self
@@ -136,6 +165,7 @@ impl fmt::Display for BoxProps<'_> {
     }
 }
 
+/// Text buttons.
 pub mod text {
     use super::*;
 
@@ -267,6 +297,11 @@ pub mod text {
     }
 }
 
+/// Image buttons.
+///
+/// Images come from the [getbootstrap] free image library.
+///
+/// [getbootstrap]: https://icons.getbootstrap.com (getbootstrap official website)
 pub mod img {
     use super::*;
 
@@ -288,6 +323,9 @@ pub mod img {
         };
     }
 
+    /// Internal rendering function.
+    ///
+    /// If `onclick.is_none()`, the button will be hidden and deactivated.
     fn render(id: &str, inner: Html, onclick: Option<OnClickAction>, desc: &str) -> Html {
         if let Some(onclick) = onclick {
             html! {

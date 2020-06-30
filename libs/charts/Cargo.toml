@@ -21,4 +21,4 @@ serde_json = "*"
 serde_regex = "*"
 strum = "*"
 strum_macros = "*"
-yew = { git = "https://github.com/yewstack/yew" }
+yew = "*"

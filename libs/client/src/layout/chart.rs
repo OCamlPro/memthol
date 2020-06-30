@@ -25,7 +25,7 @@ impl ChartPos {
 }
 
 pub fn render(model: &Model, chart: &Chart, pos: ChartPos) -> Html {
-    info!(
+    debug!(
         "rendering chart {}, visible: {}",
         chart.uid(),
         chart.is_visible()

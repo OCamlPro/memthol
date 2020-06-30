@@ -34,5 +34,5 @@ web-sys = { version = "*", features = [
     "HtmlCanvasElement", "HtmlSelectElement", "HtmlCollection"
 ] }
 wee_alloc = "*"
-yew = { git = "https://github.com/yewstack/yew" }
-yew-components = { git = "https://github.com/yewstack/yew" }
+yew = "*"
+yew-components = "*"

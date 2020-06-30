@@ -57,7 +57,6 @@ impl Model {
     pub fn handle_server_msg(&mut self, msg: Res<msg::from_server::Msg>) -> Res<ShouldRender> {
         use msg::from_server::*;
         let msg = msg?;
-        info!("handling incoming message from server");
         match msg {
             Msg::Info => Ok(false),
             Msg::Alert { msg } => {
@@ -107,7 +106,6 @@ impl Component for Model {
     }
 
     fn update(&mut self, msg: Msg) -> ShouldRender {
-        info!("handling internal message ({})", msg);
         match msg {
             // Messages to/from the server.
             Msg::FromServer(msg) => {
@@ -115,7 +113,6 @@ impl Component for Model {
                 unwrap_or_send_err!(self.handle_server_msg(msg) => self default false)
             }
             Msg::ToServer(msg) => {
-                info!("sending message to server");
                 self.server_send(msg);
                 false
             }
@@ -164,7 +161,6 @@ impl Component for Model {
     }
 
     fn rendered(&mut self, _first_render: bool) {
-        info!("rendered, {} charts", self.charts.len());
         self.charts.rendered(self.filters.reference_filters())
     }
 
