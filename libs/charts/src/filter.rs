@@ -19,7 +19,7 @@ pub use sub::SubFilter;
 pub use uid::{FilterUid, LineUid, SubFilterUid};
 
 /// A filter over allocation sizes.
-pub type SizeFilter = OrdFilter<usize>;
+pub type SizeFilter = OrdFilter<u32>;
 
 /// Function(s) a filter must implement.
 pub trait FilterExt<Data>: Sized

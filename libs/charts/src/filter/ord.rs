@@ -146,7 +146,7 @@ where
 }
 
 /// An update for a size filter.
-pub type SizeUpdate = Update<usize>;
+pub type SizeUpdate = Update<u32>;
 
 /// An update for an ordered filter.
 pub enum Update<Val> {

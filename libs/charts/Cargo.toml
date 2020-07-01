@@ -11,8 +11,10 @@ base = { path = "../base" }
 alloc_data = { path = "../alloc_data" }
 
 anyhow = "*"
+chrono = "*"
 error-chain = "*"
 lazy_static = "*"
+plotters = "*"
 regex = "*"
 safe_index = "*"
 serde = "*"

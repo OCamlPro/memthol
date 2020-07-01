@@ -523,16 +523,16 @@ pub mod menu {
 
                 match *sub {
                     SizeFilter::Cmp { cmp, val } => {
-                        table_row.push_value(input::usize_input(model, val, move |usize_res| {
+                        table_row.push_value(input::u32_input(model, val, move |usize_res| {
                             msg(usize_res.map(|val| SizeFilter::Cmp { cmp, val }))
                         }))
                     }
                     SizeFilter::In { lb, ub } => {
                         let msg_fn = msg.clone();
-                        let lb_html = input::usize_input(model, lb, move |usize_res| {
+                        let lb_html = input::u32_input(model, lb, move |usize_res| {
                             msg_fn(usize_res.map(|lb| SizeFilter::In { lb, ub }))
                         });
-                        let ub_html = input::usize_input(model, ub, move |usize_res| {
+                        let ub_html = input::u32_input(model, ub, move |usize_res| {
                             msg(usize_res.map(|ub| SizeFilter::In { lb, ub }))
                         });
                         table_row.push_sep(html! {"["});
@@ -1190,6 +1190,21 @@ pub mod input {
             &value.to_string(),
             model.link.callback(move |data| {
                 msg(parse_usize_data(data)
+                    .map_err(|e| err::Err::from(e))
+                    .chain_err(|| "while parsing integer value"))
+            }),
+        )
+    }
+
+    fn parse_u32_data(data: ChangeData) -> Res<u32> {
+        use alloc_data::Parseable;
+        parse_text_data(data).and_then(|txt| u32::parse(txt).map_err(|e| e.into()))
+    }
+    pub fn u32_input(model: &Model, value: u32, msg: impl Fn(Res<u32>) -> Msg + 'static) -> Html {
+        text_input(
+            &value.to_string(),
+            model.link.callback(move |data| {
+                msg(parse_u32_data(data)
                     .map_err(|e| err::Err::from(e))
                     .chain_err(|| "while parsing integer value"))
             }),

@@ -567,122 +567,128 @@ impl Chart {
             }
 
             if let Some(points) = &self.points {
-                match points {
-                    charts::point::Points::Time(charts::point::TimePoints::Size(points)) => {
-                        let (mut min_x, mut max_x, mut max_y) = (None, None, 5);
-
-                        for point in points.iter() {
-                            if min_x.is_none() {
-                                min_x = Some(&point.key)
-                            }
-                            max_x = Some(&point.key);
-
-                            max_y = point.vals.map.iter().fold(max_y, |max_y, (uid, val)| {
-                                let visible = visible_filters.get(uid).cloned().unwrap_or(false);
-                                if visible && *val > max_y {
-                                    *val
-                                } else {
-                                    max_y
-                                }
-                            });
-                        }
-
-                        let min_y = 0;
-                        let max_y = (max_y + std::cmp::max(1, max_y / 20)) as u32;
-
-                        let (min_x, max_x) = match (min_x, max_x) {
-                            (Some(min_x), Some(max_x)) => (*min_x, *max_x),
-                            (min_x, max_x) => {
-                                warn!(
-                                    "could not retrieve chart min/max x-values for chart #{} \
-                                    ({:?}, {:?})",
-                                    self.spec.uid(),
-                                    min_x,
-                                    max_x,
-                                );
-                                return Ok(());
-                            }
-                        };
-
-                        // chart.fill(&BLACK.mix(0.5)).unwrap();
-                        chart.fill(&WHITE).unwrap();
-
-                        // let (width, height) = chart.dim_in_pixel();
-                        // let margin = height * 2 / 100;
+                macro_rules! new_builder {
+                    () => {{
                         let (x_label_area, y_label_area) = (30, 60);
                         let (margin_top, margin_right) = (x_label_area / 3, y_label_area / 3);
 
-                        let mut chart_cxt: ChartContext<
-                            CanvasBackend,
-                            RangedCoord<RangedDuration, RangedCoordu32>,
-                        > = ChartBuilder::on(&chart)
+                        ChartBuilder::on(&chart)
                             .margin_top(margin_top)
                             .margin_right(margin_right)
                             .x_label_area_size(x_label_area)
                             .y_label_area_size(y_label_area)
-                            .build_ranged(
-                                chrono::Duration::from_std(Duration::from_millis(0)).unwrap()
-                                    ..(max_x.date().clone() - min_x.date().clone()),
-                                min_y..max_y,
-                            )
-                            .map_err(|e| err::Err::from(e.to_string()))?;
+                    }};
+                }
 
-                        chart_cxt
-                            .configure_mesh()
-                            .disable_x_mesh()
-                            .label_style(("sans-serif", 15).into_font())
-                            .x_label_formatter(&|date| {
-                                let date = date.to_std().unwrap();
-                                let mut secs = date.as_secs();
-                                let mut mins = secs / 60;
-                                secs = secs - mins * 60;
-                                let hours = mins / 60;
-                                mins = mins - hours * 60;
-                                let mut s = String::with_capacity(10);
-                                use std::fmt::Write;
-                                if hours > 0 {
-                                    write!(&mut s, "{}h", hours).unwrap()
+                match points {
+                    charts::point::Points::Time(y_points) => match y_points {
+                        charts::point::TimePoints::Size(size_points) => {
+                            let (mut min_x, mut max_x, mut max_y) = (None, None, 5);
+
+                            for point in size_points.iter() {
+                                if min_x.is_none() {
+                                    min_x = Some(&point.key)
                                 }
-                                if mins > 0 {
-                                    write!(&mut s, "{}m", mins).unwrap()
-                                }
-                                write!(&mut s, "{}", secs).unwrap();
-                                let millis = date.subsec_millis();
-                                if millis != 0 {
-                                    write!(&mut s, ".{}", millis).unwrap()
-                                }
-                                write!(&mut s, "s").unwrap();
-                                s
-                            })
-                            .draw()
-                            .unwrap();
+                                max_x = Some(&point.key);
 
-                        filters.specs_apply(|spec| {
-                            let uid = spec.uid();
-
-                            if visible_filters.get(&uid).cloned().unwrap_or(false) {
-                                let color = color::to_plotters(spec.color());
-
-                                let point_iter = points.iter().filter_map(|point| {
-                                    point.vals.map.get(&uid).map(|val| {
-                                        (
-                                            point.key.date().clone() - min_x.date().clone(),
-                                            *val as u32,
-                                        )
-                                    })
+                                max_y = point.vals.map.iter().fold(max_y, |max_y, (uid, val)| {
+                                    let visible =
+                                        visible_filters.get(uid).cloned().unwrap_or(false);
+                                    if visible && *val > max_y {
+                                        *val
+                                    } else {
+                                        max_y
+                                    }
                                 });
-
-                                chart_cxt
-                                    .draw_series(LineSeries::new(point_iter, color.stroke_width(1)))
-                                    .map_err(|e| e.to_string())?;
                             }
-                            Ok(())
-                        })?;
 
-                        chart
-                            .present()
-                            .map_err(|e| format!("error while presenting chart: {}", e))?
-                    }
+                            let min_y = 0;
+                            let max_y = (max_y + std::cmp::max(1, max_y / 20)) as u32;
+
+                            let (min_x, max_x) = match (min_x, max_x) {
+                                (Some(min_x), Some(max_x)) => (*min_x, *max_x),
+                                (min_x, max_x) => {
+                                    warn!(
+                                        "could not retrieve chart min/max x-values for chart #{} \
+                                    ({:?}, {:?})",
+                                        self.spec.uid(),
+                                        min_x,
+                                        max_x,
+                                    );
+                                    return Ok(());
+                                }
+                            };
+
+                            chart.fill(&WHITE).unwrap();
+
+                            let mut chart_cxt: ChartContext<
+                                CanvasBackend,
+                                RangedCoord<RangedDuration, RangedCoordu32>,
+                            > = new_builder!()
+                                .build_ranged(
+                                    chrono::Duration::from_std(Duration::from_millis(0)).unwrap()
+                                        ..(max_x.date().clone() - min_x.date().clone()),
+                                    min_y..max_y,
+                                )
+                                .map_err(|e| err::Err::from(e.to_string()))?;
+
+                            chart_cxt
+                                .configure_mesh()
+                                .disable_x_mesh()
+                                .label_style(("sans-serif", 15).into_font())
+                                .x_label_formatter(&|date| {
+                                    let date = date.to_std().unwrap();
+                                    let mut secs = date.as_secs();
+                                    let mut mins = secs / 60;
+                                    secs = secs - mins * 60;
+                                    let hours = mins / 60;
+                                    mins = mins - hours * 60;
+                                    let mut s = String::with_capacity(10);
+                                    use std::fmt::Write;
+                                    if hours > 0 {
+                                        write!(&mut s, "{}h", hours).unwrap()
+                                    }
+                                    if mins > 0 {
+                                        write!(&mut s, "{}m", mins).unwrap()
+                                    }
+                                    write!(&mut s, "{}", secs).unwrap();
+                                    let millis = date.subsec_millis();
+                                    if millis != 0 {
+                                        write!(&mut s, ".{}", millis).unwrap()
+                                    }
+                                    write!(&mut s, "s").unwrap();
+                                    s
+                                })
+                                .draw()
+                                .unwrap();
+
+                            filters.specs_apply(|spec| {
+                                let uid = spec.uid();
+
+                                if visible_filters.get(&uid).cloned().unwrap_or(false) {
+                                    let color = color::to_plotters(spec.color());
+
+                                    let point_iter = size_points.iter().filter_map(|point| {
+                                        point.vals.map.get(&uid).map(|val| {
+                                            (point.key.date().clone() - min_x.date().clone(), *val)
+                                        })
+                                    });
+
+                                    chart_cxt
+                                        .draw_series(LineSeries::new(
+                                            point_iter,
+                                            color.stroke_width(1),
+                                        ))
+                                        .map_err(|e| e.to_string())?;
+                                }
+                                Ok(())
+                            })?;
+
+                            chart
+                                .present()
+                                .map_err(|e| format!("error while presenting chart: {}", e))?
+                        }
+                    },
                 }
             }
         }

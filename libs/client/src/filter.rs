@@ -171,6 +171,20 @@ impl<T> FiltersExt<T> {
         Ok(())
     }
 
+    pub fn specs_iter(&self) -> impl Iterator<Item = &FilterSpec> {
+        Some(&self.everything)
+            .into_iter()
+            .chain(self.filters.iter().map(Filter::spec))
+            .chain(
+                if self.filters.is_empty() {
+                    None
+                } else {
+                    Some(&self.catch_all)
+                }
+                .into_iter(),
+            )
+    }
+
     /// True if there are no filters besides the built-in ones.
     pub fn has_user_filters(&self) -> bool {
         !self.filters.is_empty()

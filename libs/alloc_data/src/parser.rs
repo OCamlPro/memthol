@@ -187,7 +187,10 @@ impl<'txt> Parser<'txt> {
         let kind = self.kind()?;
 
         self.ws();
-        let size = self.usize()?;
+        use std::convert::TryFrom;
+        let size = u32::try_from(self.usize()?)
+            .map_err(|e| swarkn::parse::err::ParseErr::from(e.to_string()))
+            .chain_err(|| "illegal u32 value")?;
 
         self.ws();
         let trace = self.trace()?;

@@ -7,9 +7,8 @@ pub use std::{
     sync::Arc,
 };
 
+pub use chrono::Duration;
 pub use error_chain::bail;
-
-// pub use serde::{Deserialize, Serialize};
 pub use serde_derive::{Deserialize, Serialize};
 
 pub use alloc_data::{Alloc, Date, Diff, Init as AllocInit, Loc, SinceStart, Uid as AllocUid};

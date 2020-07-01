@@ -93,6 +93,13 @@ impl Color {
         Ok(Self::new(r, g, b))
     }
 
+    /// Turns itself in a `plotters`-compliant color.
+    pub fn to_plotters(
+        &self,
+    ) -> plotters::palette::rgb::Rgb<plotters::palette::encoding::srgb::Srgb, u8> {
+        plotters::palette::rgb::Rgb::new(self.r, self.g, self.b)
+    }
+
     /// Constructs a random color.
     ///
     /// - `dark` indicates whether the random color should be relatively dark.
