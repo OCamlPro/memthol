@@ -25,11 +25,6 @@ impl ChartPos {
 }
 
 pub fn render(model: &Model, chart: &Chart, pos: ChartPos) -> Html {
-    debug!(
-        "rendering chart {}, visible: {}",
-        chart.uid(),
-        chart.is_visible()
-    );
     define_style! {
         CONTAINER_STYLE = {
             block,

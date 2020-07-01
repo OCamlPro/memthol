@@ -632,14 +632,12 @@ impl Chart {
                             .disable_x_mesh()
                             .label_style(("sans-serif", 15).into_font())
                             .x_label_formatter(&|date| {
-                                let mut secs = date.to_std().unwrap().as_secs();
-                                println!("secs: {}", secs);
+                                let date = date.to_std().unwrap();
+                                let mut secs = date.as_secs();
                                 let mut mins = secs / 60;
                                 secs = secs - mins * 60;
-                                println!("- {}:{}", mins, secs);
                                 let hours = mins / 60;
                                 mins = mins - hours * 60;
-                                println!("- {}:{}:{}", hours, mins, secs);
                                 let mut s = String::with_capacity(10);
                                 use std::fmt::Write;
                                 if hours > 0 {
@@ -648,7 +646,12 @@ impl Chart {
                                 if mins > 0 {
                                     write!(&mut s, "{}m", mins).unwrap()
                                 }
-                                write!(&mut s, "{}s", secs).unwrap();
+                                write!(&mut s, "{}", secs).unwrap();
+                                let millis = date.subsec_millis();
+                                if millis != 0 {
+                                    write!(&mut s, ".{}", millis).unwrap()
+                                }
+                                write!(&mut s, "s").unwrap();
                                 s
                             })
                             .draw()
