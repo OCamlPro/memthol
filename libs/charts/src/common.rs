@@ -25,6 +25,19 @@ pub use crate::{
     uid, ChartExt,
 };
 
+pub mod num_fmt {
+    static LOCALE: num_format::Locale = num_format::Locale::en;
+
+    pub fn str_do<Stuff, Res>(stuff: &Stuff, action: impl Fn(&str) -> Res) -> Res
+    where
+        Stuff: num_format::ToFormattedStr,
+    {
+        let mut buf = num_format::Buffer::default();
+        buf.write_formatted(stuff, &LOCALE);
+        action(buf.as_str())
+    }
+}
+
 /// A set of allocation UIDs.
 pub type AllocUidSet = Set<AllocUid>;
 
