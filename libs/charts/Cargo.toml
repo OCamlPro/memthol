@@ -15,7 +15,7 @@ chrono = "*"
 error-chain = "*"
 lazy_static = "*"
 num-format = "*"
-plotters = "*"
+plotters = { git = "https://github.com/AdrienChampion/plotters", branch = "canvas_fixes" }
 regex = "*"
 safe_index = "*"
 serde = "*"

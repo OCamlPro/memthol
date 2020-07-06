@@ -252,7 +252,6 @@ pub mod tiles {
         }
 
         let move_up = layout::button::img::arrow_up(
-            tiles_height_px,
             "move_chart_up",
             if pos.is_first {
                 None
@@ -266,7 +265,6 @@ pub mod tiles {
             "move this chart up",
         );
         let move_down = layout::button::img::arrow_down(
-            tiles_height_px,
             "move_chart_down",
             if pos.is_last {
                 None
@@ -309,7 +307,6 @@ pub mod tiles {
         }
 
         let close_button = layout::button::img::close(
-            tiles_height_px,
             "close_chart_button",
             Some(
                 model
@@ -320,7 +317,6 @@ pub mod tiles {
         );
         let collapse_expand_button = if chart.is_visible() {
             layout::button::img::collapse(
-                tiles_height_px,
                 "collapse_chart_button",
                 Some(
                     model
@@ -331,7 +327,6 @@ pub mod tiles {
             )
         } else {
             layout::button::img::expand(
-                tiles_height_px,
                 "expand_chart_button",
                 Some(
                     model

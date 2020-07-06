@@ -187,28 +187,6 @@ impl Tabs {
         Self { tabs: SVec::new() }
     }
 
-    fn raw_tab(props: &TabProps, onclick: OnClickAction, content: impl fmt::Display) -> Html {
-        html! {
-            <div
-                id = "filter_tab_cell"
-                style = OUTTER_CELL_STYLE
-            >
-                <div
-                    id = "filter_tab"
-                    style = style(props)
-                >
-                    {layout::button::text::render(
-                        Some(props.to_box_props()),
-                        "filter_content",
-                        content,
-                        Some(onclick),
-                        props.dimmed,
-                    )}
-                </div>
-            </div>
-        }
-    }
-
     pub fn push_tab(&mut self, model: &Model, text: &str, props: TabProps, onclick: OnClickAction) {
         self.inner_push_tab(model, text, props, onclick)
     }
@@ -264,6 +242,28 @@ impl Tabs {
         }
 
         self.tabs.push(res)
+    }
+
+    fn raw_tab(props: &TabProps, onclick: OnClickAction, content: impl fmt::Display) -> Html {
+        html! {
+            <div
+                id = "filter_tab_cell"
+                style = OUTTER_CELL_STYLE
+            >
+                <div
+                    id = "filter_tab"
+                    style = style(props)
+                >
+                    {layout::button::text::render(
+                        Some(props.to_box_props()),
+                        "filter_content",
+                        content,
+                        Some(onclick),
+                        props.dimmed,
+                    )}
+                </div>
+            </div>
+        }
     }
 
     pub fn push_sep(&mut self) {

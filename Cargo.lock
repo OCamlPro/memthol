@@ -1874,8 +1874,7 @@ checksum = "05da548ad6865900e60eaba7f589cc0783590a92e940c26953ff81ddbab2d677"
 [[package]]
 name = "plotters"
 version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d1685fbe7beba33de0330629da9d955ac75bd54f33d7b79f9a895590124f6bb"
+source = "git+https://github.com/AdrienChampion/plotters?branch=canvas_fixes#9b6db0b03b0e0a653760e01fb355ddfadcf29e7f"
 dependencies = [
  "chrono",
  "font-kit",

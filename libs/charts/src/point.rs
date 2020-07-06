@@ -396,9 +396,14 @@ impl<X> PointValExt<u32> for PolyPoints<X, u32> {
         })
     }
     fn val_coord_range_processor(range: &Range<u32>) -> Res<Range<<u32 as CoordExt>::Coord>> {
+        let default_max = u32::default_max();
         Ok(Range {
             min: range.min,
-            max: range.max,
+            max: if range.max < default_max {
+                default_max
+            } else {
+                range.max
+            },
         })
     }
     fn val_coord_processor(_range: &Range<u32>, x: &u32) -> <u32 as CoordExt>::Coord {

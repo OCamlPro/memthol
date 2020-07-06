@@ -323,10 +323,42 @@ pub mod img {
         };
     }
 
+    #[derive(Clone, Copy, Debug)]
+    pub enum Img {
+        Close,
+        Collapse,
+        Expand,
+        ArrowUp,
+        ArrowDown,
+        Plus,
+    }
+    impl Img {
+        pub fn render(
+            self,
+            id: &str,
+            onclick: Option<OnClickAction>,
+            desc: impl fmt::Display,
+        ) -> Html {
+            match self {
+                Self::Close => close(id, onclick, desc),
+                Self::Collapse => collapse(id, onclick, desc),
+                Self::Expand => expand(id, onclick, desc),
+                Self::ArrowUp => arrow_up(id, onclick, desc),
+                Self::ArrowDown => arrow_down(id, onclick, desc),
+                Self::Plus => plus(id, onclick, desc),
+            }
+        }
+    }
+
     /// Internal rendering function.
     ///
     /// If `onclick.is_none()`, the button will be hidden and deactivated.
-    fn render(id: &str, inner: Html, onclick: Option<OnClickAction>, desc: &str) -> Html {
+    fn raw_render(
+        id: &str,
+        inner: Html,
+        onclick: Option<OnClickAction>,
+        desc: impl fmt::Display,
+    ) -> Html {
         if let Some(onclick) = onclick {
             html! {
                 <button
@@ -353,27 +385,26 @@ pub mod img {
     /// Close button.
     ///
     /// Inline SVG for https://icons.getbootstrap.com/icons/x.
-    pub fn close(size_px: usize, id: &str, onclick: Option<OnClickAction>, desc: &str) -> Html {
-        render(id, close_img(size_px), onclick, desc)
+    pub fn close(id: &str, onclick: Option<OnClickAction>, desc: impl fmt::Display) -> Html {
+        raw_render(id, close_img(), onclick, desc)
     }
-    fn close_img(size_px: usize) -> Html {
+    fn close_img() -> Html {
         html! {
             <svg
-                width=size_px
-                height=size_px
-                viewBox="0 0 16 16"
-                xmlns="http://www.w3.org/2000/svg"
+                height = "100%"
+                viewBox = "0 0 16 16"
+                xmlns = "http://www.w3.org/2000/svg"
             >
                 <path
-                    fill-rule="evenodd"
-                    d="\
+                    fill-rule = "evenodd"
+                    d = "\
                         M11.854 4.146a.5.5 0 0 1 0 .708l-7 7a.5.5 \
                         0 0 1-.708-.708l7-7a.5.5 0 0 1 .708 0z\
                     "
                 />
                 <path
-                    fill-rule="evenodd"
-                    d="\
+                    fill-rule = "evenodd"
+                    d = "\
                         M4.146 4.146a.5.5 0 0 0 0 .708l7 \
                         7a.5.5 0 0 0 .708-.708l-7-7a.5.5 0 0 0-.708 0z\
                     "
@@ -385,20 +416,19 @@ pub mod img {
     /// Collapse button.
     ///
     /// Inline SVG for https://icons.getbootstrap.com/icons/chevron-bar-up.
-    pub fn collapse(size_px: usize, id: &str, onclick: Option<OnClickAction>, desc: &str) -> Html {
-        render(id, collapse_img(size_px), onclick, desc)
+    pub fn collapse(id: &str, onclick: Option<OnClickAction>, desc: impl fmt::Display) -> Html {
+        raw_render(id, collapse_img(), onclick, desc)
     }
-    fn collapse_img(size_px: usize) -> Html {
+    fn collapse_img() -> Html {
         html! {
             <svg
-                width=size_px
-                height=size_px
-                viewBox="0 0 16 16"
-                xmlns="http://www.w3.org/2000/svg"
+                height = "100%"
+                viewBox = "0 0 16 16"
+                xmlns = "http://www.w3.org/2000/svg"
             >
                 <path
-                    fill-rule="evenodd"
-                    d="\
+                    fill-rule = "evenodd"
+                    d = "\
                         M3.646 11.854a.5.5 0 0 0 .708 0L8 8.207l3.646 3.647a.5.5 0 0 0 \
                         .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708zM2.4 5.2c0 \
                         .22.18.4.4.4h10.4a.4.4 0 0 0 0-.8H2.8a.4.4 0 0 0-.4.4z\
@@ -411,20 +441,19 @@ pub mod img {
     /// Expand button.
     ///
     /// Inline SVG for https://icons.getbootstrap.com/icons/chevron-bar-down.
-    pub fn expand(size_px: usize, id: &str, onclick: Option<OnClickAction>, desc: &str) -> Html {
-        render(id, expand_img(size_px), onclick, desc)
+    pub fn expand(id: &str, onclick: Option<OnClickAction>, desc: impl fmt::Display) -> Html {
+        raw_render(id, expand_img(), onclick, desc)
     }
-    fn expand_img(size_px: usize) -> Html {
+    fn expand_img() -> Html {
         html! {
             <svg
-                width=size_px
-                height=size_px
-                viewBox="0 0 16 16"
-                xmlns="http://www.w3.org/2000/svg"
+                height = "100%"
+                viewBox = "0 0 16 16"
+                xmlns = "http://www.w3.org/2000/svg"
             >
                 <path
-                    fill-rule="evenodd"
-                    d="\
+                    fill-rule = "evenodd"
+                    d = "\
                         M3.646 4.146a.5.5 0 0 1 .708 0L8 7.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 \
                         4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708zM1 11.5a.5.5 0 0 1 \
                         .5-.5h13a.5.5 0 0 1 0 1h-13a.5.5 0 0 1-.5-.5z\
@@ -437,27 +466,26 @@ pub mod img {
     /// Expand button.
     ///
     /// Inline SVG for https://icons.getbootstrap.com/icons/arrow-bar-up.
-    pub fn arrow_up(size_px: usize, id: &str, onclick: Option<OnClickAction>, desc: &str) -> Html {
-        render(id, arrow_up_img(size_px), onclick, desc)
+    pub fn arrow_up(id: &str, onclick: Option<OnClickAction>, desc: impl fmt::Display) -> Html {
+        raw_render(id, arrow_up_img(), onclick, desc)
     }
-    fn arrow_up_img(size_px: usize) -> Html {
+    fn arrow_up_img() -> Html {
         html! {
             <svg
-                width=size_px
-                height=size_px
-                viewBox="0 0 16 16"
-                xmlns="http://www.w3.org/2000/svg"
+                height = "100%"
+                viewBox = "0 0 16 16"
+                xmlns = "http://www.w3.org/2000/svg"
             >
                 <path
-                    fill-rule="evenodd"
-                    d="\
+                    fill-rule = "evenodd"
+                    d = "\
                         M11.354 5.854a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 \
                         .708.708L8 3.207l2.646 2.647a.5.5 0 0 0 .708 0z\
                     "
                 />
                 <path
-                    fill-rule="evenodd"
-                    d="\
+                    fill-rule = "evenodd"
+                    d = "\
                         M8 10a.5.5 0 0 0 .5-.5V3a.5.5 0 0 0-1 0v6.5a.5.5 0 0 0 .5.5zm-4.8 \
                         1.6c0-.22.18-.4.4-.4h8.8a.4.4 0 0 1 0 .8H3.6a.4.4 0 0 1-.4-.4z\
                     "
@@ -469,33 +497,51 @@ pub mod img {
     /// Expand button.
     ///
     /// Inline SVG for https://icons.getbootstrap.com/icons/arrow-bar-down.
-    pub fn arrow_down(
-        size_px: usize,
-        id: &str,
-        onclick: Option<OnClickAction>,
-        desc: &str,
-    ) -> Html {
-        render(id, arrow_down_img(size_px), onclick, desc)
+    pub fn arrow_down(id: &str, onclick: Option<OnClickAction>, desc: impl fmt::Display) -> Html {
+        raw_render(id, arrow_down_img(), onclick, desc)
     }
-    fn arrow_down_img(size_px: usize) -> Html {
+    fn arrow_down_img() -> Html {
         html! {
             <svg
-                width=size_px
-                height=size_px
-                viewBox="0 0 16 16"
-                xmlns="http://www.w3.org/2000/svg"
+                height = "100%"
+                viewBox = "0 0 16 16"
+                xmlns = "http://www.w3.org/2000/svg"
             >
                 <path
-                    fill-rule="evenodd"
-                        d="M11.354 10.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 \
+                    fill-rule = "evenodd"
+                        d = "M11.354 10.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 \
                         0l-3-3a.5.5 0 0 1 .708-.708L8 12.793l2.646-2.647a.5.5 0 0 1 .708 0z\
                     "
                 />
                 <path
-                    fill-rule="evenodd"
-                    d="\
+                    fill-rule = "evenodd"
+                    d = "\
                         M8 6a.5.5 0 0 1 .5.5V13a.5.5 0 0 1-1 0V6.5A.5.5 0 0 1 8 6zM2 \
                         3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z\
+                    "
+                />
+            </svg>
+        }
+    }
+
+    /// Plus button.
+    ///
+    /// Inline SVG for https://icons.getbootstrap.com/icons/plus-circle-fill.
+    pub fn plus(id: &str, onclick: Option<OnClickAction>, desc: impl fmt::Display) -> Html {
+        raw_render(id, plus_img(), onclick, desc)
+    }
+    fn plus_img() -> Html {
+        html! {
+            <svg
+                height = "100%"
+                viewBox = "0 0 16 16"
+                xmlns = "http://www.w3.org/2000/svg"
+            >
+                <path
+                    fill-rule = "evenodd"
+                    d = "\
+                        M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4a.5.5 0 0 0-1 0v3.5H4a.5.5 0 0 0 \
+                        0 1h3.5V12a.5.5 0 0 0 1 0V8.5H12a.5.5 0 0 0 0-1H8.5V4z\
                     "
                 />
             </svg>

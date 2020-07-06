@@ -532,13 +532,13 @@ impl charts::point::StyleExt for Styler {
             .axis_style(&plotters::prelude::BLACK)
             .line_style_1(
                 plotters::prelude::ShapeStyle::from(&plotters::prelude::BLACK.mix(0.2))
-                    .stroke_width(3),
+                    .stroke_width(1),
             )
             .line_style_2(&plotters::prelude::BLACK.mix(0.0));
     }
 
     fn shape_conf(&self, color: &charts::color::Color) -> plotters::style::ShapeStyle {
-        let style = color.to_plotters().stroke_width(9);
+        let style = color.to_plotters().stroke_width(5);
         debug!(
             "{:?}, {}, {}",
             style.color, style.filled, style.stroke_width
@@ -568,36 +568,43 @@ impl Chart {
         let visible_filters = &self.filters;
 
         if let Some((chart, canvas)) = &mut self.chart {
-            let (width, height) = (
-                match canvas.client_width() {
-                    n if n >= 0 => n as u32,
-                    _ => {
-                        alert!("An error occured while resizing a chart's canvas: negative width.");
-                        panic!("fatal")
-                    }
-                },
-                match canvas.client_height() {
-                    n if n >= 0 => n as u32,
-                    _ => {
-                        alert!(
-                            "An error occured while resizing a chart's canvas: negative height."
-                        );
-                        panic!("fatal")
-                    }
-                },
-            );
+            let (chart_w, chart_h) = chart.dim_in_pixel();
+            // debug!("w: {}, h: {}", chart_w, chart_h);
+            // let (w, h) = (canvas.client_width(), canvas.client_height());
+            // debug!("w: {}, h: {}", w, h);
+            // info!("dpr: {}", web_sys::window().unwrap().device_pixel_ratio());
+            // let (width, height) = (
+            //     match canvas.client_width() {
+            //         n if n >= 0 => n as u32,
+            //         _ => {
+            //             alert!("An error occured while resizing a chart's canvas: negative width.");
+            //             panic!("fatal")
+            //         }
+            //     },
+            //     match canvas.client_height() {
+            //         n if n >= 0 => n as u32,
+            //         _ => {
+            //             alert!(
+            //                 "An error occured while resizing a chart's canvas: negative height."
+            //             );
+            //             panic!("fatal")
+            //         }
+            //     },
+            // );
 
             use wasm_bindgen::JsCast;
             let html_canvas: web_sys::HtmlCanvasElement = canvas.clone().dyn_into().unwrap();
 
-            if html_canvas.width() != width {
-                html_canvas.set_width(width)
+            if html_canvas.width() != chart_w {
+                html_canvas.set_width(chart_w)
             }
-            if html_canvas.height() != height {
-                html_canvas.set_height(height)
+            if html_canvas.height() != chart_h {
+                html_canvas.set_height(chart_h)
             }
 
             if let Some(points) = &self.points {
+                chart.fill(&WHITE).unwrap();
+
                 let (x_label_area, y_label_area) = (30, 60);
                 let (margin_top, margin_right) = (x_label_area / 3, y_label_area / 3);
 
