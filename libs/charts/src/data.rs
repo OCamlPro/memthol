@@ -11,10 +11,7 @@ pub use watcher::Watcher;
 /// Starts global data handling.
 ///
 /// - runs the file watcher daemon.
-pub fn start<S>(dir: S)
-where
-    S: Into<String>,
-{
+pub fn start(dir: impl Into<String>) {
     Watcher::spawn(dir)
 }
 
@@ -96,14 +93,11 @@ impl Data {
     ///
     /// - new allocations that have a time-of-death **will also be** in `iter_dead_since`;
     /// - allocations will appear in reverse time-of-creation chronological order.
-    pub fn iter_new_since<AllocDo>(
+    pub fn iter_new_since(
         &self,
         time: &time::SinceStart,
-        mut new_alloc: AllocDo,
-    ) -> Res<()>
-    where
-        AllocDo: for<'a> FnMut(&'a Alloc) -> Res<()>,
-    {
+        mut new_alloc: impl FnMut(&Alloc) -> Res<()>,
+    ) -> Res<()> {
         // Reverse iter allocations.
         for (_, alloc) in self.uid_map.iter().rev() {
             if &alloc.toc <= time {
@@ -120,14 +114,11 @@ impl Data {
     ///
     /// - new allocations that have a time-of-death **will also appear** in `iter_new_since`;
     /// - allocation deaths will appear in reverse time-of-death chronological order.
-    pub fn iter_dead_since<DeathDo>(
+    pub fn iter_dead_since(
         &self,
         time: &time::SinceStart,
-        mut new_death: DeathDo,
-    ) -> Res<()>
-    where
-        DeathDo: for<'a> FnMut(&'a AllocUidSet, &'a time::SinceStart) -> Res<()>,
-    {
+        mut new_death: impl FnMut(&AllocUidSet, &time::SinceStart) -> Res<()>,
+    ) -> Res<()> {
         // Reverse iter death.
         for (tod, uid) in self.tod_map.iter().rev() {
             if tod <= time {
@@ -228,10 +219,7 @@ impl Data {
 }
 
 /// Adds an error.
-pub fn add_err<S>(err: S)
-where
-    S: Into<String>,
-{
+pub fn add_err(err: impl Into<String>) {
     let err = err.into();
     println!("Error:");
     for line in err.lines() {

@@ -38,10 +38,7 @@ impl<Val> PointVal<Val> {
     }
 
     /// Map over all values.
-    pub fn map<F, Out>(self, mut f: F) -> Res<PointVal<Out>>
-    where
-        F: FnMut(uid::LineUid, Val) -> Res<Out>,
-    {
+    pub fn map<Out>(self, mut f: impl FnMut(uid::LineUid, Val) -> Res<Out>) -> Res<PointVal<Out>> {
         let mut map = Map::new();
         for (uid, val) in self.map {
             map.insert(uid, f(uid, val)?);

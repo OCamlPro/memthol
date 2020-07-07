@@ -1178,7 +1178,7 @@ pub mod input {
     }
 
     fn parse_usize_data(data: ChangeData) -> Res<usize> {
-        use alloc_data::Parseable;
+        use alloc::parser::Parseable;
         parse_text_data(data).and_then(|txt| usize::parse(txt).map_err(|e| e.into()))
     }
     pub fn usize_input(
@@ -1197,7 +1197,7 @@ pub mod input {
     }
 
     fn parse_u32_data(data: ChangeData) -> Res<u32> {
-        use alloc_data::Parseable;
+        use alloc::parser::Parseable;
         parse_text_data(data).and_then(|txt| u32::parse(txt).map_err(|e| e.into()))
     }
     pub fn u32_input(model: &Model, value: u32, msg: impl Fn(Res<u32>) -> Msg + 'static) -> Html {

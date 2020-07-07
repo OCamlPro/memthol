@@ -2,12 +2,11 @@
 
 #![recursion_limit = "1024"]
 
-use wasm_bindgen::prelude::*;
+#[macro_use]
+pub mod prelude;
 
 #[macro_use]
 pub mod macros;
-
-pub mod common;
 
 pub mod err;
 pub mod js;
@@ -21,9 +20,9 @@ pub mod cst;
 pub mod filter;
 pub mod footer;
 pub mod msg;
-pub mod point;
 
-pub use model::Model;
+prelude! {}
+use wasm::*;
 
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;

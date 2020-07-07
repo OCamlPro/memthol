@@ -11,3 +11,4 @@ error-chain = "*"
 derive_more = "*"
 lazy_static = "*"
 rand = { version = "*", features = ["small_rng"] }
+smallvec = "*"

@@ -35,10 +35,7 @@ pub struct Watcher {
 
 impl Watcher {
     /// Spawns a watcher.
-    pub fn spawn<S>(dir: S)
-    where
-        S: Into<String>,
-    {
+    pub fn spawn(dir: impl Into<String>) {
         let mut watcher = Self::new(dir);
 
         let _ = std::thread::spawn(move || match watcher.run() {
@@ -116,10 +113,7 @@ impl Watcher {
 /// # Generic helpers.
 impl Watcher {
     /// Constructor.
-    fn new<S>(dir: S) -> Self
-    where
-        S: Into<String>,
-    {
+    fn new(dir: impl Into<String>) -> Self {
         let dir = dir.into();
         let tmp_file = "tmp.memthol".into();
         let init_file = "init.memthol".into();
@@ -167,11 +161,11 @@ impl Watcher {
     ///
     /// - clears `self.buf` once it's done.
     /// - asserts `self.buf.is_empty()`.
-    pub fn read_content<P, F, Out>(&mut self, path: P, f: F) -> Res<Out>
-    where
-        F: for<'a> FnOnce(&'a str) -> Res<Out>,
-        P: AsRef<Path>,
-    {
+    pub fn read_content<Out>(
+        &mut self,
+        path: impl AsRef<Path>,
+        f: impl FnOnce(&str) -> Res<Out>,
+    ) -> Res<Out> {
         use std::{fs::OpenOptions, io::Read};
         debug_assert!(self.buf.is_empty());
         let path = path.as_ref();

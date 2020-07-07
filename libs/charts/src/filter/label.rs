@@ -38,10 +38,7 @@ impl string_like::SpecExt for LabelSpec {
     type Data = String;
     const DATA_DESC: &'static str = "label";
 
-    fn from_string<S>(s: S) -> Res<Self>
-    where
-        S: Into<String>,
-    {
+    fn from_string(s: impl Into<String>) -> Res<Self> {
         Self::new(s)
     }
 
@@ -95,10 +92,7 @@ impl Default for LabelSpec {
 
 impl LabelSpec {
     /// Constructor from strings.
-    pub fn new<S>(s: S) -> Res<Self>
-    where
-        S: Into<String>,
-    {
+    pub fn new(s: impl Into<String>) -> Res<Self> {
         let label = s.into();
         macro_rules! illegal {
             () => {{

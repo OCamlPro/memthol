@@ -152,6 +152,7 @@ dependencies = [
  "error-chain",
  "lazy_static",
  "rand 0.7.3",
+ "smallvec",
 ]
 
 [[package]]
@@ -400,10 +401,8 @@ dependencies = [
  "log 0.4.8",
  "palette",
  "plotters",
- "regex",
  "safe_index",
  "serde",
- "smallvec 1.4.1",
  "strum",
  "strum_macros",
  "typed-html",
@@ -1740,7 +1739,7 @@ dependencies = [
  "libc",
  "redox_syscall",
  "rustc_version",
- "smallvec 0.6.13",
+ "smallvec",
  "winapi 0.3.9",
 ]
 
@@ -2501,12 +2500,6 @@ checksum = "f7b0758c52e15a8b5e3691eae6cc559f08eee9406e548a4477ba4e67770a82b6"
 dependencies = [
  "maybe-uninit",
 ]
-
-[[package]]
-name = "smallvec"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3757cb9d89161a2f24e1cf78efa0c1fcff485d18e3f55e0aa3480824ddaa0f3f"
 
 [[package]]
 name = "spin"

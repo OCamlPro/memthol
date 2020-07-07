@@ -1,7 +1,8 @@
 //! Footer DOM element.
 
-use crate::common::*;
+prelude! {}
 
+/// Footer state.
 pub struct Footer {
     /// Active footer tab, if any.
     pub active: Option<FooterTab>,

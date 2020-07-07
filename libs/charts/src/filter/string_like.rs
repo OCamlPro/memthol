@@ -35,9 +35,7 @@ pub trait SpecExt: Default + Clone + fmt::Display + Sized {
     const DATA_DESC: &'static str;
 
     /// Constructor from strings.
-    fn from_string<S>(s: S) -> Res<Self>
-    where
-        S: Into<String>;
+    fn from_string(s: impl Into<String>) -> Res<Self>;
 
     /// True if the specification is empty, meaning it is ignored.
     fn is_empty(&self) -> bool;

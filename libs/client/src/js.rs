@@ -1,8 +1,8 @@
 //! JS bindings.
 
-use wasm_bindgen::prelude::*;
+prelude! {}
 
-pub use wasm_bindgen::JsValue;
+use wasm::*;
 
 #[wasm_bindgen]
 extern "C" {
@@ -10,8 +10,11 @@ extern "C" {
     pub fn alert(s: &str);
 }
 
+/// Alias type for `wasm_bindgen`'s `JsValue`.
+pub type Value = JsValue;
+
 /// Retrieves a DOM element from its id.
-pub fn try_get_element_by_id(id: &str) -> crate::common::Res<Option<web_sys::Element>> {
+pub fn try_get_element_by_id(id: &str) -> Res<Option<web_sys::Element>> {
     let document = web_sys::window()
         .ok_or("could not retrieve window")?
         .document()
@@ -21,7 +24,7 @@ pub fn try_get_element_by_id(id: &str) -> crate::common::Res<Option<web_sys::Ele
 }
 
 /// Retrieves a DOM element from its id.
-pub fn get_element_by_id(id: &str) -> crate::common::Res<web_sys::Element> {
+pub fn get_element_by_id(id: &str) -> Res<web_sys::Element> {
     let res =
         try_get_element_by_id(id)?.ok_or_else(|| format!("unknown DOM element id {:?}", id))?;
     Ok(res)
@@ -29,7 +32,7 @@ pub fn get_element_by_id(id: &str) -> crate::common::Res<web_sys::Element> {
 
 /// Server info.
 pub mod server {
-    use crate::common::*;
+    prelude! {}
 
     fn location() -> Res<web_sys::Location> {
         web_sys::window()

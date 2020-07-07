@@ -4,7 +4,7 @@ use plotters::prelude::*;
 
 pub use charts::chart::ChartSpec;
 
-use crate::common::*;
+prelude! {}
 
 pub mod axis;
 pub mod new;

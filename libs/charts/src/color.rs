@@ -159,10 +159,7 @@ impl Color {
     }
 
     /// Keeps on constructing colors until the input predicate is true.
-    pub fn random_until<Pred>(dark: bool, pred: Pred) -> Self
-    where
-        Pred: Fn(&Color) -> bool,
-    {
+    pub fn random_until(dark: bool, pred: impl Fn(&Color) -> bool) -> Self {
         let mut color = Self::random(dark);
         while !pred(&color) {
             color = Self::random(dark)

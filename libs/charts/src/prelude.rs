@@ -47,10 +47,10 @@ pub use crate::{
 pub mod num_fmt {
     static LOCALE: num_format::Locale = num_format::Locale::en;
 
-    pub fn str_do<Stuff, Res>(stuff: &Stuff, action: impl Fn(&str) -> Res) -> Res
-    where
-        Stuff: num_format::ToFormattedStr,
-    {
+    pub fn str_do<Res>(
+        stuff: &impl num_format::ToFormattedStr,
+        action: impl Fn(&str) -> Res,
+    ) -> Res {
         let mut buf = num_format::Buffer::default();
         buf.write_formatted(stuff, &LOCALE);
         action(buf.as_str())

@@ -1,8 +1,8 @@
 //! Error-handling types.
 
-pub use error_chain::bail;
+prelude! {}
 
-use crate::common::msg::Msg;
+use msg::Msg;
 
 pub use charts::err::*;
 

@@ -1,9 +1,8 @@
 //! Part of the BUI that handles chart creation.
 
-use crate::common::{
-    chart::axis::{XAxis, YAxis},
-    *,
-};
+prelude! {}
+
+use chart::axis::{XAxis, YAxis};
 
 pub struct NewChart {
     /// X-axis selection.
