@@ -68,6 +68,7 @@ macro_rules! new {
     (mod $mod:ident for $ty:ty) => {
         mod $mod {
             pub use std::sync::{Arc, RwLock};
+
             pub use $crate::mem::Uid;
 
             /// Type of the memory structure.

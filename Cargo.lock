@@ -34,9 +34,9 @@ dependencies = [
  "lazy_static",
  "num-bigint",
  "num-traits",
+ "peg",
  "serde",
  "serde_derive",
- "swarkn",
  "toml",
 ]
 
@@ -1767,6 +1767,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "peg"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9075875c14bb21f25f11cad4b6ad2e4dd443b8fb83900b2fbdd6ebd744b82e97"
+dependencies = [
+ "peg-macros",
+ "peg-runtime",
+]
+
+[[package]]
+name = "peg-macros"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c24c165fd39e995246140cc78df55c56c6733ba87e6658cb3e197b8856c62852"
+dependencies = [
+ "peg-runtime",
+ "proc-macro2",
+ "quote",
+]
+
+[[package]]
+name = "peg-runtime"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c1a2897e69d986c7986747ebad425cf03746ec5e3e09bb3b2600f91301ba864"
+
+[[package]]
 name = "percent-encoding"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2570,15 +2597,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "swarkn"
-version = "0.1.0"
-source = "git+https://github.com/AdrienChampion/swarkn#e20b4a75c4970b73bbf7e9fbecddf6bf39119def"
-dependencies = [
- "error-chain",
- "regex",
 ]
 
 [[package]]

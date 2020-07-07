@@ -5,7 +5,7 @@
 
 use serde_derive::{Deserialize, Serialize};
 
-use crate::{Parser, Res};
+prelude! {}
 
 pub use std::time::Duration;
 
@@ -81,13 +81,8 @@ impl SinceStart {
     /// }
     /// ```
     pub fn from_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
-        Parser::parse_all(s.as_ref(), Parser::date, "date")
+        parser::since_start(s.as_ref()).map_err(|e| e.into())
     }
-
-    // /// JS representation of a duration.
-    // pub fn as_js(&self) -> Value {
-    //     js!(return @{format!("{}.{}", self.as_secs(), self.subsec_millis())})
-    // }
 }
 
 /// An actual, absolute date.
