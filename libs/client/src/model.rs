@@ -1,13 +1,11 @@
 //! Model of the client.
 
-use crate::common::*;
+prelude! {}
 
 /// Model of the client.
 pub struct Model {
     /// Component link.
     pub link: ComponentLink<Self>,
-    /// Socket service with the server.
-    pub socket: WebSocketService,
     /// Socket task for receiving/sending messages from/to the server.
     pub socket_task: Option<WebSocketTask>,
     /// Errors.
@@ -22,13 +20,28 @@ pub struct Model {
 }
 
 impl Model {
+    pub fn filters(&self) -> &filter::ReferenceFilters {
+        self.filters.reference_filters()
+    }
+    pub fn footer_filters(&self) -> &filter::Filters {
+        &self.filters
+    }
+    pub fn charts(&self) -> &Charts {
+        &self.charts
+    }
+}
+
+impl Model {
     /// Activates the websocket to receive data from the server.
-    fn activate_ws(link: &mut ComponentLink<Self>, socket: &mut WebSocketService) -> Res<WebSocketTask> {
-        let (addr, port) = get_server_addr();
+    fn activate_ws(link: &mut ComponentLink<Self>) -> Res<WebSocketTask> {
+        info!("fetching server's websocket info");
+        let (addr, port) = js::server::address()?;
         let addr = format!("ws://{}:{}", addr, port + 1);
+        info!("websocket: {:?}", addr);
         let callback = link.callback(|msg| Msg::FromServer(msg));
         let notification = link.callback(|status| Msg::ConnectionStatus(status));
-        let task = socket.connect(&addr, callback, notification)?;
+        let task = WebSocketService::connect(&addr, callback, notification)?;
+        info!("connection established successfully");
         Ok(task)
     }
 }
@@ -53,7 +66,7 @@ impl Model {
             Msg::Charts(msg) => {
                 let res = self.charts.server_update(&self.filters, msg);
                 res
-            },
+            }
             Msg::Filters(msg) => self.filters.server_update(msg),
         }
     }
@@ -76,8 +89,7 @@ impl Component for Model {
     type Properties = ();
 
     fn create(_: Self::Properties, mut link: ComponentLink<Self>) -> Self {
-        let mut socket = WebSocketService::new();
-        let (socket_task, errors) = match Self::activate_ws(&mut link, &mut socket) {
+        let (socket_task, errors) = match Self::activate_ws(&mut link) {
             Ok(res) => (Some(res), vec![]),
             Err(e) => (None, vec![e]),
         };
@@ -85,7 +97,6 @@ impl Component for Model {
         let filters = filter::Filters::new(link.callback(|msg: Msg| msg));
         Model {
             link,
-            socket,
             socket_task,
             errors,
             charts,
@@ -146,13 +157,14 @@ impl Component for Model {
         }
     }
     fn view(&self) -> Html {
-        html! {
-            <>
-                <div class=crate::style::class::FULL_BODY>
-                    { self.charts.render(self) }
-                    { self.footer.render(self, &self.filters) }
-                </div>
-            </>
-        }
+        layout::render(self)
+    }
+
+    fn rendered(&mut self, _first_render: bool) {
+        self.charts.rendered(self.filters.reference_filters())
+    }
+
+    fn change(&mut self, _props: ()) -> bool {
+        false
     }
 }

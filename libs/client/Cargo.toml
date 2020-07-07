@@ -4,11 +4,10 @@ version = "0.1.0"
 authors = ["AdrienChampion <adrien.champion@email.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib", "rlib"]
 
-[profile.release]
-lto = true
-opt-level = 3
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 alloc_data = { path = "../alloc_data" }
@@ -19,13 +18,21 @@ chrono = "*"
 error-chain = "*"
 lazy_static = "*"
 log = "*"
+palette = "*"
+plotters = { git = "https://github.com/AdrienChampion/plotters", branch = "canvas_fixes" }
 regex = "*"
 safe_index = "*"
 serde = "*"
-stdweb = "*"
-stdweb-derive = "*"
+smallvec = "*"
 strum = "*"
 strum_macros = "*"
-typed-html = { version = "*", features = ["stdweb"] }
-web_logger = "*"
-yew = { version = "0.14.3", features = ["std_web"] }
+typed-html = { git = "https://github.com/bodil/typed-html" }
+wasm-logger = "*"
+wasm-bindgen = "*"
+web-sys = { version = "*", features = [
+    "Element", "NamedNodeMap", "Attr",
+    "HtmlCanvasElement", "HtmlSelectElement", "HtmlCollection"
+] }
+wee_alloc = "*"
+yew = "*"
+yew-components = "*"

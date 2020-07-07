@@ -11,110 +11,109 @@ pub use std::{
 
 use lazy_static::lazy_static;
 
-pub use log::{error, info, warn, debug};
+pub use smallvec::smallvec;
 
-pub use stdweb::{js, Value as JsVal};
+pub use log::{debug, error, info, warn};
 
 pub use regex::Regex;
 
 pub use yew::{
-    components::Select,
     html,
     html::ChangeData,
     services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask},
     Callback, Component, ComponentLink, Renderable, ShouldRender,
 };
+pub use yew_components::Select;
 
 // Sub-crates.
 
 pub use alloc_data::{Alloc, Date as AllocDate, Diff as AllocDiff, SinceStart, Uid as AllocUid};
 
-pub use charts::{Json, point::Point};
+pub use charts::{point::Point, Json};
+
+pub mod color {
+    pub use charts::color::Color;
+    pub use plotters::palette::rgb::Rgb;
+
+    use plotters::palette::encoding::srgb::Srgb;
+
+    pub fn to_plotters(&Color { r, g, b }: &Color) -> Rgb<Srgb, u8> {
+        Rgb::new(r, g, b)
+    }
+}
 
 // Re-exports.
 
 pub use crate::{
-    buttons::Button,
-    chart,
-    chart::Charts,
+    chart::{self, Chart, Charts},
     cst,
-    err,
-    err::{bail, Res, ResExt},
-    filter,
-    footer,
+    err::{self, bail, Res, ResExt},
+    filter, footer,
+    js::{self, JsValue},
+    layout,
     model::Model,
-    msg,
-    msg::Msg,
+    msg::{self, Msg},
     point, style,
 };
 
-/// Issues an alert.
-#[macro_export]
-macro_rules! alert {
-    ($msg:expr) => (
-        js!(@(no_return) alert(@{$msg});)
-    );
-    ($($stuff:tt)*) => (
-        alert!(format!($($stuff)*))
-    );
-}
+pub type SVec<T> = smallvec::SmallVec<[T; 8]>;
 
-/// Issues an alert and then panics.
-#[macro_export]
-macro_rules! fail {
-    ($msg:expr) => ({
-        let blah = format!("{}\nin {} line {}", $msg, file!(), line!());
-        alert!(blah);
-        panic!("fatal error")
-    });
-    ($($stuff:tt)*) => ({
-        let blah = format!($($stuff)*);
-        fail!(blah)
-    });
-}
+// /// Issues an alert.
+// #[macro_export]
+// macro_rules! alert {
+//     ($msg:expr) => (
+//         js!(@(no_return) alert(@{$msg});)
+//     );
+//     ($($stuff:tt)*) => (
+//         alert!(format!($($stuff)*))
+//     );
+// }
 
-// /// Type of `onclick` actions.
-pub trait OnClick: Fn(yew::events::ClickEvent) -> Msg + 'static {}
-impl<Action> OnClick for Action where Action: Fn(yew::events::ClickEvent) -> Msg + 'static {}
-
-/// Retrieves the address and port of the server.
-pub fn get_server_addr() -> (String, usize) {
-    use stdweb::unstable::TryInto;
-    let addr: String = js! {
-        return serverAddr.get_addr();
-    }
-    .try_into()
-    .expect("addr");
-    let port: usize = js! {
-        return serverAddr.get_port();
-    }
-    .try_into()
-    .expect("port");
-    (addr, port)
-}
-
-/// Type of HTML elements in the client.
-pub type Html = yew::Html;
-
-/// Extends yew's `ChangeData` with some helpers.
-pub trait ChangeDataExt {
-    /// Retrieves a text input value or produces an error message.
-    fn text_value(self) -> Res<String>;
-}
-impl ChangeDataExt for ChangeData {
-    fn text_value(self) -> Res<String> {
-        match self {
-            ChangeData::Value(res) => Ok(res),
-            data => bail!("expected text input value, found {:?}", data),
-        }
-    }
-}
+// /// Issues an alert and then panics.
+// #[macro_export]
+// macro_rules! fail {
+//     ($msg:expr) => ({
+//         let blah = format!("{}\nin {} line {}", $msg, file!(), line!());
+//         alert!(blah);
+//         panic!("fatal error")
+//     });
+//     ($($stuff:tt)*) => ({
+//         let blah = format!($($stuff)*);
+//         fail!(blah)
+//     });
+// }
 
 /// Trait for conversion to JS.
 pub trait JsExt {
     /// Conversion to JS.
-    fn as_js(self) -> JsVal;
+    fn as_js(self) -> JsValue;
 }
+
+pub type OnClickAction = Callback<yew::events::MouseEvent>;
+pub type OnChangeAction = Callback<yew::events::ChangeData>;
+
+/// Type of `onclick` actions.
+pub trait OnClick: Fn(yew::events::MouseEvent) -> Msg + 'static {}
+impl<Action> OnClick for Action where Action: Fn(yew::events::MouseEvent) -> Msg + 'static {}
+
+pub type Action = Callback<Model>;
+
+/// Type of HTML elements in the client.
+pub type Html = yew::Html;
+
+// /// Extends yew's `ChangeData` with some helpers.
+// pub trait ChangeDataExt {
+//     /// Retrieves a text input value or produces an error message.
+//     fn text_value(self) -> Res<String>;
+// }
+// impl ChangeDataExt for ChangeData {
+//     fn text_value(self) -> Res<String> {
+//         match self {
+//             ChangeData::Value(res) => Ok(res),
+//             data => bail!("expected text input value, found {:?}", data),
+//         }
+//     }
+// }
 
 lazy_static! {
     /// Some lorem ipsum.

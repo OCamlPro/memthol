@@ -2,9 +2,9 @@
 //!
 //! The "assets" are stored in the `static` directory, and include
 //!
-//! - the html pages, typically `index.html`;
+//! - the html page(s), typically `index.html`;
 //! - the wasm/js code for the client (generated from `client`);
-//! - the css and pictures used for styling.
+//! - the pictures used for styling.
 //!
 //! Basically, everything depends on whether we're compiling in `release` mode or not.
 //!
@@ -34,12 +34,6 @@ macro_rules! asset_dir {
     (root) => {
         "static"
     };
-    (css) => {
-        concat!(asset_dir!(root), "/css")
-    };
-    (pics) => {
-        concat!(asset_dir!(root), "/pics")
-    };
 }
 
 /// String version of the path to a file in a main asset directory.
@@ -49,13 +43,18 @@ macro_rules! asset_file {
     };
 }
 
+macro_rules! asset_source {
+    (build_dir $key:tt / $path:expr) => {
+        concat!("", base::client_get_build_dir!(), "/", $path)
+    };
+    (lib $key:tt / $path:expr) => {
+        concat!("../../libs/client/", asset_file!($key / $path))
+    };
+}
+
 lazy_static::lazy_static! {
     /// Path to the asset directory.
     static ref ASSET_DIR: PathBuf = asset_dir!(root).into();
-    /// Path to the css directory.
-    static ref CSS_DIR: PathBuf = asset_dir!(css).into();
-    /// Path to the picture directory.
-    static ref PICS_DIR: PathBuf = asset_dir!(pics).into();
 }
 
 pub mod content {
@@ -64,12 +63,9 @@ pub mod content {
     use super::*;
 
     /// Sets up the assets for the UI.
-    pub fn setup(addr: &str, port: usize) -> Res<()> {
+    pub fn setup(_addr: &str, _port: usize) -> Res<()> {
         mk_asset_dirs()?;
-        css::generate()?;
-        pics::generate()?;
         top::generate()?;
-        more_js::generate(addr, port)?;
         Ok(())
     }
 
@@ -80,8 +76,6 @@ pub mod content {
 
         // Let's create stuff now.
         mk_asset_dir(&*ASSET_DIR)?;
-        mk_asset_dir(&*CSS_DIR)?;
-        mk_asset_dir(&*PICS_DIR)?;
         Ok(())
     }
 
@@ -145,46 +139,6 @@ pub mod content {
         Ok(())
     }
 
-    /// Generates helper JS scripts.
-    mod more_js {
-        use super::*;
-
-        lazy_static::lazy_static! {
-            /// Script which returns the address of the server.
-            static ref JS_SERVER_PATH: PathBuf = {
-                let mut target = ASSET_DIR.clone();
-                target.push("serverAddr.js");
-                target
-            };
-        }
-
-        /// Generates the helper to resolve the address
-        fn js_server<W: Write>(writer: &mut W, addr: &str, port: usize) -> Res<()> {
-            write!(
-                writer,
-                r#"
-var serverAddr = {{
-    get_addr: function() {{
-        return `{}`;
-    }},
-    get_port: function() {{
-        return {};
-    }}
-}}
-            "#,
-                addr, port
-            )
-            .chain_err(|| "while writing `js_server` file for SSE")?;
-            Ok(())
-        }
-
-        pub fn generate(addr: &str, port: usize) -> Res<()> {
-            let mut writer = writer_of_file(&*JS_SERVER_PATH)?;
-            js_server(&mut writer, addr, port)?;
-            Ok(())
-        }
-    }
-
     /// Builds a `generate` function that generates asset files.
     ///
     /// All asset file paths are relative from the client's crate directory.
@@ -196,8 +150,6 @@ var serverAddr = {{
     ///     make_generator_for! {
     ///         /// Main HTML file.
     ///         HTML: "static/path/to/index.html",
-    ///         /// Main CSS file.
-    ///         CSS: "static/path/to/style.css",
     ///     }
     /// }
     /// ```
@@ -207,13 +159,13 @@ var serverAddr = {{
     /// the client's static directory to `"static/path/to/<file>"`.
     macro_rules! make_generator_for {
         (
-            $($(#[$doc:meta])*$id:ident : $path:expr),* $(,)*
+            $($(#[$doc:meta])*$id:ident : $path:tt / $name:expr, from $src_kind:tt),* $(,)*
         ) => {
             /// Paths to the assets.
             pub mod path {
                 lazy_static::lazy_static! {$(
                     $(#[$doc])*
-                    pub static ref $id: std::path::PathBuf = $path.into();
+                    pub static ref $id: std::path::PathBuf = asset_file!($path / $name).into();
                 )*}
             }
 
@@ -222,10 +174,7 @@ var serverAddr = {{
                 $(#[$doc])*
                 pub static ref $id: &'static [u8] = {
                     include_bytes!(
-                        concat!(
-                            "../",
-                            $path,
-                        )
+                        asset_source!($src_kind $path / $name)
                     )
                 };
             )*}
@@ -242,53 +191,13 @@ var serverAddr = {{
     pub mod top {
         make_generator_for! {
             /// Main HTML file.
-            HTML: asset_file!(root / "index.html"),
+            HTML: root / "index.html", from lib,
             /// Favicon.
-            FAVICON: asset_file!(root / "favicon.png"),
+            FAVICON: root / "favicon.png", from lib,
             /// Memthol client's js script.
-            MEMTHOL_JS: asset_file!(root / "client.js"),
+            MEMTHOL_JS: root / "client.js", from build_dir,
             /// Memthol client's wasm code.
-            MEMTHOL_WASM: asset_file!(root / "client.wasm"),
-        }
-    }
-
-    /// Generates CSS-related files.
-    pub mod css {
-        make_generator_for! {
-            /// Main CSS file.
-            MAIN_CSS: asset_file!(css / "style.css"),
-            /// Main CSS file map.
-            MAIN_CSS_MAP: asset_file!(css / "style.css.map"),
-        }
-    }
-
-    /// Generates pictures.
-    pub mod pics {
-        make_generator_for! {
-            /// Close.
-            CLOSE: asset_file!(pics / "close.png"),
-            /// Add.
-            ADD: asset_file!(pics / "add.png"),
-            /// Arrow up.
-            ARROW_UP: asset_file!(pics / "arrow_up.png"),
-            /// Arrow down.
-            ARROW_DOWN: asset_file!(pics / "arrow_down.png"),
-            /// Expand.
-            EXPAND: asset_file!(pics / "expand.png"),
-            /// Collapse.
-            COLLAPSE: asset_file!(pics / "collapse.png"),
-
-            /// Refresh.
-            REFRESH: asset_file!(pics / "refresh.png"),
-            /// Refresh.
-            SAVE: asset_file!(pics / "save.png"),
-            /// Undo.
-            UNDO: asset_file!(pics / "undo.png"),
-
-            /// Tick, inactive.
-            TICK_INACTIVE: asset_file!(pics / "tick_inactive.png"),
-            /// Tick, active.
-            TICK_ACTIVE: asset_file!(pics / "tick_active.png"),
+            MEMTHOL_WASM: root / "client_bg.wasm", from build_dir,
         }
     }
 }

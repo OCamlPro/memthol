@@ -1,158 +1,95 @@
 //! Builds memthol's client and copies the right things in the right place.
 
-/// Checks that `cargo-web` is installed.
-mod cargo_web {
-    use std::process::Command;
+fn main() {
+    paths::show();
+    client::build();
+    emit_env_var();
+    emit_rerun();
+}
 
-    pub fn check() {
-        let fail = |msg, err| {
-            println!("Error: {}.", msg);
-            if let Some(e) = err {
-                println!("{}", e);
-                println!()
-            }
-            println!("`cargo-web` is mandatory for the client side of memthol's UI,");
-            println!("please install it with");
-            println!();
-            println!("```");
-            println!("cargo install cargo-web");
-            println!("```");
-            panic!("cargo-web is not installed")
+/// Outputs an error about building the client (includes the command) and exits with status `2`.
+fn error<T>() -> T {
+    let cmd = wasm_pack::string_cmd();
+    println!("|===| while building memthol UI's client with");
+    println!("| {}", cmd);
+    println!("|===|");
+    panic!("a fatal error occured")
+}
+
+macro_rules! unwrap {
+    ($e:expr, $($blah:tt)*) => (
+        $e.unwrap_or_else(|e| {
+            println!("|===| Error");
+            println!("| {}", e);
+            println!("| {}", format!($($blah)*));
+            crate::error()
+        })
+    );
+}
+
+/// Sets the environment variable indicating the path to the client build dir.
+pub fn emit_env_var() {
+    println!(
+        "cargo:rustc-env={}={}",
+        base::build_dir_env_var!(),
+        *paths::BUILD,
+    )
+}
+
+/// Emits the re-run instructions for cargo.
+pub fn emit_rerun() {
+    for entry in walkdir::WalkDir::new(*paths::CLIENT_CRATE)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        println!("cargo:rerun-if-changed={}", entry.path().display())
+    }
+}
+
+mod paths {
+    lazy_static::lazy_static! {
+        /// Output directory.
+        pub static ref BUILD: String = {
+            let parent = unwrap! {
+                std::fs::canonicalize(".."),
+                "during the extraction of the canonical version of path `..`",
+            };
+            format!("{}/{}", parent.display(), base::client::WASM_TARGET_DIR)
         };
-        match Command::new("cargo").arg("web").arg("help").output() {
-            Ok(output) => {
-                if output.status.success() {
-                    ()
-                } else {
-                    fail("`cargo-web` is not installed", None)
-                }
-            }
-            Err(e) => fail("could not check for `cargo-web`", Some(e)),
+
+        /// Path to the client's crate.
+        pub static ref CLIENT_CRATE: &'static str = "../libs/client";
+    }
+
+    pub fn show() {
+        macro_rules! dups {
+            ($($id:ident),* $(,)?) => (
+                vec![$((stringify!($id), $id.to_string())),*]
+            );
         }
+        println!("paths:");
+        for (id, val) in dups![BUILD, CLIENT_CRATE,] {
+            println!("| {:<30} | {}", id, val)
+        }
+        println!()
     }
 }
 
 /// Static stuff for building the client.
 mod client {
-    use lazy_static::lazy_static;
-    use std::process::Command;
+    use super::*;
 
-    /// Path to the client's crate.
-    const CLIENT_PATH: &str = "../libs/client";
+    pub fn build() {
+        let start = std::time::Instant::now();
+        wasm_pack::check();
 
-    /// Path to the UI's (this crate's) directory.
-    const UI_PATH: &str = ".";
-    /// Path to the UI's (this crate's) asset files.
-    const UI_ASSET_PATH: &str = "static";
+        let mut build_cmd = wasm_pack::cmd();
 
-    #[cfg(debug_assertions)]
-    lazy_static! {
-        /// Path to the client's target files. (The result of compiling the client.)
-        static ref CLIENT_TARGET_PATH: String = format!(
-            "{}{}", CLIENT_PATH,
-            "/target/wasm32-unknown-unknown/debug"
-        );
-    }
-    #[cfg(not(debug_assertions))]
-    lazy_static! {
-        /// Path to the client's target files. (The result of compiling the client.)
-        static ref CLIENT_TARGET_PATH: String = format!(
-            "{}{}", CLIENT_PATH,
-            "/target/wasm32-unknown-unknown/release"
-        );
-    }
+        println!("cmd: {:?}", build_cmd);
 
-    const CLIENT_JS_FILE: &str = "/client.js";
-    const CLIENT_WASM_FILE: &str = "/client.wasm";
-
-    lazy_static! {
-        /// Path to the client's asset files.
-        static ref CLIENT_ASSET_PATH: String = format!("{}{}", CLIENT_PATH, "/static");
-
-        /// Path to the client's JS target files.
-        static ref CLIENT_TARGET_JS_PATH: String = format!(
-            "{}{}", *CLIENT_TARGET_PATH, CLIENT_JS_FILE
-        );
-        /// Path to the client's web assembly target files.
-        static ref CLIENT_TARGET_WASM_PATH: String = format!(
-            "{}{}", *CLIENT_TARGET_PATH, CLIENT_WASM_FILE
-        );
-    }
-
-    /// Command to run to build the client.
-    pub static CMD: &str = "cargo-web";
-
-    /// Options for the command to build the client.
-    #[cfg(debug_assertions)]
-    pub static OPTIONS: [&str; 1] = ["build"];
-    /// Options for the command to build the client.
-    #[cfg(not(debug_assertions))]
-    pub static OPTIONS: [&str; 2] = ["build", "--release"];
-
-    /// Outputs an error about building the client (includes the command) and exits with status `2`.
-    fn error<T>() -> T {
-        let mut cmd = CMD.to_string();
-        for option in &OPTIONS {
-            cmd.push_str(" ");
-            cmd.push_str(option)
-        }
-        println!("|===| while building memthol UI's client with");
-        println!("| {}", cmd);
-        println!("|===|");
-        std::process::exit(2)
-    }
-
-    macro_rules! unwrap {
-        ($e:expr, $($blah:tt)*) => (
-            $e.unwrap_or_else(|e| {
-                println!("|===| Error");
-                println!("| {}", e);
-                println!("| {}", format!($($blah)*));
-                error()
-            })
-        );
-    }
-
-    /// Deploys the client's code and static assets in `CLIENT_PATH/DEPLOY_PATH`.
-    pub fn deploy() {
-        let curr_dir = unwrap! {
-            std::env::current_dir(),
-            "could not retrieve current direcory"
-        };
-        unwrap! {
-            std::env::set_current_dir(CLIENT_PATH),
-            "failed to access memthol's client's build directory `{}`",
-            CLIENT_PATH
-        }
-
-        // let _ = Command::new("rm").arg("!(\"Readme.md\")").output();
-
-        // Build the client.
-        let res = build();
-
-        // Get back into the original directory.
-        unwrap! {
-            std::env::set_current_dir(curr_dir).map(|_| ()),
-            "failed to access memthol's UI's build directory"
-        }
-
-        res
-    }
-
-    /// This function is meant to run in `CLIENT_PATH`. Do not use directly.
-    fn build() {
-        let mut proc = Command::new(CMD);
-        for option in &OPTIONS {
-            proc.arg(option);
-        }
-
-        let output = match proc.output() {
-            Ok(out) => out,
-            Err(e) => {
-                println!("|===| Error");
-                println!("| {}", e);
-                error()
-            }
+        let output = unwrap! {
+            build_cmd.output(),
+            "while running {:?}", build_cmd
         };
 
         if !output.status.success() {
@@ -172,52 +109,99 @@ mod client {
             }
             error()
         }
-    }
-
-    pub fn copy_assets() {
-        println!("current dir: {:?}", std::env::current_dir().unwrap());
-
-        // Copy target files.
-        let dir_copy_option = fs_extra::dir::CopyOptions {
-            overwrite: true,
-            skip_exist: true,
-            buffer_size: 64000,
-            copy_inside: true,
-            depth: 0,
-        };
-        let file_copy_option = fs_extra::file::CopyOptions {
-            overwrite: true,
-            skip_exist: true,
-            buffer_size: 64000,
-        };
-        unwrap! {
-            fs_extra::dir::copy(&*CLIENT_ASSET_PATH, &*UI_PATH, &dir_copy_option).map(|_| ()),
-            "while copying `{}` to `{}`", &*CLIENT_ASSET_PATH, UI_PATH
-        }
-        let ui_js_target = format!("{}{}", &*UI_ASSET_PATH, CLIENT_JS_FILE);
-        unwrap! {
-            fs_extra::file::copy(
-                &*CLIENT_TARGET_JS_PATH,
-                &ui_js_target,
-                &file_copy_option,
-            ).map(|_| ()),
-            "while copying `{}` to `{}`", &*CLIENT_TARGET_JS_PATH, ui_js_target
-        }
-        let ui_wasm_target = format!("{}{}", &*UI_ASSET_PATH, CLIENT_WASM_FILE);
-        unwrap! {
-            fs_extra::file::copy(
-                &*CLIENT_TARGET_WASM_PATH,
-                &ui_wasm_target,
-                &file_copy_option,
-            ).map(|_| ()),
-            "while copying `{}` to `{}`", &*CLIENT_TARGET_WASM_PATH, ui_wasm_target
-        }
+        let duration = std::time::Instant::now() - start;
+        println!(
+            "done building in {}.{}",
+            duration.as_secs(),
+            duration.subsec_millis()
+        );
     }
 }
 
-fn main() {
-    println!("cargo:rerun-if-changed=\"static\"");
-    cargo_web::check();
-    client::deploy();
-    client::copy_assets()
+/// Contains helpers related to `wasm-pack`.
+///
+/// - `cmd` and `string_cmd` generate the command to call `wasm-pack` with;
+/// - `check` will produce an error if `wasm-pack` is not installed.
+mod wasm_pack {
+    use std::process::Command;
+
+    use super::paths;
+
+    lazy_static::lazy_static! {
+        static ref CMD: &'static str = "wasm-pack";
+
+        static ref OPTIONS: Vec<&'static str> = vec![
+            // Options for `wasm-pack`.
+            "build",
+            "--target", "web",
+            "--out-name", "client",
+            "--out-dir", &*paths::BUILD,
+            &*paths::CLIENT_CRATE,
+        ];
+
+        // #[cfg(release)]
+        static ref RLS_OPTIONS: Vec<&'static str> = vec!["--release"];
+    }
+
+    fn inner_cmd() -> Command {
+        let mut cmd = Command::new(*CMD);
+        cmd.args(&*OPTIONS);
+        cmd
+    }
+    #[cfg(release)]
+    pub fn cmd() -> Command {
+        let mut cmd = inner_cmd();
+        cmd.args(&*RLS_OPTIONS);
+        cmd
+    }
+    #[cfg(not(release))]
+    pub fn cmd() -> Command {
+        inner_cmd()
+    }
+
+    fn inner_string_cmd() -> String {
+        let mut res = CMD.to_string();
+        for opt in &*OPTIONS {
+            res.push(' ');
+            res.push_str(opt);
+        }
+        res
+    }
+    #[cfg(release)]
+    pub fn string_cmd() -> String {
+        let mut res = inner_string_cmd();
+        for opt in *RLS_OPTIONS {
+            res.push(' ');
+            res.push_str(opt)
+        }
+        res
+    }
+    #[cfg(not(release))]
+    pub fn string_cmd() -> String {
+        inner_string_cmd()
+    }
+
+    pub fn check() {
+        let fail = |msg, err| {
+            println!("Error: {}.", msg);
+            if let Some(e) = err {
+                println!("{}", e);
+                println!()
+            }
+            println!("`wasm-pack` is mandatory for the client side of memthol's UI,");
+            println!("please install it from https://rustwasm.github.io/wasm-pack/installer");
+            println!();
+            panic!("wasm-pack is not installed")
+        };
+        match Command::new(*CMD).arg("help").output() {
+            Ok(output) => {
+                if output.status.success() {
+                    ()
+                } else {
+                    fail("`wasm-pack` is not installed", None)
+                }
+            }
+            Err(e) => fail("could not check for `wasm-pack`", Some(e)),
+        }
+    }
 }

@@ -13,8 +13,8 @@ pub enum Pred {
 impl fmt::Display for Pred {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Contain => write!(fmt, "contain"),
-            Self::Exclude => write!(fmt, "exclude"),
+            Self::Contain => write!(fmt, "contains"),
+            Self::Exclude => write!(fmt, "excludes"),
         }
     }
 }
@@ -57,15 +57,6 @@ pub struct StringLikeFilter<Spec> {
     pred: Pred,
     /// The specifications.
     specs: Vec<Spec>,
-}
-
-impl<Spec> Default for StringLikeFilter<Spec> {
-    fn default() -> Self {
-        Self {
-            pred: Pred::Contain,
-            specs: vec![],
-        }
-    }
 }
 
 impl<Spec> fmt::Display for StringLikeFilter<Spec>

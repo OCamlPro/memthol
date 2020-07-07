@@ -85,7 +85,7 @@ impl fmt::Display for LabelSpec {
         match self {
             Self::Value(label) => label.fmt(fmt),
             Self::Regex(regex) => write!(fmt, "#\"{}\"#", regex),
-            Self::Anything => write!(fmt, "..."),
+            Self::Anything => write!(fmt, "**"),
         }
     }
 }
@@ -134,7 +134,7 @@ impl LabelSpec {
 
 impl From<String> for LabelSpec {
     fn from(s: String) -> Self {
-        if &s == "..." {
+        if &s == "**" {
             Self::Anything
         } else {
             Self::Value(s)
@@ -149,5 +149,18 @@ impl<'a> From<&'a str> for LabelSpec {
 impl From<Regex> for LabelSpec {
     fn from(re: Regex) -> Self {
         Self::Regex(re)
+    }
+}
+
+impl Default for string_like::StringLikeFilter<LabelSpec> {
+    fn default() -> Self {
+        Self::new(
+            string_like::Pred::Contain,
+            vec![
+                LabelSpec::Anything,
+                LabelSpec::default(),
+                LabelSpec::Anything,
+            ],
+        )
     }
 }

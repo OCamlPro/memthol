@@ -32,8 +32,7 @@ pub fn new() -> Router {
                 .with_gzip(true)
                 .build(),
         );
-        route.get("client.wasm").to_file("static/client.wasm");
+        route.get("client_bg.wasm").to_file("static/client_bg.wasm");
         route.get("client.js").to_file("static/client.js");
-        route.get("serverAddr.js").to_file("static/serverAddr.js");
     })
 }

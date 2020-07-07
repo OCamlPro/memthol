@@ -44,10 +44,7 @@ pub use time::{Date, Duration, SinceStart};
 mod test;
 
 /// A bigint UID.
-#[derive(
-    Clone, Debug, PartialEq, Eq, PartialOrd, Ord,
-    Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Uid {
     /// The actual bigint.
     uid: BigUint,
@@ -91,11 +88,7 @@ impl Uid {
 }
 
 /// A span.
-#[derive(
-    Clone, Debug, PartialEq, Eq, PartialOrd, Ord,
-    From,
-    Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, From, Serialize, Deserialize)]
 pub struct Span {
     /// Start of the span.
     pub start: usize,
@@ -104,10 +97,7 @@ pub struct Span {
 }
 
 /// A location.
-#[derive(
-    Clone, Debug, PartialEq, Eq, PartialOrd, Ord,
-    Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Loc {
     /// File the location is for.
     pub file: String,
@@ -120,7 +110,10 @@ pub struct Loc {
 impl Loc {
     /// Constructor.
     pub fn new<IntoString, IntoSpan>(file: IntoString, line: usize, span: IntoSpan) -> Self
-    where IntoString: Into<String>, IntoSpan: Into<Span> {
+    where
+        IntoString: Into<String>,
+        IntoSpan: Into<Span>,
+    {
         Self {
             file: file.into(),
             line,
@@ -167,10 +160,7 @@ impl Loc {
 }
 
 /// A list of labels.
-#[derive(
-    Debug, Clone,
-    Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Labels {
     labels: Vec<String>,
 }
@@ -182,10 +172,7 @@ impl Labels {
 }
 
 /// A kind of allocation.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq,
-    Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AllocKind {
     Minor,
     Major,
@@ -230,17 +217,14 @@ impl AllocKind {
 }
 
 /// Some allocation information.
-#[derive(
-    Clone, Debug, PartialEq, Eq,
-    Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Alloc {
     /// Uid of the allocation.
     pub uid: Uid,
     /// Allocation kind.
     pub kind: AllocKind,
     /// Size of the allocation.
-    pub size: usize,
+    pub size: u32,
     /// Allocation-site callstack.
     trace: locs::Uid,
     /// User-defined labels.
@@ -256,7 +240,7 @@ impl Alloc {
     pub fn new(
         uid: Uid,
         kind: AllocKind,
-        size: usize,
+        size: u32,
         trace: Vec<(Loc, usize)>,
         labels: Vec<String>,
         toc: SinceStart,
@@ -305,7 +289,7 @@ impl Alloc {
         &self.kind
     }
     /// Size accessor (in machine words).
-    pub fn size(&self) -> usize {
+    pub fn size(&self) -> u32 {
         self.size
     }
     /// Trace accessor.
@@ -334,10 +318,7 @@ impl Alloc {
 /// A diff.
 ///
 /// **NB:** `Display` for this type is multi-line.
-#[derive(
-    Clone, Debug, PartialEq, Eq,
-    Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Diff {
     /// Timestamp.
     pub time: SinceStart,
@@ -360,10 +341,7 @@ impl Diff {
 }
 
 /// Data from a memthol init file.
-#[derive(
-    Clone, Debug,
-    Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Init {
     /// The start time of the run: an absolute date.
     pub start_time: Date,
@@ -413,6 +391,21 @@ impl Parseable for usize {
     {
         use swarkn::parse::ParserExt;
         Parser::parse_all(text.as_ref(), Parser::usize, "usize")
+    }
+}
+impl Parseable for u32 {
+    fn parse<Str>(text: Str) -> Res<Self>
+    where
+        Str: AsRef<str>,
+    {
+        use swarkn::parse::ParserExt;
+        Parser::parse_all(text.as_ref(), Parser::usize, "usize").and_then(|n| {
+            use std::convert::TryFrom;
+            use swarkn::parse::err::*;
+            u32::try_from(n)
+                .map_err(|e| swarkn::parse::err::ParseErr::from(e.to_string()))
+                .chain_err(|| format!("illegal u32 value `{}`", n))
+        })
     }
 }
 

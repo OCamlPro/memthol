@@ -2,9 +2,17 @@
 
 pub use error_chain::bail;
 
-use crate::msg::Msg;
+use crate::common::msg::Msg;
 
 pub use charts::err::*;
+
+/// Turns a `JsValue` into an error.
+pub fn from_js_val(js_val: wasm_bindgen::JsValue) -> Err {
+    let msg = js_val
+        .as_string()
+        .unwrap_or_else(|| format!("{:?}", js_val));
+    Err::from(msg)
+}
 
 /// Turns a result into a message.
 ///

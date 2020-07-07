@@ -19,5 +19,7 @@ websocket = "*"
 clap = "*"
 
 [build-dependencies]
+base = { path = "../libs/base" }
 fs_extra = "*"
 lazy_static = "*"
+walkdir = "*"

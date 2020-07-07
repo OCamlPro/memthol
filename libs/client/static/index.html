@@ -4,17 +4,16 @@
         <meta charset="utf-8">
         <title>Memthol</title>
         <link rel="shortcut icon" href="static/favicon.png" />
-        <link rel="stylesheet" href="css/style.css">
-        <script src="https://www.amcharts.com/lib/4/core.js"></script>
-        <script src="https://www.amcharts.com/lib/4/charts.js"></script>
-        <script src="https://www.amcharts.com/lib/4/themes/animated.js"></script>
-        <script
-            type="text/javascript"
-            src="serverAddr.js"
-        ></script>
     </head>
-    <body>
-        <script src="client.js"></script>
+    <body
+        style = "background: black; color: white; margin: 0"
+    >
+        <meta charset="utf-8">
+        <title>Memthol</title>
+        <script type="module">
+            import init from "./client.js"
+            init()
+        </script>
     </body>
 </html>
 

@@ -29,6 +29,10 @@ pub mod tabs {
                 RIGHT
             }
         }
+
+        pub fn get_center() -> &'static str {
+            CENTER
+        }
     }
 
     /// Active tab.
@@ -104,12 +108,18 @@ pub mod chart {
     ///
     /// Needs to be completed with the chart's uid.
     pub static PREFIX: &str = "memthol_chart_html_id_";
+    pub static CANVAS_PREFIX: &str = "memthol_chart_canvas_html_id_";
     /// Chart axis selection class.
     pub static SELECT_AXIS: &str = "select_axis";
 
-    /// Class of an actual chart.
+    /// Id of an actual chart.
     pub fn class(uid: crate::chart::ChartUid) -> String {
         format!("{}{}", PREFIX, uid)
+    }
+
+    /// Id of a chart canvas.
+    pub fn canvas(uid: crate::chart::ChartUid) -> String {
+        format!("{}{}", CANVAS_PREFIX, uid)
     }
 
     /// Class of an amchart depending on its visibility.
@@ -118,6 +128,34 @@ pub mod chart {
             VISIBLE
         } else {
             HIDDEN
+        }
+    }
+
+    /// Chart canvas stuff.
+    pub mod canvas {
+        /// Class of a chart canvas.
+        static CLASS: &str = "chart_canvas_style";
+
+        /// Class of a chart canvas.
+        pub fn style() -> &'static str {
+            CLASS
+        }
+    }
+
+    /// Active filter button.
+    pub static ACTIVE: &str = "chart_filter_button_active";
+    /// Inactive filter button.
+    pub static INACTIVE: &str = "chart_filter_button_inactive";
+
+    /// Class/style pair for an (in)active filter button.
+    pub fn filter_button_get(
+        is_active: bool,
+        color: &charts::color::Color,
+    ) -> (&'static str, String) {
+        if is_active {
+            (ACTIVE, format!("background-color: {};", color))
+        } else {
+            (INACTIVE, format!("background-color: {};", color))
         }
     }
 }

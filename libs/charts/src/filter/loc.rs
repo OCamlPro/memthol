@@ -275,7 +275,7 @@ impl fmt::Display for LocSpec {
                 }
                 Ok(())
             }
-            Self::Anything => write!(fmt, "..."),
+            Self::Anything => write!(fmt, "**"),
         }
     }
 }
@@ -300,7 +300,7 @@ impl LocSpec {
             }};
         }
 
-        if loc == "..." {
+        if loc == "**" {
             return Ok(Self::Anything);
         }
 
@@ -351,5 +351,14 @@ impl LocSpec {
             Self::Value { .. } => false,
             Self::Regex { .. } => false,
         }
+    }
+}
+
+impl Default for string_like::StringLikeFilter<LocSpec> {
+    fn default() -> Self {
+        Self::new(
+            string_like::Pred::Contain,
+            vec![LocSpec::Anything, LocSpec::default(), LocSpec::Anything],
+        )
     }
 }

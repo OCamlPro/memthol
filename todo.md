@@ -1,5 +1,9 @@
 # TODO
 
+- remove `swarkn` dependency, use `peg` instead for parsing
+- wait for plotters to merge https://github.com/38/plotters/pull/156 and update `chart` and `client`
+  deps
+
 ## Server-client File Exchanges
 
 Server currently loads init/diffs as text and sends the text, would be better to send the actual

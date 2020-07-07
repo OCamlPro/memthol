@@ -1,14 +1,27 @@
 [workspace]
 members = [
     "libs/base",
+    "libs/alloc_data",
+    "libs/charts",
+    "libs/client",
 
+    "memthol",
+]
+# The client is not in the `default-members` since it can only be built for the wasm target. This
+# prevents `cargo test` from failing to compile the client.
+# 
+# FYI, the client **is** in the `members` so that its build files end up in the top level `target`
+# directory, meaning `cargo clean` does clean everything.
+default-members = [
+    "libs/base",
     "libs/alloc_data",
     "libs/charts",
 
     "memthol",
 ]
+
 exclude = [
-    "libs/client",
+    "libs/plotters",
 ]
 
 [profile.release]

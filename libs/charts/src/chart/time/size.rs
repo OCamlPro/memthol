@@ -2,13 +2,10 @@
 
 use crate::common::*;
 
-/// Initial size value.
-const INIT_SIZE_VALUE: usize = 0;
+use point::TimeSizePoints;
 
-/// A total-size-over-time point.
-pub type TimeSizePoint = super::TimePoint<usize>;
-/// Some total-size-over-time points.
-pub type TimeSizePoints = Vec<TimeSizePoint>;
+/// Initial size value.
+const INIT_SIZE_VALUE: u32 = 0;
 
 /// Total size over time chart.
 #[derive(Debug, Serialize, Deserialize)]
@@ -16,9 +13,9 @@ pub struct TimeSize {
     /// Timestamp of the last allocation registered.
     timestamp: SinceStart,
     /// Current total size.
-    size: PointVal<usize>,
+    size: PointVal<u32>,
     /// Map used to construct the points.
-    map: Map<Date, PointVal<(usize, usize)>>,
+    map: Map<Date, PointVal<(u32, u32)>>,
 }
 
 impl TimeSize {
@@ -59,7 +56,7 @@ impl TimeSize {
     }
 
     /// Initial size.
-    fn init_size_point(filters: &filter::Filters) -> PointVal<usize> {
+    fn init_size_point(filters: &filter::Filters) -> PointVal<u32> {
         PointVal::new(INIT_SIZE_VALUE, filters)
     }
 }
