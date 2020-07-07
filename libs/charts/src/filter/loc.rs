@@ -1,11 +1,8 @@
 //! Location filters.
 
-use regex::Regex;
+prelude! {}
 
-use crate::{
-    common::*,
-    filter::{string_like, FilterExt},
-};
+use filter::{string_like, FilterExt};
 
 /// A location filter.
 pub type LocFilter = string_like::StringLikeFilter<LocSpec>;
@@ -209,8 +206,8 @@ pub enum LocSpec {
         line: LineSpec,
     },
 }
-impl FilterExt<(Loc, usize)> for LocSpec {
-    fn apply(&self, (loc, _): &(Loc, usize)) -> bool {
+impl FilterExt<alloc::CLoc> for LocSpec {
+    fn apply(&self, alloc::CLoc { loc, .. }: &alloc::CLoc) -> bool {
         match self {
             LocSpec::Anything => true,
             LocSpec::Value { value, line } => &loc.file == value && line.apply(&loc.line),
@@ -220,7 +217,7 @@ impl FilterExt<(Loc, usize)> for LocSpec {
 }
 
 impl string_like::SpecExt for LocSpec {
-    type Data = (Loc, usize);
+    type Data = alloc::CLoc;
     const DATA_DESC: &'static str = "label";
 
     fn from_string<S>(s: S) -> Res<Self>

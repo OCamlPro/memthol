@@ -1,6 +1,6 @@
 //! Filter over ordered (number-like) quantities.
 
-use crate::common::*;
+prelude! {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Kind {
@@ -134,7 +134,13 @@ impl<Num: fmt::Display> fmt::Display for OrdFilter<Num> {
 
 impl<Num> crate::filter::FilterExt<Num> for OrdFilter<Num>
 where
-    Num: PartialOrd + PartialEq + fmt::Display + Default + alloc_data::Parseable + Clone + 'static,
+    Num: PartialOrd
+        + PartialEq
+        + fmt::Display
+        + Default
+        + alloc_data::parser::Parseable
+        + Clone
+        + 'static,
     Self: Into<filter::SubFilter>,
 {
     fn apply(&self, data: &Num) -> bool {

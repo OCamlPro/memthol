@@ -35,14 +35,15 @@ pub mod mem;
 pub mod labels;
 pub mod locs;
 pub mod parser;
-mod time;
+pub mod time;
 
 mod fmt;
 
 pub use time::{Date, Duration, SinceStart};
 
+/// Errors, handled by `error_chain`.
 pub mod err {
-    error_chain::error_chain! {
+    crate::prelude::error_chain::error_chain! {
         types {
             Err, ErrKind, ResExt, Res;
         }

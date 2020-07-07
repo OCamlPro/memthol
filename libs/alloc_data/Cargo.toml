@@ -8,8 +8,6 @@ edition = "2018"
 base = { path = "../base" }
 
 chrono = { version = "*", features = ["serde", "wasmbind"] }
-error-chain = "*"
-lazy_static = "*"
 num-bigint = { version = "*", features = ["serde"] }
 num-traits = "*"
 peg = "*"

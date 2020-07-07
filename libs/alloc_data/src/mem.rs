@@ -74,7 +74,7 @@ macro_rules! new {
             /// Type of the memory structure.
             pub type Memory = $crate::mem::Memory<$ty>;
 
-            lazy_static::lazy_static! {
+            $crate::prelude::lazy_static! {
                 /// Memory.
                 static ref MEM: RwLock<Memory> = RwLock::new(Memory::new());
             }

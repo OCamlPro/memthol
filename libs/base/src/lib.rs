@@ -3,6 +3,12 @@
 pub extern crate rand;
 
 pub use derive_more::*;
+pub use lazy_static::lazy_static;
+
+/// Re-exports from `error_chain`.
+pub mod error_chain {
+    pub use error_chain::*;
+}
 
 #[macro_use]
 pub mod macros;

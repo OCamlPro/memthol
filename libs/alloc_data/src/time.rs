@@ -9,7 +9,12 @@ prelude! {}
 
 pub use std::time::Duration;
 
-pub type DateTime = chrono::DateTime<chrono::Utc>;
+/// Re-exports from `chrono`.
+pub mod chrono {
+    pub use chrono::*;
+}
+
+pub type DateTime = time::chrono::DateTime<self::chrono::Utc>;
 
 /// Wrapper around a duration.
 ///
@@ -115,7 +120,7 @@ impl Date {
     /// assert_eq! { date.to_string(), "2019-08-22 15:54:02.007000572 UTC" }
     /// ```
     pub fn of_timestamp(secs: i64, nanos: u32) -> Self {
-        use chrono::{offset::TimeZone, Utc};
+        use time::chrono::{offset::TimeZone, Utc};
         let date = Utc.timestamp(secs, nanos);
         Date { date }
     }
@@ -196,7 +201,7 @@ impl Date {
     /// assert_eq! { mi, 7 }
     /// ```
     pub fn time_info(&self) -> (u32, u32, u32, u32) {
-        use chrono::Timelike;
+        use time::chrono::Timelike;
         (
             self.date.hour(),
             self.date.minute(),

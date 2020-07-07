@@ -1,6 +1,6 @@
 //! Point representation.
 
-use crate::common::*;
+prelude! {}
 
 /// A point value.
 ///
@@ -138,13 +138,13 @@ where
     fn default_max() -> Self::Coord;
 }
 impl CoordExt for Date {
-    type Coord = Duration;
+    type Coord = time::chrono::Duration;
     type Range = plotters::coord::RangedDuration;
-    fn default_min() -> Duration {
-        Duration::seconds(0)
+    fn default_min() -> time::chrono::Duration {
+        time::chrono::Duration::seconds(0)
     }
-    fn default_max() -> Duration {
-        Duration::seconds(5)
+    fn default_max() -> time::chrono::Duration {
+        time::chrono::Duration::seconds(5)
     }
 }
 impl CoordExt for u32 {
@@ -355,7 +355,7 @@ impl<Y> PointValExt<Date> for PolyPoints<Date, Y> {
         }
     }
     fn val_coord_range_processor(range: &Range<Date>) -> Res<Range<<Date as CoordExt>::Coord>> {
-        let min = chrono::Duration::seconds(0);
+        let min = time::chrono::Duration::seconds(0);
         let max = range.max.date().clone() - range.min.date().clone();
         Ok(Range { min, max })
     }

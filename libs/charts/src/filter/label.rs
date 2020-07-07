@@ -1,11 +1,8 @@
 //! Label filters.
 
-use regex::Regex;
+prelude! {}
 
-use crate::{
-    common::*,
-    filter::{string_like, FilterExt},
-};
+use filter::{string_like, FilterExt};
 
 /// A label filter.
 pub type LabelFilter = string_like::StringLikeFilter<LabelSpec>;

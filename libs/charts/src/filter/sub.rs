@@ -4,7 +4,8 @@
 //!
 //! [`Filter`]: ../struct.Filter.html (The Filter struct).
 
-use crate::common::filter::*;
+prelude! {}
+use filter::*;
 
 /// An allocation filter.
 #[derive(Debug, Clone, Serialize, Deserialize)]

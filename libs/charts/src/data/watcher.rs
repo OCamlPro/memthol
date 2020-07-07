@@ -1,13 +1,13 @@
 //! Daemon monitoring files.
 
+prelude! {}
+
 use std::{
     ffi::OsString,
     path::{Path, PathBuf},
     thread::sleep,
     time::{Duration, SystemTime},
 };
-
-use crate::common::*;
 
 /// Daemon monitoring files.
 pub struct Watcher {
@@ -27,7 +27,7 @@ pub struct Watcher {
     known_files: Set<OsString>,
 
     /// New diffs.
-    new_diffs: Vec<Diff>,
+    new_diffs: Vec<AllocDiff>,
 
     /// Buffer for file-reading.
     buf: String,
@@ -243,7 +243,7 @@ impl Watcher {
             if content.is_empty() {
                 return Ok(None);
             } else {
-                let init = AllocInit::from_str(content)?;
+                let init = AllocInit::try_from(content)?;
                 Ok(Some(init))
             }
         })
@@ -378,7 +378,7 @@ impl Watcher {
 
             let diff = self
                 .read_content(&file_path, |content| {
-                    let diff = Diff::from_str(content)?;
+                    let diff = AllocDiff::try_from(content)?;
                     Ok(diff)
                 })
                 .chain_err(|| {

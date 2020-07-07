@@ -1,6 +1,6 @@
 //! Total size over time chart.
 
-use crate::common::*;
+prelude! {}
 
 use point::TimeSizePoints;
 
@@ -11,7 +11,7 @@ const INIT_SIZE_VALUE: u32 = 0;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TimeSize {
     /// Timestamp of the last allocation registered.
-    timestamp: SinceStart,
+    timestamp: time::SinceStart,
     /// Current total size.
     size: PointVal<u32>,
     /// Map used to construct the points.
@@ -22,7 +22,7 @@ impl TimeSize {
     /// Default constructor.
     pub fn default(filters: &filter::Filters) -> Self {
         Self {
-            timestamp: SinceStart::zero(),
+            timestamp: time::SinceStart::zero(),
             size: Self::init_size_point(filters),
             map: Map::new(),
         }
@@ -36,7 +36,7 @@ impl ChartExt for TimeSize {
     }
 
     fn reset(&mut self, filters: &filter::Filters) {
-        self.timestamp = SinceStart::zero();
+        self.timestamp = time::SinceStart::zero();
         self.size = Self::init_size_point(filters);
         self.map.clear()
     }
@@ -45,7 +45,7 @@ impl ChartExt for TimeSize {
 impl TimeSize {
     /// Constructor.
     pub fn new(filters: &filter::Filters) -> Self {
-        let timestamp = SinceStart::zero();
+        let timestamp = time::SinceStart::zero();
         let size = PointVal::new(0, filters);
         let map = Map::new();
         Self {
@@ -107,10 +107,10 @@ impl TimeSize {
         let start_time = data
             .start_time()
             .chain_err(|| "while building new points")?;
-        let as_date = |duration: SinceStart| start_time.copy_add(duration);
+        let as_date = |duration: time::SinceStart| start_time.copy_add(duration);
 
         if init {
-            map!(entry my_map, with filters => at as_date(SinceStart::zero()));
+            map!(entry my_map, with filters => at as_date(time::SinceStart::zero()));
             ()
         }
 

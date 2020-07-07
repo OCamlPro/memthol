@@ -1,15 +1,15 @@
 //! Color handling.
 
-use std::sync::RwLock;
+prelude! {}
 
-use crate::common::*;
+use std::sync::RwLock;
 
 pub use base::rand::{
     rngs::SmallRng,
     {Rng, SeedableRng},
 };
 
-lazy_static::lazy_static! {
+lazy_static! {
     /// Color RNG.
     static ref RNG: RwLock<SmallRng> = RwLock::new(
         SmallRng::seed_from_u64(42u64)

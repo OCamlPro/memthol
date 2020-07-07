@@ -6,10 +6,12 @@ pub use crate::{
     err::{self, Res, ResExt},
     labels, locs, mem,
     parser::{self, Parseable},
-    Alloc, AllocKind, BigUint, CLoc, Date, Diff, Duration, Init, Loc, SinceStart, Span, Uid,
+    time, Alloc, AllocKind, BigUint, CLoc, Date, Diff, Duration, Init, Loc, SinceStart, Span, Uid,
 };
 
-#[macro_export]
+pub use base::{error_chain, lazy_static};
+
+/// Imports this crate's prelude.
 macro_rules! prelude {
     () => {
         use $crate::prelude::*;

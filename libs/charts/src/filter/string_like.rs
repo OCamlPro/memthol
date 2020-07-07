@@ -2,7 +2,9 @@
 //!
 //! Used for labels and locations.
 
-use crate::{common::*, filter::FilterExt};
+prelude! {}
+
+use filter::FilterExt;
 
 /// A comparison predicate over lists.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
