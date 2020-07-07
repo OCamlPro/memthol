@@ -1,5 +1,7 @@
 //! Memthol's server errors.
 
+prelude! {}
+
 error_chain::error_chain! {
     types {
         Err, ErrorKind, ResExt, Res;
@@ -16,7 +18,7 @@ error_chain::error_chain! {
     }
 
     links {
-        Data(alloc_data::parser::err::ParseErr, alloc_data::parser::err::ParseErrKind)
+        Data(alloc_data::err::Err, alloc_data::err::ErrKind)
         /// Error from the `alloc_data` crate.
         ;
     }

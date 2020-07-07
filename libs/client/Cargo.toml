@@ -20,10 +20,8 @@ lazy_static = "*"
 log = "*"
 palette = "*"
 plotters = { git = "https://github.com/AdrienChampion/plotters", branch = "canvas_fixes" }
-regex = "*"
 safe_index = "*"
 serde = "*"
-smallvec = "*"
 strum = "*"
 strum_macros = "*"
 typed-html = { git = "https://github.com/bodil/typed-html" }

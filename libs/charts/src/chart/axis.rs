@@ -1,6 +1,6 @@
 //! Axis-related stuff.
 
-use crate::common::*;
+prelude! {}
 
 /// X-axis spec.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, strum_macros::EnumIter)]

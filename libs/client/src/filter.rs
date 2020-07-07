@@ -1,6 +1,6 @@
 //! Filter-handling.
 
-use crate::common::*;
+prelude! {}
 
 pub use charts::filter::{Filter, FilterSpec};
 

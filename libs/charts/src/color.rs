@@ -1,15 +1,15 @@
 //! Color handling.
 
-use std::sync::RwLock;
+prelude! {}
 
-use crate::common::*;
+use std::sync::RwLock;
 
 pub use base::rand::{
     rngs::SmallRng,
     {Rng, SeedableRng},
 };
 
-lazy_static::lazy_static! {
+lazy_static! {
     /// Color RNG.
     static ref RNG: RwLock<SmallRng> = RwLock::new(
         SmallRng::seed_from_u64(42u64)
@@ -159,10 +159,7 @@ impl Color {
     }
 
     /// Keeps on constructing colors until the input predicate is true.
-    pub fn random_until<Pred>(dark: bool, pred: Pred) -> Self
-    where
-        Pred: Fn(&Color) -> bool,
-    {
+    pub fn random_until(dark: bool, pred: impl Fn(&Color) -> bool) -> Self {
         let mut color = Self::random(dark);
         while !pred(&color) {
             color = Self::random(dark)

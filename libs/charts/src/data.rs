@@ -1,10 +1,8 @@
 //! Global data about allocations.
 
+prelude! {}
+
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-
-use lazy_static::lazy_static;
-
-use crate::common::*;
 
 mod watcher;
 
@@ -13,10 +11,7 @@ pub use watcher::Watcher;
 /// Starts global data handling.
 ///
 /// - runs the file watcher daemon.
-pub fn start<S>(dir: S)
-where
-    S: Into<String>,
-{
+pub fn start(dir: impl Into<String>) {
     Watcher::spawn(dir)
 }
 
@@ -52,11 +47,11 @@ pub struct Data {
     /// Map from allocation UIDs to allocation data.
     uid_map: Map<AllocUid, Alloc>,
     /// Map from time-of-death to allocation UIDs.
-    tod_map: Map<SinceStart, AllocUidSet>,
+    tod_map: Map<time::SinceStart, AllocUidSet>,
     /// Errors encountered so far.
     errors: Vec<String>,
     /// Time of the latest diff.
-    current_time: SinceStart,
+    current_time: time::SinceStart,
 }
 
 impl Data {
@@ -67,12 +62,12 @@ impl Data {
             uid_map: Map::new(),
             tod_map: Map::new(),
             errors: vec![],
-            current_time: SinceStart::zero(),
+            current_time: time::SinceStart::zero(),
         }
     }
 
     /// Current time accessor.
-    pub fn current_time(&self) -> &SinceStart {
+    pub fn current_time(&self) -> &time::SinceStart {
         &self.current_time
     }
 
@@ -98,10 +93,11 @@ impl Data {
     ///
     /// - new allocations that have a time-of-death **will also be** in `iter_dead_since`;
     /// - allocations will appear in reverse time-of-creation chronological order.
-    pub fn iter_new_since<AllocDo>(&self, time: &SinceStart, mut new_alloc: AllocDo) -> Res<()>
-    where
-        AllocDo: for<'a> FnMut(&'a Alloc) -> Res<()>,
-    {
+    pub fn iter_new_since(
+        &self,
+        time: &time::SinceStart,
+        mut new_alloc: impl FnMut(&Alloc) -> Res<()>,
+    ) -> Res<()> {
         // Reverse iter allocations.
         for (_, alloc) in self.uid_map.iter().rev() {
             if &alloc.toc <= time {
@@ -118,10 +114,11 @@ impl Data {
     ///
     /// - new allocations that have a time-of-death **will also appear** in `iter_new_since`;
     /// - allocation deaths will appear in reverse time-of-death chronological order.
-    pub fn iter_dead_since<DeathDo>(&self, time: &SinceStart, mut new_death: DeathDo) -> Res<()>
-    where
-        DeathDo: for<'a> FnMut(&'a AllocUidSet, &'a SinceStart) -> Res<()>,
-    {
+    pub fn iter_dead_since(
+        &self,
+        time: &time::SinceStart,
+        mut new_death: impl FnMut(&AllocUidSet, &time::SinceStart) -> Res<()>,
+    ) -> Res<()> {
         // Reverse iter death.
         for (tod, uid) in self.tod_map.iter().rev() {
             if tod <= time {
@@ -138,7 +135,7 @@ impl Data {
 /// # Mutable Functions
 impl Data {
     /// Mutable reference to `self.tod_map[tod]`.
-    fn tod_map_get_mut(&mut self, time: SinceStart) -> &mut AllocUidSet {
+    fn tod_map_get_mut(&mut self, time: time::SinceStart) -> &mut AllocUidSet {
         self.tod_map.entry(time).or_insert_with(AllocUidSet::new)
     }
 
@@ -149,11 +146,11 @@ impl Data {
         self.init = Some(init);
         self.uid_map.clear();
         self.tod_map.clear();
-        self.current_time = SinceStart::zero()
+        self.current_time = time::SinceStart::zero()
     }
 
     /// Registers a diff.
-    pub fn add_diff(&mut self, diff: Diff) -> Res<()> {
+    pub fn add_diff(&mut self, diff: AllocDiff) -> Res<()> {
         self.current_time = diff.time;
 
         for mut alloc in diff.new {
@@ -222,10 +219,7 @@ impl Data {
 }
 
 /// Adds an error.
-pub fn add_err<S>(err: S)
-where
-    S: Into<String>,
-{
+pub fn add_err(err: impl Into<String>) {
     let err = err.into();
     println!("Error:");
     for line in err.lines() {
@@ -239,7 +233,7 @@ where
 }
 
 /// Registers a diff.
-pub fn add_diff(diff: Diff) -> Res<()> {
+pub fn add_diff(diff: AllocDiff) -> Res<()> {
     let mut data = get_mut().chain_err(|| "while registering a diff")?;
     data.add_diff(diff)?;
     Ok(())

@@ -11,9 +11,6 @@ base = { path = "../base" }
 alloc_data = { path = "../alloc_data" }
 
 anyhow = "*"
-chrono = "*"
-error-chain = "*"
-lazy_static = "*"
 num-format = "*"
 plotters = { git = "https://github.com/AdrienChampion/plotters", branch = "canvas_fixes" }
 regex = "*"

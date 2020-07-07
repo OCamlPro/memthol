@@ -32,7 +32,7 @@ macro_rules! impl_display {
         impl std::fmt::Display for $ty $(<$($t_param)*>)? {
             fn fmt(&$slf, $fmt: &mut std::fmt::Formatter) -> std::fmt::Result { $def }
         }
-        impl_display! {
+        $crate::impl_display! {
             fmt(&$slf, $fmt)
             $($tail)*
         }

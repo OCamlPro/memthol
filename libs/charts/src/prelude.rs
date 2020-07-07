@@ -1,17 +1,36 @@
-//! Basic types and helpers for this crate.
+//! Common imports for this crate.
 
 pub use std::{
     collections::{BTreeMap as Map, BTreeSet as Set},
+    convert::{TryFrom, TryInto},
     fmt,
     ops::{Deref, DerefMut},
     sync::Arc,
 };
 
-pub use chrono::Duration;
-pub use error_chain::bail;
+pub use regex::Regex;
 pub use serde_derive::{Deserialize, Serialize};
 
-pub use alloc_data::{Alloc, Date, Diff, Init as AllocInit, Loc, SinceStart, Uid as AllocUid};
+pub use base::{
+    error_chain::{self, bail},
+    lazy_static,
+};
+
+/// Re-exports from the `alloc_data` crate.
+pub mod alloc {
+    pub use alloc_data::prelude::*;
+}
+
+pub use alloc::{
+    time, Alloc, Date, Diff as AllocDiff, Duration, Init as AllocInit, Uid as AllocUid,
+};
+
+/// Imports this crate's prelude.
+macro_rules! prelude {
+    () => {
+        use $crate::prelude::*;
+    };
+}
 
 pub use crate::{
     chart,
@@ -28,10 +47,10 @@ pub use crate::{
 pub mod num_fmt {
     static LOCALE: num_format::Locale = num_format::Locale::en;
 
-    pub fn str_do<Stuff, Res>(stuff: &Stuff, action: impl Fn(&str) -> Res) -> Res
-    where
-        Stuff: num_format::ToFormattedStr,
-    {
+    pub fn str_do<Res>(
+        stuff: &impl num_format::ToFormattedStr,
+        action: impl Fn(&str) -> Res,
+    ) -> Res {
         let mut buf = num_format::Buffer::default();
         buf.write_formatted(stuff, &LOCALE);
         action(buf.as_str())

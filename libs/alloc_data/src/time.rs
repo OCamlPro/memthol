@@ -5,11 +5,16 @@
 
 use serde_derive::{Deserialize, Serialize};
 
-use crate::{Parser, Res};
+prelude! {}
 
 pub use std::time::Duration;
 
-pub type DateTime = chrono::DateTime<chrono::Utc>;
+/// Re-exports from `chrono`.
+pub mod chrono {
+    pub use chrono::*;
+}
+
+pub type DateTime = time::chrono::DateTime<self::chrono::Utc>;
 
 /// Wrapper around a duration.
 ///
@@ -81,13 +86,8 @@ impl SinceStart {
     /// }
     /// ```
     pub fn from_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
-        Parser::parse_all(s.as_ref(), Parser::date, "date")
+        parser::since_start(s.as_ref()).map_err(|e| e.into())
     }
-
-    // /// JS representation of a duration.
-    // pub fn as_js(&self) -> Value {
-    //     js!(return @{format!("{}.{}", self.as_secs(), self.subsec_millis())})
-    // }
 }
 
 /// An actual, absolute date.
@@ -120,7 +120,7 @@ impl Date {
     /// assert_eq! { date.to_string(), "2019-08-22 15:54:02.007000572 UTC" }
     /// ```
     pub fn of_timestamp(secs: i64, nanos: u32) -> Self {
-        use chrono::{offset::TimeZone, Utc};
+        use time::chrono::{offset::TimeZone, Utc};
         let date = Utc.timestamp(secs, nanos);
         Date { date }
     }
@@ -201,7 +201,7 @@ impl Date {
     /// assert_eq! { mi, 7 }
     /// ```
     pub fn time_info(&self) -> (u32, u32, u32, u32) {
-        use chrono::Timelike;
+        use time::chrono::Timelike;
         (
             self.date.hour(),
             self.date.minute(),

@@ -1,6 +1,6 @@
 //! Types and helpers for time charts.
 
-use crate::common::*;
+prelude! {}
 
 pub mod size;
 

@@ -1,6 +1,7 @@
 # TODO
 
-- remove `swarkn` dependency, use `peg` instead for parsing
+- investigate whether the `color` module in `charts` could be made to use what `plotters` expects
+  right away (instead of using custom types)
 - wait for plotters to merge https://github.com/38/plotters/pull/156 and update `chart` and `client`
   deps
 

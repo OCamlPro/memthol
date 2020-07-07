@@ -67,7 +67,7 @@ macro_rules! new_uid {
                 }
             }
 
-            lazy_static::lazy_static! {
+            $crate::prelude::lazy_static! {
                 /// Uid factory.
                 static ref COUNTER: Mutex<usize> = Mutex::new(0);
             }

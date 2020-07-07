@@ -50,15 +50,33 @@ resulting binary will be in `target/debug/memthol` in *debug* mode and `target/r
 
 You can install memthol's BUI by running
 
-```
+```bash
 cargo install --git <memthol's BUI repository>
 ```
 
 To update, run the same command with `--force`
 
-```
+```bash
 cargo install --force --git <memthol's BUI repository>
 ```
+
+# Testing
+
+Run memthol-ui on the test files located on this repository, in `rsc/ackermann_with_sets` to make
+sure it works:
+
+- if your binary is called `memthol` and is in you path, and you are at the root of this repository:
+
+    ```bash
+    memthol rsc/ackermann_with_sets
+    ```
+
+- if you are at the root of the repo and want build-and-run the sources:
+
+    ```bash
+    cargo build -- rsc/ackermann_with_sets
+    ```
+
 
 # Other Resources
 

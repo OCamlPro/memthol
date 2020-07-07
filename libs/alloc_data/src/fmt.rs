@@ -1,23 +1,39 @@
 //! `Display` implementations for all relevant types.
 
-use crate::*;
+prelude! {}
 
-base::impl_display! {
+use base::impl_display;
+
+impl_display! {
     fmt(&self, fmt)
 
     Uid = self.uid.fmt(fmt);
 
+    SinceStart = {
+        let mut nanos = format!(".{:>09}", (*self).subsec_nanos());
+        // Remove trailing zeros.
+        loop {
+            match nanos.pop() {
+                // Remove zeros.
+                Some('0') => (),
+                // There was nothing but zeros, remove dot as well (last character).
+                Some('.') => break,
+                // Otherwise it's a number, we must keep it and stop removing stuff.
+                Some(c) => {
+                    nanos.push(c);
+                    break;
+                }
+                None => unreachable!(),
+            }
+        }
+        write!(fmt, "{}{}", (*self).as_secs(), nanos)
+    }
+    Date = write!(fmt, "{}", self.date());
+
     Span = write!(fmt, "{}-{}", self.start, self.end);
 
     Loc = write!(fmt, "`{}`:{}:{}", self.file, self.line, self.span);
-
-    Labels = {
-        write!(fmt, "[")?;
-        for label in &self.labels {
-            write!(fmt, " `{}`", label)?
-        }
-        write!(fmt, " ]")
-    }
+    CLoc = write!(fmt, "{}#{}", self.loc, self.cnt);
 
     AllocKind = {
         write!(fmt, "{}", self.as_str())
@@ -36,8 +52,8 @@ base::impl_display! {
 
         // Write the trace.
         write!(fmt, "[")?;
-        for (loc, count) in my_trace.iter() {
-            write!(fmt, " {}#{}", loc, count)?
+        for cloc in my_trace.iter() {
+            write!(fmt, " {}#{}", cloc.loc, cloc.cnt)?
         }
         write!(fmt, " ], ")?;
 
@@ -75,26 +91,4 @@ base::impl_display! {
         writeln!(fmt, "word_size: {}", self.word_size)?;
         Ok(())
     }
-
-    SinceStart = {
-        let mut nanos = format!(".{:>09}", (*self).subsec_nanos());
-        // Remove trailing zeros.
-        loop {
-            match nanos.pop() {
-                // Remove zeros.
-                Some('0') => (),
-                // There was nothing but zeros, remove dot as well (last character).
-                Some('.') => break,
-                // Otherwise it's a number, we must keep it and stop removing stuff.
-                Some(c) => {
-                    nanos.push(c);
-                    break;
-                }
-                None => unreachable!(),
-            }
-        }
-        write!(fmt, "{}{}", (*self).as_secs(), nanos)
-    }
-
-    Date = write!(fmt, "{}", self.date());
 }

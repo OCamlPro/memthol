@@ -1,41 +1,17 @@
 //! Tests.
 
-use crate::*;
+prelude! {}
 
 macro_rules! unwrap {
     ($e:expr) => {
         match $e {
             Ok(res) => res,
             Err(e) => {
-                println!("{}", e.pretty());
+                println!("{}", e);
                 panic!("trying to unwrap an `Err` value")
             }
         }
     };
-}
-
-#[test]
-fn position_details() {
-    let mut parser = Parser::new(
-        "\
-first line with some text
-second line problem is >H<ere
-third line
-    ",
-    );
-
-    use swarkn::parse::ParserExt;
-    parser.chars_until_including(|char| char == '>');
-    let err = parser.position_details(parser.pos());
-
-    let mut expected = "".to_string();
-    expected.push_str("   |\n");
-    expected.push_str(" 2 | second line problem is >H<ere\n");
-    expected.push_str("   |                         ^");
-
-    println!("{}", err);
-
-    assert_eq! { err.to_string(), expected }
 }
 
 static DIFF_0: &str = r#"
@@ -233,8 +209,7 @@ dead {
 
 #[test]
 fn diff_0() {
-    let mut parser = Parser::new(DIFF_0);
-    let diff = unwrap!(parser.diff());
+    let diff = unwrap!(Diff::try_from(DIFF_0));
     assert_eq! { diff.new.len(), 164 }
     assert_eq! { diff.dead.len(), 21 }
 }

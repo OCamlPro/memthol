@@ -1,6 +1,6 @@
 //! Client/server messages.
 
-use crate::common::*;
+prelude! {}
 use filter::*;
 
 /// Messages from the client to the server.
@@ -148,10 +148,7 @@ pub mod to_client {
             Self::Info
         }
         /// Constructor for `Alert`.
-        pub fn alert<S>(msg: S) -> Self
-        where
-            S: Into<String>,
-        {
+        pub fn alert(msg: impl Into<String>) -> Self {
             Self::Alert { msg: msg.into() }
         }
         /// Constructor for `Charts`.

@@ -1,9 +1,10 @@
 //! Macros.
 
-/// Opens the prelude.
-macro_rules! prelude {
-    () => {
-        use crate::common::*;
+/// Creates a `SVec`.
+#[macro_export]
+macro_rules! svec {
+    ($($stuff:tt)*) => {
+        $crate::smallvec::smallvec!($($stuff)*)
     };
 }
 

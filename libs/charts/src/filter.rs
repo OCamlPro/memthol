@@ -2,7 +2,7 @@
 //!
 //! All types in this module implement `serde`'s `Serialize` and `Deserialize` traits.
 
-use crate::common::*;
+prelude! {}
 
 pub mod label;
 pub mod loc;

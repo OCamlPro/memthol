@@ -3,6 +3,22 @@
 pub extern crate rand;
 
 pub use derive_more::*;
+pub use lazy_static::lazy_static;
+
+/// Re-exports from `error_chain`.
+pub mod error_chain {
+    pub use error_chain::*;
+}
+
+/// Alias type for `SmallVec` of max stack-size 8.
+pub type SVec<T> = smallvec::SmallVec<[T; 8]>;
+/// Alias macro for smallvec construction.
+#[macro_export]
+macro_rules! svec {
+    ($($stuff:tt)*) => {
+        $crate::smallvec::smallvec!($($stuff)*)
+    };
+}
 
 #[macro_use]
 pub mod macros;

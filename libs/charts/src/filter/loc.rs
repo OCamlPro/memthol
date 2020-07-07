@@ -1,11 +1,8 @@
 //! Location filters.
 
-use regex::Regex;
+prelude! {}
 
-use crate::{
-    common::*,
-    filter::{string_like, FilterExt},
-};
+use filter::{string_like, FilterExt};
 
 /// A location filter.
 pub type LocFilter = string_like::StringLikeFilter<LocSpec>;
@@ -69,10 +66,7 @@ impl LineSpec {
     /// let line_spec = LineSpec::new(" [ 105, _  ]  ").unwrap();
     /// assert_eq!(line_spec, LineSpec::range(Some(105), None));
     /// ```
-    pub fn new<Str>(str: Str) -> Res<Self>
-    where
-        Str: AsRef<str>,
-    {
+    pub fn new(str: impl AsRef<str>) -> Res<Self> {
         use std::str::FromStr;
         let mut s = str.as_ref();
         macro_rules! s_do {
@@ -209,8 +203,8 @@ pub enum LocSpec {
         line: LineSpec,
     },
 }
-impl FilterExt<(Loc, usize)> for LocSpec {
-    fn apply(&self, (loc, _): &(Loc, usize)) -> bool {
+impl FilterExt<alloc::CLoc> for LocSpec {
+    fn apply(&self, alloc::CLoc { loc, .. }: &alloc::CLoc) -> bool {
         match self {
             LocSpec::Anything => true,
             LocSpec::Value { value, line } => &loc.file == value && line.apply(&loc.line),
@@ -220,13 +214,10 @@ impl FilterExt<(Loc, usize)> for LocSpec {
 }
 
 impl string_like::SpecExt for LocSpec {
-    type Data = (Loc, usize);
+    type Data = alloc::CLoc;
     const DATA_DESC: &'static str = "label";
 
-    fn from_string<S>(s: S) -> Res<Self>
-    where
-        S: Into<String>,
-    {
+    fn from_string(s: impl Into<String>) -> Res<Self> {
         Self::new(s)
     }
 
@@ -288,10 +279,7 @@ impl Default for LocSpec {
 
 impl LocSpec {
     /// Constructor from strings.
-    pub fn new<S>(s: S) -> Res<Self>
-    where
-        S: Into<String>,
-    {
+    pub fn new(s: impl Into<String>) -> Res<Self> {
         let loc = s.into();
         macro_rules! illegal {
             () => {{
