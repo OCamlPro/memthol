@@ -1,0 +1,9 @@
+7.347
+new {
+    16666: Minor 2 [ `src/main.ml`:40:24-64#638 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 7.347 _
+}
+dead {
+    16504: 7.254
+    16503: 7.254
+}
+

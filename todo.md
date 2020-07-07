@@ -1,6 +1,5 @@
 # TODO
 
-- remove `swarkn` dependency, use `peg` instead for parsing
 - wait for plotters to merge https://github.com/38/plotters/pull/156 and update `chart` and `client`
   deps
 

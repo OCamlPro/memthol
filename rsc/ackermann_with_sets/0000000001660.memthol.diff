@@ -1,0 +1,9 @@
+7.900
+new {
+    17696: Minor 2 [ `src/main.ml`:40:24-64#503 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 7.899 _
+    17695: Minor 16 [ `src/main.ml`:40:24-64#532 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 7.898 _
+}
+dead {
+    17533: 7.808
+}
+

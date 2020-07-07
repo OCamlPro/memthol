@@ -243,13 +243,13 @@ peg::parser! {
 
         /// Parses an allocation.
         pub rule new_alloc() -> Alloc
-        = uid: (uid: uid() { println!("uid: {}", uid) ; uid })
+        = uid: uid()
             _ ":"
-            _ kind: (res: alloc_kind() { println!("alloc kind") ; res})
-            _ size: (res: u32() { println!("res") ; res})
+            _ kind: alloc_kind()
+            _ size: u32()
 
             // Callstack.
-            _ callstack: (res: loc_list() { println!("callstack") ; res })
+            _ callstack: loc_list()
             // User-provided labels.
             _ labels: string_list()
             // Time Of Creation.
@@ -257,7 +257,6 @@ peg::parser! {
             // Time Of Death.
             _ tod: since_start_opt()
         {
-            println!("new alloc success");
             Alloc::new(uid, kind, size, callstack, labels, toc, tod)
         }
         / expected!("allocation data")
@@ -265,7 +264,7 @@ peg::parser! {
         /// Parses the new allocations of a diff.
         pub rule diff_new_allocs() -> Vec<Alloc>
         = "new" _ "{"
-            new_allocs: ( (_ {println!("ws")}) new_alloc: new_alloc() { new_alloc })*
+            new_allocs: ( _ new_alloc: new_alloc() { new_alloc })*
         _ "}" {
             new_allocs
         }

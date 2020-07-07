@@ -1,0 +1,14 @@
+0.648
+new {
+    3562: Minor 2 [ `src/main.ml`:40:24-64#322 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 0.648 _
+    3561: Minor 128 [ `src/main.ml`:40:24-64#263 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 0.647 _
+    3560: Minor 128 [ `src/main.ml`:40:24-64#160 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 0.647 _
+    3558: Minor 4 [ `set.ml`:133:21-28#1 `set.ml`:130:21-28#1 `src/main.ml`:40:24-46#1 `src/main.ml`:40:24-64#132 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 0.646 _
+}
+dead {
+    3260: 0.557
+    3259: 0.557
+    3258: 0.557
+    3257: 0.557
+}
+

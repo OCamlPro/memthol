@@ -12,6 +12,7 @@ pub use crate::{
 pub use base::{error_chain, lazy_static};
 
 /// Imports this crate's prelude.
+#[macro_export]
 macro_rules! prelude {
     () => {
         use $crate::prelude::*;

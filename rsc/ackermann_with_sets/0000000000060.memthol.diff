@@ -1,0 +1,14 @@
+0.369
+new {
+    2672: Minor 2 [ `src/main.ml`:40:24-64#216 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 0.369 _
+    2671: Minor 2 [ `src/main.ml`:40:24-64#214 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 0.369 _
+    2670: Minor 24 [ `src/main.ml`:40:24-64#237 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 0.369 _
+    2669: Minor 2 [ `src/main.ml`:40:24-64#294 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 0.368 _
+}
+dead {
+    2203: 0.262
+    2201: 0.262
+    2181: 0.262
+    2180: 0.262
+}
+
