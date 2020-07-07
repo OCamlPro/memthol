@@ -20,6 +20,10 @@ default-members = [
     "memthol",
 ]
 
+exclude = [
+    "libs/plotters",
+]
+
 [profile.release]
 lto = true
 opt-level = 3
