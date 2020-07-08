@@ -20,6 +20,8 @@
 //! [`Date`]: struct.date.html (The Date struct)
 //! [`SinceStart`]: struct.sincestart.html (The SinceStart struct)
 
+pub extern crate peg;
+
 pub use error_chain::bail;
 pub use num_bigint::BigUint;
 pub use serde_derive::{Deserialize, Serialize};

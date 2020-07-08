@@ -346,6 +346,7 @@ impl Watcher {
                         file_path.to_string_lossy()
                     )
                 })?;
+
             if last_modified < init_last_modified
                 || upper_bound
                     .as_ref()
