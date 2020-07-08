@@ -538,7 +538,7 @@ impl charts::point::StyleExt for Styler {
     }
 
     fn shape_conf(&self, color: &charts::color::Color) -> plotters::style::ShapeStyle {
-        let style = color.to_plotters().stroke_width(3);
+        let style = color.stroke_width(3);
         style
     }
 }

@@ -18,7 +18,6 @@ chrono = "*"
 error-chain = "*"
 lazy_static = "*"
 log = "*"
-palette = "*"
 plotters = { git = "https://github.com/AdrienChampion/plotters", branch = "canvas_fixes" }
 safe_index = "*"
 serde = "*"

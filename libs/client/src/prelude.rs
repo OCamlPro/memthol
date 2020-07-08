@@ -38,18 +38,6 @@ macro_rules! prelude {
     };
 }
 
-/// Basic color-handling stuff, so that everything works between `charts` and `plotters`.
-pub mod color {
-    pub use charts::color::Color;
-    pub use plotters::palette::rgb::Rgb;
-
-    use plotters::palette::encoding::srgb::Srgb;
-
-    pub fn to_plotters(&Color { r, g, b }: &Color) -> Rgb<Srgb, u8> {
-        Rgb::new(r, g, b)
-    }
-}
-
 /// Re-exports from `charts::point`.
 pub mod point {
     pub use charts::point::{Point, Points, TimePoints};

@@ -22,8 +22,8 @@ macro_rules! rng {
     };
 }
 
-/// RGB color.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// RGBA color.
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Color {
     /// Red component.
     pub r: u8,
@@ -33,6 +33,14 @@ pub struct Color {
     pub b: u8,
 }
 
+impl plotters::style::Color for Color {
+    fn rgb(&self) -> (u8, u8, u8) {
+        (self.r, self.g, self.b)
+    }
+    fn alpha(&self) -> f64 {
+        1.0
+    }
+}
 impl fmt::Display for Color {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "#{:0>2x}{:0>2x}{:0>2x}", self.r, self.g, self.b)
@@ -45,7 +53,7 @@ impl Color {
     /// # Examples
     ///
     /// ```rust
-    /// use charts::color::Color;
+    /// # use charts::color::Color;
     /// let color = Color::new(0xff, 0x00, 0x00);
     /// assert_eq!(&color.to_string(), "#ff0000")
     /// ```
@@ -60,7 +68,7 @@ impl Color {
     /// # Examples
     ///
     /// ```rust
-    /// use charts::color::Color;
+    /// # use charts::color::Color;
     /// let color = Color::from_str("#ff0000").unwrap();
     /// assert_eq!(&color.to_string(), "#ff0000")
     /// ```
