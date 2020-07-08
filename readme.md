@@ -13,7 +13,30 @@ Memthol is a memory profiler for [OCaml]. This repository contains the **B**rows
 - [ ] data-splitting: plot several families of data separately in the same chart by separating them
     based on size, allocation lifetime, source locations in the allocation callstack, *etc.*
 
-# Building
+
+# Quick Note About Dump Files
+
+Memthol-ui works on a user-provided directory, in which it expects to find
+
+- an *init file* `init.memthol`
+- some *diff files* `*.memthol.diff`
+
+Memthol-ui relies on the **time of last modification** to sort the diff files, **not** the
+lexicographical order.
+
+Also, note that a "run" of the program you are profiling is represented by the init file, which
+specifies the time at which the run started (amongst other things). Memthol-ui takes the time of
+last modification of the init file as the starting point of the run, which entails that any diff
+file *older* than the init file **is ignored**.
+
+> **NB:** the reason memthol-ui works this way is because it is designed to work live, *i.e.* as the
+> program is running. More precisely, memthol-ui supports stopping and re-launching the program
+> while memthol-ui is running. Meaning, in general, there will be leftover diff files in the dump
+> directory. These files need to be ignored for the new run, which is why memthol-ui takes the time
+> of last modification of the init file as its reference point.
+
+
+# Build
 
 ## Pre-requisites
 
@@ -61,6 +84,12 @@ cargo install --force --git <memthol's BUI repository>
 ```
 
 # Testing
+
+First, make sure you run the bash script that prepares all the test-profiling-dumps:
+
+```bash
+./rsc/scripts/prepare_dumps.sh
+```
 
 Run memthol-ui on the test files located on this repository, in `rsc/ackermann_with_sets` to make
 sure it works:
