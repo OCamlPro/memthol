@@ -102,20 +102,24 @@ sure it works:
 - if your binary is called `memthol` and is in you path, and you are at the root of this repository:
 
     ```bash
-    memthol rsc/ackermann_with_sets
+    memthol rsc/dumps/ackermann_with_sets
     ```
 
 - if you are at the root of the repo and want build-and-run the sources:
 
     ```bash
-    cargo run -- rsc/ackermann_with_sets
+    cargo run -- rsc/dumps/ackermann_with_sets
     ```
 
 
 # Other Resources
 
-- [browser compatibility]
-- [todo list]
+- [a small tutorial][tuto] (with outdated screenshots)
+
+- [browser compatibility][compat]
+- [todo list][todo]
+- [memthol-ui compile time and binary size statistics][stats]
+- [discussion on string-like filters in memthol-ui][string filters]
 
 # Icons
 
@@ -126,7 +130,10 @@ All icons come from the [bootstrap library][bootstrap].
 [Rust]: https://www.rust-lang.org/ (Rust official page)
 [rust toolchain]: https://www.rust-lang.org/tools/install (Rust installation instructions)
 [wasm-pack]: https://crates.io/crates/cargo-web (Cargo-web on crates.io)
-[browser compatibility]: ./docs/compatibility.md (Browser compatibility discussion)
-[todo list]: ./todo.md (Todo list)
+[tuto]: ./rsc/docs/mini_tutorial (Small memthol tutorial)
+[compat]: ./rsc/docs/compatibility.md (Browser compatibility discussion)
+[todo]: ./todo.md (Todo list)
+[stats]: ./rsc/docs/compile_stats.md (Compile time and binary size statistics)
+[string filters]: ./rsc/docs/string_like_filters.md (String-like filters)
 [install wasm-pack]: https://rustwasm.github.io/wasm-pack/installer (wasm-pack install instructions)
 [bootstrap]: https://icons.getbootstrap.com (the bootstrap library)
