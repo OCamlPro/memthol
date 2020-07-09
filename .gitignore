@@ -3,3 +3,4 @@ libs/client/static/css/package-lock.json
 .DS_Store
 static
 memthol/static
+/memthol_ui

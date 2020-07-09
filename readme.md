@@ -61,15 +61,20 @@ assembly] (wasm). To do this, you need to have the [rust toolchain].
 
 ## From sources
 
+### `debug`
+
+At the root of this repository, simply run `cargo build`. The binary will be located at
+`target/debug/memthol`.
+
+### `release`
+
+At the root of this repository, run `./rsc/scripts/release.sh`. The binary will be located at
+`target/release/memthol`, with a copy at the root of the repository for convenience.
+
+<!-- ## Using cargo
+
 > **NB**: this workflow may fail because the BUI's repository is currently private. The commands
 > above will fail if git's `credential.helper` does not contain the appropriate credentials.
-
-To build memthol's BUI from the sources, clone this repository and enter it. Then, run either `cargo
-build` to compile the BUI in *debug* mode or `cargo build --release` for *release* mode. The
-resulting binary will be in `target/debug/memthol` in *debug* mode and `target/release/memthol` in
-*release* mode.
-
-## Using cargo
 
 You can install memthol's BUI by running
 
@@ -81,7 +86,7 @@ To update, run the same command with `--force`
 
 ```bash
 cargo install --force --git <memthol's BUI repository>
-```
+``` -->
 
 # Testing
 
@@ -103,7 +108,7 @@ sure it works:
 - if you are at the root of the repo and want build-and-run the sources:
 
     ```bash
-    cargo build -- rsc/ackermann_with_sets
+    cargo run -- rsc/ackermann_with_sets
     ```
 
 
