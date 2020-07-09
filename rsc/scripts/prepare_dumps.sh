@@ -7,17 +7,14 @@ my_name=`basename "$0"`
 init_name="init.memthol"
 diff_tail=".memthol.diff"
 
-rsc_dir="./rsc"
-test_dirs=(
-    "$rsc_dir/ackermann_with_sets"
-)
+dump_dir="./rsc/dumps"
 
-if [ ! -d "$rsc_dir" ] ; then
+if [ ! -d "$dump_dir" ] ; then
     >&2 echo "Error, script $my_name must run from the root of the memthol-ui repository."
     exit 2
 fi
 
-for test_dir in $test_dirs ; do
+for test_dir in $dump_dir/* ; do
     printf "preparing $test_dir ..."
 
     if [ ! -d "$test_dir" ] ; then
