@@ -1,17 +1,44 @@
 //! Builds memthol's client and copies the right things in the right place.
 
 fn main() {
+    let in_release = {
+        let profile = std::env::var("PROFILE")
+            .expect("failed to retrieve cargo profile info from environment");
+        match &profile as &str {
+            "release" => true,
+            "debug" => false,
+            _ => panic!("unexpected cargo profile {:?}", profile),
+        }
+    };
+
     paths::show();
-    client::build();
+
+    if !in_release {
+        client::build();
+    } else {
+        let target = std::path::Path::new(&*paths::WASM_TARGET);
+        if !target.exists() {
+            eprintln!(
+                "\
+                    Could not find WASM client `{}`.\n\
+                    It seems you are trying to build memthol-ui in release mode \
+                    using cargo directly.\n\
+                    This won't work, use `rsc/scripts/release.sh` instead.
+                ",
+                &*paths::WASM_TARGET,
+            );
+            panic!("compilation failed")
+        }
+    }
+
     emit_env_var();
     emit_rerun();
 }
 
 /// Outputs an error about building the client (includes the command) and exits with status `2`.
 fn error<T>() -> T {
-    let cmd = wasm_pack::string_cmd();
     println!("|===| while building memthol UI's client with");
-    println!("| {}", cmd);
+    println!("| {:?}", wasm_pack::cmd());
     println!("|===|");
     panic!("a fatal error occured")
 }
@@ -57,6 +84,9 @@ mod paths {
             format!("{}/{}", parent.display(), base::client::WASM_TARGET_DIR)
         };
 
+        /// WASM target file.
+        pub static ref WASM_TARGET: String = format!("{}/client_bg.wasm", &*BUILD);
+
         /// Path to the client's crate.
         pub static ref CLIENT_CRATE: &'static str = "../libs/client";
     }
@@ -86,6 +116,10 @@ mod client {
         let mut build_cmd = wasm_pack::cmd();
 
         println!("cmd: {:?}", build_cmd);
+
+        build_cmd.spawn().unwrap();
+
+        std::thread::sleep(std::time::Duration::from_secs(100));
 
         let output = unwrap! {
             build_cmd.output(),
@@ -127,58 +161,24 @@ mod wasm_pack {
 
     use super::paths;
 
-    lazy_static::lazy_static! {
-        static ref CMD: &'static str = "wasm-pack";
+    const CMD: &str = "wasm-pack";
+    const MODE: &str = "build";
 
+    lazy_static::lazy_static! {
         static ref OPTIONS: Vec<&'static str> = vec![
             // Options for `wasm-pack`.
-            "build",
             "--target", "web",
             "--out-name", "client",
             "--out-dir", &*paths::BUILD,
             &*paths::CLIENT_CRATE,
         ];
-
-        // #[cfg(release)]
-        static ref RLS_OPTIONS: Vec<&'static str> = vec!["--release"];
     }
 
-    fn inner_cmd() -> Command {
-        let mut cmd = Command::new(*CMD);
+    pub fn cmd() -> Command {
+        let mut cmd = Command::new(CMD);
+        cmd.arg(MODE);
         cmd.args(&*OPTIONS);
         cmd
-    }
-    #[cfg(release)]
-    pub fn cmd() -> Command {
-        let mut cmd = inner_cmd();
-        cmd.args(&*RLS_OPTIONS);
-        cmd
-    }
-    #[cfg(not(release))]
-    pub fn cmd() -> Command {
-        inner_cmd()
-    }
-
-    fn inner_string_cmd() -> String {
-        let mut res = CMD.to_string();
-        for opt in &*OPTIONS {
-            res.push(' ');
-            res.push_str(opt);
-        }
-        res
-    }
-    #[cfg(release)]
-    pub fn string_cmd() -> String {
-        let mut res = inner_string_cmd();
-        for opt in *RLS_OPTIONS {
-            res.push(' ');
-            res.push_str(opt)
-        }
-        res
-    }
-    #[cfg(not(release))]
-    pub fn string_cmd() -> String {
-        inner_string_cmd()
     }
 
     pub fn check() {
@@ -193,7 +193,7 @@ mod wasm_pack {
             println!();
             panic!("wasm-pack is not installed")
         };
-        match Command::new(*CMD).arg("help").output() {
+        match Command::new(CMD).arg("help").output() {
             Ok(output) => {
                 if output.status.success() {
                     ()
