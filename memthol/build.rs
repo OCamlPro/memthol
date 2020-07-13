@@ -117,10 +117,6 @@ mod client {
 
         println!("cmd: {:?}", build_cmd);
 
-        build_cmd.spawn().unwrap();
-
-        std::thread::sleep(std::time::Duration::from_secs(100));
-
         let output = unwrap! {
             build_cmd.output(),
             "while running {:?}", build_cmd

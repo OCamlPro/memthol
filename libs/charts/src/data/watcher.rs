@@ -38,14 +38,14 @@ impl Watcher {
     pub fn spawn(dir: impl Into<String>) {
         let mut watcher = Self::new(dir);
 
-        let _ = std::thread::spawn(move || match watcher.run() {
+        let _ = std::thread::spawn(move || match watcher.run(true) {
             Ok(()) => (),
             Err(e) => super::add_err(e.pretty()),
         });
     }
 
     /// Runs the watcher.
-    pub fn run(&mut self) -> Res<()> {
+    pub fn run(&mut self, forever: bool) -> Res<()> {
         // First init read.
         'first_init: loop {
             if let Some(init) = self.try_read_init()? {
@@ -106,6 +106,10 @@ impl Watcher {
                     diff_error = Some(e)
                 }
             }
+
+            if !forever {
+                break Ok(());
+            }
         }
     }
 }
@@ -113,7 +117,7 @@ impl Watcher {
 /// # Generic helpers.
 impl Watcher {
     /// Constructor.
-    fn new(dir: impl Into<String>) -> Self {
+    pub fn new(dir: impl Into<String>) -> Self {
         let dir = dir.into();
         let tmp_file = "tmp.memthol".into();
         let init_file = "init.memthol".into();

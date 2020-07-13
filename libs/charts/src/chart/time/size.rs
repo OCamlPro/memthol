@@ -119,7 +119,7 @@ impl TimeSize {
             // New allocation.
             |alloc| {
                 // Filter UID that matches the allocation, or catch-all.
-                let uid = if let Some(uid) = filters.find_match(alloc) {
+                let uid = if let Some(uid) = filters.find_match(data.current_time(), alloc) {
                     uid::LineUid::Filter(uid)
                 } else {
                     uid::LineUid::CatchAll
@@ -145,6 +145,13 @@ impl TimeSize {
             // New dead allocation.
             |uids, tod| {
                 for uid in uids {
+                    // Potentially update the map, some filters are time-sensitive so matches can
+                    // change.
+                    // let uid = if let Some(uid) = filters.find_match(data.current_time(), alloc) {
+                    //     uid::LineUid::Filter(uid)
+                    // } else {
+                    //     uid::LineUid::CatchAll
+                    // };
                     let alloc = data
                         .get_alloc(uid)
                         .chain_err(|| "while handling new dead allocations")?;

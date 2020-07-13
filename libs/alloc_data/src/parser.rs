@@ -2,62 +2,6 @@
 
 prelude! {}
 
-// /// Span separator.
-// static SPAN_SEP: &str = "-";
-// /// Location separator.
-// static LOC_SEP: &str = ":";
-// /// Location counter separator.
-// static LOC_COUNT_SEP: &str = "#";
-// /// None format.
-// static NONE_FMT: &str = "_";
-// /// Trace start.
-// static TRACE_START: &str = "[";
-// /// Trace end.
-// static TRACE_END: &str = "]";
-// /// Allocation kind format.
-// static ALLOC_KIND_FMT: &str = "\\( Minor | Major | MajorPostponed | Serialized | _ \\)";
-// /// Dead allocation format.
-// static DEAD_ALLOC_FMT: &str = "<uid>: <died_at: date>";
-// /// Diff format.
-// static DIFF_FMT: &str = "<timestamp> `new` {{ \
-//                          <alloc> ... \
-//                          }} dead {{ \
-//                          <dead alloc> ... \
-//                          }}\
-//                          ";
-// /// Label format.
-// static LABEL_FMT: &str = "`<anything but `>`";
-
-// lazy_static::lazy_static! {
-//     /// Span format.
-//     static ref SPAN_FMT: String = format!("<int>{}<int>", SPAN_SEP);
-
-//     /// Location format.
-//     static ref LOC_FMT: String = format!("<file>{}<line>{}{}", LOC_SEP, LOC_SEP, *SPAN_FMT);
-//     /// Location with count format.
-//     static ref LOC_COUNT_FMT: String = format!("{}{}<int>", *LOC_FMT, LOC_COUNT_SEP);
-
-//     /// Trace format.
-//     static ref TRACE_FMT: String = format!(
-//         "{} \\({} | {}\\) ... {}",
-//         TRACE_START, *LOC_COUNT_FMT, NONE_FMT, TRACE_END
-//     );
-//     /// Labels format.
-//     static ref LABELS_FMT: String = format!(
-//         "{} {} ... {}",
-//         TRACE_START, LABEL_FMT, TRACE_END
-//     );
-
-//     /// Date format.
-//     static ref DATE_FMT: String = "<int>.<int>".into();
-
-//     /// Allocation format.
-//     static ref ALLOC_FMT: String = format!(
-//         "<uid>: <kind> <size> <trace> <labels> <created_at: date> \\( <died_at: date> | {} \\)",
-//         NONE_FMT
-//     );
-// }
-
 pub use data_parser::*;
 
 peg::parser! {
@@ -202,6 +146,13 @@ peg::parser! {
             sub_sec_res.map(|sub_sec|(secs, sub_sec))
         }
         / expected!("seconds (float with at most nanosecond sub-second precision)")
+
+        /// Parses an amount of seconds representing a lifetime.
+        pub rule lifetime() -> Lifetime
+        = secs: secs() {
+            Duration::new(secs.0, secs.1).into()
+        }
+        / expected!("an amount of seconds (float, lifetime)")
 
         /// Parses an amount of seconds since the start of the run.
         pub rule since_start() -> SinceStart
@@ -367,6 +318,7 @@ implement! {
         u64 => u64(text),
 
         SinceStart => +TryFrom since_start(text),
+        Lifetime => +TryFrom lifetime(text),
         Date => +TryFrom date(text),
 
         Uid => +TryFrom uid(text),

@@ -1,6 +1,21 @@
 //! Macros used throughout the whole project.
 
 #[macro_export]
+#[cfg(not(release))]
+macro_rules! debug_do {
+    ($($stuff:tt)*) => {{
+        $($stuff)*
+    }};
+}
+#[macro_export]
+#[cfg(release)]
+macro_rules! debug_do {
+    ($($stuff:tt)*) => {{
+        $($stuff)*
+    }};
+}
+
+#[macro_export]
 macro_rules! impl_display {
     (
         fmt(&$slf:ident, $fmt:ident)

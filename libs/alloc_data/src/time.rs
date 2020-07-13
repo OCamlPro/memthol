@@ -16,6 +16,88 @@ pub mod chrono {
 
 pub type DateTime = time::chrono::DateTime<self::chrono::Utc>;
 
+/// Wrapper around a duration representing a lifetime.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct Lifetime {
+    /// Actual duration.
+    duration: Duration,
+}
+impl Default for Lifetime {
+    fn default() -> Self {
+        Self {
+            duration: Duration::default(),
+        }
+    }
+}
+impl std::ops::Deref for Lifetime {
+    type Target = Duration;
+    fn deref(&self) -> &Duration {
+        &self.duration
+    }
+}
+impl From<Duration> for Lifetime {
+    fn from(duration: Duration) -> Self {
+        Self { duration }
+    }
+}
+impl Into<std::time::Duration> for Lifetime {
+    fn into(self) -> std::time::Duration {
+        self.duration
+    }
+}
+impl fmt::Display for Lifetime {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let mut dot_nanos = format!(".{}", self.duration.subsec_nanos());
+
+        // We don't want to remove the `.` or the digit right after it.
+        while dot_nanos.len() > 2 {
+            match dot_nanos.pop() {
+                // Pop zeros.
+                Some('0') => continue,
+                // Some digit, push it back and break out.
+                Some(digit) => {
+                    dot_nanos.push(digit);
+                    break;
+                }
+
+                None => unreachable!("failed to pop `dot_nanos` but its length is > 2"),
+            }
+        }
+        write!(fmt, "{}{}", self.duration.as_secs(), dot_nanos)
+    }
+}
+
+impl Lifetime {
+    /// A duration of 0 nanoseconds.
+    pub fn zero() -> Self {
+        Lifetime {
+            duration: std::time::Duration::new(0, 0),
+        }
+    }
+
+    /// Duration parser.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::time::Duration;
+    /// use alloc_data::SinceStart;
+    /// let s_list = [
+    ///     ("320.74", Duration::new(320, 740_000_000)),
+    ///     ("703470.0074", Duration::new(703470, 7_400_000)),
+    ///     ("0.2", Duration::new(0, 200_000_000)),
+    ///     ("7.0", Duration::new(7, 0)),
+    /// ];
+    /// for (s, exp) in &s_list {
+    ///     let date = SinceStart::from_str(s).unwrap();
+    ///     assert_eq! { &*date, exp }
+    /// }
+    /// ```
+    pub fn from_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
+        parser::lifetime(s.as_ref()).map_err(|e| e.into())
+    }
+}
+
 /// Wrapper around a duration.
 ///
 /// This type represents a point in time **relative to** the start time of the run of the program
@@ -87,6 +169,11 @@ impl SinceStart {
     /// ```
     pub fn from_str<Str: AsRef<str>>(s: Str) -> Res<Self> {
         parser::since_start(s.as_ref()).map_err(|e| e.into())
+    }
+
+    /// Subtraction, yields a lifetime.
+    pub fn sub_to_lt(&self, other: &Self) -> Lifetime {
+        (self.duration - other.duration).into()
     }
 }
 
