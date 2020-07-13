@@ -57,7 +57,8 @@ assembly] (wasm). To do this, you need to have the [rust toolchain].
 
 - make sure you have [wasm-pack] installed so that Rust can compile the client
 
-    installation instructions [here][install wasm-pack]
+    installation instructions [here][install wasm-pack], although `cargo install wasm-pack` should
+    work
 
 ## From sources
 
@@ -69,7 +70,8 @@ At the root of this repository, simply run `cargo build`. The binary will be loc
 ### `release`
 
 At the root of this repository, run `./rsc/scripts/release.sh`. The binary will be located at
-`target/release/memthol`, with a copy at the root of the repository for convenience.
+`target/release/memthol`, with a copy at the root of the repository for convenience. Note that the
+`release.sh` scripts accepts arguments, which will be passed to the call to `cargo build --release`.
 
 <!-- ## Using cargo
 
