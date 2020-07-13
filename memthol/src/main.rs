@@ -78,7 +78,9 @@ pub fn main() {
     }
 
     println!("starting data monitoring...");
-    charts::data::start(dump_dir);
+    memthol::unwrap! {
+        charts::data::start(dump_dir)
+    }
 
     println!("starting socket listeners...");
     memthol::unwrap! {

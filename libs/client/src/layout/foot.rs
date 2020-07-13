@@ -365,7 +365,7 @@ pub mod menu {
 
     pub mod subfilters {
         use super::*;
-        use charts::filter::{sub::RawSubFilter, SizeFilter, SubFilter};
+        use charts::filter::{sub::RawSubFilter, LifetimeFilter, SizeFilter, SubFilter};
 
         pub fn render(model: &Model, filter: &filter::Filter) -> Html {
             // if !filter.has_sub_filters() {
@@ -410,6 +410,16 @@ pub mod menu {
                             msg::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Size(size)),
+                            )
+                        }))
+                    })
+                }
+                RawSubFilter::Lifetime(sub) => {
+                    lifetime::render(&mut table_row, model, sub, move |lifetime_sub_filter_res| {
+                        err::msg_of_res(lifetime_sub_filter_res.map(|lifetime| {
+                            msg::FilterMsg::update_sub(
+                                uid,
+                                filter::SubFilter::new(sub_uid, RawSubFilter::Lifetime(lifetime)),
                             )
                         }))
                     })
@@ -525,7 +535,10 @@ pub mod menu {
                     SizeFilter::Cmp { cmp, val } => {
                         table_row.push_value(input::u32_input(model, val, move |usize_res| {
                             msg(usize_res.map(|val| SizeFilter::Cmp { cmp, val }))
-                        }))
+                        }));
+                        table_row.push_value(html! {
+                            "machine word(s)"
+                        })
                     }
                     SizeFilter::In { lb, ub } => {
                         let msg_fn = msg.clone();
@@ -534,6 +547,62 @@ pub mod menu {
                         });
                         let ub_html = input::u32_input(model, ub, move |usize_res| {
                             msg(usize_res.map(|ub| SizeFilter::In { lb, ub }))
+                        });
+                        table_row.push_sep(html! {"["});
+                        table_row.push_value(lb_html);
+                        table_row.push_sep(html! {","});
+                        table_row.push_value(ub_html);
+                        table_row.push_sep(html! {"]"});
+                    }
+                }
+            }
+        }
+
+        pub mod lifetime {
+            use super::*;
+            use charts::filter::ord::Kind;
+
+            pub fn render(
+                table_row: &mut table::TableRow,
+                model: &Model,
+                sub: &LifetimeFilter,
+                msg: impl Fn(Res<LifetimeFilter>) -> Msg + 'static + Clone,
+            ) {
+                let selector = {
+                    let selected = Some(sub.cmp_kind());
+                    let sub_clone = sub.clone();
+                    let msg = msg.clone();
+                    html! {
+                        <Select<Kind>
+                            selected = selected
+                            options = Kind::all()
+                            on_change = model.link.callback(
+                                move |kind| {
+                                    let sub = sub_clone.clone().change_cmp_kind(kind);
+                                    msg(Ok(sub))
+                                }
+                            )
+                        />
+                    }
+                };
+                table_row.push_selector(selector);
+
+                match *sub {
+                    LifetimeFilter::Cmp { cmp, val } => {
+                        table_row.push_value(input::lifetime_input(model, val, move |usize_res| {
+                            msg(usize_res.map(|val| LifetimeFilter::Cmp { cmp, val }))
+                        }));
+                        table_row.push_value(html! {
+                            "second(s)"
+                        })
+                    }
+                    LifetimeFilter::In { lb, ub } => {
+                        let msg_fn = msg.clone();
+                        let lb_html = input::lifetime_input(model, lb, move |usize_res| {
+                            msg_fn(usize_res.map(|lb| LifetimeFilter::In { lb, ub }))
+                        });
+                        let ub_html = input::lifetime_input(model, ub, move |usize_res| {
+                            msg(usize_res.map(|ub| LifetimeFilter::In { lb, ub }))
                         });
                         table_row.push_sep(html! {"["});
                         table_row.push_value(lb_html);
@@ -1192,6 +1261,22 @@ pub mod input {
                 msg(parse_usize_data(data)
                     .map_err(|e| err::Err::from(e))
                     .chain_err(|| "while parsing integer value"))
+            }),
+        )
+    }
+
+    pub fn lifetime_input(
+        model: &Model,
+        value: time::Lifetime,
+        msg: impl Fn(Res<time::Lifetime>) -> Msg + 'static,
+    ) -> Html {
+        text_input(
+            &value.to_string(),
+            model.link.callback(move |data| {
+                let lifetime = parse_text_data(data).and_then(|txt| {
+                    time::Lifetime::from_str(&txt).chain_err(|| "while parsing lifetime value")
+                });
+                msg(lifetime)
             }),
         )
     }

@@ -11,8 +11,9 @@ pub use watcher::Watcher;
 /// Starts global data handling.
 ///
 /// - runs the file watcher daemon.
-pub fn start(dir: impl Into<String>) {
-    Watcher::spawn(dir)
+pub fn start(dir: impl Into<String>) -> Res<()> {
+    let mut watcher = Watcher::new(dir);
+    watcher.run(false)
 }
 
 lazy_static! {

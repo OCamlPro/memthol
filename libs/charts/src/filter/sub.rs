@@ -12,6 +12,8 @@ use filter::*;
 pub enum RawSubFilter {
     /// Filter over allocation sizes.
     Size(SizeFilter),
+    /// Filter over lifetime.
+    Lifetime(LifetimeFilter),
     /// Filter over labels.
     Label(LabelFilter),
     /// Filter over locations.
@@ -22,6 +24,7 @@ impl RawSubFilter {
     pub fn of_kind(kind: FilterKind) -> Self {
         match kind {
             FilterKind::Size => SizeFilter::default().into(),
+            FilterKind::Lifetime => LifetimeFilter::default().into(),
             FilterKind::Label => LabelFilter::default().into(),
             FilterKind::Loc => LocFilter::default().into(),
         }
@@ -31,15 +34,23 @@ impl RawSubFilter {
     pub fn kind(&self) -> FilterKind {
         match self {
             Self::Size(_) => FilterKind::Size,
+            Self::Lifetime(_) => FilterKind::Lifetime,
             Self::Label(_) => FilterKind::Label,
             Self::Loc(_) => FilterKind::Loc,
         }
     }
 
     /// Applies the filter to an allocation.
-    pub fn apply(&self, alloc: &Alloc) -> bool {
+    pub fn apply(&self, timestamp: &time::SinceStart, alloc: &Alloc) -> bool {
         match self {
             RawSubFilter::Size(filter) => filter.apply(&alloc.size),
+            RawSubFilter::Lifetime(filter) => {
+                let timestamp = alloc
+                    .tod()
+                    .map(|tod| std::cmp::min(tod, *timestamp))
+                    .unwrap_or(*timestamp);
+                filter.apply_at(&timestamp, &alloc.toc())
+            }
             RawSubFilter::Label(filter) => filter.apply(&alloc.labels()),
             RawSubFilter::Loc(filter) => filter.apply(&alloc.trace()),
         }
@@ -59,18 +70,27 @@ impl RawSubFilter {
 
     /// Updates a sub-filter.
     pub fn update(&mut self, update: Update) -> Res<bool> {
+        macro_rules! fail {
+            () => {
+                bail!("cannot apply update `{}` to filter `{}`", update, self)
+            };
+        }
         match self {
             Self::Size(filter) => match update {
                 Update::Size(update) => filter.update(update),
-                update => bail!("cannot apply update `{}` to filter `{}`", update, self),
+                _ => fail!(),
+            },
+            Self::Lifetime(filter) => match update {
+                Update::Lifetime(update) => filter.update(update),
+                _ => fail!(),
             },
             Self::Label(filter) => match update {
                 Update::Label(update) => filter.update(update),
-                update => bail!("cannot apply update `{}` to filter `{}`", update, self),
+                _ => fail!(),
             },
             Self::Loc(filter) => match update {
                 Update::Loc(update) => filter.update(update),
-                update => bail!("cannot apply update `{}` to filter `{}`", update, self),
+                _ => fail!(),
             },
         }
     }
@@ -80,6 +100,7 @@ impl fmt::Display for RawSubFilter {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Size(filter) => write!(fmt, "size {}", filter),
+            Self::Lifetime(filter) => write!(fmt, "lifetime {}", filter),
             Self::Label(filter) => write!(fmt, "labels {}", filter),
             Self::Loc(filter) => write!(fmt, "callstack {}", filter),
         }
@@ -89,6 +110,11 @@ impl fmt::Display for RawSubFilter {
 impl From<SizeFilter> for RawSubFilter {
     fn from(filter: SizeFilter) -> Self {
         Self::Size(filter)
+    }
+}
+impl From<LifetimeFilter> for RawSubFilter {
+    fn from(filter: LifetimeFilter) -> Self {
+        Self::Lifetime(filter)
     }
 }
 impl From<LabelFilter> for RawSubFilter {
@@ -218,6 +244,8 @@ impl SubFilter {
 pub enum Update {
     /// Size filter update.
     Size(ord::SizeUpdate),
+    /// Lifetime filter update.
+    Lifetime(ord::LifetimeUpdate),
     /// Label filter update.
     Label(label::LabelUpdate),
     /// Location filter update.
@@ -227,6 +255,7 @@ impl fmt::Display for Update {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Size(update) => update.fmt(fmt),
+            Self::Lifetime(update) => update.fmt(fmt),
             Self::Label(update) => update.fmt(fmt),
             Self::Loc(update) => update.fmt(fmt),
         }

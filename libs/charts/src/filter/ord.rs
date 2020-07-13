@@ -62,13 +62,13 @@ pub enum OrdFilter<Num> {
 
 impl<Num> OrdFilter<Num>
 where
-    Num: PartialEq + PartialOrd + fmt::Display,
+    Num: PartialEq + PartialOrd + fmt::Debug,
 {
     pub fn between(lb: Num, ub: Num) -> Res<Self> {
         if lb <= ub {
             Ok(Self::In { lb, ub })
         } else {
-            bail!("illegal interval [{}, {}]", lb, ub)
+            bail!("illegal interval [{:?}, {:?}]", lb, ub)
         }
     }
     pub fn cmp(cmp: Cmp, val: Num) -> Self {
@@ -116,7 +116,7 @@ where
 
 impl<Num> Default for OrdFilter<Num>
 where
-    Num: Default + PartialEq + PartialOrd + fmt::Display,
+    Num: Default + PartialEq + PartialOrd + fmt::Debug,
 {
     fn default() -> Self {
         Self::cmp(Cmp::Eq, Num::default())
@@ -134,14 +134,7 @@ impl<Num: fmt::Display> fmt::Display for OrdFilter<Num> {
 
 impl<Num> crate::filter::FilterExt<Num> for OrdFilter<Num>
 where
-    Num: PartialOrd
-        + PartialEq
-        + fmt::Display
-        + Default
-        + alloc_data::parser::Parseable
-        + Clone
-        + 'static,
-    Self: Into<filter::SubFilter>,
+    Num: PartialOrd + PartialEq + fmt::Display + Clone + 'static,
 {
     fn apply(&self, data: &Num) -> bool {
         match self {
@@ -153,6 +146,9 @@ where
 
 /// An update for a size filter.
 pub type SizeUpdate = Update<u32>;
+
+/// An update for a lifetime filter.
+pub type LifetimeUpdate = Update<time::Lifetime>;
 
 /// An update for an ordered filter.
 pub enum Update<Val> {

@@ -12,6 +12,7 @@ pub use regex::Regex;
 pub use serde_derive::{Deserialize, Serialize};
 
 pub use base::{
+    debug_do,
     error_chain::{self, bail},
     lazy_static,
 };

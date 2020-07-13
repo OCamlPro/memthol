@@ -21,6 +21,18 @@ pub use uid::{FilterUid, LineUid, SubFilterUid};
 /// A filter over allocation sizes.
 pub type SizeFilter = OrdFilter<u32>;
 
+/// A filter over allocation lifetimes.
+pub type LifetimeFilter = OrdFilter<time::Lifetime>;
+impl LifetimeFilter {
+    /// Applies the filter to an allocation w.r.t. a diff timestamp.
+    ///
+    /// It should always be the case that `alloc_toc <= timestamp`.
+    pub fn apply_at(&self, timestamp: &time::SinceStart, alloc_toc: &time::SinceStart) -> bool {
+        debug_assert!(alloc_toc <= timestamp);
+        self.apply(&timestamp.sub_to_lt(alloc_toc))
+    }
+}
+
 /// Function(s) a filter must implement.
 pub trait FilterExt<Data>: Sized
 where
@@ -69,6 +81,8 @@ impl fmt::Display for CmpKind {
 pub enum FilterKind {
     /// Size filter.
     Size,
+    /// Lifetime filter.
+    Lifetime,
     /// Label filter.
     Label,
     /// Location filter.
@@ -78,6 +92,7 @@ impl fmt::Display for FilterKind {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Size => write!(fmt, "size"),
+            Self::Lifetime => write!(fmt, "lifetime"),
             Self::Label => write!(fmt, "labels"),
             Self::Loc => write!(fmt, "locations"),
         }
@@ -86,7 +101,24 @@ impl fmt::Display for FilterKind {
 
 impl FilterKind {
     pub fn all() -> Vec<FilterKind> {
-        vec![FilterKind::Size, FilterKind::Label, FilterKind::Loc]
+        debug_do! {
+            // If this fails, it means you added/removed a variant to/from `FilterKind`. The vector
+            // below, which yields all variants, must be updated.
+            match Self::Size {
+                Self::Size => (),
+                Self::Lifetime => (),
+                Self::Label => (),
+                Self::Loc => (),
+            }
+        }
+
+        // Lists all `FilterKind` variants.
+        vec![
+            FilterKind::Size,
+            FilterKind::Lifetime,
+            FilterKind::Label,
+            FilterKind::Loc,
+        ]
     }
 }
 
@@ -184,9 +216,13 @@ impl Filters {
     }
 
     /// Searches for a filter that matches on the input allocation.
-    pub fn find_match(&mut self, alloc: &Alloc) -> Option<uid::FilterUid> {
+    pub fn find_match(
+        &mut self,
+        timestamp: &time::SinceStart,
+        alloc: &Alloc,
+    ) -> Option<uid::FilterUid> {
         for filter in &self.filters {
-            if filter.apply(alloc) {
+            if filter.apply(timestamp, alloc) {
                 Self::remember(&mut self.memory, alloc.uid().clone(), filter.uid());
                 return Some(filter.uid());
             }
@@ -331,9 +367,9 @@ impl Filter {
     }
 
     /// Applies the filters to an allocation.
-    pub fn apply(&self, alloc: &Alloc) -> bool {
+    pub fn apply(&self, timestamp: &time::SinceStart, alloc: &Alloc) -> bool {
         for filter in self.subs.values() {
-            if !filter.apply(alloc) {
+            if !filter.apply(timestamp, alloc) {
                 return false;
             }
         }

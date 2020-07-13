@@ -4,7 +4,7 @@ final_bin="./memthol_ui"
 
 set -e
 
-./rsc/scripts/compie_wasm.sh
+./rsc/scripts/compile_wasm.sh
 
 echo
 echo
