@@ -308,7 +308,7 @@ impl Filters {
 /// # Invariants
 ///
 /// - `self.uid().is_some()`
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Filter {
     /// Actual list of filters.
     subs: Map<SubFilterUid, SubFilter>,

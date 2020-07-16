@@ -23,7 +23,7 @@ macro_rules! rng {
 }
 
 /// RGBA color.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
 pub struct Color {
     /// Red component.
     pub r: u8,

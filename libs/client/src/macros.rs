@@ -694,6 +694,9 @@ macro_rules! css {
     (@($str:expr) extends($style:ident)) => (
         $style!($str)
     );
+    (@($str:expr) extends_style($style:expr)) => (
+        write!($str, "{}", $style);
+    );
 
     (@($str:expr)) => ();
 }

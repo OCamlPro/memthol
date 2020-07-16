@@ -8,11 +8,13 @@ pub const width_wrt_full: usize = 100;
 pub const collapsed_height_px: usize = 50;
 pub const expanded_height_px: usize = 500;
 
-pub const expanded_tabs_height_px: usize = collapsed_height_px;
+pub const tabs_height_px: usize = collapsed_height_px;
+
+pub const expanded_tabs_height_px: usize = tabs_height_px;
 pub const expanded_menu_height_px: usize = expanded_height_px - expanded_tabs_height_px;
 
-pub const collapsed_tabs_height_px: usize = collapsed_height_px;
-pub const collapsed_menu_height_px: usize = collapsed_height_px - collapsed_tabs_height_px;
+pub const collapsed_tabs_height_px: usize = tabs_height_px;
+pub const collapsed_menu_height_px: usize = tabs_height_px - collapsed_tabs_height_px;
 
 pub const center_tile_width: usize = 70;
 pub const left_tile_width: usize = (width_wrt_full - center_tile_width) / 2;
@@ -224,16 +226,9 @@ pub mod menu {
         use super::*;
 
         pub fn render(model: &Model, uid: filter::LineUid) -> Html {
-            let edited = model.footer_filters().edited();
             html! {
                 <>
                     <br/><br/>
-                    {remove_button(model, uid.filter_uid())}
-                    <br/>
-                    {save_button(model, edited)}
-                    <br/>
-                    {undo_button(model, edited)}
-                    <br/><br/><br/><br/>
                     {add_subfilter_button(model, uid)}
                     <br/>
                 </>
@@ -264,31 +259,6 @@ pub mod menu {
             }
         }
 
-        pub fn remove_button(model: &Model, current_filter: Option<filter::FilterUid>) -> Html {
-            let action =
-                current_filter.map(|uid| model.link.callback(move |_| msg::FiltersMsg::rm(uid)));
-            button("remove_filter_button", "remove filter", action)
-        }
-        pub fn save_button(model: &Model, edited: bool) -> Html {
-            let action = if edited {
-                Some(model.link.callback(move |_| msg::FiltersMsg::save()))
-            } else {
-                None
-            };
-            button("save_button", "save all", action)
-        }
-        pub fn undo_button(model: &Model, edited: bool) -> Html {
-            let action = if edited {
-                Some(
-                    model
-                        .link
-                        .callback(move |_| msg::to_server::FiltersMsg::revert()),
-                )
-            } else {
-                None
-            };
-            button("undo_button", "undo all", action)
-        }
         pub fn add_subfilter_button(model: &Model, uid: filter::LineUid) -> Html {
             let action = match uid {
                 filter::LineUid::Filter(uid) => {
@@ -778,12 +748,14 @@ pub mod tabs {
     pub const width: usize = 100;
     pub const height: usize = 100;
 
+    const img_dim_px: usize = 4 * (tabs_height_px / 5);
+
     pub fn render(model: &Model, active: Option<filter::LineUid>) -> Html {
         html! {
             <>
-                { tabs_left::render() }
+                { tabs_left::render(model) }
                 { tabs_center::render(model, active) }
-                { tabs_right::render(model) }
+                { tabs_right::render(model, active.and_then(|uid| uid.filter_uid())) }
             </>
         }
     }
@@ -795,12 +767,51 @@ pub mod tabs {
             LEFT_STYLE = {
                 extends(tile_style),
                 width({left_tile_width}%),
+                table,
                 // bg(red),
             };
         }
-        pub fn render() -> Html {
+        pub fn render(model: &Model) -> Html {
+            let mut tabs = layout::tabs::Tabs::new();
+
+            let edited = model.footer_filters().edited();
+
+            tabs.push_img_tab(
+                img_dim_px,
+                TabProps::new_footer_gray(),
+                if edited {
+                    Some(
+                        model
+                            .link
+                            .callback(move |_| msg::to_server::FiltersMsg::revert()),
+                    )
+                } else {
+                    None
+                },
+                layout::button::img::Img::Undo,
+                "undo all modifications",
+            );
+            tabs.push_img_tab(
+                img_dim_px,
+                TabProps::new_footer_gray(),
+                if edited {
+                    Some(model.link.callback(move |_| msg::FiltersMsg::save()))
+                } else {
+                    None
+                },
+                layout::button::img::Img::Check,
+                "save all modifications",
+            );
+
+            tabs.push_sep_right();
+
             html! {
-                <div id = "left_tabs_tile" style = LEFT_STYLE />
+                <div
+                    id = "left_tabs_tile"
+                    style = LEFT_STYLE
+                >
+                    {tabs.render_right()}
+                </div>
             }
         }
     }
@@ -817,17 +828,30 @@ pub mod tabs {
             };
         }
 
-        pub fn render(model: &Model) -> Html {
+        pub fn render(model: &Model, current_filter: Option<filter::FilterUid>) -> Html {
             let mut tabs = layout::tabs::Tabs::new();
+
             tabs.push_sep();
-            tabs.push_tab(
-                model,
-                "add filter",
-                TabProps::new_footer("white"),
-                model
-                    .link
-                    .callback(move |_| msg::to_server::FiltersMsg::request_new()),
+
+            tabs.push_img_tab(
+                img_dim_px,
+                TabProps::new_footer_gray(),
+                Some(
+                    model
+                        .link
+                        .callback(move |_| msg::to_server::FiltersMsg::request_new()),
+                ),
+                layout::button::img::Img::Plus,
+                "add a new filter",
             );
+            tabs.push_img_tab(
+                img_dim_px,
+                TabProps::new_footer_gray(),
+                current_filter.map(|uid| model.link.callback(move |_| msg::FiltersMsg::rm(uid))),
+                layout::button::img::Img::Minus,
+                "remove current filter",
+            );
+
             html! {
                 <div
                     id = "right_tabs_tile"
