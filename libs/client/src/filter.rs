@@ -82,6 +82,41 @@ impl Filters {
             || self.everything != reference.everything
             || self.filters != reference.filters
     }
+
+    /// True if the filter has been edited in some way.
+    ///
+    /// Returns true if the filter is unknown.
+    pub fn is_filter_edited(&self, uid: LineUid) -> bool {
+        let reference = self.reference_filters();
+        match uid {
+            LineUid::Everything => self.everything != reference.everything,
+            LineUid::CatchAll => self.catch_all != reference.catch_all,
+            LineUid::Filter(uid) => {
+                let mut pair_opt: Option<(usize, &Filter)> = None;
+                for (index, filter) in self.reference.filters.iter().enumerate() {
+                    if filter.uid() == uid {
+                        pair_opt = Some((index, filter))
+                    }
+                }
+
+                let (ref_index, ref_filter) = if let Some((index, filter)) = pair_opt {
+                    (index, filter)
+                } else {
+                    // Reference does not know this filter, necessarily new, => edited.
+                    return true;
+                };
+
+                for (index, filter) in self.filters.iter().enumerate() {
+                    if filter.uid() == uid {
+                        return ref_index != index || ref_filter != filter;
+                    }
+                }
+
+                // Filter is known by the reference, but not the current filters.
+                return true;
+            }
+        }
+    }
 }
 
 impl<T> FiltersExt<T> {

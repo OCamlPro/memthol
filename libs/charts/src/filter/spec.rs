@@ -22,10 +22,6 @@ pub struct FilterSpec {
     name: String,
     /// Color of the filter.
     color: Color,
-    /// True if the filter has been edited.
-    ///
-    /// This is only used by the client to keep track of which filters have been edited in the UI.
-    edited: bool,
 }
 impl FilterSpec {
     /// Constructor for user-defined filters.
@@ -36,7 +32,6 @@ impl FilterSpec {
             uid: LineUid::Filter(uid),
             name,
             color,
-            edited: false,
         }
     }
 
@@ -46,7 +41,6 @@ impl FilterSpec {
             uid: LineUid::CatchAll,
             name: "catch all".into(),
             color: Color::new(0x01, 0x93, 0xff),
-            edited: false,
         }
     }
 
@@ -56,7 +50,6 @@ impl FilterSpec {
             uid: LineUid::Everything,
             name: "everything".into(),
             color: Color::new(0xff, 0x66, 0x00),
-            edited: false,
         }
     }
 
@@ -76,19 +69,6 @@ impl FilterSpec {
     /// UID accessor.
     pub fn uid(&self) -> LineUid {
         self.uid
-    }
-
-    /// Value of the `edited` flag.
-    pub fn edited(&self) -> bool {
-        self.edited
-    }
-    /// Sets the `edited` flag to true.
-    pub fn set_edited(&mut self) {
-        self.edited = true
-    }
-    /// Sets the `edited` flag to false.
-    pub fn unset_edited(&mut self) {
-        self.edited = false
     }
 
     /// Name accessor.

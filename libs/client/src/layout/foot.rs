@@ -892,17 +892,19 @@ pub mod tabs {
                     .callback(move |_| msg::FooterMsg::toggle_tab(footer::FooterTab::filter(uid)))
             };
 
-            let push_spec =
-                |tabs: &mut layout::tabs::Tabs, filter: &filter::FilterSpec, edited: bool| {
-                    tabs.push_tab(
-                        model,
-                        filter.name(),
-                        TabProps::new_footer(filter.color().to_string())
-                            .set_active(is_active(filter))
-                            .set_edited(edited || filter.edited()),
-                        callback(filter.uid()),
-                    )
-                };
+            let is_edited =
+                |filter: &filter::FilterSpec| model.filters.is_filter_edited(filter.uid());
+
+            let push_spec = |tabs: &mut layout::tabs::Tabs, filter: &filter::FilterSpec| {
+                tabs.push_tab(
+                    model,
+                    filter.name(),
+                    TabProps::new_footer(filter.color().to_string())
+                        .set_active(is_active(filter))
+                        .set_edited(is_edited(filter)),
+                    callback(filter.uid()),
+                )
+            };
 
             let push_filter =
                 |tabs: &mut layout::tabs::Tabs, index: usize, filter: &filter::Filter| {
@@ -918,7 +920,7 @@ pub mod tabs {
                                     filter.uid(),
                                 )
                             })
-                            .set_edited(filter.edited() || filter.spec().edited()),
+                            .set_edited(is_edited(filter.spec())),
                         callback(filter.spec().uid()),
                     )
                 };
@@ -926,7 +928,7 @@ pub mod tabs {
             let mut tabs = layout::tabs::Tabs::new();
 
             tabs.push_sep();
-            push_spec(&mut tabs, everything, false);
+            push_spec(&mut tabs, everything);
 
             if let Some((catch_all, filters)) = others {
                 tabs.push_sep();
@@ -936,7 +938,7 @@ pub mod tabs {
                 }
 
                 tabs.push_sep();
-                push_spec(&mut tabs, catch_all, false);
+                push_spec(&mut tabs, catch_all);
             }
 
             html! {
