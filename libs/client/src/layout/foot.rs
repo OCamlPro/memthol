@@ -228,6 +228,8 @@ pub mod menu {
             html! {
                 <>
                     <br/><br/>
+                    {remove_button(model, uid.filter_uid())}
+                    <br/>
                     {save_button(model, edited)}
                     <br/>
                     {undo_button(model, edited)}
@@ -262,6 +264,11 @@ pub mod menu {
             }
         }
 
+        pub fn remove_button(model: &Model, current_filter: Option<filter::FilterUid>) -> Html {
+            let action =
+                current_filter.map(|uid| model.link.callback(move |_| msg::FiltersMsg::rm(uid)));
+            button("remove_filter_button", "remove filter", action)
+        }
         pub fn save_button(model: &Model, edited: bool) -> Html {
             let action = if edited {
                 Some(model.link.callback(move |_| msg::FiltersMsg::save()))
