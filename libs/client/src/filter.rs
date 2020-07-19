@@ -166,10 +166,21 @@ impl<T> FiltersExt<T> {
     }
 
     /// Removes a filter.
-    pub fn remove(&mut self, uid: FilterUid) -> Res<()> {
+    ///
+    /// Returns the uid of
+    /// - the filter after `uid`, if any
+    /// - otherwise the filter before `uid`, if any.
+    pub fn remove(&mut self, uid: FilterUid) -> Res<Option<FilterUid>> {
         let (index, _) = self.get_filter(uid)?;
         self.filters.remove(index);
-        Ok(())
+        if index < self.filters.len() {
+            Ok(Some(self.filters[index].uid()))
+        } else if 0 < index {
+            debug_assert!(index - 1 < self.filters.len());
+            Ok(Some(self.filters[index - 1].uid()))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Returns the number filters, **not** including the catch-all.
@@ -263,11 +274,7 @@ impl Filters {
                 Ok(true)
             }
 
-            Rm(uid) => {
-                self.remove(uid)?;
-                self.to_model.emit(msg::FooterMsg::removed(uid));
-                Ok(true)
-            }
+            Rm(uid) => self.rm_filter(uid),
 
             FilterSpec {
                 uid,
@@ -380,7 +387,8 @@ impl Filters {
                 for filter in &self.filters {
                     let uid = filter.uid();
                     if filters.iter().all(|filter| filter.uid() != uid) {
-                        self.to_model.emit(msg::FooterMsg::removed(uid));
+                        self.to_model
+                            .emit(msg::FooterMsg::toggle_tab(LineUid::Everything));
                     }
                 }
                 self.filters.clear();
@@ -410,12 +418,11 @@ impl<T> FiltersExt<T> {
     }
 
     /// Removes a filter from the map.
-    ///
-    /// - changes the active filter to catch-all.
     pub fn rm_filter(&mut self, uid: FilterUid) -> Res<ShouldRender> {
-        self.remove(uid)?;
-        self.to_model.emit(msg::FooterMsg::removed(uid));
-        self.send_refresh_filters();
+        let now_active = self.remove(uid)?;
+        self.to_model.emit(msg::FooterMsg::toggle_tab(
+            now_active.map(LineUid::from).unwrap_or(LineUid::Everything),
+        ));
         Ok(true)
     }
 
