@@ -111,6 +111,13 @@ impl Data {
         Ok(())
     }
 
+    /// Iterator over all the allocations.
+    ///
+    /// - allocations will appear in time-of-creation chronological order.
+    pub fn iter_all(&self) -> impl Iterator<Item = &Alloc> {
+        self.uid_map.values()
+    }
+
     /// Runs some functions on new allocations and allocation deaths since some time in history.
     ///
     /// - new allocations that have a time-of-death **will also appear** in `iter_new_since`;

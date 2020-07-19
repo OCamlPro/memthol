@@ -11,6 +11,9 @@ mod spec;
 pub mod string_like;
 pub mod sub;
 
+pub mod gen;
+
+pub use gen::FilterGen;
 pub use label::LabelFilter;
 pub use loc::LocFilter;
 use ord::OrdFilter;
@@ -164,14 +167,34 @@ impl Filters {
         }
     }
 
+    pub fn catch_all(&self) -> &FilterSpec {
+        &self.catch_all
+    }
+    pub fn everything(&self) -> &FilterSpec {
+        &self.everything
+    }
+    pub fn filters(&self) -> &Vec<Filter> {
+        &self.filters
+    }
+
+    /// Runs filter generation.
+    ///
+    /// Returns the number of filter generated.
+    pub fn auto_gen(
+        &mut self,
+        data: &data::Data,
+        generator: impl Into<filter::gen::FilterGen>,
+    ) -> Res<usize> {
+        let generator = generator.into();
+        let filters = generator.run(data)?;
+        let count = filters.len();
+        self.filters.extend(filters);
+        Ok(count)
+    }
+
     /// Length of the list of filters.
     pub fn len(&self) -> usize {
         self.filters.len()
-    }
-
-    /// The list of active filters.
-    pub fn filters(&self) -> &Vec<Filter> {
-        &self.filters
     }
 
     /// Filter specification mutable accessor.
@@ -368,7 +391,8 @@ impl Filter {
     /// Inserts a subfilter.
     ///
     /// Fails if the subfilter is **not** new.
-    pub fn insert(&mut self, sub: SubFilter) -> Res<()> {
+    pub fn insert(&mut self, sub: impl Into<SubFilter>) -> Res<()> {
+        let sub = sub.into();
         let prev = self.subs.insert(sub.uid(), sub);
         if let Some(prev) = prev {
             bail!("subfilter UID collision on #{}", prev.uid())

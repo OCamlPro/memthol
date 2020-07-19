@@ -76,7 +76,7 @@ impl FilterSpec {
         &self.name
     }
     /// Name setter.
-    pub fn set_name<S: Into<String>>(&mut self, name: S) {
+    pub fn set_name(&mut self, name: impl Into<String>) {
         self.name = name.into()
     }
 

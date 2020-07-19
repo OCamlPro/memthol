@@ -63,11 +63,17 @@ impl Handler {
         let ping_label = vec![6u8, 6u8, 6u8];
         let ping_msg = websocket::message::OwnedMessage::Ping(ping_label.clone());
 
+        let mut charts = Charts::new();
+
+        charts
+            .auto_gen(charts::filter::FilterGen::default())
+            .chain_err(|| "during default filter generation")?;
+
         let slf = Handler {
             ip,
             recver,
             sender,
-            charts: Charts::new(),
+            charts,
             from_client: FromClient::new(),
             last_frame: Instant::now(),
             frame_span: Duration::from_millis(500),
@@ -163,6 +169,27 @@ impl Handler {
         Ok(())
     }
 
+    fn send_all_charts(&mut self) -> Res<()> {
+        for chart in self.charts.charts() {
+            let msg = msg::to_client::ChartsMsg::new_chart(chart.spec().clone());
+            Self::internal_send(&self.ip, &mut self.sender, msg)?
+        }
+        Ok(())
+    }
+    fn send_filters(&mut self) -> Res<()> {
+        let msg = msg::to_client::FiltersMsg::revert(
+            self.charts.filters().everything().clone(),
+            self.charts.filters().filters().clone(),
+            self.charts.filters().catch_all().clone(),
+        );
+        self.send(msg)
+    }
+    fn send_all_points(&mut self) -> Res<()> {
+        let (points, overwrite) = self.charts.new_points(true)?;
+        let msg = msg::to_client::ChartsMsg::points(points, overwrite);
+        self.send(msg)
+    }
+
     /// Initializes a client.
     pub fn init(&mut self) -> Res<()> {
         use charts::chart::{
@@ -170,17 +197,14 @@ impl Handler {
             Chart,
         };
         let chart = Chart::new(self.charts.filters(), XAxis::Time, YAxis::TotalSize)?;
-        let create_graph = msg::to_client::ChartsMsg::new_chart(chart.spec().clone());
         self.charts.push(chart);
-        self.send(create_graph)
-            .chain_err(|| "while sending initial chart to client")?;
-        let (points, overwrite) = self
-            .charts
-            .new_points(true)
-            .chain_err(|| "while constructing points for client init")?;
-        let msg = msg::to_client::ChartsMsg::points(points, overwrite);
-        self.send(msg)
+        self.send_filters()
+            .chain_err(|| "while sending filters for client init")?;
+        self.send_all_charts()
+            .chain_err(|| "while sending charts for client init")?;
+        self.send_all_points()
             .chain_err(|| "while sending points for client init")?;
+
         Ok(())
     }
 
@@ -191,11 +215,12 @@ impl Handler {
             .chain_err(|| format!("while sending ping message to client {}", self.ip))
     }
 
-    /// Sends a message to the client.
-    pub fn send<Msg>(&mut self, msg: Msg) -> Res<()>
-    where
-        Msg: Into<msg::to_client::Msg>,
-    {
+    /// Version of `send` that does not take an `&mut self`.
+    fn internal_send(
+        ip: &IpAddr,
+        sender: &mut Sender,
+        msg: impl Into<msg::to_client::Msg>,
+    ) -> Res<()> {
         use websocket::message::OwnedMessage;
 
         let content = msg
@@ -204,10 +229,15 @@ impl Handler {
             .chain_err(|| "while encoding message as json")?
             .into_bytes();
         let msg = OwnedMessage::Binary(content);
-        self.sender
+        sender
             .send_message(&msg)
-            .chain_err(|| format!("while sending message to client {}", self.ip))?;
+            .chain_err(|| format!("while sending message to client {}", ip))?;
         Ok(())
+    }
+
+    /// Sends a message to the client.
+    pub fn send(&mut self, msg: impl Into<msg::to_client::Msg>) -> Res<()> {
+        Self::internal_send(&self.ip, &mut self.sender, msg)
     }
 
     /// Retrieves actions to perform from the client before rendering.

@@ -291,10 +291,17 @@ impl Alloc {
     pub fn size(&self) -> u32 {
         self.size
     }
+
     /// Trace accessor.
     pub fn trace(&self) -> std::sync::Arc<Vec<CLoc>> {
         locs::get(self.trace)
     }
+    /// Allocation-site of the allocation.
+    pub fn alloc_site_do<Res>(&self, action: impl FnOnce(Option<&CLoc>) -> Res) -> Res {
+        let trace = self.trace();
+        action(trace.last())
+    }
+
     /// Labels accessor.
     pub fn labels(&self) -> std::sync::Arc<Vec<String>> {
         labels::get(self.labels)

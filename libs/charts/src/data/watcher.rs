@@ -386,6 +386,7 @@ impl Watcher {
                         file_path.to_string_lossy()
                     )
                 })?;
+
             self.new_diffs.push(diff)
         }
         Ok(highest_last_modified)

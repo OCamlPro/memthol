@@ -372,6 +372,9 @@ impl Filters {
                 filters,
                 catch_all,
             } => {
+                self.reference.catch_all = catch_all.clone();
+                self.reference.everything = everything.clone();
+                self.reference.filters = filters.clone();
                 self.catch_all = catch_all;
                 self.everything = everything;
                 for filter in &self.filters {

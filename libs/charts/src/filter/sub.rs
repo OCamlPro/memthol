@@ -19,9 +19,9 @@ pub enum RawSubFilter {
     /// Filter over locations.
     Loc(LocFilter),
 }
-impl RawSubFilter {
-    /// Default filter for some filter kind.
-    pub fn of_kind(kind: FilterKind) -> Self {
+
+impl From<FilterKind> for RawSubFilter {
+    fn from(kind: FilterKind) -> Self {
         match kind {
             FilterKind::Size => SizeFilter::default().into(),
             FilterKind::Lifetime => LifetimeFilter::default().into(),
@@ -29,7 +29,9 @@ impl RawSubFilter {
             FilterKind::Loc => LocFilter::default().into(),
         }
     }
+}
 
+impl RawSubFilter {
     /// Filter kind of a filter.
     pub fn kind(&self) -> FilterKind {
         match self {
@@ -64,7 +66,7 @@ impl RawSubFilter {
             return false;
         }
 
-        *self = Self::of_kind(kind);
+        *self = Self::from(kind);
         true
     }
 
@@ -176,11 +178,27 @@ impl From<SizeFilter> for SubFilter {
         Self::of(SubFilterUid::fresh(), RawSubFilter::from(filter))
     }
 }
+impl From<LifetimeFilter> for SubFilter {
+    fn from(filter: LifetimeFilter) -> Self {
+        Self::of(SubFilterUid::fresh(), RawSubFilter::from(filter))
+    }
+}
 impl From<LabelFilter> for SubFilter {
     fn from(filter: LabelFilter) -> Self {
         Self::of(SubFilterUid::fresh(), RawSubFilter::from(filter))
     }
 }
+impl From<LocFilter> for SubFilter {
+    fn from(filter: LocFilter) -> Self {
+        Self::of(SubFilterUid::fresh(), RawSubFilter::from(filter))
+    }
+}
+impl From<RawSubFilter> for SubFilter {
+    fn from(filter: RawSubFilter) -> Self {
+        Self::of(SubFilterUid::fresh(), filter)
+    }
+}
+
 impl Default for SubFilter {
     fn default() -> Self {
         Self::of(SubFilterUid::fresh(), RawSubFilter::default())
@@ -203,12 +221,13 @@ impl std::cmp::Ord for SubFilter {
     }
 }
 
-impl SubFilter {
-    /// Default filter for some filter kind.
-    pub fn of_kind(kind: FilterKind) -> Self {
-        Self::of(SubFilterUid::fresh(), RawSubFilter::of_kind(kind))
+impl From<FilterKind> for SubFilter {
+    fn from(kind: FilterKind) -> Self {
+        Self::of(SubFilterUid::fresh(), RawSubFilter::from(kind))
     }
+}
 
+impl SubFilter {
     /// Constructor.
     pub fn new(uid: SubFilterUid, raw: RawSubFilter) -> Self {
         Self::of(uid, raw)

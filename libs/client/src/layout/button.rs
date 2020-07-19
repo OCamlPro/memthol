@@ -29,6 +29,7 @@ pub struct BoxProps<'color> {
     bl_rounded: bool,
     br_rounded: bool,
     top: bool,
+    no_wrap: bool,
 }
 
 impl<'color> BoxProps<'color> {
@@ -42,6 +43,7 @@ impl<'color> BoxProps<'color> {
             bl_rounded: false,
             br_rounded: false,
             top: false,
+            no_wrap: false,
             gradient_top: "#c1c1c1",
             gradient_bot: "black",
         }
@@ -57,6 +59,7 @@ impl<'color> BoxProps<'color> {
             bl_rounded: true,
             br_rounded: true,
             top: false,
+            no_wrap: false,
             gradient_top: "#c1c1c1",
             gradient_bot: "black",
         }
@@ -72,6 +75,7 @@ impl<'color> BoxProps<'color> {
             bl_rounded: false,
             br_rounded: false,
             top: false,
+            no_wrap: true,
             gradient_top: "#c1c1c1",
             gradient_bot: "black",
         }
@@ -118,6 +122,12 @@ impl<'color> BoxProps<'color> {
         self
     }
 
+    /// Forbids wrapping the button's text (if any).
+    pub const fn with_wrap_text(mut self, wrap: bool) -> Self {
+        self.no_wrap = !wrap;
+        self
+    }
+
     /// Indicates whether the button should be "on top", *i.e.* is a footer button.
     pub const fn for_footer(mut self, top: bool) -> Self {
         self.top = top;
@@ -149,7 +159,7 @@ impl fmt::Display for BoxProps<'_> {
         #[allow(unused_results)]
         css!(fmt: fmt,
             height(100%),
-            width(100%),
+            width(auto),
             table,
             bg(gradient {self.gradient_top} to {self.gradient_bot}),
             border({self.stroke_px} px, {self.border_color}),
@@ -158,6 +168,10 @@ impl fmt::Display for BoxProps<'_> {
                 {radius_px(self.tr_rounded)} px,
                 {radius_px(self.br_rounded)} px,
                 {radius_px(self.bl_rounded)} px,
+            ),
+            if(
+                self.no_wrap,
+                white_space(nowrap),
             ),
         );
 
@@ -171,7 +185,7 @@ pub mod text {
 
     define_style! {
         link_box! = {
-            width(100%),
+            width(auto),
             height(100%),
             table,
         };

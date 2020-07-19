@@ -870,7 +870,8 @@ pub mod tabs {
             CENTER_STYLE = {
                 extends(tile_style),
                 width({center_tile_width}%),
-                table,
+                block,
+                overflow(scroll),
                 // bg(blue),
             };
             TABS_ROW = {
@@ -1247,7 +1248,7 @@ pub mod input {
         html! {
             <input
                 type = "text"
-                id = "text_input"
+                class = "text_input"
                 style = TEXT_INPUT_STYLE
                 value = value
                 onchange = onchange

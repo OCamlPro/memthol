@@ -71,20 +71,32 @@ macro_rules! css {
         )
     ) => {{
         if $e {
-            $crate::css!($str, $($thn_id)+ $(($($thn_args)*))?)
+            $crate::css!(@($str) $($thn_id)+ $(($($thn_args)*))?)
         }
     }};
     (@($str:expr)
         if(
             $e:expr,
             {
-                $($thn_args:tt)*
+                $(
+                    $($thn_id:ident)+ $(
+                        ($($thn_args:tt)*)
+                    )?
+                ),*
+                $(,)?
             }
             $(,)?
         )
     ) => {{
         if $e {
-            $crate::css!($str, $($thn_args)*)
+            $(
+                $crate::css!(
+                    @($str)
+                    $($thn_id)+ $(
+                        ($($thn_args)*)
+                    )?
+                );
+            )*
         }
     }};
     (@($str:expr)
@@ -101,9 +113,9 @@ macro_rules! css {
         )
     ) => {{
         if $e {
-            $crate::css!($str, $($thn_id)+ $(($($thn_args)*))?)
+            $crate::css!(@($str) $($thn_id)+ $(($($thn_args)*))?)
         } else {
-            $crate::css!($str, $($els_id)+ $(($($els_args)*))?)
+            $crate::css!(@($str) $($els_id)+ $(($($els_args)*))?)
         }
     }};
 
@@ -139,6 +151,18 @@ macro_rules! css {
     (@($str:expr) list item) => ($crate::css!(@($str) display(list item)));
     (@($str:expr) none) => ($crate::css!(@($str) display(none)));
     (@($str:expr) flex) => ($crate::css!(@($str) display(flex)));
+
+    // #white_space
+    (@($str:expr) white_space($($args:tt)*)) => {{
+        write!($str, "white-space: {};", $crate::css!(@ws($($args)*)));
+    }};
+    (@ws(nowrap)) => ("nowrap");
+    (@ws(normal)) => ("normal");
+    (@ws(pre)) => ("pre");
+    (@ws(pre line)) => ("pre-line");
+    (@ws(pre wrap)) => ("pre-wrap");
+    (@ws(initial)) => ("initial");
+    (@ws(inherit)) => ("inherit");
 
     // #visi
     (@($str:expr) visi($($args:tt)*)) => {{

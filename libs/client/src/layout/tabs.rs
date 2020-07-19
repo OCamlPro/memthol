@@ -11,7 +11,7 @@ pub const min_width: usize = 5;
 define_style! {
     OUTTER_CELL_STYLE = {
         height(100%),
-        width(min {min_width}%),
+        width(auto),
         table cell,
         pointer,
     };
@@ -324,7 +324,9 @@ impl Tabs {
             <div
                 id = "tab_sep"
                 style = SEP
-            />
+            >
+                {"\u{00a0}"}
+            </div>
         })
     }
     pub fn push_sep_right(&mut self) {
@@ -341,21 +343,18 @@ impl Tabs {
             <div
                 id = "tab_sep"
                 style = SEP
-            />
+            >
+                {"\u{00a0}"}
+            </div>
         })
     }
 
     pub fn render(self) -> Html {
         define_style! {
             TABS_ROW = {
-                height(100%),
-                table,
-            };
-
-            END_SEP = {
                 width(auto),
                 height(100%),
-                table cell,
+                table,
             };
         }
 
@@ -364,7 +363,6 @@ impl Tabs {
                 style = TABS_ROW
             >
                 {for self.tabs.into_iter()}
-                <div id = "tab_end_sep" style = END_SEP/>
             </div>
         }
     }
@@ -372,15 +370,10 @@ impl Tabs {
     pub fn render_right(self) -> Html {
         define_style! {
             TABS_ROW = {
+                width(auto),
                 height(100%),
                 table,
                 float(right),
-            };
-
-            END_SEP = {
-                width(auto),
-                height(100%),
-                table cell,
             };
         }
 
@@ -389,7 +382,6 @@ impl Tabs {
                 style = TABS_ROW
             >
                 {for self.tabs.into_iter()}
-                <div id = "tab_end_sep" style = END_SEP/>
             </div>
         }
     }
