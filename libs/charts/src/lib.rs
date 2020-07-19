@@ -64,6 +64,26 @@ impl Charts {
         }
     }
 
+    /// All the charts.
+    pub fn charts(&self) -> &Vec<Chart> {
+        &self.charts
+    }
+    /// All the filters.
+    pub fn filters(&self) -> &Filters {
+        &self.filters
+    }
+    /// Start time.
+    pub fn start_time(&self) -> Option<&Date> {
+        self.start_time.as_ref()
+    }
+
+    /// Runs filter generation.
+    ///
+    /// Returns the number of filter generated.
+    pub fn auto_gen(&mut self, generator: impl Into<filter::gen::FilterGen>) -> Res<usize> {
+        self.filters.auto_gen(data::get()?.deref(), generator)
+    }
+
     /// Pushes a new chart.
     pub fn push(&mut self, chart: Chart) {
         self.charts.push(chart)
@@ -77,11 +97,6 @@ impl Charts {
             }
         }
         bail!("cannot access chart with unknown UID #{}", uid)
-    }
-
-    /// Filters of the charts.
-    pub fn filters(&self) -> &Filters {
-        &self.filters
     }
 }
 

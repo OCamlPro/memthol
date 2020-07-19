@@ -190,25 +190,25 @@ impl fmt::Display for ChartsMsg {
 pub enum FooterMsg {
     /// Toggles a tab.
     ToggleTab(footer::FooterTab),
-    /// Lets the footer know a filter was removed.
-    Removed(FilterUid),
+    // /// Lets the footer know a filter was removed.
+    // Removed(FilterUid),
 }
 impl FooterMsg {
     /// Toggles a tab.
-    pub fn toggle_tab(tab: footer::FooterTab) -> Msg {
-        Self::ToggleTab(tab).into()
+    pub fn toggle_tab(tab: impl Into<footer::FooterTab>) -> Msg {
+        Self::ToggleTab(tab.into()).into()
     }
-    /// Lets the footer know a filter was removed.
-    pub fn removed(uid: FilterUid) -> Msg {
-        Self::Removed(uid).into()
-    }
+    // /// Lets the footer know a filter was removed.
+    // pub fn removed(uid: FilterUid) -> Msg {
+    //     Self::Removed(uid).into()
+    // }
 }
 
 impl fmt::Display for FooterMsg {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::ToggleTab(_) => write!(fmt, "toggle tab"),
-            Self::Removed(f_uid) => write!(fmt, "remove {}", f_uid),
+            // Self::Removed(f_uid) => write!(fmt, "remove {}", f_uid),
         }
     }
 }

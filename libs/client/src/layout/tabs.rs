@@ -11,7 +11,7 @@ pub const min_width: usize = 5;
 define_style! {
     OUTTER_CELL_STYLE = {
         height(100%),
-        width(min {min_width}%),
+        width(auto),
         table cell,
         pointer,
     };
@@ -31,6 +31,9 @@ pub struct TabProps {
     top: bool,
 }
 impl TabProps {
+    pub fn new_footer_gray() -> Self {
+        Self::new_footer("#c1c1c1")
+    }
     pub fn new(color: impl Into<String>) -> Self {
         Self {
             color: color.into(),
@@ -57,7 +60,7 @@ impl TabProps {
             .with_gradient_top(&self.color)
             .with_gradient_bot("black")
             .with_stroke_px(1)
-            .with_radius_px(5)
+            .with_radius_px(10)
             .revert_if(self.rev)
             .for_footer(self.top)
     }
@@ -266,10 +269,52 @@ impl Tabs {
         }
     }
 
+    pub fn push_img_tab(
+        &mut self,
+        dimension_px: usize,
+        props: TabProps,
+        onclick: Option<OnClickAction>,
+        img: layout::button::img::Img,
+        desc: impl fmt::Display,
+    ) {
+        if let Some(onclick) = onclick {
+            self.tabs
+                .push(Self::raw_img_tab(dimension_px, props, onclick, img, desc))
+        }
+    }
+    fn raw_img_tab(
+        dimension_px: usize,
+        props: TabProps,
+        onclick: OnClickAction,
+        img: layout::button::img::Img,
+        desc: impl fmt::Display,
+    ) -> Html {
+        html! {
+            <div
+                id = "filter_tab_cell"
+                style = OUTTER_CELL_STYLE
+            >
+                <div
+                    id = "filter_tab"
+                    style = style(&props)
+                >
+                    {img.button_render(
+                        dimension_px,
+                        Some(props.to_box_props()),
+                        "filter_content",
+                        desc,
+                        onclick,
+                        props.dimmed,
+                    )}
+                </div>
+            </div>
+        }
+    }
+
     pub fn push_sep(&mut self) {
         define_style! {
             SEP = {
-                width(10%),
+                width(10 px),
                 height(100%),
                 table cell,
             };
@@ -279,22 +324,37 @@ impl Tabs {
             <div
                 id = "tab_sep"
                 style = SEP
-            />
+            >
+                {"\u{00a0}"}
+            </div>
+        })
+    }
+    pub fn push_sep_right(&mut self) {
+        define_style! {
+            SEP = {
+                width(10 px),
+                height(100%),
+                float(right),
+                table cell,
+            };
+        }
+
+        self.tabs.push(html! {
+            <div
+                id = "tab_sep"
+                style = SEP
+            >
+                {"\u{00a0}"}
+            </div>
         })
     }
 
     pub fn render(self) -> Html {
         define_style! {
             TABS_ROW = {
-                height(100%),
-                table,
-                table_layout(fixed),
-            };
-
-            END_SEP = {
                 width(auto),
                 height(100%),
-                table cell,
+                table,
             };
         }
 
@@ -303,7 +363,25 @@ impl Tabs {
                 style = TABS_ROW
             >
                 {for self.tabs.into_iter()}
-                <div id = "tab_end_sep" style = END_SEP/>
+            </div>
+        }
+    }
+
+    pub fn render_right(self) -> Html {
+        define_style! {
+            TABS_ROW = {
+                width(auto),
+                height(100%),
+                table,
+                float(right),
+            };
+        }
+
+        html! {
+            <div
+                style = TABS_ROW
+            >
+                {for self.tabs.into_iter()}
             </div>
         }
     }

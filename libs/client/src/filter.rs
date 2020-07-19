@@ -41,8 +41,6 @@ pub struct FiltersExt<Reference> {
     pub everything: FilterSpec,
     /// Actual filters.
     pub filters: Vec<Filter>,
-    /// True if a filter was (re)moved and the server was not notified.
-    edited: bool,
     /// Reference filters, if any.
     reference: Reference,
 }
@@ -55,7 +53,6 @@ impl ReferenceFilters {
             catch_all: FilterSpec::new_catch_all(),
             everything: FilterSpec::new_everything(),
             filters: Vec::new(),
-            edited: false,
             reference: (),
         }
     }
@@ -69,7 +66,6 @@ impl Filters {
             catch_all: FilterSpec::new_catch_all(),
             everything: FilterSpec::new_everything(),
             filters: Vec::new(),
-            edited: false,
             reference: ReferenceFilters::new_reference(to_model),
         }
     }
@@ -78,22 +74,52 @@ impl Filters {
     pub fn reference_filters(&self) -> &ReferenceFilters {
         &self.reference
     }
-}
 
-impl<T> FiltersExt<T> {
-    /// True if at least one filter was edited.
+    /// True if some modification took place w.r.t. the reference.
     pub fn edited(&self) -> bool {
-        if self.edited || self.everything.edited() || self.catch_all.edited() {
-            return true;
-        }
-        for filter in &self.filters {
-            if filter.edited() || filter.spec().edited() {
+        let reference = self.reference_filters();
+        self.catch_all != reference.catch_all
+            || self.everything != reference.everything
+            || self.filters != reference.filters
+    }
+
+    /// True if the filter has been edited in some way.
+    ///
+    /// Returns true if the filter is unknown.
+    pub fn is_filter_edited(&self, uid: LineUid) -> bool {
+        let reference = self.reference_filters();
+        match uid {
+            LineUid::Everything => self.everything != reference.everything,
+            LineUid::CatchAll => self.catch_all != reference.catch_all,
+            LineUid::Filter(uid) => {
+                let mut pair_opt: Option<(usize, &Filter)> = None;
+                for (index, filter) in self.reference.filters.iter().enumerate() {
+                    if filter.uid() == uid {
+                        pair_opt = Some((index, filter))
+                    }
+                }
+
+                let (ref_index, ref_filter) = if let Some((index, filter)) = pair_opt {
+                    (index, filter)
+                } else {
+                    // Reference does not know this filter, necessarily new, => edited.
+                    return true;
+                };
+
+                for (index, filter) in self.filters.iter().enumerate() {
+                    if filter.uid() == uid {
+                        return ref_index != index || ref_filter != filter;
+                    }
+                }
+
+                // Filter is known by the reference, but not the current filters.
                 return true;
             }
         }
-        false
     }
+}
 
+impl<T> FiltersExt<T> {
     /// Retrieves a filter from its UID.
     pub fn get_filter(&self, uid: FilterUid) -> Res<(usize, &Filter)> {
         for (index, filter) in self.filters.iter().enumerate() {
@@ -140,10 +166,21 @@ impl<T> FiltersExt<T> {
     }
 
     /// Removes a filter.
-    pub fn remove(&mut self, uid: FilterUid) -> Res<()> {
+    ///
+    /// Returns the uid of
+    /// - the filter after `uid`, if any
+    /// - otherwise the filter before `uid`, if any.
+    pub fn remove(&mut self, uid: FilterUid) -> Res<Option<FilterUid>> {
         let (index, _) = self.get_filter(uid)?;
         self.filters.remove(index);
-        Ok(())
+        if index < self.filters.len() {
+            Ok(Some(self.filters[index].uid()))
+        } else if 0 < index {
+            debug_assert!(index - 1 < self.filters.len());
+            Ok(Some(self.filters[index - 1].uid()))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Returns the number filters, **not** including the catch-all.
@@ -217,20 +254,14 @@ impl Filters {
         use msg::{FilterSpecMsg::*, FiltersMsg::*};
         match msg {
             Save => {
-                self.edited = false;
-
                 let catch_all = self.catch_all.clone();
-                self.catch_all.unset_edited();
 
                 let everything = self.everything.clone();
-                self.everything.unset_edited();
 
                 let mut filters = Vec::with_capacity(self.filters.len());
 
                 for filter in &mut self.filters {
                     filters.push(filter.clone());
-                    filter.unset_edited();
-                    filter.spec_mut().unset_edited()
                 }
                 self.to_model.emit(
                     msg::to_server::FiltersMsg::update_all(everything, filters, catch_all).into(),
@@ -243,12 +274,7 @@ impl Filters {
                 Ok(true)
             }
 
-            Rm(uid) => {
-                self.remove(uid)?;
-                self.edited = true;
-                self.to_model.emit(msg::FooterMsg::removed(uid));
-                Ok(true)
-            }
+            Rm(uid) => self.rm_filter(uid),
 
             FilterSpec {
                 uid,
@@ -287,7 +313,6 @@ impl Filters {
                 };
                 if let Some((i_1, i_2)) = to_swap {
                     self.filters.swap(i_1, i_2);
-                    self.edited = true;
                     Ok(true)
                 } else {
                     Ok(false)
@@ -319,7 +344,6 @@ impl<T> FiltersExt<T> {
             .get_spec_mut(uid)
             .chain_err(|| "while updating a filter's name")?;
         spec.set_name(new_name);
-        spec.set_edited();
 
         Ok(())
     }
@@ -338,7 +362,6 @@ impl<T> FiltersExt<T> {
             .get_spec_mut(uid)
             .chain_err(|| "while updating the color of a filter")?;
         spec.set_color(new_color);
-        spec.set_edited();
 
         Ok(())
     }
@@ -356,13 +379,16 @@ impl Filters {
                 filters,
                 catch_all,
             } => {
-                self.edited = false;
+                self.reference.catch_all = catch_all.clone();
+                self.reference.everything = everything.clone();
+                self.reference.filters = filters.clone();
                 self.catch_all = catch_all;
                 self.everything = everything;
                 for filter in &self.filters {
                     let uid = filter.uid();
                     if filters.iter().all(|filter| filter.uid() != uid) {
-                        self.to_model.emit(msg::FooterMsg::removed(uid));
+                        self.to_model
+                            .emit(msg::FooterMsg::toggle_tab(LineUid::Everything));
                     }
                 }
                 self.filters.clear();
@@ -381,8 +407,7 @@ impl<T> FiltersExt<T> {
     ///
     /// - makes the new filter active;
     /// - triggers a refresh of the filters of all the charts.
-    pub fn add_filter(&mut self, mut filter: Filter) -> Res<ShouldRender> {
-        filter.set_edited();
+    pub fn add_filter(&mut self, filter: Filter) -> Res<ShouldRender> {
         let uid = filter.uid();
         self.filters.push(filter);
         self.to_model
@@ -393,12 +418,11 @@ impl<T> FiltersExt<T> {
     }
 
     /// Removes a filter from the map.
-    ///
-    /// - changes the active filter to catch-all.
     pub fn rm_filter(&mut self, uid: FilterUid) -> Res<ShouldRender> {
-        self.remove(uid)?;
-        self.to_model.emit(msg::FooterMsg::removed(uid));
-        self.send_refresh_filters();
+        let now_active = self.remove(uid)?;
+        self.to_model.emit(msg::FooterMsg::toggle_tab(
+            now_active.map(LineUid::from).unwrap_or(LineUid::Everything),
+        ));
         Ok(true)
     }
 
@@ -407,19 +431,16 @@ impl<T> FiltersExt<T> {
     /// - triggers a refresh of the filters of all the charts.
     pub fn update_specs(&mut self, mut specs: Map<LineUid, FilterSpec>) -> Res<ShouldRender> {
         // Update "everything" filter.
-        if let Some(mut spec) = specs.remove(&LineUid::Everything) {
-            spec.unset_edited();
+        if let Some(spec) = specs.remove(&LineUid::Everything) {
             self.everything = spec
         }
         // Update "catch-all" filter.
-        if let Some(mut spec) = specs.remove(&LineUid::CatchAll) {
-            spec.unset_edited();
+        if let Some(spec) = specs.remove(&LineUid::CatchAll) {
             self.catch_all = spec
         }
         // Check all filters for changes.
         for filter in &mut self.filters {
-            if let Some(mut spec) = specs.remove(&LineUid::Filter(filter.uid())) {
-                spec.unset_edited();
+            if let Some(spec) = specs.remove(&LineUid::Filter(filter.uid())) {
                 *filter.spec_mut() = spec
             }
         }
@@ -440,17 +461,14 @@ fn filter_update(filter: &mut Filter, msg: msg::FilterMsg) -> Res<ShouldRender> 
         AddNew => {
             let sub = SubFilter::default();
             filter.insert(sub)?;
-            filter.set_edited();
             Ok(true)
         }
         Sub(sub) => {
             filter.replace(sub)?;
-            filter.set_edited();
             Ok(true)
         }
         RmSub(uid) => {
             filter.remove(uid)?;
-            filter.set_edited();
             Ok(true)
         }
     }

@@ -252,6 +252,7 @@ pub mod tiles {
         }
 
         let move_up = layout::button::img::arrow_up(
+            None,
             "move_chart_up",
             if pos.is_first {
                 None
@@ -265,6 +266,7 @@ pub mod tiles {
             "move this chart up",
         );
         let move_down = layout::button::img::arrow_down(
+            None,
             "move_chart_down",
             if pos.is_last {
                 None
@@ -307,6 +309,7 @@ pub mod tiles {
         }
 
         let close_button = layout::button::img::close(
+            None,
             "close_chart_button",
             Some(
                 model
@@ -317,6 +320,7 @@ pub mod tiles {
         );
         let collapse_expand_button = if chart.is_visible() {
             layout::button::img::collapse(
+                None,
                 "collapse_chart_button",
                 Some(
                     model
@@ -327,6 +331,7 @@ pub mod tiles {
             )
         } else {
             layout::button::img::expand(
+                None,
                 "expand_chart_button",
                 Some(
                     model
@@ -360,16 +365,21 @@ pub mod filter_toggles {
     use super::*;
     use layout::tabs::{TabProps, Tabs};
 
+    const tab_container_width: usize = 96;
+    const tab_container_width_padding: usize = (100 - tab_container_width) / 2;
+
     pub fn render(model: &Model, chart: &Chart) -> Html {
         define_style! {
             TOGGLE_BAR = {
                 width(100%),
                 height({filter_toggles_height_px} px),
-                text_align(center),
+                padding(0 px, {tab_container_width_padding}%),
                 // bg(red),
             };
             TOGGLE_CONTAINER = {
+                width({tab_container_width}%),
                 height(100%),
+                overflow(scroll),
             };
         }
 

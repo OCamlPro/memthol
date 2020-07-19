@@ -29,7 +29,7 @@ impl Pred {
 /// Trait that string-like specifications must implement.
 pub trait SpecExt: Default + Clone + fmt::Display + Sized {
     /// Type of data the specification is able to check for matches.
-    type Data;
+    type Data: fmt::Display;
 
     /// Description of the kind of data this specification works on.
     const DATA_DESC: &'static str;
@@ -177,8 +177,65 @@ where
         }
     }
 
-    /// Helper that returns true if some labels verify the input specs.
+    /// Helper handling the suffix case.
+    ///
+    /// Returns nothing if the specs do not fall in the suffix case.
+    fn check_suffix(specs: &Vec<Spec>, data: &[Spec::Data]) -> Option<bool> {
+        let mut slice = &specs[0..];
+
+        if !slice.is_empty() {
+            if !slice[0].matches_anything() {
+                // Not starting with a wildcard.
+                return None;
+            }
+
+            slice = &slice[1..]
+        }
+
+        // The specs start with a wildcard. Drain all wildcards.
+        while !slice.is_empty() {
+            if !slice[0].matches_anything() {
+                // Not a wildcard, stop here.
+                break;
+            } else {
+                slice = &slice[1..]
+            }
+        }
+
+        // Not in a suffix case if there are wildcards left.
+        if slice.iter().any(Spec::matches_anything) {
+            return None;
+        }
+
+        // We're in a suffix case.
+
+        // Reverse iter on the `slice` and `data` to check if we have a match.
+        let rev_slice = slice.iter().rev();
+        let mut rev_data = data.iter().rev();
+
+        for spec in rev_slice {
+            if let Some(data) = rev_data.next() {
+                if spec.matches(data) {
+                    continue;
+                } else {
+                    return Some(false);
+                }
+            } else {
+                return Some(false);
+            }
+        }
+
+        // Only reachable if there's no more specs in the suffix, and all specs matched the data's
+        // suffix.
+        Some(true)
+    }
+
+    /// Helper that returns true if the input data verifies the input specs.
     fn check_contain(specs: &Vec<Spec>, data: &[Spec::Data]) -> bool {
+        if let Some(res) = Self::check_suffix(specs, data) {
+            return res;
+        }
+
         let mut data = data.iter();
         let mut specs = specs.iter();
 
@@ -221,7 +278,7 @@ where
                 }
             }
 
-            // Only reachable if there are no more data.
+            // Only reachable if there is no more data.
             return false;
         }
 

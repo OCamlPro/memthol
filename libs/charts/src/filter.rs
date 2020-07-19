@@ -11,6 +11,9 @@ mod spec;
 pub mod string_like;
 pub mod sub;
 
+pub mod gen;
+
+pub use gen::FilterGen;
 pub use label::LabelFilter;
 pub use loc::LocFilter;
 use ord::OrdFilter;
@@ -164,14 +167,34 @@ impl Filters {
         }
     }
 
+    pub fn catch_all(&self) -> &FilterSpec {
+        &self.catch_all
+    }
+    pub fn everything(&self) -> &FilterSpec {
+        &self.everything
+    }
+    pub fn filters(&self) -> &Vec<Filter> {
+        &self.filters
+    }
+
+    /// Runs filter generation.
+    ///
+    /// Returns the number of filter generated.
+    pub fn auto_gen(
+        &mut self,
+        data: &data::Data,
+        generator: impl Into<filter::gen::FilterGen>,
+    ) -> Res<usize> {
+        let generator = generator.into();
+        let filters = generator.run(data)?;
+        let count = filters.len();
+        self.filters.extend(filters);
+        Ok(count)
+    }
+
     /// Length of the list of filters.
     pub fn len(&self) -> usize {
         self.filters.len()
-    }
-
-    /// The list of active filters.
-    pub fn filters(&self) -> &Vec<Filter> {
-        &self.filters
     }
 
     /// Filter specification mutable accessor.
@@ -269,25 +292,14 @@ impl Filters {
     }
 
     /// Updates all the filters.
-    ///
-    /// # TODO
-    ///
-    /// - decide whether we need to re-compute all the points using the `edited()` flags. If only
-    ///     filter specifications have changed, there is no need to re-compute the points.
     pub fn update_all(
         &mut self,
-        mut everything: FilterSpec,
-        mut filters: Vec<Filter>,
-        mut catch_all: FilterSpec,
+        everything: FilterSpec,
+        filters: Vec<Filter>,
+        catch_all: FilterSpec,
     ) -> Res<msg::to_client::Msgs> {
-        catch_all.unset_edited();
         self.catch_all = catch_all;
-        everything.unset_edited();
         self.everything = everything;
-        for filter in &mut filters {
-            filter.unset_edited();
-            filter.spec_mut().unset_edited();
-        }
         self.filters = filters;
         Ok(vec![])
     }
@@ -304,19 +316,14 @@ impl Filters {
 /// A filter that combines `SubFilter`s.
 ///
 /// Also contains a [`FilterSpec`](struct.FilterSpec.html).
-///
-/// # Invariants
-///
-/// - `self.uid().is_some()`
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Filter {
     /// Actual list of filters.
     subs: Map<SubFilterUid, SubFilter>,
     /// Filter specification.
     spec: FilterSpec,
-    /// Edited flag, for the client.
-    edited: bool,
 }
+
 impl Filter {
     /// Constructor.
     pub fn new(spec: FilterSpec) -> Res<Filter> {
@@ -326,7 +333,6 @@ impl Filter {
         let slf = Self {
             subs: Map::new(),
             spec,
-            edited: false,
         };
         Ok(slf)
     }
@@ -343,19 +349,6 @@ impl Filter {
     /// Name of the filter.
     pub fn name(&self) -> &str {
         self.spec().name()
-    }
-
-    /// True if the filter itself, and not the spec, has been edited.
-    pub fn edited(&self) -> bool {
-        self.edited
-    }
-    /// Sets the edited flag to true.
-    pub fn set_edited(&mut self) {
-        self.edited = true
-    }
-    /// Sets the edited flag to false.
-    pub fn unset_edited(&mut self) {
-        self.edited = false
     }
 
     /// UID accessor.
@@ -398,7 +391,8 @@ impl Filter {
     /// Inserts a subfilter.
     ///
     /// Fails if the subfilter is **not** new.
-    pub fn insert(&mut self, sub: SubFilter) -> Res<()> {
+    pub fn insert(&mut self, sub: impl Into<SubFilter>) -> Res<()> {
+        let sub = sub.into();
         let prev = self.subs.insert(sub.uid(), sub);
         if let Some(prev) = prev {
             bail!("subfilter UID collision on #{}", prev.uid())

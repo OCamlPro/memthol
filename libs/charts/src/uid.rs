@@ -143,6 +143,12 @@ pub enum LineUid {
     Everything,
 }
 
+impl From<FilterUid> for LineUid {
+    fn from(uid: FilterUid) -> LineUid {
+        Self::Filter(uid)
+    }
+}
+
 impl LineUid {
     /// The filter UID, if any.
     pub fn filter_uid(self) -> Option<FilterUid> {

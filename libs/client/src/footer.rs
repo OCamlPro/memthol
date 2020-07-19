@@ -25,15 +25,14 @@ impl Footer {
                     self.active = Some(tab)
                 }
                 Ok(true)
-            }
-            Removed(uid) => {
-                if self.active == Some(FooterTab::Filter(filter::LineUid::Filter(uid))) {
-                    self.active = Some(FooterTab::Filter(filter::LineUid::Everything));
-                    Ok(true)
-                } else {
-                    Ok(false)
-                }
-            }
+            } // Removed(uid) => {
+              //     if self.active == Some(FooterTab::Filter(filter::LineUid::Filter(uid))) {
+              //         self.active = Some(FooterTab::Filter(filter::LineUid::Everything));
+              //         Ok(true)
+              //     } else {
+              //         Ok(false)
+              //     }
+              // }
         }
     }
 
@@ -114,5 +113,10 @@ impl fmt::Display for FooterTab {
 impl From<NormalFooterTab> for FooterTab {
     fn from(tab: NormalFooterTab) -> Self {
         FooterTab::Normal(tab)
+    }
+}
+impl From<filter::LineUid> for FooterTab {
+    fn from(uid: filter::LineUid) -> Self {
+        FooterTab::Filter(uid)
     }
 }

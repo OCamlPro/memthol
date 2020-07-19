@@ -29,6 +29,7 @@ pub struct BoxProps<'color> {
     bl_rounded: bool,
     br_rounded: bool,
     top: bool,
+    no_wrap: bool,
 }
 
 impl<'color> BoxProps<'color> {
@@ -42,7 +43,8 @@ impl<'color> BoxProps<'color> {
             bl_rounded: false,
             br_rounded: false,
             top: false,
-            gradient_top: "white",
+            no_wrap: false,
+            gradient_top: "#c1c1c1",
             gradient_bot: "black",
         }
     }
@@ -57,7 +59,8 @@ impl<'color> BoxProps<'color> {
             bl_rounded: true,
             br_rounded: true,
             top: false,
-            gradient_top: "white",
+            no_wrap: false,
+            gradient_top: "#c1c1c1",
             gradient_bot: "black",
         }
     }
@@ -72,7 +75,8 @@ impl<'color> BoxProps<'color> {
             bl_rounded: false,
             br_rounded: false,
             top: false,
-            gradient_top: "white",
+            no_wrap: true,
+            gradient_top: "#c1c1c1",
             gradient_bot: "black",
         }
     }
@@ -118,6 +122,12 @@ impl<'color> BoxProps<'color> {
         self
     }
 
+    /// Forbids wrapping the button's text (if any).
+    pub const fn with_wrap_text(mut self, wrap: bool) -> Self {
+        self.no_wrap = !wrap;
+        self
+    }
+
     /// Indicates whether the button should be "on top", *i.e.* is a footer button.
     pub const fn for_footer(mut self, top: bool) -> Self {
         self.top = top;
@@ -149,7 +159,7 @@ impl fmt::Display for BoxProps<'_> {
         #[allow(unused_results)]
         css!(fmt: fmt,
             height(100%),
-            width(100%),
+            width(auto),
             table,
             bg(gradient {self.gradient_top} to {self.gradient_bot}),
             border({self.stroke_px} px, {self.border_color}),
@@ -158,6 +168,10 @@ impl fmt::Display for BoxProps<'_> {
                 {radius_px(self.tr_rounded)} px,
                 {radius_px(self.br_rounded)} px,
                 {radius_px(self.bl_rounded)} px,
+            ),
+            if(
+                self.no_wrap,
+                white_space(nowrap),
             ),
         );
 
@@ -171,7 +185,7 @@ pub mod text {
 
     define_style! {
         link_box! = {
-            width(100%),
+            width(auto),
             height(100%),
             table,
         };
@@ -225,27 +239,27 @@ pub mod text {
         };
     }
 
-    fn centered_text(txt: impl fmt::Display, dimmed: bool) -> Html {
+    fn centered(inner: Html, dimmed: bool) -> Html {
         html! {
             <a
                 style = if dimmed { &*DIMMED_CONTENT_STYLE } else { &*CONTENT_STYLE }
             >
-                {txt}
+                {inner}
             </a>
         }
     }
-    fn top_centered_text(txt: impl fmt::Display, dimmed: bool) -> Html {
+    fn top_centered(inner: Html, dimmed: bool) -> Html {
         html! {
             <a
                 style = if dimmed { &*TOP_DIMMED_CONTENT_STYLE } else { &*TOP_CONTENT_STYLE }
             >
-                {txt}
+                {inner}
             </a>
         }
     }
 
     pub fn render_default_button(
-        id: &str,
+        id: impl fmt::Display,
         txt: impl fmt::Display,
         onclick: Option<OnClickAction>,
         dimmed: bool,
@@ -255,15 +269,15 @@ pub mod text {
 
     pub fn render(
         props: Option<BoxProps<'_>>,
-        id: &str,
+        id: impl fmt::Display,
         txt: impl fmt::Display,
         onclick: Option<OnClickAction>,
         dimmed: bool,
     ) -> Html {
         let mut inner = if props.as_ref().map(|props| props.top).unwrap_or(false) {
-            top_centered_text(txt, dimmed)
+            top_centered(html! {{txt}}, dimmed)
         } else {
-            centered_text(txt, dimmed)
+            centered(html! {{txt}}, dimmed)
         };
         if let Some(props) = props {
             inner = html! {
@@ -295,6 +309,55 @@ pub mod text {
             }
         }
     }
+
+    pub(super) fn img_render(
+        dimension_px: usize,
+        props: Option<BoxProps<'_>>,
+        id: impl fmt::Display,
+        img: img::Img,
+        desc: impl fmt::Display,
+        onclick: OnClickAction,
+        dimmed: bool,
+    ) -> Html {
+        let mut inner = if props.as_ref().map(|props| props.top).unwrap_or(false) {
+            top_centered(
+                img.render(
+                    Some(dimension_px),
+                    format!("{}_content", id),
+                    Some(onclick),
+                    desc,
+                ),
+                dimmed,
+            )
+        } else {
+            centered(
+                img.render(
+                    Some(dimension_px),
+                    format!("{}_content", id),
+                    Some(onclick),
+                    desc,
+                ),
+                dimmed,
+            )
+        };
+        if let Some(props) = props {
+            inner = html! {
+                <div
+                    style = props
+                >
+                    {inner}
+                </div>
+            }
+        }
+        html! {
+            <div
+                id = id
+                style = LINK_BOX
+            >
+                {inner}
+            </div>
+        }
+    }
 }
 
 /// Image buttons.
@@ -311,7 +374,10 @@ pub mod img {
             height(100%),
             border(none),
             margin(none),
+            padding(none),
             bg(transparent),
+            fg(inherit),
+            display(table),
         };
         LINK_BOX = {
             extends(link_box),
@@ -331,22 +397,41 @@ pub mod img {
         ArrowUp,
         ArrowDown,
         Plus,
+        Minus,
+        Undo,
+        Check,
     }
     impl Img {
         pub fn render(
             self,
-            id: &str,
+            dimension_px: Option<usize>,
+            id: impl fmt::Display,
             onclick: Option<OnClickAction>,
             desc: impl fmt::Display,
         ) -> Html {
             match self {
-                Self::Close => close(id, onclick, desc),
-                Self::Collapse => collapse(id, onclick, desc),
-                Self::Expand => expand(id, onclick, desc),
-                Self::ArrowUp => arrow_up(id, onclick, desc),
-                Self::ArrowDown => arrow_down(id, onclick, desc),
-                Self::Plus => plus(id, onclick, desc),
+                Self::Close => close(dimension_px, id, onclick, desc),
+                Self::Collapse => collapse(dimension_px, id, onclick, desc),
+                Self::Expand => expand(dimension_px, id, onclick, desc),
+                Self::ArrowUp => arrow_up(dimension_px, id, onclick, desc),
+                Self::ArrowDown => arrow_down(dimension_px, id, onclick, desc),
+                Self::Plus => plus(dimension_px, id, onclick, desc),
+                Self::Minus => minus(dimension_px, id, onclick, desc),
+                Self::Undo => undo(dimension_px, id, onclick, desc),
+                Self::Check => check(dimension_px, id, onclick, desc),
             }
+        }
+
+        pub fn button_render(
+            self,
+            dimension_px: usize,
+            props: Option<BoxProps<'_>>,
+            id: impl fmt::Display,
+            desc: impl fmt::Display,
+            onclick: OnClickAction,
+            dimmed: bool,
+        ) -> Html {
+            text::img_render(dimension_px, props, id, self, desc, onclick, dimmed)
         }
     }
 
@@ -354,15 +439,23 @@ pub mod img {
     ///
     /// If `onclick.is_none()`, the button will be hidden and deactivated.
     fn raw_render(
-        id: &str,
+        dimension_px: Option<usize>,
+        id: impl fmt::Display,
         inner: Html,
         onclick: Option<OnClickAction>,
         desc: impl fmt::Display,
     ) -> Html {
         if let Some(onclick) = onclick {
+            let style = dimension_px.map(|dim| {
+                inline_css! {
+                    extends_style(&*LINK_BOX),
+                    height({dim}px),
+                    width({dim}px),
+                }
+            });
             html! {
                 <button
-                    style = LINK_BOX
+                    style = style.as_ref().unwrap_or(&*LINK_BOX)
                     onclick = onclick
                     title = desc
                 >
@@ -385,12 +478,18 @@ pub mod img {
     /// Close button.
     ///
     /// Inline SVG for https://icons.getbootstrap.com/icons/x.
-    pub fn close(id: &str, onclick: Option<OnClickAction>, desc: impl fmt::Display) -> Html {
-        raw_render(id, close_img(), onclick, desc)
+    pub fn close(
+        dimension_px: Option<usize>,
+        id: impl fmt::Display,
+        onclick: Option<OnClickAction>,
+        desc: impl fmt::Display,
+    ) -> Html {
+        raw_render(dimension_px, id, close_img(), onclick, desc)
     }
     fn close_img() -> Html {
         html! {
             <svg
+                fill = "currentColor"
                 height = "100%"
                 viewBox = "0 0 16 16"
                 xmlns = "http://www.w3.org/2000/svg"
@@ -416,12 +515,18 @@ pub mod img {
     /// Collapse button.
     ///
     /// Inline SVG for https://icons.getbootstrap.com/icons/chevron-bar-up.
-    pub fn collapse(id: &str, onclick: Option<OnClickAction>, desc: impl fmt::Display) -> Html {
-        raw_render(id, collapse_img(), onclick, desc)
+    pub fn collapse(
+        dimension_px: Option<usize>,
+        id: impl fmt::Display,
+        onclick: Option<OnClickAction>,
+        desc: impl fmt::Display,
+    ) -> Html {
+        raw_render(dimension_px, id, collapse_img(), onclick, desc)
     }
     fn collapse_img() -> Html {
         html! {
             <svg
+                fill = "currentColor"
                 height = "100%"
                 viewBox = "0 0 16 16"
                 xmlns = "http://www.w3.org/2000/svg"
@@ -441,12 +546,18 @@ pub mod img {
     /// Expand button.
     ///
     /// Inline SVG for https://icons.getbootstrap.com/icons/chevron-bar-down.
-    pub fn expand(id: &str, onclick: Option<OnClickAction>, desc: impl fmt::Display) -> Html {
-        raw_render(id, expand_img(), onclick, desc)
+    pub fn expand(
+        dimension_px: Option<usize>,
+        id: impl fmt::Display,
+        onclick: Option<OnClickAction>,
+        desc: impl fmt::Display,
+    ) -> Html {
+        raw_render(dimension_px, id, expand_img(), onclick, desc)
     }
     fn expand_img() -> Html {
         html! {
             <svg
+                fill = "currentColor"
                 height = "100%"
                 viewBox = "0 0 16 16"
                 xmlns = "http://www.w3.org/2000/svg"
@@ -466,12 +577,18 @@ pub mod img {
     /// Expand button.
     ///
     /// Inline SVG for https://icons.getbootstrap.com/icons/arrow-bar-up.
-    pub fn arrow_up(id: &str, onclick: Option<OnClickAction>, desc: impl fmt::Display) -> Html {
-        raw_render(id, arrow_up_img(), onclick, desc)
+    pub fn arrow_up(
+        dimension_px: Option<usize>,
+        id: impl fmt::Display,
+        onclick: Option<OnClickAction>,
+        desc: impl fmt::Display,
+    ) -> Html {
+        raw_render(dimension_px, id, arrow_up_img(), onclick, desc)
     }
     fn arrow_up_img() -> Html {
         html! {
             <svg
+                fill = "currentColor"
                 height = "100%"
                 viewBox = "0 0 16 16"
                 xmlns = "http://www.w3.org/2000/svg"
@@ -497,12 +614,18 @@ pub mod img {
     /// Expand button.
     ///
     /// Inline SVG for https://icons.getbootstrap.com/icons/arrow-bar-down.
-    pub fn arrow_down(id: &str, onclick: Option<OnClickAction>, desc: impl fmt::Display) -> Html {
-        raw_render(id, arrow_down_img(), onclick, desc)
+    pub fn arrow_down(
+        dimension_px: Option<usize>,
+        id: impl fmt::Display,
+        onclick: Option<OnClickAction>,
+        desc: impl fmt::Display,
+    ) -> Html {
+        raw_render(dimension_px, id, arrow_down_img(), onclick, desc)
     }
     fn arrow_down_img() -> Html {
         html! {
             <svg
+                fill = "currentColor"
                 height = "100%"
                 viewBox = "0 0 16 16"
                 xmlns = "http://www.w3.org/2000/svg"
@@ -527,12 +650,18 @@ pub mod img {
     /// Plus button.
     ///
     /// Inline SVG for https://icons.getbootstrap.com/icons/plus-circle-fill.
-    pub fn plus(id: &str, onclick: Option<OnClickAction>, desc: impl fmt::Display) -> Html {
-        raw_render(id, plus_img(), onclick, desc)
+    pub fn plus(
+        dimension_px: Option<usize>,
+        id: impl fmt::Display,
+        onclick: Option<OnClickAction>,
+        desc: impl fmt::Display,
+    ) -> Html {
+        raw_render(dimension_px, id, plus_img(), onclick, desc)
     }
     fn plus_img() -> Html {
         html! {
             <svg
+                fill = "currentColor"
                 height = "100%"
                 viewBox = "0 0 16 16"
                 xmlns = "http://www.w3.org/2000/svg"
@@ -540,8 +669,119 @@ pub mod img {
                 <path
                     fill-rule = "evenodd"
                     d = "\
-                        M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4a.5.5 0 0 0-1 0v3.5H4a.5.5 0 0 0 \
-                        0 1h3.5V12a.5.5 0 0 0 1 0V8.5H12a.5.5 0 0 0 0-1H8.5V4z\
+                        M8 3.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5H4a.5.5 0 0 1 0-1h3.5V4a.5.5 0 0 1 \
+                        .5-.5z\
+                    "
+                />
+                <path
+                    fill-rule = "evenodd"
+                    d = "M7.5 8a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1H8.5V12a.5.5 0 0 1-1 0V8z"
+                />
+                <path
+                    fill-rule = "evenodd"
+                    d = "M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"
+                />
+            </svg>
+        }
+    }
+
+    /// Minus button.
+    ///
+    /// Inline SVG for https://icons.getbootstrap.com/icons/dash-circle.
+    pub fn minus(
+        dimension_px: Option<usize>,
+        id: impl fmt::Display,
+        onclick: Option<OnClickAction>,
+        desc: impl fmt::Display,
+    ) -> Html {
+        raw_render(dimension_px, id, minus_img(), onclick, desc)
+    }
+    fn minus_img() -> Html {
+        html! {
+            <svg
+                fill = "currentColor"
+                height = "100%"
+                viewBox = "0 0 16 16"
+                xmlns = "http://www.w3.org/2000/svg"
+            >
+                <path
+                    fill-rule = "evenodd"
+                    d = "M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"
+                />
+                <path
+                    fill-rule = "evenodd"
+                    d = "M3.5 8a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1H4a.5.5 0 0 1-.5-.5z"
+                />
+            </svg>
+        }
+    }
+
+    /// Undo button.
+    ///
+    /// Inline SVG for https://icons.getbootstrap.com/icons/arrow-counterclockwise.
+    pub fn undo(
+        dimension_px: Option<usize>,
+        id: impl fmt::Display,
+        onclick: Option<OnClickAction>,
+        desc: impl fmt::Display,
+    ) -> Html {
+        raw_render(dimension_px, id, undo_img(), onclick, desc)
+    }
+    fn undo_img() -> Html {
+        html! {
+            <svg
+                fill = "currentColor"
+                height = "100%"
+                viewBox = "0 0 16 16"
+                xmlns = "http://www.w3.org/2000/svg"
+            >
+                <path
+                    fill-rule = "evenodd"
+                    d = "\
+                        M12.83 6.706a5 5 0 0 0-7.103-3.16.5.5 0 1 1-.454-.892A6 6 0 1 1 2.545 \
+                        5.5a.5.5 0 1 1 .91.417 5 5 0 1 0 9.375.789z\
+                    "
+                />
+                <path
+                    fill-rule = "evenodd"
+                    d = "\
+                        M7.854.146a.5.5 0 0 0-.708 0l-2.5 2.5a.5.5 0 0 0 0 .708l2.5 2.5a.5.5 0 1 0 \
+                        .708-.708L5.707 3 7.854.854a.5.5 0 0 0 0-.708z\
+                    "
+                />
+            </svg>
+        }
+    }
+
+    /// Check button.
+    ///
+    /// Inline SVG for https://icons.getbootstrap.com/icons/check-circle.
+    pub fn check(
+        dimension_px: Option<usize>,
+        id: impl fmt::Display,
+        onclick: Option<OnClickAction>,
+        desc: impl fmt::Display,
+    ) -> Html {
+        raw_render(dimension_px, id, check_img(), onclick, desc)
+    }
+    fn check_img() -> Html {
+        html! {
+            <svg
+                fill = "currentColor"
+                height = "100%"
+                viewBox = "0 0 16 16"
+                xmlns = "http://www.w3.org/2000/svg"
+            >
+                <path
+                    fill-rule = "evenodd"
+                    d = "M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"
+                />
+                <path
+                    fill-rule = "evenodd"
+                    d = "\
+                        M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 \
+                        8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.236.236 0 0 1 \
+                        .02-.022z\
                     "
                 />
             </svg>

@@ -12,7 +12,7 @@ use super::*;
 ///
 /// The UID is optional because the filter specification can belong the "catch all" line of charts.
 /// It is made from the points that all filters miss.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FilterSpec {
     /// Uid of the filter.
     ///
@@ -22,10 +22,6 @@ pub struct FilterSpec {
     name: String,
     /// Color of the filter.
     color: Color,
-    /// True if the filter has been edited.
-    ///
-    /// This is only used by the client to keep track of which filters have been edited in the UI.
-    edited: bool,
 }
 impl FilterSpec {
     /// Constructor for user-defined filters.
@@ -36,7 +32,6 @@ impl FilterSpec {
             uid: LineUid::Filter(uid),
             name,
             color,
-            edited: false,
         }
     }
 
@@ -46,7 +41,6 @@ impl FilterSpec {
             uid: LineUid::CatchAll,
             name: "catch all".into(),
             color: Color::new(0x01, 0x93, 0xff),
-            edited: false,
         }
     }
 
@@ -56,7 +50,6 @@ impl FilterSpec {
             uid: LineUid::Everything,
             name: "everything".into(),
             color: Color::new(0xff, 0x66, 0x00),
-            edited: false,
         }
     }
 
@@ -78,25 +71,12 @@ impl FilterSpec {
         self.uid
     }
 
-    /// Value of the `edited` flag.
-    pub fn edited(&self) -> bool {
-        self.edited
-    }
-    /// Sets the `edited` flag to true.
-    pub fn set_edited(&mut self) {
-        self.edited = true
-    }
-    /// Sets the `edited` flag to false.
-    pub fn unset_edited(&mut self) {
-        self.edited = false
-    }
-
     /// Name accessor.
     pub fn name(&self) -> &str {
         &self.name
     }
     /// Name setter.
-    pub fn set_name<S: Into<String>>(&mut self, name: S) {
+    pub fn set_name(&mut self, name: impl Into<String>) {
         self.name = name.into()
     }
 
