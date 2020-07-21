@@ -2,6 +2,8 @@
 
 prelude! {}
 
+use mem::Factory;
+
 pub use data_parser::*;
 
 peg::parser! {
@@ -63,14 +65,24 @@ peg::parser! {
         = "`" s: $( (!['`'] [_])* ) "`" { s }
         / expected!("string (delimited by backquotes)")
 
+        /// A backquote-delimited string.
+        pub rule str(f: &mut Factory) -> Str
+        = "`" s: $( (!['`'] [_])* ) "`" { f.register_str(s) }
+        / expected!("string (delimited by backquotes)")
+
         /// A whitespace-separated list of strings.
         pub rule string_list() -> Vec<String>
         = "[" list: ( (_ s: string() { s.to_string() })* ) _ "]" { list }
         / expected!("list of whitespace-separated, backquote-delimited strings")
 
+        /// A whitespace-separated list of shared strings.
+        pub rule str_list(f: &mut Factory) -> Vec<Str>
+        = "[" list: ( (_ s: str(f) { s })* ) _ "]" { list }
+        / expected!("list of whitespace-separated, backquote-delimited strings")
+
         /// Parses a location.
-        pub rule loc() -> Loc
-        = file: string()
+        pub rule loc(f: &mut Factory) -> Loc
+        = file: str(f)
             _ ":"
             _ line: usize()
             _ ":"
@@ -83,12 +95,12 @@ peg::parser! {
         / expected!("file location")
 
         /// Parses a location followed a hashtag `#` and a count (integer, usize).
-        pub rule counted_loc() -> CLoc
-        = loc: loc() "#" count: usize() { CLoc::new(loc, count) }
+        pub rule counted_loc(f: &mut Factory) -> CLoc
+        = loc: loc(f) "#" count: usize() { CLoc::new(loc, count) }
 
         /// A whitespace-separated list of locations.
-        pub rule loc_list() -> Vec<CLoc>
-        = "[" list: ( (_ loc: counted_loc() { loc })* ) _ "]" { list }
+        pub rule loc_list(f: &mut Factory) -> Vec<CLoc>
+        = "[" list: ( (_ loc: counted_loc(f) { loc })* ) _ "]" { list }
         / expected!("list of whitespace-separated locations")
 
 
@@ -193,29 +205,31 @@ peg::parser! {
         / expected!("allocation kind")
 
         /// Parses an allocation.
-        pub rule new_alloc() -> Alloc
+        pub rule new_alloc(f: &mut Factory) -> Alloc
         = uid: uid()
             _ ":"
             _ kind: alloc_kind()
             _ size: u32()
 
             // Callstack.
-            _ callstack: loc_list()
+            _ callstack: loc_list(f)
             // User-provided labels.
-            _ labels: string_list()
+            _ labels: str_list(f)
             // Time Of Creation.
             _ toc: since_start()
             // Time Of Death.
             _ tod: since_start_opt()
         {
+            let labels = f.register_labels(labels);
+            let callstack = f.register_trace(callstack);
             Alloc::new(uid, kind, size, callstack, labels, toc, tod)
         }
         / expected!("allocation data")
 
         /// Parses the new allocations of a diff.
-        pub rule diff_new_allocs() -> Vec<Alloc>
+        pub rule diff_new_allocs(f: &mut Factory) -> Vec<Alloc>
         = "new" _ "{"
-            new_allocs: ( _ new_alloc: new_alloc() { new_alloc })*
+            new_allocs: ( _ new_alloc: new_alloc(f) { new_alloc })*
         _ "}" {
             new_allocs
         }
@@ -235,9 +249,9 @@ peg::parser! {
         / expected!("list of dead allocations")
 
         /// Parses a dump diff, consumes heading/trailing whitespaces.
-        pub rule diff() -> Diff =
+        pub rule diff(f: &mut Factory) -> Diff =
             _ date: since_start()
-            _ new: diff_new_allocs()
+            _ new: diff_new_allocs(f)
             _ dead: diff_dead_allocs()
             _
         {
@@ -323,11 +337,11 @@ implement! {
 
         Uid => +TryFrom uid(text),
         AllocKind => +TryFrom alloc_kind(text),
-        Loc => +TryFrom loc(text),
-        CLoc => +TryFrom counted_loc(text),
+        Loc => +TryFrom loc(text, &mut Factory::new()),
+        CLoc => +TryFrom counted_loc(text, &mut Factory::new()),
 
-        Alloc => +TryFrom new_alloc(text),
-        Diff => +TryFrom diff(text),
+        Alloc => +TryFrom new_alloc(text, &mut Factory::new()),
+        Diff => +TryFrom diff(text, &mut Factory::new()),
         Init => +TryFrom init(text),
     }
 }

@@ -40,14 +40,9 @@ impl_display! {
     }
 
     Alloc = {
-        let my_labels = labels::get(self.labels);
-        let my_trace = locs::get(self.trace);
-        let mut labels = "[".to_string();
-        for label in my_labels.iter() {
-            labels.push_str(" ");
-            labels.push_str(label)
-        }
-        labels.push_str(" ]");
+        let my_labels = self.labels.get();
+        let my_trace = self.trace.get();
+
         write!(fmt, "{}: {}, {}, ", self.uid, self.kind, self.size)?;
 
         // Write the trace.

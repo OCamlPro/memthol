@@ -30,14 +30,16 @@ impl AllocSite {
         }
     }
 
-    fn inc(&mut self, file: Option<&FileName>) {
+    fn inc(&mut self, file: Option<alloc::Str>) {
         if let Some(file) = file {
-            if let Some(count) = self.map.get_mut(file) {
-                *count += 1
-            } else {
-                let prev = self.map.insert(file.clone(), 1);
-                debug_assert!(prev.is_none())
-            }
+            file.str_do(|file| {
+                if let Some(count) = self.map.get_mut(file) {
+                    *count += 1
+                } else {
+                    let prev = self.map.insert(file.to_string(), 1);
+                    debug_assert!(prev.is_none())
+                }
+            })
         } else {
             self.unk += 1
         }
@@ -45,7 +47,7 @@ impl AllocSite {
 
     fn scan(&mut self, data: &data::Data) {
         for alloc in data.iter_all() {
-            alloc.alloc_site_do(|cloc_opt| self.inc(cloc_opt.map(|cloc| &cloc.loc.file)))
+            alloc.alloc_site_do(|cloc_opt| self.inc(cloc_opt.map(|cloc| cloc.loc.file)))
         }
     }
 

@@ -35,7 +35,7 @@ impl FilterExt<str> for LabelSpec {
 }
 
 impl string_like::SpecExt for LabelSpec {
-    type Data = String;
+    type Data = alloc::Str;
     const DATA_DESC: &'static str = "label";
 
     fn from_string(s: impl Into<String>) -> Res<Self> {
@@ -59,7 +59,7 @@ impl string_like::SpecExt for LabelSpec {
     fn matches(&self, data: &Self::Data) -> bool {
         match self {
             LabelSpec::Value(value) => data == value,
-            LabelSpec::Regex(regex) => regex.is_match(data),
+            LabelSpec::Regex(regex) => data.str_do(|s| regex.is_match(s)),
             LabelSpec::Anything => true,
         }
     }

@@ -4,75 +4,61 @@ use std::{collections::BTreeMap as Map, sync::Arc};
 
 pub use serde_derive::{Deserialize, Serialize};
 
-/// A UID.
-///
-/// Cannot be constructed outside of [`alloc_data::mem`].
-///
-/// [`alloc_data::mem`]: index.html (The mem module in alloc_data)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
-pub struct Uid {
-    /// Actual index.
-    index: usize,
-}
-
-/// A structure mapping some elements to UIDs and back.
-///
-/// This type is very biased towards a particular situation: new elements are very rare compared to
-///
-/// - insertion of already-known elements, and
-/// - query over already-known elements.
-pub struct Memory<Elm>
-where
-    Elm: Ord,
-{
-    map: Map<Arc<Elm>, usize>,
-    vec: Vec<Arc<Elm>>,
-}
-impl<Elm> Memory<Elm>
-where
-    Elm: Ord,
-{
-    /// Constructor.
-    pub fn new() -> Self {
-        Self {
-            map: Map::new(),
-            vec: Vec::with_capacity(103),
-        }
-    }
-
-    /// The UID associated to some element.
-    ///
-    /// Generates a fresh one if none exists.
-    pub fn get_uid(&mut self, elm: Elm) -> Uid
-    where
-        Elm: Clone,
-    {
-        let elm = Arc::new(elm);
-        let next_index = self.vec.len();
-        let index = *self.map.entry(elm.clone()).or_insert(next_index);
-        // Insert in `self.vec` if new.
-        if index == next_index {
-            self.vec.push(elm)
-        }
-        Uid { index }
-    }
-
-    /// Retrieves an element from its UID.
-    pub fn get_elm(&self, uid: Uid) -> Arc<Elm> {
-        self.vec[uid.index].clone()
-    }
-}
+prelude! {}
 
 /// Convenience macro that creates a lazy-static-rw-locked memory and some accessors.
 macro_rules! new {
-    (mod $mod:ident for $ty:ty) => {
+    (mod $mod:ident for $ty:ty, uid: $uid:ident) => {
         mod $mod {
+            pub use serde_derive::{Deserialize, Serialize};
             pub use std::sync::{Arc, RwLock};
 
-            pub use $crate::mem::Uid;
+            /// Stores a UID, cannot be constructed outside of the module it's declared in.
+            #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+            pub struct $uid {
+                uid: usize,
+            }
+            impl $uid {
+                pub fn factory_mut<'a>() -> AsWrite<'a> {
+                    write()
+                }
+                pub fn factory<'a>() -> AsRead<'a> {
+                    read()
+                }
+
+                pub fn get(self) -> Arc<$ty> {
+                    Self::factory().get_elm(self)
+                }
+
+                pub fn new(elm: $ty) -> Self {
+                    Self::factory_mut().get_uid(elm)
+                }
+            }
 
             /// Type of the memory structure.
-            pub type Memory = $crate::mem::Memory<$ty>;
+            type Memory = $crate::mem::Memory<$ty>;
+
+            pub struct AsRead<'a> {
+                mem: std::sync::RwLockReadGuard<'a, Memory>,
+            }
+            impl<'a> AsRead<'a> {
+                pub fn get_elm(&self, uid: $uid) -> Arc<$ty> {
+                    self.mem.get_elm(uid.uid)
+                }
+            }
+            pub struct AsWrite<'a> {
+                mem: std::sync::RwLockWriteGuard<'a, Memory>,
+            }
+            impl<'a> AsWrite<'a> {
+                pub fn get_uid(&mut self, elm: $ty) -> $uid {
+                    $uid {
+                        uid: self.mem.get_uid(elm),
+                    }
+                }
+                pub fn get_elm(&self, uid: $uid) -> Arc<$ty> {
+                    self.mem.get_elm(uid.uid)
+                }
+            }
 
             $crate::prelude::lazy_static! {
                 /// Memory.
@@ -82,17 +68,116 @@ macro_rules! new {
             /// Provides read-access to the memory.
             ///
             /// Panics if the memory has been poisoned.
-            pub fn read<'a>() -> std::sync::RwLockReadGuard<'a, Memory> {
-                MEM.read()
-                    .expect("fatal error: a data memory has been poisoned")
+            pub fn read<'a>() -> AsRead<'a> {
+                AsRead {
+                    mem: MEM
+                        .read()
+                        .expect("fatal error: a data memory has been poisoned"),
+                }
             }
             /// Provides write-access to the memory.
             ///
             /// Panics if the memory has been poisoned.
-            pub fn write<'a>() -> std::sync::RwLockWriteGuard<'a, Memory> {
-                MEM.write()
-                    .expect("fatal error: a data memory has been poisoned")
+            pub fn write<'a>() -> AsWrite<'a> {
+                AsWrite {
+                    mem: MEM
+                        .write()
+                        .expect("fatal error: a data memory has been poisoned"),
+                }
             }
         }
     };
+}
+
+pub mod labels;
+pub mod str;
+pub mod trace;
+
+/// Factory for string, labels and trace creation.
+pub struct Factory<'a> {
+    str: str::AsWrite<'a>,
+    labels: labels::AsWrite<'a>,
+    trace: trace::AsWrite<'a>,
+}
+impl<'a> Factory<'a> {
+    /// Constructor.
+    pub fn new() -> Self {
+        Self {
+            str: Str::factory_mut(),
+            labels: Labels::factory_mut(),
+            trace: Trace::factory_mut(),
+        }
+    }
+
+    pub fn register_str(&mut self, s: &str) -> Str {
+        self.str.get_uid(s)
+    }
+    pub fn register_labels(&mut self, labels: Vec<Str>) -> Labels {
+        self.labels.get_uid(labels)
+    }
+    pub fn register_trace(&mut self, trace: Vec<CLoc>) -> Trace {
+        self.trace.get_uid(trace)
+    }
+}
+
+/// A structure mapping some elements to UIDs and back.
+///
+/// This type is very biased towards a particular situation: new elements are very rare compared to
+///
+/// - insertion of already-known elements, and
+/// - query over already-known elements.
+pub struct Memory<Elm: ?Sized> {
+    map: Map<Arc<Elm>, usize>,
+    vec: Vec<Arc<Elm>>,
+}
+
+impl<Elm: ?Sized + Ord> Memory<Elm> {
+    /// Constructor.
+    pub fn new() -> Self {
+        Self {
+            map: Map::new(),
+            vec: Vec::with_capacity(103),
+        }
+    }
+
+    /// Retrieves an element from its UID.
+    pub fn get_elm(&self, uid: usize) -> Arc<Elm> {
+        self.vec[uid].clone()
+    }
+}
+
+impl<Elm> Memory<Elm>
+where
+    Elm: Ord + Sized,
+{
+    /// The UID associated to some element.
+    ///
+    /// Generates a fresh one if none exists. Biased towards the case when the element is already
+    /// registered.
+    pub fn get_uid(&mut self, elm: Elm) -> usize {
+        if let Some(uid) = self.map.get(&elm) {
+            *uid
+        } else {
+            let uid = self.vec.len();
+            let elm = Arc::new(elm);
+            self.vec.push(elm);
+            let prev = self.map.insert(self.vec[uid].clone(), uid);
+            debug_assert_eq!(prev, None);
+            uid
+        }
+    }
+}
+impl Memory<[u8]> {
+    fn get_uid(&mut self, s: &str) -> usize {
+        if let Some(uid) = self.map.get(s.as_bytes()) {
+            *uid
+        } else {
+            let uid = self.vec.len();
+            let elm = s.to_owned().into_boxed_str().into_boxed_bytes().into();
+            self.vec.push(elm);
+            let prev = self.map.insert(self.vec[uid].clone(), uid);
+            debug_assert_eq!(prev, None);
+            uid
+        }
+    }
 }

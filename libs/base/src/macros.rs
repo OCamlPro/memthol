@@ -1,6 +1,18 @@
 //! Macros used throughout the whole project.
 
 #[macro_export]
+macro_rules! time {
+    ($e:expr, |$time:ident| $time_action:expr) => {{
+        let start = std::time::Instant::now();
+        let res = $e;
+        let time = std::time::Instant::now() - start;
+        let $time = format!("{}.{:0>9}s", time.as_secs(), time.subsec_nanos());
+        $time_action;
+        res
+    }};
+}
+
+#[macro_export]
 #[cfg(not(release))]
 macro_rules! debug_do {
     ($($stuff:tt)*) => {{

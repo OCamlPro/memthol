@@ -11,6 +11,7 @@ chrono = { version = "*", features = ["serde", "wasmbind"] }
 num-bigint = { version = "*", features = ["serde"] }
 num-traits = "*"
 peg = "*"
+rayon = "*"
 serde = "*"
 serde_derive = "*"
 toml = "*"
