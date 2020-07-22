@@ -158,6 +158,13 @@ impl LineUid {
         }
     }
 
+    pub fn is_everything(self) -> bool {
+        self == Self::Everything
+    }
+    pub fn is_catch_all(self) -> bool {
+        self == Self::CatchAll
+    }
+
     /// Y-axis key representation.
     pub fn y_axis_key(self) -> String {
         match self {

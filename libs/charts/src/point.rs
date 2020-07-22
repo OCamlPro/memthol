@@ -37,6 +37,17 @@ impl<Val> PointVal<Val> {
             .ok_or_else(|| format!("unknown line uid `{}`", uid).into())
     }
 
+    pub fn get(&self, uid: uid::LineUid) -> Res<&Val> {
+        self.map
+            .get(&uid)
+            .ok_or_else(|| format!("unknown line uid `{}`", uid).into())
+    }
+
+    /// Retrieves the value for the *everything* filter.
+    pub fn get_everything_val(&self) -> Res<&Val> {
+        self.get(uid::LineUid::Everything)
+    }
+
     /// Map over all values.
     pub fn map<Out>(self, mut f: impl FnMut(uid::LineUid, Val) -> Res<Out>) -> Res<PointVal<Out>> {
         let mut map = Map::new();
@@ -131,12 +142,20 @@ where
 {
     type Coord;
     type Range;
+    fn zero() -> Self::Coord;
+    fn is_zero(val: &Self::Coord) -> bool;
     fn default_min() -> Self::Coord;
     fn default_max() -> Self::Coord;
 }
 impl CoordExt for Date {
     type Coord = time::chrono::Duration;
     type Range = plotters::coord::RangedDuration;
+    fn zero() -> time::chrono::Duration {
+        time::chrono::Duration::seconds(0)
+    }
+    fn is_zero(dur: &time::chrono::Duration) -> bool {
+        dur.is_zero()
+    }
     fn default_min() -> time::chrono::Duration {
         time::chrono::Duration::seconds(0)
     }
@@ -147,11 +166,56 @@ impl CoordExt for Date {
 impl CoordExt for u32 {
     type Coord = u32;
     type Range = plotters::coord::RangedCoordu32;
+    fn zero() -> u32 {
+        0
+    }
+    fn is_zero(val: &u32) -> bool {
+        *val == 0
+    }
     fn default_min() -> u32 {
         0
     }
     fn default_max() -> u32 {
         5
+    }
+}
+impl CoordExt for f32 {
+    type Coord = f32;
+    type Range = plotters::coord::RangedCoordf32;
+    fn zero() -> f32 {
+        0.0
+    }
+    fn is_zero(val: &f32) -> bool {
+        *val == 0.0
+    }
+    fn default_min() -> f32 {
+        0.0
+    }
+    fn default_max() -> f32 {
+        5.0
+    }
+}
+
+pub trait RatioExt {
+    /// Returns the percentage (between `0` and `100`) of the ratio between `self` and `max`.
+    fn ratio_wrt(&self, max: &Self) -> Res<f32>;
+}
+impl RatioExt for u32 {
+    fn ratio_wrt(&self, max: &Self) -> Res<f32> {
+        let (slf, max) = (*self, *max);
+        if max == 0 || slf > max {
+            bail!("cannot compute u32 ratio of {} w.r.t. {}", slf, max)
+        }
+        Ok(((slf * 100) as f32) / (max as f32))
+    }
+}
+impl RatioExt for time::chrono::Duration {
+    fn ratio_wrt(&self, max: &Self) -> Res<f32> {
+        let (slf, max) = match (self.num_nanoseconds(), max.num_nanoseconds()) {
+            (Some(slf), Some(max)) if max != 0 && slf <= max => (slf, max),
+            _ => bail!("cannot compute Duration ratio of {} w.r.t. {}", self, max),
+        };
+        Ok(((slf * 100) as f32) / (max as f32))
     }
 }
 
@@ -279,6 +343,111 @@ where
             });
 
             let style = style_conf.shape_conf(filter_spec.color());
+
+            chart_cxt
+                .draw_series(LineSeries::new(points, style))
+                .map_err(|e| e.to_string())?;
+        }
+
+        Ok(())
+    }
+
+    fn stacked_area_chart_render<'spec, DB>(
+        &self,
+        mut chart_builder: plotters::prelude::ChartBuilder<DB>,
+        style_conf: &impl StyleExt,
+        is_active: impl Fn(uid::LineUid) -> bool,
+        active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
+    ) -> Res<()>
+    where
+        DB: plotters::prelude::DrawingBackend,
+        Y::Coord: RatioExt
+            + std::ops::Add<Output = Y::Coord>
+            + std::ops::Sub<Output = Y::Coord>
+            + Clone
+            + PartialOrd
+            + Ord
+            + PartialEq,
+        Self: ChartRender<X, Y>,
+    {
+        let opt_ranges = self.ranges(&is_active);
+        let raw_ranges = Self::ranges_processor(opt_ranges)?;
+        let ranges = Self::coord_ranges_processor(&raw_ranges)?;
+
+        use plotters::prelude::*;
+
+        let x_range: X::Range = (ranges.x.min..ranges.x.max).into();
+        let y_range: RangedCoordf32 = (0. ..100.).into();
+
+        // Alright, time to build the actual chart context used for drawing.
+        let mut chart_cxt: ChartContext<DB, RangedCoord<X::Range, RangedCoordf32>> = chart_builder
+            .build_ranged(x_range, y_range)
+            .map_err(|e| e.to_string())?;
+
+        // Mesh configuration.
+        {
+            let mut mesh = chart_cxt.configure_mesh();
+
+            // Apply caller's configuration.
+            style_conf.mesh_conf::<X, f32, DB>(&mut mesh);
+
+            // Set x/y formatters and draw this thing.
+            mesh.x_label_formatter(&Self::x_label_formatter)
+                // .y_label_formatter(&Self::y_label_formatter)
+                .draw()
+                .map_err(|e| e.to_string())?;
+        }
+
+        // Stores all the maximum values and the sum of the values for each filter that has been
+        // processed so far (used in the loop below).
+        let mut memory: Vec<_> = self
+            .points()
+            .map(|point| {
+                let mut max = Y::zero();
+                for (uid, val) in &point.vals.map {
+                    if !uid.is_everything() && is_active(*uid) {
+                        max = max + Self::y_coord_processor(&raw_ranges.y, val);
+                    }
+                }
+                (max, 0.0f32)
+            })
+            .collect();
+
+        // Invariant: `memory.len()` is the same length as `self.points()`.
+
+        // Time to add some points.
+        for filter_spec in active_filters.clone() {
+            let f_uid = filter_spec.uid();
+            if f_uid.is_everything() {
+                continue;
+            }
+
+            let points = self
+                .points()
+                .enumerate()
+                .filter_map(|(point_index, point)| {
+                    let (ref max, ref mut sum) = memory[point_index];
+                    point.vals.map.get(&f_uid).map(|val| {
+                        let y_val = Self::y_coord_processor(&raw_ranges.y, val);
+                        assert!(*max >= y_val);
+
+                        let y_val = if Y::is_zero(max) {
+                            f32::zero()
+                        } else {
+                            y_val.ratio_wrt(max).expect(
+                                "\
+                                    logical error, maximum value for stacked area chart is not \
+                                    compatible with one of the individual values\
+                                ",
+                            )
+                        };
+                        println!("y_val: {}, sum: {}", y_val, sum);
+                        *sum = *sum + y_val;
+                        (Self::x_coord_processor(&raw_ranges.x, &point.key), *sum)
+                    })
+                });
+
+            let style = style_conf.shape_conf(filter_spec.color()).filled();
 
             chart_cxt
                 .draw_series(LineSeries::new(points, style))
@@ -458,6 +627,26 @@ impl TimePoints {
             }
         }
     }
+
+    pub fn stacked_area_chart_render<'spec, DB>(
+        &self,
+        chart_builder: plotters::prelude::ChartBuilder<DB>,
+        style_conf: &impl StyleExt,
+        is_active: impl Fn(uid::LineUid) -> bool,
+        active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
+    ) -> Res<()>
+    where
+        DB: plotters::prelude::DrawingBackend,
+    {
+        match self {
+            Self::Size(points) => points.stacked_area_chart_render(
+                chart_builder,
+                style_conf,
+                is_active,
+                active_filters,
+            ),
+        }
+    }
 }
 
 impl From<TimeSizePoints> for TimePoints {
@@ -504,6 +693,26 @@ impl Points {
             Self::Time(points) => {
                 points.chart_render(chart_builder, style_conf, is_active, active_filters)
             }
+        }
+    }
+
+    pub fn stacked_area_chart_render<'spec, DB>(
+        &self,
+        chart_builder: plotters::prelude::ChartBuilder<DB>,
+        style_conf: &impl StyleExt,
+        is_active: impl Fn(uid::LineUid) -> bool,
+        active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
+    ) -> Res<()>
+    where
+        DB: plotters::prelude::DrawingBackend,
+    {
+        match self {
+            Self::Time(points) => points.stacked_area_chart_render(
+                chart_builder,
+                style_conf,
+                is_active,
+                active_filters,
+            ),
         }
     }
 }

@@ -208,7 +208,7 @@ impl<T> FiltersExt<T> {
         Ok(())
     }
 
-    pub fn specs_iter(&self) -> impl Iterator<Item = &FilterSpec> {
+    pub fn specs_iter(&self) -> impl Iterator<Item = &FilterSpec> + Clone {
         Some(&self.everything)
             .into_iter()
             .chain(self.filters.iter().map(Filter::spec))

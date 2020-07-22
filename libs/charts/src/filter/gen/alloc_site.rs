@@ -78,11 +78,22 @@ impl AllocSite {
             0
         };
 
+        let validate = |count: usize| min_count <= count;
+
+        let filter_count = self.map.iter().fold(
+            0,
+            |acc, (_, count)| if validate(*count) { acc + 1 } else { acc },
+        );
+
+        let mut colors = Color::randoms(filter_count).into_iter();
+
         for (file, count) in self.map {
-            if count >= min_count {
+            if validate(count) {
                 let sub_filter = Self::generate_subfilter(&file);
 
-                let color = Color::random(true);
+                let color = colors.next().expect(
+                    "internal error, `filter_count` is not consistant with the actual filter count",
+                );
                 let mut spec = filter::FilterSpec::new(color);
                 spec.set_name(file);
 

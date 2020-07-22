@@ -306,7 +306,7 @@ impl Filters {
 
     /// Adds a new filter.
     pub fn add_new(&mut self) -> Res<msg::to_client::Msgs> {
-        let spec = FilterSpec::new(Color::random(true));
+        let spec = FilterSpec::new(Color::random());
         let filter = Filter::new(spec).chain_err(|| "while creating new filter")?;
         let msg = msg::to_client::FiltersMsg::add(filter);
         Ok(vec![msg])

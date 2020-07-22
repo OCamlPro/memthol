@@ -614,7 +614,7 @@ impl Chart {
                 let is_active =
                     |f_uid: filter::LineUid| visible_filters.get(&f_uid).cloned().unwrap_or(false);
 
-                points.chart_render(
+                points.stacked_area_chart_render(
                     builder,
                     &Styler,
                     is_active,
