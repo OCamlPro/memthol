@@ -12,7 +12,6 @@ alloc_data = { path = "../alloc_data" }
 
 anyhow = "*"
 num-format = "*"
-palette = "*"
 plotters = { git = "https://github.com/AdrienChampion/plotters", branch = "canvas_fixes" }
 regex = "*"
 safe_index = "*"
