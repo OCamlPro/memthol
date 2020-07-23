@@ -400,6 +400,7 @@ pub mod img {
         Minus,
         Undo,
         Check,
+        Dots,
     }
     impl Img {
         pub fn render(
@@ -419,6 +420,7 @@ pub mod img {
                 Self::Minus => minus(dimension_px, id, onclick, desc),
                 Self::Undo => undo(dimension_px, id, onclick, desc),
                 Self::Check => check(dimension_px, id, onclick, desc),
+                Self::Dots => dots(dimension_px, id, onclick, desc),
             }
         }
 
@@ -782,6 +784,36 @@ pub mod img {
                         M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 \
                         8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.236.236 0 0 1 \
                         .02-.022z\
+                    "
+                />
+            </svg>
+        }
+    }
+
+    /// Dots button.
+    ///
+    /// Inline SVG for https://icons.getbootstrap.com/icons/three-dots.
+    pub fn dots(
+        dimension_px: Option<usize>,
+        id: impl fmt::Display,
+        onclick: Option<OnClickAction>,
+        desc: impl fmt::Display,
+    ) -> Html {
+        raw_render(dimension_px, id, dots_img(), onclick, desc)
+    }
+    fn dots_img() -> Html {
+        html! {
+            <svg
+                fill = "currentColor"
+                height = "100%"
+                viewBox = "0 0 16 16"
+                xmlns = "http://www.w3.org/2000/svg"
+            >
+                <path
+                    fill-rule = "evenodd"
+                    d = "\
+                        M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 \
+                        0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z\
                     "
                 />
             </svg>
