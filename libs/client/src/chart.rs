@@ -2,7 +2,7 @@
 
 use plotters::prelude::*;
 
-pub use charts::chart::ChartSpec;
+pub use charts::chart::{ChartSettings, ChartSpec};
 
 prelude! {}
 
@@ -99,6 +99,8 @@ impl Charts {
 
             NewChartSetX(x_axis) => self.new_chart.set_x_axis(x_axis),
             NewChartSetY(y_axis) => self.new_chart.set_y_axis(y_axis),
+
+            ChartSettingsMsg(msg) => unimplemented!(),
         }
     }
 
@@ -220,8 +222,8 @@ impl Charts {
         let filters = filters.reference_filters();
 
         let should_render = match action {
-            ChartsMsg::NewChart(spec) => {
-                let chart = Chart::new(spec, filters)?;
+            ChartsMsg::NewChart(spec, settings) => {
+                let chart = Chart::new(spec, settings, filters)?;
                 self.charts.push(chart);
                 true
             }
@@ -270,6 +272,8 @@ impl Charts {
 pub struct Chart {
     /// Chart specification.
     spec: ChartSpec,
+    /// Chart settings.
+    settings: ChartSettings,
     /// True if the chart is expanded.
     visible: bool,
     /// DOM element containing the chart and its tabs.
@@ -303,7 +307,11 @@ pub struct Chart {
 }
 impl Chart {
     /// Constructor.
-    pub fn new(spec: ChartSpec, all_filters: &filter::ReferenceFilters) -> Res<Self> {
+    pub fn new(
+        spec: ChartSpec,
+        settings: ChartSettings,
+        all_filters: &filter::ReferenceFilters,
+    ) -> Res<Self> {
         let top_container = format!("chart_container_{}", spec.uid().get());
         let container = format!("chart_canvas_container_{}", spec.uid().get());
         let canvas = format!("chart_canvas_{}", spec.uid().get());
@@ -318,6 +326,7 @@ impl Chart {
 
         Ok(Self {
             spec,
+            settings,
             visible: true,
             top_container,
             container,
@@ -615,6 +624,7 @@ impl Chart {
                     |f_uid: filter::LineUid| visible_filters.get(&f_uid).cloned().unwrap_or(false);
 
                 points.stacked_area_chart_render(
+                    &self.settings,
                     builder,
                     &Styler,
                     is_active,

@@ -3,8 +3,6 @@
 //! - `SinceStart`: indicates a date since the start of the profiling run. Essentially a wrapper
 //!     around a `std::time::Duration`.
 
-use serde_derive::{Deserialize, Serialize};
-
 prelude! {}
 
 pub use std::time::Duration;

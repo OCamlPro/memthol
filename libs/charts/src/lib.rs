@@ -148,6 +148,7 @@ impl Charts {
                 // Chart creation message.
                 to_client_msgs.push(msg::to_client::ChartsMsg::new_chart(
                     nu_chart.spec().clone(),
+                    nu_chart.settings().clone(),
                 ));
                 // Initial points message.
                 let points = nu_chart.new_points(&mut self.filters, true).chain_err(|| {

@@ -16,7 +16,6 @@ plotters = { git = "https://github.com/AdrienChampion/plotters", branch = "canva
 regex = "*"
 safe_index = "*"
 serde = "*"
-serde_derive = "*"
 serde_json = "*"
 serde_regex = "*"
 strum = "*"

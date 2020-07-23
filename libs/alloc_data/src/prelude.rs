@@ -15,6 +15,12 @@ pub use crate::{
 
 pub use base::{error_chain, lazy_static};
 
+/// Re-exports of the serde traits for auto-implementations.
+pub mod serderive {
+    pub use serde_derive::{Deserialize, Serialize};
+}
+pub use serderive::*;
+
 /// Imports this crate's prelude.
 #[macro_export]
 macro_rules! prelude {

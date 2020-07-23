@@ -24,9 +24,6 @@ pub extern crate peg;
 
 pub use error_chain::bail;
 pub use num_bigint::BigUint;
-pub use serde_derive::{Deserialize, Serialize};
-
-use base::*;
 
 #[macro_use]
 pub mod prelude;
@@ -102,7 +99,7 @@ impl From<BigUint> for Uid {
 }
 
 /// A span.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, From, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, base::From, Serialize, Deserialize)]
 pub struct Span {
     /// Start of the span.
     pub start: usize,

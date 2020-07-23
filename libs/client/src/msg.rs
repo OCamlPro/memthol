@@ -121,6 +121,9 @@ pub enum ChartsMsg {
     /// Toggles the visibility of a filter for a chart.
     FilterToggleVisible(ChartUid, LineUid),
 
+    /// Settings message.
+    ChartSettingsMsg(ChartSettingsMsg),
+
     /// Destroys a chart.
     Destroy(ChartUid),
 
@@ -169,6 +172,12 @@ impl ChartsMsg {
     }
 }
 
+impl From<ChartSettingsMsg> for ChartsMsg {
+    fn from(msg: ChartSettingsMsg) -> Self {
+        Self::ChartSettingsMsg(msg)
+    }
+}
+
 impl fmt::Display for ChartsMsg {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -181,6 +190,32 @@ impl fmt::Display for ChartsMsg {
             Self::RefreshFilters => write!(fmt, "refresh filters"),
             Self::NewChartSetX(_) => write!(fmt, "new-chart-set-x"),
             Self::NewChartSetY(_) => write!(fmt, "new-chart-set-y"),
+            Self::ChartSettingsMsg(msg) => write!(fmt, "settings({})", msg),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ChartSettingsMsg {
+    ToggleVisible,
+    ToggleStackedArea,
+}
+
+impl ChartSettingsMsg {
+    pub fn toggle_visible() -> ChartsMsg {
+        Self::ToggleVisible.into()
+    }
+
+    pub fn toggle_stacked_area() -> ChartsMsg {
+        Self::ToggleStackedArea.into()
+    }
+}
+
+impl fmt::Display for ChartSettingsMsg {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::ToggleVisible => write!(fmt, "toggle visible"),
+            Self::ToggleStackedArea => write!(fmt, "toggle stacked aread"),
         }
     }
 }

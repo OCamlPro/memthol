@@ -4,10 +4,13 @@ prelude! {}
 
 use axis::{XAxis, YAxis};
 
-pub mod axis;
 mod spec;
+
+pub mod axis;
+pub mod settings;
 pub mod time;
 
+pub use settings::ChartSettings;
 pub use spec::ChartSpec;
 pub use uid::ChartUid;
 
@@ -45,14 +48,20 @@ impl RawChart {
 
 pub struct Chart {
     spec: ChartSpec,
+    settings: ChartSettings,
     chart: RawChart,
 }
 impl Chart {
     /// Creates a time chart.
     pub fn new(filters: &filter::Filters, x_axis: XAxis, y_axis: YAxis) -> Res<Self> {
         let spec = ChartSpec::new(x_axis, y_axis);
+        let settings = ChartSettings::from_axes(spec.desc(), x_axis, y_axis);
         let chart = RawChart::new(filters, x_axis, y_axis)?;
-        let slf = Self { spec, chart };
+        let slf = Self {
+            spec,
+            settings,
+            chart,
+        };
         Ok(slf)
     }
 
@@ -60,6 +69,17 @@ impl Chart {
     #[inline]
     pub fn spec(&self) -> &ChartSpec {
         &self.spec
+    }
+
+    /// Settings accessor.
+    #[inline]
+    pub fn settings(&self) -> &ChartSettings {
+        &self.settings
+    }
+    /// Settings mutable accessor.
+    #[inline]
+    pub fn settings_mut(&mut self) -> &mut ChartSettings {
+        &mut self.settings
     }
 
     /// UID accessor.

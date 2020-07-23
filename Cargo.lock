@@ -355,7 +355,6 @@ dependencies = [
  "regex",
  "safe_index",
  "serde",
- "serde_derive",
  "serde_json",
  "serde_regex",
  "strum",

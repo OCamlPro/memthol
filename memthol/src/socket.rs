@@ -171,7 +171,10 @@ impl Handler {
 
     fn send_all_charts(&mut self) -> Res<()> {
         for chart in self.charts.charts() {
-            let msg = msg::to_client::ChartsMsg::new_chart(chart.spec().clone());
+            let msg = msg::to_client::ChartsMsg::new_chart(
+                chart.spec().clone(),
+                chart.settings().clone(),
+            );
             Self::internal_send(&self.ip, &mut self.sender, msg)?
         }
         Ok(())

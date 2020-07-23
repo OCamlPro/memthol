@@ -4,8 +4,9 @@
 //!
 //! - with some work, macro `crate::mem::new` could handle this case too
 
-pub use serde_derive::{Deserialize, Serialize};
 pub use std::sync::{Arc, RwLock};
+
+prelude! {}
 
 type Memory = crate::mem::Memory<[u8]>;
 

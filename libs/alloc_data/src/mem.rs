@@ -2,15 +2,13 @@
 
 use std::{collections::BTreeMap as Map, sync::Arc};
 
-pub use serde_derive::{Deserialize, Serialize};
-
 prelude! {}
 
 /// Convenience macro that creates a lazy-static-rw-locked memory and some accessors.
 macro_rules! new {
     (mod $mod:ident for $ty:ty, uid: $uid:ident) => {
         mod $mod {
-            pub use serde_derive::{Deserialize, Serialize};
+            prelude! {}
             pub use std::sync::{Arc, RwLock};
 
             /// Stores a UID, cannot be constructed outside of the module it's declared in.

@@ -52,10 +52,17 @@ pub enum YAxis {
 }
 impl YAxis {
     /// Description of a y-axis.
-    pub fn desc(&self) -> &'static str {
+    pub fn desc(self) -> &'static str {
         match self {
             Self::TotalSize => "total size",
             // Self::MaxLifetime => "highest lifetime",
+        }
+    }
+
+    /// True if `self` supports stacked-area rendering.
+    pub fn can_stack_area(self) -> bool {
+        match self {
+            Self::TotalSize => true,
         }
     }
 }

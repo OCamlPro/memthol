@@ -291,8 +291,46 @@ where
 
     fn points(&self) -> std::slice::Iter<Point<X, Y>>;
 
+    fn render<'spec, DB>(
+        &self,
+        settings: &ChartSettings,
+        chart_builder: plotters::prelude::ChartBuilder<DB>,
+        style_conf: &impl StyleExt,
+        is_active: impl Fn(uid::LineUid) -> bool,
+        active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
+    ) -> Res<()>
+    where
+        DB: plotters::prelude::DrawingBackend,
+        Y::Coord: RatioExt
+            + std::ops::Add<Output = Y::Coord>
+            + std::ops::Sub<Output = Y::Coord>
+            + Clone
+            + PartialOrd
+            + Ord
+            + PartialEq,
+    {
+        if settings.stacked_area().unwrap_or(false) {
+            self.chart_render(
+                settings,
+                chart_builder,
+                style_conf,
+                is_active,
+                active_filters,
+            )
+        } else {
+            self.stacked_area_chart_render(
+                settings,
+                chart_builder,
+                style_conf,
+                is_active,
+                active_filters,
+            )
+        }
+    }
+
     fn chart_render<'spec, DB>(
         &self,
+        _settings: &ChartSettings,
         mut chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::LineUid) -> bool,
@@ -354,6 +392,7 @@ where
 
     fn stacked_area_chart_render<'spec, DB>(
         &self,
+        _settings: &ChartSettings,
         mut chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::LineUid) -> bool,
@@ -613,6 +652,7 @@ impl TimePoints {
 
     pub fn chart_render<'spec, DB>(
         &self,
+        settings: &ChartSettings,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::LineUid) -> bool,
@@ -622,14 +662,19 @@ impl TimePoints {
         DB: plotters::prelude::DrawingBackend,
     {
         match self {
-            Self::Size(points) => {
-                points.chart_render(chart_builder, style_conf, is_active, active_filters)
-            }
+            Self::Size(points) => points.chart_render(
+                settings,
+                chart_builder,
+                style_conf,
+                is_active,
+                active_filters,
+            ),
         }
     }
 
     pub fn stacked_area_chart_render<'spec, DB>(
         &self,
+        settings: &ChartSettings,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::LineUid) -> bool,
@@ -640,6 +685,7 @@ impl TimePoints {
     {
         match self {
             Self::Size(points) => points.stacked_area_chart_render(
+                settings,
                 chart_builder,
                 style_conf,
                 is_active,
@@ -681,6 +727,7 @@ impl Points {
 
     pub fn chart_render<'spec, DB>(
         &self,
+        settings: &ChartSettings,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::LineUid) -> bool,
@@ -690,14 +737,19 @@ impl Points {
         DB: plotters::prelude::DrawingBackend,
     {
         match self {
-            Self::Time(points) => {
-                points.chart_render(chart_builder, style_conf, is_active, active_filters)
-            }
+            Self::Time(points) => points.chart_render(
+                settings,
+                chart_builder,
+                style_conf,
+                is_active,
+                active_filters,
+            ),
         }
     }
 
     pub fn stacked_area_chart_render<'spec, DB>(
         &self,
+        settings: &ChartSettings,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::LineUid) -> bool,
@@ -708,6 +760,7 @@ impl Points {
     {
         match self {
             Self::Time(points) => points.stacked_area_chart_render(
+                settings,
                 chart_builder,
                 style_conf,
                 is_active,
