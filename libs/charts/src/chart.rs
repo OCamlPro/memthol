@@ -65,6 +65,14 @@ impl Chart {
         Ok(slf)
     }
 
+    /// Applies an update to its settings.
+    pub fn update(&mut self, msg: msg::to_server::ChartMsg) {
+        use msg::to_server::ChartMsg::*;
+        match msg {
+            SettingsUpdate(msg) => self.settings.update(msg),
+        }
+    }
+
     /// Spec accessor.
     #[inline]
     pub fn spec(&self) -> &ChartSpec {

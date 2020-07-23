@@ -325,7 +325,7 @@ pub mod tiles {
                 Some(
                     model
                         .link
-                        .callback(move |_| msg::ChartsMsg::toggle_visible(chart_uid)),
+                        .callback(move |_| msg::ChartMsg::toggle_visible(chart_uid)),
                 ),
                 "collapse this chart",
             )
@@ -336,7 +336,7 @@ pub mod tiles {
                 Some(
                     model
                         .link
-                        .callback(move |_| msg::ChartsMsg::toggle_visible(chart_uid)),
+                        .callback(move |_| msg::ChartMsg::toggle_visible(chart_uid)),
                 ),
                 "expand this chart",
             )
@@ -396,7 +396,7 @@ pub mod filter_toggles {
             let uid = spec.uid();
             model
                 .link
-                .callback(move |_| msg::ChartsMsg::filter_toggle_visible(chart_uid, uid))
+                .callback(move |_| msg::ChartMsg::filter_toggle_visible(chart_uid, uid))
         };
 
         let mut tabs = Tabs::new();

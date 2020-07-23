@@ -3,6 +3,44 @@
 prelude! {}
 use filter::*;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ChartSettingsMsg {
+    ToggleVisible,
+    ChangeTitle(String),
+    ToggleStackedArea,
+}
+
+impl ChartSettingsMsg {
+    pub fn toggle_visible<Res>(uid: uid::ChartUid) -> Res
+    where
+        (uid::ChartUid, Self): Into<Res>,
+    {
+        (uid, Self::ToggleVisible).into()
+    }
+    pub fn toggle_stacked_area<Res>(uid: uid::ChartUid) -> Res
+    where
+        (uid::ChartUid, Self): Into<Res>,
+    {
+        (uid, Self::ToggleStackedArea).into()
+    }
+    pub fn change_title<Res>(uid: uid::ChartUid, title: impl Into<String>) -> Res
+    where
+        (uid::ChartUid, Self): Into<Res>,
+    {
+        (uid, Self::ChangeTitle(title.into())).into()
+    }
+}
+
+impl fmt::Display for ChartSettingsMsg {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::ToggleVisible => write!(fmt, "toggle visible"),
+            Self::ToggleStackedArea => write!(fmt, "toggle stacked aread"),
+            Self::ChangeTitle(title) => write!(fmt, "title: {}", title),
+        }
+    }
+}
+
 /// Messages from the client to the server.
 pub mod to_server {
     use super::*;
@@ -27,6 +65,8 @@ pub mod to_server {
         New(chart::axis::XAxis, chart::axis::YAxis),
         /// Reloads all charts.
         Reload,
+        /// An update for a specific chart.
+        ChartUpdate { uid: uid::ChartUid, msg: ChartMsg },
     }
     impl ChartsMsg {
         /// Constructs a chart creation message.
@@ -36,6 +76,31 @@ pub mod to_server {
         /// Reloads all charts.
         pub fn reload() -> Msg {
             Self::Reload.into()
+        }
+    }
+
+    impl From<(uid::ChartUid, ChartMsg)> for ChartsMsg {
+        fn from((uid, msg): (uid::ChartUid, ChartMsg)) -> Self {
+            Self::ChartUpdate { uid, msg }
+        }
+    }
+    impl From<(uid::ChartUid, ChartSettingsMsg)> for ChartsMsg {
+        fn from((uid, msg): (uid::ChartUid, ChartSettingsMsg)) -> Self {
+            Self::ChartUpdate {
+                uid,
+                msg: msg.into(),
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub enum ChartMsg {
+        SettingsUpdate(ChartSettingsMsg),
+    }
+
+    impl From<ChartSettingsMsg> for ChartMsg {
+        fn from(msg: ChartSettingsMsg) -> Self {
+            Self::SettingsUpdate(msg)
         }
     }
 

@@ -90,17 +90,17 @@ impl Charts {
 
         match action {
             Move { uid, up } => self.move_chart(uid, up),
-            ToggleVisible(uid) => self.toggle_visible(uid),
             Destroy(uid) => self.destroy(uid),
-
-            FilterToggleVisible(uid, filter_uid) => self.filter_toggle_visible(uid, filter_uid),
 
             RefreshFilters => self.refresh_filters(filters),
 
             NewChartSetX(x_axis) => self.new_chart.set_x_axis(x_axis),
             NewChartSetY(y_axis) => self.new_chart.set_y_axis(y_axis),
 
-            ChartSettingsMsg(msg) => unimplemented!(),
+            ChartMsg { uid, msg } => {
+                let (_, chart) = self.get_mut(uid)?;
+                chart.update(msg)
+            }
         }
     }
 
@@ -162,27 +162,6 @@ impl Charts {
             true
         };
         Ok(did_something)
-    }
-
-    /// Toggles the visibility of a chart.
-    fn toggle_visible(&mut self, uid: ChartUid) -> Res<ShouldRender> {
-        let (_, chart) = self
-            .get_mut(uid)
-            .chain_err(|| format!("while changing chart visibility"))?;
-        chart.toggle_visible()
-    }
-
-    /// Toggles the visibility of a chart.
-    fn filter_toggle_visible(
-        &mut self,
-        uid: ChartUid,
-        filter_uid: charts::uid::LineUid,
-    ) -> Res<ShouldRender> {
-        let (_, chart) = self
-            .get_mut(uid)
-            .chain_err(|| format!("while changing chart visibility"))?;
-        chart.filter_toggle_visible(filter_uid)?;
-        Ok(true)
     }
 }
 
@@ -340,6 +319,16 @@ impl Chart {
         })
     }
 
+    pub fn update(&mut self, msg: msg::ChartMsg) -> Res<ShouldRender> {
+        use msg::ChartMsg::*;
+        match msg {
+            ToggleVisible => self.toggle_visible(),
+            FilterToggleVisible(l_uid) => self.filter_toggle_visible(l_uid)?,
+            SettingsUpdate(msg) => self.settings.update(msg),
+        }
+        Ok(true)
+    }
+
     /// UID accessor.
     pub fn uid(&self) -> ChartUid {
         self.spec.uid()
@@ -375,9 +364,8 @@ impl Chart {
     }
 
     /// Toggles the visibility of the chart.
-    pub fn toggle_visible(&mut self) -> Res<ShouldRender> {
-        self.visible = !self.visible;
-        Ok(true)
+    pub fn toggle_visible(&mut self) {
+        self.visible = !self.visible
     }
 
     pub fn filter_visibility(&self) -> &Map<charts::uid::LineUid, bool> {

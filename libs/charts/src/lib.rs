@@ -166,6 +166,8 @@ impl Charts {
                 let msg = self.reload_points(false)?;
                 to_client_msgs.push(msg)
             }
+
+            msg::to_server::ChartsMsg::ChartUpdate { uid, msg } => self.get_mut(uid)?.update(msg),
         }
 
         Ok(to_client_msgs)

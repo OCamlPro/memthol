@@ -378,6 +378,7 @@ pub mod img {
             bg(transparent),
             fg(inherit),
             display(table),
+            outline(none),
         };
         LINK_BOX = {
             extends(link_box),

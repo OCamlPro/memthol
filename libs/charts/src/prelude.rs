@@ -13,7 +13,7 @@ pub use regex::Regex;
 pub use base::{
     debug_do,
     error_chain::{self, bail},
-    lazy_static,
+    impl_display, lazy_static,
 };
 
 /// Re-exports from the `alloc_data` crate.

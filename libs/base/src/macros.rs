@@ -28,6 +28,47 @@ macro_rules! debug_do {
 }
 
 #[macro_export]
+macro_rules! implement {
+    (
+        $(
+            $trait:ident $( ($($args:tt)*) )? {
+                $($def:tt)*
+            }
+        )*
+    ) => {
+        $(
+            $crate::implement! {
+                @ $trait $(( $($args)* ))? { $($def)* }
+            }
+        )*
+    };
+
+    (@Display {
+        $( $ty:ty => |&$slf:ident, $fmt:pat| $def:expr ),* $(,)?
+    }) => {
+        $(
+            impl std::fmt::Display for $ty {
+                fn fmt(&$slf, $fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+                    $def
+                }
+            }
+        )*
+    };
+
+    (@From {
+        $( $src:ty, to $tgt:ty => |$param:pat| $def:expr ),* $(,)?
+    }) => {
+        $(
+            impl std::convert::From<$src> for $tgt {
+                fn from($param: $src) -> Self {
+                    $def
+                }
+            }
+        )*
+    };
+}
+
+#[macro_export]
 macro_rules! impl_display {
     (
         fmt(&$slf:ident, $fmt:ident)

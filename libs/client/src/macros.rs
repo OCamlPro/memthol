@@ -121,15 +121,27 @@ macro_rules! css {
 
     // #overflow
     (@($str:expr) overflow($($args:tt)*)) => {{
-        write!($str, "overflow: ");
-        write!($str, "{}",
-            $crate::css!(@overflow($($args)*))
-        );
+        write!($str, "overflow: {}; ", $crate::css!(@overflow($($args)*)));
     }};
-    (@overflow(scroll)) => ("scroll; ");
-    (@overflow(hidden)) => ("hidden; ");
-    (@overflow(auto)) => ("auto; ");
-    (@overflow(visible)) => ("visible; ");
+    (@overflow(scroll)) => ("scroll");
+    (@overflow(hidden)) => ("hidden");
+    (@overflow(auto)) => ("auto");
+    (@overflow(visible)) => ("visible");
+
+    // #outline
+    (@($str:expr) outline($($args:tt)*)) => {{
+        write!($str, "outline: {}; ", $crate::css!(@outline($($args)*)));
+    }};
+    (@outline(dotted)) => ("dotted");
+    (@outline(dashed)) => ("dashed");
+    (@outline(solid)) => ("solid");
+    (@outline(double)) => ("double");
+    (@outline(groove)) => ("groove");
+    (@outline(ridge)) => ("ridge");
+    (@outline(inset)) => ("inset");
+    (@outline(outset)) => ("outset");
+    (@outline(none)) => ("none");
+    (@outline(hidden)) => ("hidden");
 
     // #display
     (@($str:expr) display($($args:tt)*)) => {{
