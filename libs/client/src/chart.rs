@@ -253,8 +253,6 @@ pub struct Chart {
     spec: ChartSpec,
     /// Chart settings.
     settings: ChartSettings,
-    /// True if the chart is expanded.
-    visible: bool,
     /// DOM element containing the chart and its tabs.
     top_container: String,
     /// DOM element containing the canvas.
@@ -283,6 +281,8 @@ pub struct Chart {
     /// unset this flag so that its value is preserved until the chart is visible again. At that
     /// point the chart will be redrawn.
     redraw: bool,
+    /// True if the chart settings are visible.
+    settings_visible: bool,
 }
 impl Chart {
     /// Constructor.
@@ -306,7 +306,6 @@ impl Chart {
         Ok(Self {
             spec,
             settings,
-            visible: true,
             top_container,
             container,
             canvas,
@@ -315,6 +314,7 @@ impl Chart {
             points: None,
             filters,
             prev_filters: Map::new(),
+            settings_visible: false,
             redraw: true,
         })
     }
@@ -322,7 +322,7 @@ impl Chart {
     pub fn update(&mut self, msg: msg::ChartMsg) -> Res<ShouldRender> {
         use msg::ChartMsg::*;
         match msg {
-            ToggleVisible => self.toggle_visible(),
+            SettingsToggleVisible => self.toggle_settings_visible(),
             FilterToggleVisible(l_uid) => self.filter_toggle_visible(l_uid)?,
             SettingsUpdate(msg) => self.settings.update(msg),
         }
@@ -340,7 +340,24 @@ impl Chart {
 
     /// True if the chart is visible.
     pub fn is_visible(&self) -> bool {
-        self.visible
+        self.settings.is_visible()
+    }
+    /// True if the settings of the chart are visible.
+    ///
+    /// - settings can only be visible if the chart is visible.
+    pub fn is_settings_visible(&self) -> bool {
+        self.is_visible() && self.settings_visible
+    }
+
+    /// Chart settings.
+    #[inline]
+    pub fn settings(&self) -> &ChartSettings {
+        &self.settings
+    }
+    /// Chart title.
+    #[inline]
+    pub fn title(&self) -> &str {
+        self.settings().title()
     }
 
     /// Chart specification.
@@ -365,7 +382,11 @@ impl Chart {
 
     /// Toggles the visibility of the chart.
     pub fn toggle_visible(&mut self) {
-        self.visible = !self.visible
+        self.settings.toggle_visible()
+    }
+    /// Toggles the visibility of the settings.
+    pub fn toggle_settings_visible(&mut self) {
+        self.settings_visible = !self.settings_visible
     }
 
     pub fn filter_visibility(&self) -> &Map<charts::uid::LineUid, bool> {
@@ -494,7 +515,7 @@ impl Chart {
     ///
     /// Also, makes the chart visible.
     pub fn build_chart(&mut self) -> Res<()> {
-        if self.visible {
+        if self.settings.is_visible() {
             if self.chart.is_some() {
                 bail!("asked to build and bind a chart that's already built and binded")
             }
@@ -554,7 +575,7 @@ impl Chart {
     pub fn draw(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
         // If the chart's not visible, do nothing. We will draw once the chart becomes visible
         // again.
-        if !self.visible {
+        if !self.settings.is_visible() {
             return Ok(());
         }
 
@@ -611,7 +632,7 @@ impl Chart {
                 let is_active =
                     |f_uid: filter::LineUid| visible_filters.get(&f_uid).cloned().unwrap_or(false);
 
-                points.stacked_area_chart_render(
+                points.render(
                     &self.settings,
                     builder,
                     &Styler,

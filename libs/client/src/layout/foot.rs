@@ -158,7 +158,6 @@ pub mod menu {
             width({center_tile_width}%),
             float(left),
             overflow(auto),
-            font_size(120%),
             // border(left, 1 px, white),
             // border(right, 1 px, white),
         };
@@ -281,15 +280,6 @@ pub mod menu {
         }
     }
 
-    define_style! {
-        TITLE_STYLE = {
-            font_size(150%),
-            text_align(center),
-            bold,
-            underline,
-        };
-    }
-
     pub mod settings {
         use super::*;
 
@@ -297,13 +287,7 @@ pub mod menu {
             html! {
                 <>
                     <br/>
-                    <div
-                        id = "settings_title"
-                        style = TITLE_STYLE
-                    >
-                        { "Settings" }
-                    </div>
-
+                    {layout::section("Settings")}
                     <br/>
 
                     {render_name_row(model, filter)}
@@ -313,10 +297,10 @@ pub mod menu {
         }
 
         pub fn render_name_row(model: &Model, filter: &filter::FilterSpec) -> Html {
-            let mut table_row = table::TableRow::new_menu(true, html! { "name" });
+            let mut table_row = layout::table::TableRow::new_menu(true, html! { "name" });
             table_row.push_single_value({
                 let uid = filter.uid();
-                input::text_input(
+                layout::input::text_input(
                     filter.name(),
                     model
                         .link
@@ -326,10 +310,10 @@ pub mod menu {
             table_row.render()
         }
         pub fn render_color_row(model: &Model, filter: &filter::FilterSpec) -> Html {
-            let mut table_row = table::TableRow::new_menu(false, html! { "color" });
+            let mut table_row = layout::table::TableRow::new_menu(false, html! { "color" });
             table_row.push_single_value({
                 let uid = filter.uid();
-                input::color_input(
+                layout::input::color_input(
                     filter.color(),
                     model
                         .link
@@ -352,14 +336,7 @@ pub mod menu {
             html! {
                 <>
                     <br/>
-
-                    <div
-                        id = "subfilter_title"
-                        style = TITLE_STYLE
-                    >
-                        { "Sub-Filters" }
-                    </div>
-
+                    {layout::section("Sub-Filters")}
                     <br/>
 
                     {
@@ -378,7 +355,7 @@ pub mod menu {
             sub: &filter::SubFilter,
         ) -> Html {
             let key = render_key(model, uid, sub);
-            let mut table_row = table::TableRow::new_menu(is_first, key);
+            let mut table_row = layout::table::TableRow::new_menu(is_first, key);
             let sub_uid = sub.uid();
             match sub.raw() {
                 RawSubFilter::Size(sub) => {
@@ -482,7 +459,7 @@ pub mod menu {
             use charts::filter::ord::Kind;
 
             pub fn render<Update>(
-                table_row: &mut table::TableRow,
+                table_row: &mut layout::table::TableRow,
                 model: &Model,
                 sub: &SizeFilter,
                 msg: Update,
@@ -510,19 +487,21 @@ pub mod menu {
 
                 match *sub {
                     SizeFilter::Cmp { cmp, val } => {
-                        table_row.push_value(input::u32_input(model, val, move |usize_res| {
-                            msg(usize_res.map(|val| SizeFilter::Cmp { cmp, val }))
-                        }));
+                        table_row.push_value(layout::input::u32_input(
+                            model,
+                            val,
+                            move |usize_res| msg(usize_res.map(|val| SizeFilter::Cmp { cmp, val })),
+                        ));
                         table_row.push_value(html! {
                             "machine word(s)"
                         })
                     }
                     SizeFilter::In { lb, ub } => {
                         let msg_fn = msg.clone();
-                        let lb_html = input::u32_input(model, lb, move |usize_res| {
+                        let lb_html = layout::input::u32_input(model, lb, move |usize_res| {
                             msg_fn(usize_res.map(|lb| SizeFilter::In { lb, ub }))
                         });
-                        let ub_html = input::u32_input(model, ub, move |usize_res| {
+                        let ub_html = layout::input::u32_input(model, ub, move |usize_res| {
                             msg(usize_res.map(|ub| SizeFilter::In { lb, ub }))
                         });
                         table_row.push_sep(html! {"["});
@@ -540,7 +519,7 @@ pub mod menu {
             use charts::filter::ord::Kind;
 
             pub fn render(
-                table_row: &mut table::TableRow,
+                table_row: &mut layout::table::TableRow,
                 model: &Model,
                 sub: &LifetimeFilter,
                 msg: impl Fn(Res<LifetimeFilter>) -> Msg + 'static + Clone,
@@ -566,19 +545,23 @@ pub mod menu {
 
                 match *sub {
                     LifetimeFilter::Cmp { cmp, val } => {
-                        table_row.push_value(input::lifetime_input(model, val, move |usize_res| {
-                            msg(usize_res.map(|val| LifetimeFilter::Cmp { cmp, val }))
-                        }));
+                        table_row.push_value(layout::input::lifetime_input(
+                            model,
+                            val,
+                            move |usize_res| {
+                                msg(usize_res.map(|val| LifetimeFilter::Cmp { cmp, val }))
+                            },
+                        ));
                         table_row.push_value(html! {
                             "second(s)"
                         })
                     }
                     LifetimeFilter::In { lb, ub } => {
                         let msg_fn = msg.clone();
-                        let lb_html = input::lifetime_input(model, lb, move |usize_res| {
+                        let lb_html = layout::input::lifetime_input(model, lb, move |usize_res| {
                             msg_fn(usize_res.map(|lb| LifetimeFilter::In { lb, ub }))
                         });
-                        let ub_html = input::lifetime_input(model, ub, move |usize_res| {
+                        let ub_html = layout::input::lifetime_input(model, ub, move |usize_res| {
                             msg(usize_res.map(|ub| LifetimeFilter::In { lb, ub }))
                         });
                         table_row.push_sep(html! {"["});
@@ -598,14 +581,12 @@ pub mod menu {
                 LabelFilter,
             };
 
-            pub fn render<Update>(
-                table_row: &mut table::TableRow,
+            pub fn render(
+                table_row: &mut layout::table::TableRow,
                 model: &Model,
                 sub: &LabelFilter,
-                msg: Update,
-            ) where
-                Update: Fn(Res<LabelFilter>) -> Msg + 'static + Clone,
-            {
+                msg: impl Fn(Res<LabelFilter>) -> Msg + 'static + Clone,
+            ) {
                 macro_rules! push_add_button {
                     ($idx:expr) => {
                         table_row.push_button("+", {
@@ -643,7 +624,7 @@ pub mod menu {
                     push_add_button!(idx);
 
                     let value = spec.to_string();
-                    let inner = input::string_input(model, &value, {
+                    let inner = layout::input::string_input(model, &value, {
                         let msg = msg.clone();
                         let sub = sub.clone();
 
@@ -674,7 +655,7 @@ pub mod menu {
             };
 
             pub fn render<Update>(
-                table_row: &mut table::TableRow,
+                table_row: &mut layout::table::TableRow,
                 model: &Model,
                 sub: &LocFilter,
                 msg: Update,
@@ -716,7 +697,7 @@ pub mod menu {
                     push_add_button!(idx);
 
                     let value = spec.to_string();
-                    let inner = input::string_input(model, &value, {
+                    let inner = layout::input::string_input(model, &value, {
                         let msg = msg.clone();
                         let sub = sub.clone();
 
@@ -950,395 +931,6 @@ pub mod tabs {
                     {tabs.render()}
                 </div>
             }
-        }
-    }
-}
-
-pub mod table {
-    use super::*;
-
-    pub const LEFT_COL_WIDTH: usize = 15;
-    pub const RIGHT_COL_WIDTH: usize = 100 - LEFT_COL_WIDTH - 1;
-
-    define_style! {
-        row_style! = {
-            width(100%),
-            height(10%),
-            block,
-        };
-        FIRST_ROW_STYLE = {
-            extends(row_style),
-        };
-        NON_FIRST_ROW_STYLE = {
-            extends(row_style),
-            border(top, 2 px, white),
-        };
-
-        LEFT_COL = {
-            block,
-            height(100%),
-            width({LEFT_COL_WIDTH}%),
-            text_align(center),
-            float(left),
-            padding(none),
-            margin(none),
-            border(right, 2 px, white),
-        };
-        RIGHT_COL = {
-            block,
-            height(100%),
-            width({RIGHT_COL_WIDTH}%),
-            float(left),
-            padding(none),
-            margin(none),
-            overflow(auto),
-        };
-        table_cell_style! = {
-            table cell,
-            vertical_align(middle),
-        };
-    }
-
-    define_style! {
-        cell_style! = {
-            height(100%),
-            display(table),
-            float(left),
-            text_align(center),
-        };
-        VALUE_CONTAINER_STYLE = {
-            extends(cell_style),
-            width(min 10%),
-        };
-        TINY_VALUE_CONTAINER_STYLE = {
-            extends(cell_style),
-            width(3%),
-        };
-        SINGLE_VALUE_CONTAINER_STYLE = {
-            extends(cell_style),
-            width(100%),
-        };
-        SEP_CONTAINER_STYLE = {
-            extends(cell_style),
-            width(2%),
-        };
-        SELECTOR_CONTAINER_STYLE = {
-            extends(cell_style),
-            width(10%),
-        };
-        SINGLE_VALUE_WITH_SELECTOR_CONTAINER_STYLE = {
-            extends(cell_style),
-            width(90%)
-        };
-
-        value_cell_style! = {
-            extends(table_cell_style),
-            height(100%),
-            width(auto),
-            // width(min 15%),
-        };
-        CELL_STYLE = {
-            extends(value_cell_style),
-        };
-        VALUE_STYLE = {
-            extends(value_cell_style),
-            // margin(0%, 1%),
-        };
-        SEP_STYLE = {
-            extends(value_cell_style),
-            // padding(0%, 1%),
-            // width(5%),
-            font(code),
-        };
-        ADD_STYLE = {
-            // extends(value_cell_style),
-            // width(5%),
-            font(code),
-            pointer,
-        };
-
-        SELECTOR_STYLE = {
-            extends(value_cell_style),
-            // margin(0%, 1%),
-        };
-
-        BUTTON_STYLE = {
-            font(code),
-            pointer,
-        };
-    }
-
-    pub struct TableRow {
-        style: &'static str,
-        lft_style: &'static str,
-        lft: Html,
-        rgt_style: &'static str,
-        rgt: SVec<Html>,
-    }
-
-    impl TableRow {
-        fn new(
-            is_first: bool,
-            lft_style: &'static str,
-            lft: Html,
-            rgt_style: &'static str,
-        ) -> Self {
-            let style = if is_first {
-                &*FIRST_ROW_STYLE
-            } else {
-                &*NON_FIRST_ROW_STYLE
-            };
-            let lft = html! {
-                <div
-                    style = SINGLE_VALUE_CONTAINER_STYLE
-                >
-                    {Self::new_cell(lft)}
-                </div>
-            };
-            Self {
-                style,
-                lft_style,
-                lft,
-                rgt_style,
-                rgt: SVec::new(),
-            }
-        }
-
-        pub fn new_menu(is_first: bool, lft: Html) -> Self {
-            Self::new(is_first, &*LEFT_COL, lft, &*RIGHT_COL)
-        }
-
-        pub fn render(self) -> Html {
-            html! {
-                <div
-                    style = self.style
-                >
-                    <div
-                        style = self.lft_style
-                    >
-                        {self.lft}
-                    </div>
-                    <div
-                        style = self.rgt_style
-                    >
-                        { for self.rgt.into_iter() }
-                    </div>
-                </div>
-            }
-        }
-
-        fn new_cell(inner: Html) -> Html {
-            html! {
-                <div
-                    style = CELL_STYLE
-                >
-                    {inner}
-                </div>
-            }
-        }
-
-        pub fn push_selector(&mut self, selector: Html) {
-            self.rgt.push(html! {
-                <div
-                    style = SELECTOR_CONTAINER_STYLE
-                >
-                    {Self::new_cell(selector)}
-                </div>
-            })
-        }
-        pub fn push_sep(&mut self, sep: Html) {
-            self.rgt.push(html! {
-                <div
-                    style = SEP_CONTAINER_STYLE
-                >
-                    {Self::new_cell(sep)}
-                </div>
-            })
-        }
-        pub fn push_value(&mut self, value: Html) {
-            self.rgt.push(html! {
-                <div
-                    style = VALUE_CONTAINER_STYLE
-                >
-                    {Self::new_cell(value)}
-                </div>
-            })
-        }
-        pub fn push_tiny_value(&mut self, value: Html) {
-            self.rgt.push(html! {
-                <div
-                    style = TINY_VALUE_CONTAINER_STYLE
-                >
-                    {Self::new_cell(value)}
-                </div>
-            })
-        }
-        pub fn push_single_value(&mut self, value: Html) {
-            self.rgt.push(html! {
-                <div
-                    style = SINGLE_VALUE_CONTAINER_STYLE
-                >
-                    {Self::new_cell(value)}
-                </div>
-            })
-        }
-
-        pub fn push_single_selector_and_value(&mut self, selector: Html, value: Html) {
-            self.rgt.push(html! {
-                <div
-                    style = SELECTOR_CONTAINER_STYLE
-                >
-                    {Self::new_cell(selector)}
-                </div>
-            });
-            self.rgt.push(html! {
-                <div
-                    style = VALUE_CONTAINER_STYLE
-                >
-                    {Self::new_cell(value)}
-                </div>
-            })
-        }
-
-        pub fn push_button(&mut self, txt: &str, action: OnClickAction) {
-            self.rgt.push(html! {
-                <div
-                    style = SEP_CONTAINER_STYLE
-                >
-                    {Self::new_cell(html! {
-                        <div
-                            style = BUTTON_STYLE
-                            onclick = action
-                        >
-                            {txt}
-                        </div>
-                    })}
-                </div>
-            })
-        }
-    }
-}
-
-pub mod input {
-    use super::*;
-
-    define_style! {
-        input_style! = {
-            width(85%),
-            height(70%),
-            border_radius(5 px),
-            text_align(center),
-            margin(none),
-            padding(0%, 1%),
-            border(none),
-            bg({"#3a3a3a"}),
-        };
-
-        TEXT_INPUT_STYLE = {
-            extends(input_style),
-            fg(orange),
-            font(code),
-        };
-        COLOR_INPUT_STYLE = {
-            extends(input_style),
-        };
-    }
-
-    pub fn text_input(value: &str, onchange: OnChangeAction) -> Html {
-        html! {
-            <input
-                type = "text"
-                class = "text_input"
-                style = TEXT_INPUT_STYLE
-                value = value
-                onchange = onchange
-            />
-        }
-    }
-
-    fn parse_text_data(data: ChangeData) -> Res<String> {
-        match data {
-            yew::html::ChangeData::Value(txt) => Ok(txt),
-            err @ yew::html::ChangeData::Select(_) | err @ yew::html::ChangeData::Files(_) => {
-                bail!("unexpected text field update {:?}", err)
-            }
-        }
-    }
-
-    pub fn string_input(
-        model: &Model,
-        value: &str,
-        msg: impl Fn(Res<String>) -> Msg + 'static,
-    ) -> Html {
-        text_input(
-            value,
-            model.link.callback(move |data| {
-                msg(parse_text_data(data)
-                    .map_err(err::Err::from)
-                    .chain_err(|| "while parsing string value"))
-            }),
-        )
-    }
-
-    fn parse_usize_data(data: ChangeData) -> Res<usize> {
-        use alloc::parser::Parseable;
-        parse_text_data(data).and_then(|txt| usize::parse(txt).map_err(|e| e.into()))
-    }
-    pub fn usize_input(
-        model: &Model,
-        value: usize,
-        msg: impl Fn(Res<usize>) -> Msg + 'static,
-    ) -> Html {
-        text_input(
-            &value.to_string(),
-            model.link.callback(move |data| {
-                msg(parse_usize_data(data)
-                    .map_err(|e| err::Err::from(e))
-                    .chain_err(|| "while parsing integer value"))
-            }),
-        )
-    }
-
-    pub fn lifetime_input(
-        model: &Model,
-        value: time::Lifetime,
-        msg: impl Fn(Res<time::Lifetime>) -> Msg + 'static,
-    ) -> Html {
-        text_input(
-            &value.to_string(),
-            model.link.callback(move |data| {
-                let lifetime = parse_text_data(data).and_then(|txt| {
-                    time::Lifetime::from_str(&txt).chain_err(|| "while parsing lifetime value")
-                });
-                msg(lifetime)
-            }),
-        )
-    }
-
-    fn parse_u32_data(data: ChangeData) -> Res<u32> {
-        use alloc::parser::Parseable;
-        parse_text_data(data).and_then(|txt| u32::parse(txt).map_err(|e| e.into()))
-    }
-    pub fn u32_input(model: &Model, value: u32, msg: impl Fn(Res<u32>) -> Msg + 'static) -> Html {
-        text_input(
-            &value.to_string(),
-            model.link.callback(move |data| {
-                msg(parse_u32_data(data)
-                    .map_err(|e| err::Err::from(e))
-                    .chain_err(|| "while parsing integer value"))
-            }),
-        )
-    }
-
-    pub fn color_input(value: &impl fmt::Display, onchange: OnChangeAction) -> Html {
-        html! {
-            <input
-                type = "color"
-                id = "color_input"
-                style = COLOR_INPUT_STYLE
-                value = value
-                onchange = onchange
-            />
         }
     }
 }

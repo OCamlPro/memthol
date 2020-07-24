@@ -95,6 +95,15 @@ impl From<ChartsMsg> for Msg {
         Self::Charts(msg)
     }
 }
+impl From<Res<ChartsMsg>> for Msg {
+    fn from(res: Res<ChartsMsg>) -> Self {
+        match res {
+            Ok(msg) => msg.into(),
+            Err(e) => Self::err(e),
+        }
+    }
+}
+
 impl From<FooterMsg> for Msg {
     fn from(msg: FooterMsg) -> Self {
         Self::Footer(msg)
@@ -162,14 +171,14 @@ impl ChartsMsg {
 
 #[derive(Debug)]
 pub enum ChartMsg {
-    ToggleVisible,
+    SettingsToggleVisible,
     FilterToggleVisible(LineUid),
     SettingsUpdate(ChartSettingsMsg),
 }
 
 impl ChartMsg {
-    pub fn toggle_visible(uid: ChartUid) -> ChartsMsg {
-        (uid, Self::ToggleVisible).into()
+    pub fn settings_toggle_visible(uid: ChartUid) -> ChartsMsg {
+        (uid, Self::SettingsToggleVisible).into()
     }
     pub fn filter_toggle_visible(uid: ChartUid, line: LineUid) -> ChartsMsg {
         (uid, Self::FilterToggleVisible(line)).into()
@@ -298,7 +307,7 @@ base::implement! {
 
 
         ChartMsg => |&self, fmt| match self {
-            Self::ToggleVisible => write!(fmt, "toggle visible"),
+            Self::SettingsToggleVisible => write!(fmt, "settings toggle visible"),
             Self::FilterToggleVisible(l_uid) => write!(fmt, "filter toggle visible {}", l_uid),
             Self::SettingsUpdate(msg) => write!(fmt, "{}", msg),
         },

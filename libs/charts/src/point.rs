@@ -768,6 +768,36 @@ impl Points {
             ),
         }
     }
+
+    pub fn render<'spec, DB>(
+        &self,
+        settings: &ChartSettings,
+        chart_builder: plotters::prelude::ChartBuilder<DB>,
+        style_conf: &impl StyleExt,
+        is_active: impl Fn(uid::LineUid) -> bool,
+        active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
+    ) -> Res<()>
+    where
+        DB: plotters::prelude::DrawingBackend,
+    {
+        if settings.stacked_area().unwrap_or(false) {
+            self.stacked_area_chart_render(
+                settings,
+                chart_builder,
+                style_conf,
+                is_active,
+                active_filters,
+            )
+        } else {
+            self.chart_render(
+                settings,
+                chart_builder,
+                style_conf,
+                is_active,
+                active_filters,
+            )
+        }
+    }
 }
 
 impl<T> From<T> for Points

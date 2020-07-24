@@ -281,6 +281,9 @@ macro_rules! css {
     (@($str:expr) margin(auto)) => {{
         write!($str, "margin: auto; ");
     }};
+    (@($str:expr) margin(0, auto)) => {{
+        write!($str, "margin: 0 auto; ");
+    }};
     (@($str:expr) margin(
         $($margin:tt $unit:tt),* $(,)*
     )) => {{
