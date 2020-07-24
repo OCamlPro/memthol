@@ -13,7 +13,10 @@ pub use watcher::Watcher;
 /// - runs the file watcher daemon.
 pub fn start(dir: impl Into<String>) -> Res<()> {
     let mut watcher = Watcher::new(dir);
+    // base::time! {
     watcher.run(false)
+    //     ,|time| println!("startup time: {}", time)
+    // }
 }
 
 lazy_static! {

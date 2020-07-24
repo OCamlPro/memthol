@@ -208,7 +208,9 @@ impl FilterExt<alloc::CLoc> for LocSpec {
         match self {
             LocSpec::Anything => true,
             LocSpec::Value { value, line } => &loc.file == value && line.apply(&loc.line),
-            LocSpec::Regex { regex, line } => regex.is_match(&loc.file) && line.apply(&loc.line),
+            LocSpec::Regex { regex, line } => {
+                loc.file.str_do(|s| regex.is_match(s)) && line.apply(&loc.line)
+            }
         }
     }
 }

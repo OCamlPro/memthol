@@ -60,6 +60,14 @@ assembly] (wasm). To do this, you need to have the [rust toolchain].
     installation instructions [here][install wasm-pack], although `cargo install wasm-pack` should
     work
 
+Memthol UI's dependencies rely on some OS-level packages. Please make sure they are installed and in
+your path:
+
+- build essentials (including `cmake`)
+- openssl/libssl
+- freetype
+- expat
+
 ## From sources
 
 ### `debug`

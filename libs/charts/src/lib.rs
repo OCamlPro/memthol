@@ -148,6 +148,7 @@ impl Charts {
                 // Chart creation message.
                 to_client_msgs.push(msg::to_client::ChartsMsg::new_chart(
                     nu_chart.spec().clone(),
+                    nu_chart.settings().clone(),
                 ));
                 // Initial points message.
                 let points = nu_chart.new_points(&mut self.filters, true).chain_err(|| {
@@ -165,6 +166,8 @@ impl Charts {
                 let msg = self.reload_points(false)?;
                 to_client_msgs.push(msg)
             }
+
+            msg::to_server::ChartsMsg::ChartUpdate { uid, msg } => self.get_mut(uid)?.update(msg),
         }
 
         Ok(to_client_msgs)

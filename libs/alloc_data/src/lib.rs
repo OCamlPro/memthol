@@ -24,9 +24,6 @@ pub extern crate peg;
 
 pub use error_chain::bail;
 pub use num_bigint::BigUint;
-pub use serde_derive::{Deserialize, Serialize};
-
-use base::*;
 
 #[macro_use]
 pub mod prelude;
@@ -34,12 +31,12 @@ pub mod prelude;
 #[macro_use]
 pub mod mem;
 
-pub mod labels;
-pub mod locs;
 pub mod parser;
 pub mod time;
 
 mod fmt;
+
+prelude! {}
 
 pub use time::{Date, Duration, SinceStart};
 
@@ -102,7 +99,7 @@ impl From<BigUint> for Uid {
 }
 
 /// A span.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, From, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, base::From, Serialize, Deserialize)]
 pub struct Span {
     /// Start of the span.
     pub start: usize,
@@ -127,7 +124,7 @@ pub struct Span {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Loc {
     /// File the location is for.
-    pub file: String,
+    pub file: Str,
     /// Line in the file.
     pub line: usize,
     /// Column span at that line in the file.
@@ -135,9 +132,9 @@ pub struct Loc {
 }
 impl Loc {
     /// Constructor.
-    pub fn new(file: impl Into<String>, line: usize, span: impl Into<Span>) -> Self {
+    pub fn new(file: Str, line: usize, span: impl Into<Span>) -> Self {
         Self {
-            file: file.into(),
+            file,
             line,
             span: span.into(),
         }
@@ -225,9 +222,9 @@ pub struct Alloc {
     /// Size of the allocation.
     pub size: u32,
     /// Allocation-site callstack.
-    trace: locs::Uid,
+    trace: Trace,
     /// User-defined labels.
-    labels: labels::Uid,
+    labels: Labels,
     /// Time of creation.
     pub toc: SinceStart,
     /// Time of death.
@@ -240,13 +237,11 @@ impl Alloc {
         uid: Uid,
         kind: AllocKind,
         size: u32,
-        trace: Vec<CLoc>,
-        labels: Vec<String>,
+        trace: Trace,
+        labels: Labels,
         toc: SinceStart,
         tod: Option<SinceStart>,
     ) -> Self {
-        let trace = locs::add(trace);
-        let labels = labels::add(labels);
         Self {
             uid,
             kind,
@@ -294,7 +289,7 @@ impl Alloc {
 
     /// Trace accessor.
     pub fn trace(&self) -> std::sync::Arc<Vec<CLoc>> {
-        locs::get(self.trace)
+        self.trace.get()
     }
     /// Allocation-site of the allocation.
     pub fn alloc_site_do<Res>(&self, action: impl FnOnce(Option<&CLoc>) -> Res) -> Res {
@@ -303,8 +298,8 @@ impl Alloc {
     }
 
     /// Labels accessor.
-    pub fn labels(&self) -> std::sync::Arc<Vec<String>> {
-        labels::get(self.labels)
+    pub fn labels(&self) -> std::sync::Arc<Vec<Str>> {
+        self.labels.get()
     }
     /// Time of creation accessor.
     pub fn toc(&self) -> SinceStart {

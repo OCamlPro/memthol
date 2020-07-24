@@ -108,69 +108,89 @@ impl Color {
         plotters::palette::rgb::Rgb::new(self.r, self.g, self.b)
     }
 
+    pub fn from_hue(hue: f32, saturation: f32, lightness: f32) -> Self {
+        // Dumb application of https://en.wikipedia.org/wiki/HSL_and_HSV#Color_conversion_formulae.
+        let hue = hue % 360.;
+        let saturation = if saturation < 0.0 {
+            0.0
+        } else if 1.0 < saturation {
+            1.0
+        } else {
+            saturation
+        };
+        let lightness = if lightness < 0.0 {
+            0.0
+        } else if 1.0 < lightness {
+            1.0
+        } else {
+            lightness
+        };
+
+        let first_chroma = (1.0 - (2.0 * lightness - 1.).abs()) * saturation;
+        let hue_prime = hue / 60.;
+        let x = first_chroma * (1. - ((hue_prime % 2.) - 1.).abs());
+
+        let (r, g, b) = if hue_prime <= 1. {
+            (first_chroma, x, 0.)
+        } else if hue_prime <= 2. {
+            (x, first_chroma, 0.)
+        } else if hue_prime <= 3. {
+            (0., first_chroma, x)
+        } else if hue_prime <= 4. {
+            (0., x, first_chroma)
+        } else if hue_prime <= 5. {
+            (x, 0., first_chroma)
+        } else if hue_prime <= 6. {
+            (first_chroma, 0., x)
+        } else {
+            panic!("illegal `hue_prime` value {}", hue_prime)
+        };
+
+        let m = lightness - (first_chroma / 2.);
+
+        let (r, g, b) = ((r + m) * 255., (g + m) * 255., (b + m) * 255.);
+        let (r, g, b) = (r as u8, g as u8, b as u8);
+
+        Self { r, g, b }
+    }
+
+    /// Constructs `n` random colors evenly spread on the color wheel.
+    ///
+    /// - the starting point on the color wheel is random.
+    ///
+    /// # Guarantees
+    ///
+    /// - `Color::randoms(n).len() == n`
+    pub fn randoms(n: usize) -> Vec<Self> {
+        if n == 0 {
+            return vec![];
+        }
+
+        let inc = 360. / (n as f32);
+        let mut current = rng!().gen::<f32>() * 360f32;
+
+        (0..n)
+            .into_iter()
+            .map(|_| {
+                let color = Self::from_hue(current, 1.0, 0.5);
+                current += inc;
+                color
+            })
+            .collect()
+    }
+
     /// Constructs a random color.
     ///
     /// - `dark` indicates whether the random color should be relatively dark.
-    pub fn random(dark: bool) -> Self {
-        let mut rng = rng!();
-        let mut values = Vec::with_capacity(3);
-        // Generate a first hi value.
-        values.push(Self::random_hi_u8(&mut rng));
-        // Decide wether the next value is high too.
-        let v_2_hi = rng.gen::<bool>();
-        // Generate a second value.
-        values.push(if v_2_hi {
-            Self::random_hi_u8(&mut rng)
-        } else {
-            Self::random_mid_u8(&mut rng)
-        });
-        // Decide wether the next value is high too.
-        let v_3_hi = (!v_2_hi || !dark) && rng.gen::<bool>();
-        // Generate a third value.
-        values.push(if v_3_hi {
-            Self::random_hi_u8(&mut rng)
-        } else {
-            Self::random_low_u8(&mut rng)
-        });
-
-        // Shuffle stuff around.
-        use base::rand::seq::SliceRandom;
-        values.shuffle(&mut *rng);
-
-        Self {
-            r: values[0],
-            g: values[1],
-            b: values[2],
-        }
-    }
-    /// A random u8 between a lower-bound and an upper-bound.
-    ///
-    /// Panics if `lb >= ub`.
-    fn random_u8(rng: &mut SmallRng, lb: u8, ub: u8) -> u8 {
-        if lb >= ub {
-            panic!("illegal call `Color::random_u8(_, {}, {})`", lb, ub)
-        }
-        let mod_val = ub - lb + 1;
-        rng.gen::<u8>() % mod_val + lb
-    }
-    /// A random u8 between `200` and `255`.
-    fn random_hi_u8(rng: &mut SmallRng) -> u8 {
-        Self::random_u8(rng, 200, 255)
-    }
-    /// A random u8 between `100` and `200`.
-    fn random_mid_u8(rng: &mut SmallRng) -> u8 {
-        Self::random_u8(rng, 100, 200)
-    }
-    /// A random u8 between `50` and `150`.
-    fn random_low_u8(rng: &mut SmallRng) -> u8 {
-        Self::random_u8(rng, 50, 150)
+    pub fn random() -> Self {
+        Self::from_hue(rng!().gen::<f32>() * 360f32, 1.0, 0.5)
     }
 
     /// Keeps on constructing colors until the input predicate is true.
-    pub fn random_until(dark: bool, pred: impl Fn(&Color) -> bool) -> Self {
-        let mut color = Self::random(dark);
+    pub fn random_until(pred: impl Fn(&Color) -> bool) -> Self {
+        let mut color = Self::random();
         while !pred(&color) {
-            color = Self::random(dark)
+            color = Self::random()
         }
         color
     }

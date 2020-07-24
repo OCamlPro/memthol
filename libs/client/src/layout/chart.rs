@@ -10,6 +10,8 @@ const collapsed_chart_height_px: usize = 40;
 const tiles_height_px: usize = 50;
 const filter_toggles_height_px: usize = 30;
 
+const menu_bg_color: &str = "#dbe9ff";
+
 #[derive(Clone, Copy)]
 pub struct ChartPos {
     is_first: bool,
@@ -33,6 +35,7 @@ pub fn render(model: &Model, chart: &Chart, pos: ChartPos) -> Html {
         MAIN_CONTAINER_STYLE = {
             block,
             width(100%),
+            overflow(hidden),
             border_radius(20 px),
             border({border_size_px} px, black),
             box_shadow(
@@ -53,6 +56,7 @@ pub fn render(model: &Model, chart: &Chart, pos: ChartPos) -> Html {
                 style = MAIN_CONTAINER_STYLE
             >
                 {tiles::render(model, chart, pos)}
+                {settings::render(model, chart)}
                 {render_chart(model, chart)}
             </div>
             {filter_toggles::render(model, chart)}
@@ -148,6 +152,7 @@ pub mod tiles {
             top_tiles! = {
                 height({tiles_height_px} px),
                 width(100%),
+                bg({menu_bg_color}),
             };
 
             TOP_TILES = {
@@ -219,8 +224,15 @@ pub mod tiles {
             TITLE_CELL = {
                 vertical_align(middle),
                 table cell,
+                overflow(scroll),
             };
         }
+
+        let mut title = chart.title().to_string();
+        if chart.settings().stacked_area().unwrap_or(false) {
+            title.push_str(" (stacked area)")
+        }
+
         html! {
             <center
                 style = TITLE_CONTAINER
@@ -228,7 +240,7 @@ pub mod tiles {
                 <div
                     style = TITLE_CELL
                 >
-                    {chart.spec().desc()}
+                    {title}
                 </div>
             </center>
         }
@@ -322,28 +334,45 @@ pub mod tiles {
             layout::button::img::collapse(
                 None,
                 "collapse_chart_button",
-                Some(
-                    model
-                        .link
-                        .callback(move |_| msg::ChartsMsg::toggle_visible(chart_uid)),
-                ),
+                Some(model.link.callback(move |_| {
+                    msg::ChartSettingsMsg::toggle_visible::<msg::ChartsMsg>(chart_uid)
+                })),
                 "collapse this chart",
             )
         } else {
             layout::button::img::expand(
                 None,
                 "expand_chart_button",
-                Some(
-                    model
-                        .link
-                        .callback(move |_| msg::ChartsMsg::toggle_visible(chart_uid)),
-                ),
+                Some(model.link.callback(move |_| {
+                    msg::ChartSettingsMsg::toggle_visible::<msg::ChartsMsg>(chart_uid)
+                })),
                 "expand this chart",
             )
         };
 
+        let settings_button = layout::button::img::dots(
+            None,
+            "settings_chart_button",
+            Some(
+                model
+                    .link
+                    .callback(move |_| msg::ChartMsg::settings_toggle_visible(chart_uid)),
+            ),
+            if chart.is_settings_visible() {
+                "collapse the chart's settings"
+            } else {
+                "expand the chart's settings"
+            },
+        );
+
         html! {
             <>
+                <div
+                    id = "settings_chart_button_container"
+                    style = BUTTON_CONTAINER
+                >
+                    {settings_button}
+                </div>
                 <div
                     id = "collapse_expand_chart_button_container"
                     style = BUTTON_CONTAINER
@@ -361,25 +390,90 @@ pub mod tiles {
     }
 }
 
+pub mod settings {
+    use super::*;
+
+    const LINE_HEIGHT_PX: usize = 40;
+
+    pub fn render(model: &Model, chart: &Chart) -> Html {
+        define_style! {
+            SETTINGS_STYLE = {
+                border(bottom, 2 px, black),
+                padding(10 px, 0 px),
+                font_size(120%),
+                bg({menu_bg_color}),
+            };
+        }
+
+        if !chart.is_settings_visible() {
+            return html! {};
+        }
+
+        html! {
+            <div
+                style = SETTINGS_STYLE
+            >
+                {layout::section("Settings")}
+                <br/>
+
+                { title(model, chart) }
+                { options(model, chart) }
+            </div>
+        }
+    }
+
+    pub fn title(model: &Model, chart: &Chart) -> Html {
+        let mut title = layout::table::TableRow::new_menu(true, html! { "title" })
+            .black_sep()
+            .height_px(LINE_HEIGHT_PX);
+        title.push_single_value({
+            let uid = chart.uid();
+            layout::input::string_input(model, chart.title(), move |new_title_res| {
+                new_title_res
+                    .map(|new_title| msg::ChartSettingsMsg::change_title(uid, new_title))
+                    .into()
+            })
+        });
+        title.render()
+    }
+
+    pub fn options(model: &Model, chart: &Chart) -> Html {
+        let chart_uid = chart.uid();
+        let mut row = layout::table::TableRow::new_menu(false, html! { "options" })
+            .black_sep()
+            .height_px(LINE_HEIGHT_PX);
+
+        let stacked_area = layout::input::checkbox(
+            chart.settings().stacked_area().unwrap_or(false),
+            format!("stacked_area_chart_{}", chart.uid()),
+            "stacked area",
+            model.link.callback(move |_| {
+                msg::ChartSettingsMsg::toggle_stacked_area::<msg::ChartsMsg>(chart_uid)
+            }),
+        );
+        row.push_value(stacked_area);
+        row.render()
+    }
+}
+
 pub mod filter_toggles {
     use super::*;
     use layout::tabs::{TabProps, Tabs};
 
     const tab_container_width: usize = 96;
-    const tab_container_width_padding: usize = (100 - tab_container_width) / 2;
 
     pub fn render(model: &Model, chart: &Chart) -> Html {
         define_style! {
             TOGGLE_BAR = {
                 width(100%),
                 height({filter_toggles_height_px} px),
-                padding(0 px, {tab_container_width_padding}%),
                 // bg(red),
             };
             TOGGLE_CONTAINER = {
                 width({tab_container_width}%),
                 height(100%),
                 overflow(scroll),
+                margin(0, auto),
             };
         }
 
@@ -396,7 +490,7 @@ pub mod filter_toggles {
             let uid = spec.uid();
             model
                 .link
-                .callback(move |_| msg::ChartsMsg::filter_toggle_visible(chart_uid, uid))
+                .callback(move |_| msg::ChartMsg::filter_toggle_visible(chart_uid, uid))
         };
 
         let mut tabs = Tabs::new();

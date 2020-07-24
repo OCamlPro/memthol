@@ -21,7 +21,7 @@ pub use yew_components::Select;
 
 pub use base::{
     error_chain::{self, bail},
-    lazy_static, svec, SVec,
+    impl_display, lazy_static, svec, SVec,
 };
 
 pub use charts::prelude::{alloc, time, Alloc, AllocDiff, AllocUid, Json, Regex};

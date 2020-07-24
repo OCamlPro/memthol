@@ -9,18 +9,19 @@ pub use std::{
 };
 
 pub use regex::Regex;
-pub use serde_derive::{Deserialize, Serialize};
 
 pub use base::{
     debug_do,
     error_chain::{self, bail},
-    lazy_static,
+    impl_display, lazy_static,
 };
 
 /// Re-exports from the `alloc_data` crate.
 pub mod alloc {
     pub use alloc_data::prelude::*;
 }
+
+pub use alloc::serderive::*;
 
 pub use alloc::{
     time, Alloc, Date, Diff as AllocDiff, Duration, Init as AllocInit, Uid as AllocUid,
@@ -34,7 +35,7 @@ macro_rules! prelude {
 }
 
 pub use crate::{
-    chart,
+    chart::{self, settings::ChartSettings},
     color::Color,
     data, err,
     err::{Res, ResExt},

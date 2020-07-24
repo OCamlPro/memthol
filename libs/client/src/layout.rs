@@ -7,7 +7,28 @@ prelude! {}
 pub mod button;
 pub mod chart;
 pub mod foot;
+pub mod input;
+pub mod table;
 pub mod tabs;
+
+define_style! {
+    SECTION_STYLE = {
+        font_size(150%),
+        text_align(center),
+        bold,
+        underline,
+    };
+}
+
+pub fn section(txt: &str) -> Html {
+    html! {
+        <div
+            style = SECTION_STYLE
+        >
+            {txt}
+        </div>
+    }
+}
 
 pub fn render(model: &Model) -> Html {
     define_style! {
