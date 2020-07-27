@@ -20,17 +20,6 @@ pub enum RawSubFilter {
     Loc(LocFilter),
 }
 
-impl From<FilterKind> for RawSubFilter {
-    fn from(kind: FilterKind) -> Self {
-        match kind {
-            FilterKind::Size => SizeFilter::default().into(),
-            FilterKind::Lifetime => LifetimeFilter::default().into(),
-            FilterKind::Label => LabelFilter::default().into(),
-            FilterKind::Loc => LocFilter::default().into(),
-        }
-    }
-}
-
 impl RawSubFilter {
     /// Filter kind of a filter.
     pub fn kind(&self) -> FilterKind {
@@ -98,43 +87,6 @@ impl RawSubFilter {
     }
 }
 
-impl fmt::Display for RawSubFilter {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Size(filter) => write!(fmt, "size {}", filter),
-            Self::Lifetime(filter) => write!(fmt, "lifetime {}", filter),
-            Self::Label(filter) => write!(fmt, "labels {}", filter),
-            Self::Loc(filter) => write!(fmt, "callstack {}", filter),
-        }
-    }
-}
-
-impl From<SizeFilter> for RawSubFilter {
-    fn from(filter: SizeFilter) -> Self {
-        Self::Size(filter)
-    }
-}
-impl From<LifetimeFilter> for RawSubFilter {
-    fn from(filter: LifetimeFilter) -> Self {
-        Self::Lifetime(filter)
-    }
-}
-impl From<LabelFilter> for RawSubFilter {
-    fn from(filter: LabelFilter) -> Self {
-        Self::Label(filter)
-    }
-}
-impl From<LocFilter> for RawSubFilter {
-    fn from(filter: LocFilter) -> Self {
-        Self::Loc(filter)
-    }
-}
-impl Default for RawSubFilter {
-    fn default() -> Self {
-        SizeFilter::default().into()
-    }
-}
-
 #[cfg(target_arch = "wasm32")]
 static CREATOR_FLAG: bool = true;
 #[cfg(not(target_arch = "wasm32"))]
@@ -173,37 +125,6 @@ impl DerefMut for SubFilter {
     }
 }
 
-impl From<SizeFilter> for SubFilter {
-    fn from(filter: SizeFilter) -> Self {
-        Self::of(SubFilterUid::fresh(), RawSubFilter::from(filter))
-    }
-}
-impl From<LifetimeFilter> for SubFilter {
-    fn from(filter: LifetimeFilter) -> Self {
-        Self::of(SubFilterUid::fresh(), RawSubFilter::from(filter))
-    }
-}
-impl From<LabelFilter> for SubFilter {
-    fn from(filter: LabelFilter) -> Self {
-        Self::of(SubFilterUid::fresh(), RawSubFilter::from(filter))
-    }
-}
-impl From<LocFilter> for SubFilter {
-    fn from(filter: LocFilter) -> Self {
-        Self::of(SubFilterUid::fresh(), RawSubFilter::from(filter))
-    }
-}
-impl From<RawSubFilter> for SubFilter {
-    fn from(filter: RawSubFilter) -> Self {
-        Self::of(SubFilterUid::fresh(), filter)
-    }
-}
-
-impl Default for SubFilter {
-    fn default() -> Self {
-        Self::of(SubFilterUid::fresh(), RawSubFilter::default())
-    }
-}
 impl std::cmp::PartialEq for SubFilter {
     fn eq(&self, other: &Self) -> bool {
         self.uid.eq(&other.uid)
@@ -218,12 +139,6 @@ impl std::cmp::PartialOrd for SubFilter {
 impl std::cmp::Ord for SubFilter {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.uid.cmp(&other.uid)
-    }
-}
-
-impl From<FilterKind> for SubFilter {
-    fn from(kind: FilterKind) -> Self {
-        Self::of(SubFilterUid::fresh(), RawSubFilter::from(kind))
     }
 }
 
@@ -270,13 +185,60 @@ pub enum Update {
     /// Location filter update.
     Loc(loc::LocUpdate),
 }
-impl fmt::Display for Update {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match self {
+
+base::implement! {
+    Display {
+        SubFilter => |&self, fmt| write!(fmt, "{}({})", self.uid, self.raw),
+
+        RawSubFilter => |&self, fmt| match self {
+            Self::Size(filter) => write!(fmt, "size {}", filter),
+            Self::Lifetime(filter) => write!(fmt, "lifetime {}", filter),
+            Self::Label(filter) => write!(fmt, "labels {}", filter),
+            Self::Loc(filter) => write!(fmt, "callstack {}", filter),
+        },
+
+        Update => |&self, fmt| match self {
             Self::Size(update) => update.fmt(fmt),
             Self::Lifetime(update) => update.fmt(fmt),
             Self::Label(update) => update.fmt(fmt),
             Self::Loc(update) => update.fmt(fmt),
-        }
+        },
+    }
+
+    From {
+        RawSubFilter, from FilterKind => |kind| match kind {
+            FilterKind::Size => SizeFilter::default().into(),
+            FilterKind::Lifetime => LifetimeFilter::default().into(),
+            FilterKind::Label => LabelFilter::default().into(),
+            FilterKind::Loc => LocFilter::default().into(),
+        },
+        RawSubFilter, from SizeFilter => |filter| Self::Size(filter),
+        RawSubFilter, from LifetimeFilter => |filter| Self::Lifetime(filter),
+        RawSubFilter, from LabelFilter => |filter| Self::Label(filter),
+        RawSubFilter, from LocFilter => |filter| Self::Loc(filter),
+
+        SubFilter, from FilterKind => |kind| Self::of(
+            SubFilterUid::fresh(), RawSubFilter::from(kind)
+        ),
+        SubFilter, from SizeFilter => |filter| Self::of(
+            SubFilterUid::fresh(), RawSubFilter::from(filter)
+        ),
+        SubFilter, from LifetimeFilter => |filter| Self::of(
+            SubFilterUid::fresh(), RawSubFilter::from(filter)
+        ),
+        SubFilter, from LabelFilter => |filter| Self::of(
+            SubFilterUid::fresh(), RawSubFilter::from(filter)
+        ),
+        SubFilter, from LocFilter => |filter| Self::of(
+            SubFilterUid::fresh(), RawSubFilter::from(filter)
+        ),
+        SubFilter, from RawSubFilter => |filter| Self::of(
+            SubFilterUid::fresh(), filter
+        ),
+    }
+
+    Default {
+        RawSubFilter => SizeFilter::default().into(),
+        SubFilter => Self::of(SubFilterUid::fresh(), RawSubFilter::default()),
     }
 }

@@ -615,7 +615,7 @@ impl<X> PointValExt<u32> for PolyPoints<X, u32> {
         *x
     }
     fn val_label_formatter(val: &<u32 as CoordExt>::Coord) -> String {
-        num_fmt::str_do(val, |str| str.to_string())
+        num_fmt::str_do(*val, base::identity)
     }
 }
 

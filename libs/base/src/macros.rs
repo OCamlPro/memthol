@@ -56,11 +56,23 @@ macro_rules! implement {
     };
 
     (@From {
-        $( $src:ty, to $tgt:ty => |$param:pat| $def:expr ),* $(,)?
+        $( $tgt:ty, from $src:ty => |$param:pat| $def:expr ),* $(,)?
     }) => {
         $(
             impl std::convert::From<$src> for $tgt {
                 fn from($param: $src) -> Self {
+                    $def
+                }
+            }
+        )*
+    };
+
+    (@Default {
+        $( $ty:ty => $def:expr ),* $(,)?
+    }) => {
+        $(
+            impl std::default::Default for $ty {
+                fn default() -> Self {
                     $def
                 }
             }

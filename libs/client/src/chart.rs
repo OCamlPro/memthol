@@ -619,7 +619,7 @@ impl Chart {
             if let Some(points) = &self.points {
                 chart.fill(&WHITE).unwrap();
 
-                let (x_label_area, y_label_area) = (30, 60);
+                let (x_label_area, y_label_area) = (30, 100);
                 let (margin_top, margin_right) = (x_label_area / 3, y_label_area / 3);
 
                 let mut builder = ChartBuilder::on(&chart);

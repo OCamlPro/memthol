@@ -451,7 +451,7 @@ pub mod settings {
                 msg::ChartSettingsMsg::toggle_stacked_area::<msg::ChartsMsg>(chart_uid)
             }),
         );
-        row.push_value(stacked_area);
+        row.push_single_value(stacked_area);
         row.render()
     }
 }

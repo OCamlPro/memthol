@@ -92,15 +92,6 @@ checksum = "a4c527152e37cf757a3f78aae5a06fbeefdb07ccc535c980a3208ee3060dd544"
 
 [[package]]
 name = "arrayvec"
-version = "0.4.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd9fd44efafa8690358b7408d253adf110036b88f55672a933f01d616ad9b1b9"
-dependencies = [
- "nodrop",
-]
-
-[[package]]
-name = "arrayvec"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
@@ -225,7 +216,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8fb2d74254a3a0b5cac33ac9f8ed0e44aa50378d9dbb2e5d83bd21ed1dc2c8a"
 dependencies = [
  "arrayref",
- "arrayvec 0.5.1",
+ "arrayvec",
  "constant_time_eq",
 ]
 
@@ -350,7 +341,7 @@ dependencies = [
  "alloc_data",
  "anyhow",
  "base",
- "num-format",
+ "number_prefix",
  "plotters",
  "regex",
  "safe_index",
@@ -1546,12 +1537,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4a24736216ec316047a1fc4252e27dabb04218aa4a3f37c6e7ddbf1f9782b54"
 
 [[package]]
-name = "nodrop"
-version = "0.1.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
-
-[[package]]
 name = "num-bigint"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1561,16 +1546,6 @@ dependencies = [
  "num-integer",
  "num-traits",
  "serde",
-]
-
-[[package]]
-name = "num-format"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bafe4179722c2894288ee77a9f044f02811c86af699344c498b0840c698a2465"
-dependencies = [
- "arrayvec 0.4.12",
- "itoa",
 ]
 
 [[package]]
@@ -1623,6 +1598,12 @@ dependencies = [
  "hermit-abi",
  "libc",
 ]
+
+[[package]]
+name = "number_prefix"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 
 [[package]]
 name = "object"
