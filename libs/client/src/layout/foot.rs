@@ -654,29 +654,12 @@ pub mod menu {
                 LocFilter,
             };
 
-            pub fn render<Update>(
+            pub fn render(
                 table_row: &mut layout::table::TableRow,
                 model: &Model,
                 sub: &LocFilter,
-                msg: Update,
-            ) where
-                Update: Fn(Res<LocFilter>) -> Msg + 'static + Clone,
-            {
-                macro_rules! push_add_button {
-                    ($idx:expr) => {
-                        table_row.push_button("+", {
-                            let msg = msg.clone();
-                            let sub = sub.clone();
-                            let idx = $idx;
-                            model.link.callback(move |_| {
-                                let mut sub = sub.clone();
-                                sub.insert(idx, LocSpec::default());
-                                msg(Ok(sub))
-                            })
-                        });
-                    };
-                }
-
+                msg: impl Fn(Res<LocFilter>) -> Msg + 'static + Clone,
+            ) {
                 let selector = {
                     let selected = Some(sub.pred().clone());
                     let specs = sub.specs().clone();
@@ -692,6 +675,21 @@ pub mod menu {
                     }
                 };
                 table_row.push_selector(selector);
+
+                macro_rules! push_add_button {
+                    ($idx:expr) => {
+                        table_row.push_button("+", {
+                            let msg = msg.clone();
+                            let sub = sub.clone();
+                            let idx = $idx;
+                            model.link.callback(move |_| {
+                                let mut sub = sub.clone();
+                                sub.insert(idx, LocSpec::default());
+                                msg(Ok(sub))
+                            })
+                        });
+                    };
+                }
 
                 for (idx, spec) in sub.specs().iter().enumerate() {
                     push_add_button!(idx);

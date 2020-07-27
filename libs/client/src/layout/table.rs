@@ -61,29 +61,35 @@ define_style! {
         display(table),
         text_align(center),
     };
-    VALUE_CONTAINER_STYLE = {
-        extends(cell_style),
-        width(min 10%),
+    left! = {
+        float(left),
+    };
+    center! = {
         margin(0, auto),
     };
+
+    VALUE_CONTAINER_STYLE = {
+        extends(cell_style, left),
+        width(min 10%),
+    };
     TINY_VALUE_CONTAINER_STYLE = {
-        extends(cell_style),
+        extends(cell_style, left),
         width(3%),
     };
     SINGLE_VALUE_CONTAINER_STYLE = {
-        extends(cell_style),
+        extends(cell_style, center),
         width(100%),
     };
     SEP_CONTAINER_STYLE = {
-        extends(cell_style),
+        extends(cell_style, left),
         width(2%),
     };
     SELECTOR_CONTAINER_STYLE = {
-        extends(cell_style),
+        extends(cell_style, left),
         width(10%),
     };
     SINGLE_VALUE_WITH_SELECTOR_CONTAINER_STYLE = {
-        extends(cell_style),
+        extends(cell_style, left),
         width(90%)
     };
 

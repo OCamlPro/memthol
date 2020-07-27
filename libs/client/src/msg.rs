@@ -338,11 +338,11 @@ base::implement! {
     }
 
     From {
-        (ChartUid, ChartMsg), to ChartsMsg => |(uid, msg)| Self::ChartMsg { uid, msg },
-        (ChartUid, ChartSettingsMsg), to ChartsMsg => |(uid, msg)| Self::ChartMsg {
+        ChartsMsg, from (ChartUid, ChartMsg) => |(uid, msg)| Self::ChartMsg { uid, msg },
+        ChartsMsg, from (ChartUid, ChartSettingsMsg) => |(uid, msg)| Self::ChartMsg {
             uid, msg: msg.into()
         },
 
-        ChartSettingsMsg, to ChartMsg => |msg| Self::SettingsUpdate(msg),
+        ChartMsg, from ChartSettingsMsg => |msg| Self::SettingsUpdate(msg),
     }
 }
