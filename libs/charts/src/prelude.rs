@@ -46,15 +46,16 @@ pub use crate::{
 };
 
 pub mod num_fmt {
-    static LOCALE: num_format::Locale = num_format::Locale::en;
-
     pub fn str_do<Res>(
-        stuff: &impl num_format::ToFormattedStr,
-        action: impl Fn(&str) -> Res,
+        stuff: impl std::convert::TryInto<f64> + std::fmt::Display + Clone,
+        action: impl Fn(String) -> Res,
     ) -> Res {
-        let mut buf = num_format::Buffer::default();
-        buf.write_formatted(stuff, &LOCALE);
-        action(buf.as_str())
+        use number_prefix::NumberPrefix::{self, *};
+        let s = match stuff.clone().try_into().map(NumberPrefix::decimal) {
+            Ok(Prefixed(pref, val)) => format!("{:.2}{}", val, pref),
+            Err(_) | Ok(Standalone(_)) => stuff.to_string(),
+        };
+        action(s)
     }
 }
 

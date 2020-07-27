@@ -10,6 +10,10 @@ pub mod error_chain {
     pub use error_chain::*;
 }
 
+pub fn identity<T>(t: T) -> T {
+    t
+}
+
 pub fn pretty_time(dur: std::time::Duration) -> String {
     format!("{}.{:0>9}", dur.as_secs(), dur.subsec_nanos())
 }
