@@ -9,28 +9,202 @@ fn new_server(addr: &str, port: usize) -> Res<Server> {
     Ok(server)
 }
 
-fn handle_requests(server: Server) -> Res<()> {
+fn handle_requests(log: bool, server: Server) -> Res<()> {
     for request in server.filter_map(Result::ok) {
-        let mut handler = Handler::new(request).chain_err(|| "while creating request handler")?;
+        let mut handler =
+            Handler::new(log, request).chain_err(|| "while creating request handler")?;
         std::thread::spawn(move || handler.run());
         ()
     }
     Ok(())
 }
 
-pub fn spawn_server(addr: &str, port: usize) -> Res<()> {
+pub fn spawn_server(addr: &str, port: usize, log: bool) -> Res<()> {
     let server = new_server(addr, port)?;
-    std::thread::spawn(move || handle_requests(server));
+    std::thread::spawn(move || handle_requests(log, server));
     Ok(())
 }
 
-pub struct Handler {
-    /// Ip address of the client.
+pub struct Com {
     ip: IpAddr,
-    /// Receives messages from the client.
-    recver: Receiver,
-    /// Sends messages to the client.
     sender: Sender,
+    receiver: Receiver,
+    log: Option<std::fs::File>,
+    /// Ping message use for acknowledgments.
+    ping_msg: websocket::message::OwnedMessage,
+}
+impl Com {
+    pub fn new(
+        log: bool,
+        ping_label: Vec<u8>,
+        ip: IpAddr,
+        sender: Sender,
+        receiver: Receiver,
+    ) -> Res<Self> {
+        let ping_msg = websocket::message::OwnedMessage::Ping(ping_label);
+
+        let log = if log {
+            use std::fs::OpenOptions;
+            let path = format!("log_{}", ip);
+            let file = OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .create(true)
+                .open(&path)
+                .chain_err(|| format!("while opening log file {:?}", path))?;
+            Some(file)
+        } else {
+            None
+        };
+
+        Ok(Self {
+            log,
+            ip,
+            sender,
+            receiver,
+            ping_msg,
+        })
+    }
+
+    pub fn ip(&self) -> &IpAddr {
+        &self.ip
+    }
+
+    pub fn send(&mut self, msg: impl Into<msg::to_client::Msg>) -> Res<()> {
+        use websocket::message::OwnedMessage;
+
+        let content = msg
+            .into()
+            .as_json()
+            .chain_err(|| "while encoding message as json")?;
+
+        if let Some(log) = self.log.as_mut() {
+            use std::io::Write;
+            writeln!(
+                log,
+                "[{}] sending message to client {{",
+                alloc_data::time::now()
+            )
+            .chain_err(|| "while writing to log file")?;
+            for line in content.to_string().lines() {
+                writeln!(log, "    {}", line).chain_err(|| "while writing to log file")?;
+            }
+            writeln!(log, "}}\n").chain_err(|| "while writing to log file")?;
+        }
+
+        let msg = OwnedMessage::Binary(content.into_bytes());
+        self.sender
+            .send_message(&msg)
+            .chain_err(|| format!("while sending message to client {}", self.ip))?;
+        Ok(())
+    }
+
+    pub fn send_ping(&mut self) -> Res<()> {
+        if let Some(log) = self.log.as_mut() {
+            use std::io::Write;
+            writeln!(
+                log,
+                "[{}] sending ping message to client\n",
+                alloc_data::time::now(),
+            )
+            .chain_err(|| "while writing to log file")?;
+        }
+
+        self.sender
+            .send_message(&self.ping_msg)
+            .chain_err(|| format!("while sending message to client {}", self.ip))?;
+        Ok(())
+    }
+
+    pub fn receiver(&self) -> &Receiver {
+        &self.receiver
+    }
+    pub fn receiver_mut(&mut self) -> &mut Receiver {
+        &mut self.receiver
+    }
+    fn log_receive_msg(log: &mut std::fs::File, msg: &Res<websocket::OwnedMessage>) -> Res<()> {
+        use std::io::Write;
+        use websocket::OwnedMessage::*;
+
+        match msg {
+            Ok(Text(txt)) => {
+                writeln!(
+                    log,
+                    "[{}] received text message from client {{",
+                    alloc_data::time::now(),
+                )?;
+                for line in txt.lines() {
+                    writeln!(log, "    {}", line)?
+                }
+                writeln!(log, "}}\n")?
+            }
+            Ok(Binary(data)) => {
+                let msg = msg::from_client::Msg::from_json_bytes(&data)
+                    .chain_err(|| "while parsing message from client")?;
+                writeln!(
+                    log,
+                    "[{}] received binary message from client {{",
+                    alloc_data::time::now(),
+                )?;
+                for line in msg.as_json() {
+                    writeln!(log, "    {}", line)?
+                }
+                writeln!(log, "}}\n")?
+            }
+            Ok(Ping(_)) => writeln!(
+                log,
+                "[{}] received ping message from client\n",
+                alloc_data::time::now()
+            )?,
+            Ok(Pong(_)) => writeln!(
+                log,
+                "[{}] received pong message from client\n",
+                alloc_data::time::now()
+            )?,
+            Ok(Close(_)) => writeln!(
+                log,
+                "[{}] received close message from client\n",
+                alloc_data::time::now()
+            )?,
+            Err(e) => {
+                writeln!(
+                    log,
+                    "[{}] received error from client {{    {}    }}\n",
+                    alloc_data::time::now(),
+                    e
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn incoming_messages<'a>(
+        &'a mut self,
+    ) -> impl Iterator<Item = Res<websocket::OwnedMessage>> + 'a {
+        let log = &mut self.log;
+        self.receiver.incoming_messages().map(move |res| {
+            let res = res.map_err(|e| e.to_string().into());
+
+            let log_res = if let Some(log) = log {
+                Self::log_receive_msg(log, &res)
+            } else {
+                Ok(())
+            };
+
+            if res.is_ok() {
+                if let Err(e) = log_res {
+                    return Err(e);
+                }
+            }
+
+            res
+        })
+    }
+}
+
+pub struct Handler {
+    /// Sends/receives messages to/from the client.
+    com: Com,
     /// The charts of the client.
     charts: Charts,
     /// Stores the result of receiving messages from the client.
@@ -41,13 +215,11 @@ pub struct Handler {
     frame_span: Duration,
     /// Label for ping messages.
     ping_label: Vec<u8>,
-    /// Ping message use for acknowledgments.
-    ping_msg: websocket::message::OwnedMessage,
 }
 
 impl Handler {
     /// Constructor from a request and a dump directory.
-    pub fn new(request: Request) -> Res<Self> {
+    pub fn new(log: bool, request: Request) -> Res<Self> {
         let client = request
             .accept()
             .map_err(|(_, e)| e)
@@ -56,12 +228,13 @@ impl Handler {
             .peer_addr()
             .chain_err(|| "while retrieving client's IP address")?;
 
-        let (recver, sender) = client
+        let (receiver, sender) = client
             .split()
             .chain_err(|| "while splitting the client into receive/send pair")?;
 
         let ping_label = vec![6u8, 6u8, 6u8];
-        let ping_msg = websocket::message::OwnedMessage::Ping(ping_label.clone());
+        let com = Com::new(log, ping_label.clone(), ip, sender, receiver)
+            .chain_err(|| "during communicator construction")?;
 
         let mut charts = Charts::new();
 
@@ -70,20 +243,21 @@ impl Handler {
             .chain_err(|| "during default filter generation")?;
 
         let slf = Handler {
-            ip,
-            recver,
-            sender,
+            com,
             charts,
             from_client: FromClient::new(),
             last_frame: Instant::now(),
             frame_span: Duration::from_millis(500),
             ping_label,
-            ping_msg,
         };
 
-        log!(slf.ip => "connection successful");
+        log!(slf.ip() => "connection successful");
 
         Ok(slf)
+    }
+
+    pub fn ip(&self) -> &IpAddr {
+        self.com.ip()
     }
 
     /// Runs the handler.
@@ -98,10 +272,10 @@ impl Handler {
 
     /// Runs the handler, can fail.
     fn internal_run(&mut self) -> Res<()> {
-        log!(self.ip => "init...");
+        log!(self.ip() => "init...");
         self.init()?;
 
-        log!(self.ip => "running...");
+        log!(self.ip() => "running...");
 
         // Let's do this.
         loop {
@@ -130,7 +304,7 @@ impl Handler {
                         },
                     )
                     .unwrap_or_else(|| "no information".into());
-                log!(self.ip => "client closed the connection with {}", close_data);
+                log!(self.ip() => "client closed the connection with {}", close_data);
                 break;
             }
 
@@ -175,7 +349,7 @@ impl Handler {
                 chart.spec().clone(),
                 chart.settings().clone(),
             );
-            Self::internal_send(&self.ip, &mut self.sender, msg)?
+            self.com.send(msg)?
         }
         Ok(())
     }
@@ -213,34 +387,14 @@ impl Handler {
 
     /// Sends a ping message to the client.
     pub fn send_ping(&mut self) -> Res<()> {
-        self.sender
-            .send_message(&self.ping_msg)
-            .chain_err(|| format!("while sending ping message to client {}", self.ip))
-    }
-
-    /// Version of `send` that does not take an `&mut self`.
-    fn internal_send(
-        ip: &IpAddr,
-        sender: &mut Sender,
-        msg: impl Into<msg::to_client::Msg>,
-    ) -> Res<()> {
-        use websocket::message::OwnedMessage;
-
-        let content = msg
-            .into()
-            .as_json()
-            .chain_err(|| "while encoding message as json")?
-            .into_bytes();
-        let msg = OwnedMessage::Binary(content);
-        sender
-            .send_message(&msg)
-            .chain_err(|| format!("while sending message to client {}", ip))?;
-        Ok(())
+        self.com
+            .send_ping()
+            .chain_err(|| format!("while sending ping message to client {}", self.ip()))
     }
 
     /// Sends a message to the client.
     pub fn send(&mut self, msg: impl Into<msg::to_client::Msg>) -> Res<()> {
-        Self::internal_send(&self.ip, &mut self.sender, msg)
+        self.com.send(msg)
     }
 
     /// Retrieves actions to perform from the client before rendering.
@@ -250,7 +404,7 @@ impl Handler {
         // Used in the `match` below.
         use websocket::message::OwnedMessage::*;
 
-        for message in self.recver.incoming_messages() {
+        for message in self.com.incoming_messages() {
             let message = message.chain_err(|| "while retrieving message")?;
 
             // Let's do this.

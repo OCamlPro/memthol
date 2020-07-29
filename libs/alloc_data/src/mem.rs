@@ -96,14 +96,19 @@ pub struct Factory<'a> {
     str: str::AsWrite<'a>,
     labels: labels::AsWrite<'a>,
     trace: trace::AsWrite<'a>,
+    /// Indicates whether the callstacks are in reverse order.
+    ///
+    /// If true, callstacks must be reversed when registering them.
+    callstack_is_rev: bool,
 }
 impl<'a> Factory<'a> {
     /// Constructor.
-    pub fn new() -> Self {
+    pub fn new(callstack_is_rev: bool) -> Self {
         Self {
             str: Str::factory_mut(),
             labels: Labels::factory_mut(),
             trace: Trace::factory_mut(),
+            callstack_is_rev,
         }
     }
 
@@ -113,7 +118,10 @@ impl<'a> Factory<'a> {
     pub fn register_labels(&mut self, labels: Vec<Str>) -> Labels {
         self.labels.get_uid(labels)
     }
-    pub fn register_trace(&mut self, trace: Vec<CLoc>) -> Trace {
+    pub fn register_trace(&mut self, mut trace: Vec<CLoc>) -> Trace {
+        if self.callstack_is_rev {
+            trace.reverse()
+        }
         self.trace.get_uid(trace)
     }
 }

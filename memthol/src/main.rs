@@ -43,6 +43,10 @@ pub fn main() {
                 { usize_validator }
                 "the port to serve the UI at"
             )
+            (@arg LOG:
+                -l --log !required
+                "activates (separate) socket logging"
+            )
             (@arg DIR:
                 !required
                 default_value(default::DIR)
@@ -57,6 +61,7 @@ pub fn main() {
         let port = matches.value_of("PORT").expect("argument with default");
         usize::from_str(port).expect("argument with validator")
     };
+    let log = matches.occurrences_of("LOG") > 0;
 
     let verb = matches.occurrences_of("VERB") > 0;
     memthol::conf::set_verb(verb);
@@ -84,7 +89,7 @@ pub fn main() {
 
     println!("starting socket listeners...");
     memthol::unwrap! {
-        memthol::socket::spawn_server(addr, port + 1)
+        memthol::socket::spawn_server(addr, port + 1, log)
     }
 
     gotham::start(path, router)

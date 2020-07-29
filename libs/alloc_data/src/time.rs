@@ -14,6 +14,10 @@ pub mod chrono {
 
 pub type DateTime = time::chrono::DateTime<self::chrono::Utc>;
 
+pub fn now() -> time::chrono::DateTime<chrono::offset::Local> {
+    time::chrono::offset::Local::now()
+}
+
 /// Wrapper around a duration representing a lifetime.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Lifetime {

@@ -20,6 +20,7 @@
 //! [`Date`]: struct.date.html (The Date struct)
 //! [`SinceStart`]: struct.sincestart.html (The SinceStart struct)
 
+pub extern crate chrono;
 pub extern crate peg;
 
 pub use error_chain::bail;
@@ -68,7 +69,7 @@ mod test;
 /// ```rust
 /// # alloc_data::prelude! {}
 /// let s = "72430";
-/// let uid = Uid::try_from(s).unwrap();
+/// let uid = Uid::parse(s).unwrap();
 /// # println!("uid: {}", uid);
 /// assert_eq! { format!("{}", uid), s }
 /// ```
@@ -76,7 +77,7 @@ mod test;
 /// ```rust
 /// # alloc_data::prelude! {}
 /// let s = "643128653641564321563425361425364523164523164";
-/// let uid = Uid::try_from(s).unwrap();
+/// let uid = Uid::parse(s).unwrap();
 /// # println!("uid: {}", uid);
 /// assert_eq! { format!("{}", uid), s }
 /// ```
@@ -114,7 +115,7 @@ pub struct Span {
 /// ```rust
 /// # alloc_data::prelude! {}
 /// let s = "`blah/stuff/file.ml`:325:7-38";
-/// let loc = Loc::try_from(s).unwrap();
+/// let loc = Loc::parse(s).unwrap();
 /// # println!("loc: {}", loc);
 /// assert_eq! { format!("{}", loc), s }
 /// assert_eq! { loc.file, "blah/stuff/file.ml" }
@@ -150,7 +151,7 @@ impl Loc {
 /// ```rust
 /// # alloc_data::prelude! {}
 /// let s = "`blah/stuff/file.ml`:325:7-38#5";
-/// let CLoc { loc, cnt } = CLoc::try_from(s).unwrap();
+/// let CLoc { loc, cnt } = CLoc::parse(s).unwrap();
 /// # println!("loc_count: {}#{}", loc, cnt);
 /// assert_eq! { format!("{}", loc), s[0..s.len()-2] }
 /// assert_eq! { loc.file, "blah/stuff/file.ml" }
@@ -185,7 +186,7 @@ impl CLoc {
 ///     ("Serialized", AllocKind::Serialized),
 /// ];
 /// for (s, exp) in &s_list {
-///     let kind = AllocKind::try_from(*s).unwrap();
+///     let kind = AllocKind::parse(*s).unwrap();
 ///     assert_eq! { kind, *exp }
 /// }
 /// ```
@@ -338,7 +339,7 @@ impl Diff {
 /// ```rust
 /// # alloc_data::prelude! {}
 /// let txt = "start: 1566489242.007000572\nword_size: 4\n";
-/// let init = Init::try_from(txt).unwrap();
+/// let init = Init::parse(txt).unwrap();
 /// assert_eq! { init.to_string(), "start: 2019-08-22 15:54:02.007000572 UTC\nword_size: 4\n" }
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -347,13 +348,27 @@ pub struct Init {
     pub start_time: Date,
     /// Size of machine words in bytes.
     pub word_size: usize,
+    /// True if the callstack go from `main` to allocation site, called *reversed order*.
+    pub callstack_is_rev: bool,
 }
+
+impl Default for Init {
+    fn default() -> Self {
+        Self {
+            start_time: Date::of_timestamp(0, 0),
+            word_size: 8,
+            callstack_is_rev: false,
+        }
+    }
+}
+
 impl Init {
     /// Constructor.
-    pub fn new(start_time: Date, word_size: usize) -> Self {
+    pub fn new(start_time: Date, word_size: usize, callstack_is_rev: bool) -> Self {
         Self {
             start_time,
             word_size,
+            callstack_is_rev,
         }
     }
 }

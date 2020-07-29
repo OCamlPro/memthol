@@ -209,7 +209,7 @@ dead {
 
 #[test]
 fn diff_0() {
-    let diff = unwrap!(Diff::try_from(DIFF_0));
+    let diff = unwrap!(Diff::parse_with(DIFF_0, &Init::default()));
     assert_eq! { diff.new.len(), 164 }
     assert_eq! { diff.dead.len(), 21 }
 }
