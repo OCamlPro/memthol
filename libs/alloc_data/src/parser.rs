@@ -221,8 +221,6 @@ peg::parser! {
             _ tod: since_start_opt()
         {
             let labels = f.register_labels(labels);
-            let mut callstack = callstack;
-            callstack.reverse();
             let callstack = f.register_trace(callstack);
             Alloc::new(uid, kind, size, callstack, labels, toc, tod)
         }
@@ -262,8 +260,8 @@ peg::parser! {
 
         pub rule callstack_is_reversed() -> bool =
             "callstacks" _ ":" _ is_rev:(
-                "main" _ "to" _ "site" { true }
-                / "site" _ "to" _ "main" { false }
+                "main" _ "to" _ "site" { false }
+                / "site" _ "to" _ "main" { true }
                 / expected!("either `main to site` or `site to main`")
             ) {
                 is_rev
