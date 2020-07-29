@@ -20,6 +20,7 @@
 //! [`Date`]: struct.date.html (The Date struct)
 //! [`SinceStart`]: struct.sincestart.html (The SinceStart struct)
 
+pub extern crate chrono;
 pub extern crate peg;
 
 pub use error_chain::bail;
