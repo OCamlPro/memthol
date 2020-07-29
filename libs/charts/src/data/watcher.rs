@@ -241,7 +241,8 @@ impl Watcher {
             if content.is_empty() {
                 return Ok(None);
             } else {
-                let init = AllocInit::try_from(content)?;
+                use alloc_data::parser::Parseable;
+                let init = AllocInit::parse(content)?;
                 Ok(Some(init))
             }
         })
@@ -375,9 +376,16 @@ impl Watcher {
                 last_modified
             });
 
+            let data = super::get().chain_err(|| "while accessing init info from data")?;
+            let init = data
+                .init
+                .as_ref()
+                .ok_or_else(|| "trying to parse diffs when no init file has been parsed yet")?;
+
             let diff = self
                 .read_content(&file_path, |content| {
-                    let diff = AllocDiff::try_from(content)?;
+                    use alloc_data::parser::Parseable;
+                    let diff = AllocDiff::parse_with(content, init)?;
                     Ok(diff)
                 })
                 .chain_err(|| {

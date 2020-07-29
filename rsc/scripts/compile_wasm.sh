@@ -2,6 +2,8 @@
 
 target_path=`echo "$(cd "$(dirname "target")"; pwd -P)/$(basename "target")"`
 
+set -e
+
 echo "compiling client to wasm..."
 echo
 echo

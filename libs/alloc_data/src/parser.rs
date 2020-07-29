@@ -221,6 +221,8 @@ peg::parser! {
             _ tod: since_start_opt()
         {
             let labels = f.register_labels(labels);
+            let mut callstack = callstack;
+            callstack.reverse();
             let callstack = f.register_trace(callstack);
             Alloc::new(uid, kind, size, callstack, labels, toc, tod)
         }
@@ -258,57 +260,79 @@ peg::parser! {
             Diff::new(date, new, dead)
         }
 
+        pub rule callstack_is_reversed() -> bool =
+            "callstacks" _ ":" _ is_rev:(
+                "main" _ "to" _ "site" { true }
+                / "site" _ "to" _ "main" { false }
+                / expected!("either `main to site` or `site to main`")
+            ) {
+                is_rev
+            }
+            / { false }
+
         /// Parses a dump init, consumes heading/trailing whitespaces.
         pub rule init() -> Init =
             _ "start" _ ":" _ start_time: date()
             _ "word_size" _ ":" _ word_size: usize()
+            _ stack_is_rev: callstack_is_reversed()
             _
         {
-            Init::new(start_time, word_size)
+            Init::new(start_time, word_size, stack_is_rev)
         }
     }
 }
 
 /// Trait for types that can be parsed.
 pub trait Parseable: Sized {
-    /// Parses something.
-    fn parse(text: impl AsRef<str>) -> Res<Self>;
+    /// Information used during parsing.
+    type Info;
+
+    /// Parses something, given some info.
+    fn parse_with(text: impl AsRef<str>, info: &Self::Info) -> Res<Self>;
+    /// Parses something when no info is needed.
+    fn parse(text: impl AsRef<str>) -> Res<Self>
+    where
+        Self: Parseable<Info = ()>,
+    {
+        Self::parse_with(text, &())
+    }
 }
 
 macro_rules! implement {
-    (parseable($txt:ident) for {
-        $($inner:tt)*
-    }) => {
-        implement! {
-            @($txt) $($inner)*
+    (
+        Parseable($txt:ident) for {
+            $($inner:tt)*
         }
-    };
-
-    (@($txt:ident)
-        $ty:ty => +TryFrom $def:expr $( , $($tail:tt)*)?
+        $($tail:tt)*
     ) => {
         implement! {
-            @($txt) $ty => $def
+            @($txt, _info: ()) $($inner)*
         }
-        impl<'s> std::convert::TryFrom<&'s str> for $ty {
-            type Error = err::Err;
-            fn try_from($txt: &'s str) -> Res<Self> {
-                Self::parse($txt)
-            }
+        implement! {
+            $($tail)*
         }
-
-        $(
-            implement! {
-                @($txt) $($tail)*
-            }
-        )?
     };
+    (
+        Parseable<$info_ty:ty>($txt:ident, $info:ident) for {
+            $($inner:tt)*
+        }
+        $($tail:tt)*
+    ) => {
+        implement! {
+            @($txt, $info: $info_ty) $($inner)*
+        }
+        implement! {
+            $($tail)*
+        }
+    };
+    () => ();
 
-    (@($txt:ident)
+    (@($txt:ident, $info:ident: $info_ty:ty)
         $ty:ty => $def:expr $( , $($tail:tt)*)?
     ) => {
         impl Parseable for $ty {
-            fn parse(text: impl AsRef<str>) -> Res<Self> {
+            type Info = $info_ty;
+            fn parse_with(text: impl AsRef<str>, $info: &Self::Info) -> Res<Self> {
                 let $txt = text.as_ref();
                 let res = $def?;
                 Ok(res)
@@ -317,31 +341,33 @@ macro_rules! implement {
 
         $(
             implement! {
-                @($txt) $($tail)*
+                @($txt, $info: $info_ty) $($tail)*
             }
         )?
     };
 
-    (@($txt:ident)) => {};
+    (@($($stuff:tt)*)) => {};
 }
 
 implement! {
-    parseable(text) for {
+    Parseable(text) for {
         usize => usize(text),
         u32 => u32(text),
         u64 => u64(text),
 
-        SinceStart => +TryFrom since_start(text),
-        Lifetime => +TryFrom lifetime(text),
-        Date => +TryFrom date(text),
+        SinceStart => since_start(text),
+        Lifetime => lifetime(text),
+        Date => date(text),
 
-        Uid => +TryFrom uid(text),
-        AllocKind => +TryFrom alloc_kind(text),
-        Loc => +TryFrom loc(text, &mut Factory::new()),
-        CLoc => +TryFrom counted_loc(text, &mut Factory::new()),
+        Uid => uid(text),
+        AllocKind => alloc_kind(text),
+        Init => init(text),
+        Loc => loc(text, &mut Factory::new(false)),
+        CLoc => counted_loc(text, &mut Factory::new(false)),
+    }
 
-        Alloc => +TryFrom new_alloc(text, &mut Factory::new()),
-        Diff => +TryFrom diff(text, &mut Factory::new()),
-        Init => +TryFrom init(text),
+    Parseable<Init>(text, init) for {
+        Alloc => new_alloc(text, &mut Factory::new(init.callstack_is_rev)),
+        Diff => diff(text, &mut Factory::new(init.callstack_is_rev)),
     }
 }
