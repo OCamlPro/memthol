@@ -120,6 +120,12 @@ macro_rules! css {
     }};
 
     // #overflow
+    (@($str:expr) overflow(x: $($args:tt)*)) => {{
+        write!($str, "overflow-x: {}; ", $crate::css!(@overflow($($args)*)));
+    }};
+    (@($str:expr) overflow(y: $($args:tt)*)) => {{
+        write!($str, "overflow-y: {}; ", $crate::css!(@overflow($($args)*)));
+    }};
     (@($str:expr) overflow($($args:tt)*)) => {{
         write!($str, "overflow: {}; ", $crate::css!(@overflow($($args)*)));
     }};
@@ -127,6 +133,17 @@ macro_rules! css {
     (@overflow(hidden)) => ("hidden");
     (@overflow(auto)) => ("auto");
     (@overflow(visible)) => ("visible");
+
+    // #scrollbar_width
+    (@($str:expr) scrollbar_width($($args:tt)*)) => {{
+        write!($str, "scrollbar-width: {}; ", $crate::css!(@scrollbar_width($($args)*)));
+    }};
+    (@scrollbar_width(auto)) => ("auto");
+    (@scrollbar_width(thin)) => ("thin");
+    (@scrollbar_width(none)) => ("none");
+    (@scrollbar_width(inherit)) => ("inherit");
+    (@scrollbar_width(initial)) => ("initial");
+    (@scrollbar_width(unset)) => ("unset");
 
     // #outline
     (@($str:expr) outline($($args:tt)*)) => {{

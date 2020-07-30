@@ -224,7 +224,7 @@ pub mod tiles {
             TITLE_CELL = {
                 vertical_align(middle),
                 table cell,
-                overflow(scroll),
+                overflow(x: auto),
             };
         }
 
@@ -466,14 +466,19 @@ pub mod filter_toggles {
         define_style! {
             TOGGLE_BAR = {
                 width(100%),
-                height({filter_toggles_height_px} px),
+                height(auto),
                 // bg(red),
             };
             TOGGLE_CONTAINER = {
                 width({tab_container_width}%),
-                height(100%),
-                overflow(scroll),
+                height(auto),
                 margin(0, auto),
+                overflow(x: auto),
+                scrollbar_width(thin),
+            };
+            SUBCONTAINER = {
+                height({filter_toggles_height_px} px),
+                width(auto),
             };
         }
 
@@ -539,8 +544,13 @@ pub mod filter_toggles {
             >
                 <center
                     style = TOGGLE_CONTAINER
+                    class = "h_scroll"
                 >
-                    {tabs.render()}
+                    <div
+                        style = SUBCONTAINER
+                    >
+                        {tabs.render()}
+                    </div>
                 </center>
             </div>
         }

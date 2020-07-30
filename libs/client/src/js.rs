@@ -4,6 +4,24 @@ prelude! {}
 
 use wasm::*;
 
+pub const HORIZONTAL_SCROLL_SCRIPT: &str = r#"
+var items = document.getElementsByClassName('horizontal_scroll');
+
+var len = items.length;
+console.log("adding wheel stuff to " + len + " elements");
+for (var i = 0; i < len; i++) {
+    var item = items.item(i);
+    item.addEventListener(
+        'wheel',
+        function(e) {
+            console.log("wheel event, deltaY: " + e.deltaY);
+            if (e.deltaY > 0) item.scrollLeft += 100;
+            else item.scrollLeft -= 100;
+        }
+    )
+}
+"#;
+
 #[wasm_bindgen]
 extern "C" {
     /// Issues an alert.

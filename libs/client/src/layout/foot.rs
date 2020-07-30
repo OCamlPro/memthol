@@ -850,7 +850,7 @@ pub mod tabs {
                 extends(tile_style),
                 width({center_tile_width}%),
                 block,
-                overflow(scroll),
+                overflow(x: auto),
                 // bg(blue),
             };
             TABS_ROW = {
@@ -922,12 +922,15 @@ pub mod tabs {
             }
 
             html! {
-                <div
-                    id = "center_tabs_tile"
-                    style = CENTER_STYLE
-                >
-                    {tabs.render()}
-                </div>
+                <>
+                    <div
+                        id = "center_tabs_tile"
+                        style = CENTER_STYLE
+                        class = "h_scroll"
+                    >
+                        {tabs.render()}
+                    </div>
+                </>
             }
         }
     }
