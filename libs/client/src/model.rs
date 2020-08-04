@@ -17,6 +17,9 @@ pub struct Model {
 
     /// Footer DOM element.
     pub footer: footer::Footer,
+
+    /// If not `None`, then the server is currently loading the dumps.
+    pub progress: Option<LoadInfo>,
 }
 
 impl Model {
@@ -63,11 +66,16 @@ impl Model {
                 alert!("{}", msg);
                 Ok(false)
             }
-            Msg::Charts(msg) => {
-                let res = self.charts.server_update(&self.filters, msg);
-                res
-            }
+            Msg::Charts(msg) => self.charts.server_update(&self.filters, msg),
             Msg::Filters(msg) => self.filters.server_update(msg),
+            Msg::LoadProgress { loaded, total } => {
+                self.progress = if loaded == total {
+                    None
+                } else {
+                    Some(LoadInfo { loaded, total })
+                };
+                Ok(true)
+            }
         }
     }
 }
@@ -102,6 +110,7 @@ impl Component for Model {
             charts,
             filters,
             footer: footer::Footer::new(),
+            progress: None,
         }
     }
 

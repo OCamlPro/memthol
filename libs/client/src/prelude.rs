@@ -71,3 +71,11 @@ pub type Action = Callback<Model>;
 
 /// Type of HTML elements in the client.
 pub type Html = yew::Html;
+
+/// Information about the loading state of the server.
+pub struct LoadInfo {
+    /// Number of dumps loaded so far.
+    pub loaded: usize,
+    /// Total number of dumps.
+    pub total: usize,
+}

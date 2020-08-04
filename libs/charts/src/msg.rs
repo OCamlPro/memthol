@@ -202,6 +202,16 @@ pub mod to_client {
             /// Alert message.
             msg: String,
         },
+        /// Loading progress.
+        ///
+        /// Sent by the server when it is loading data, *i.e.* not ready to actually produce charts
+        /// yet.
+        LoadProgress {
+            /// Number of dump loaded.
+            loaded: usize,
+            /// Total number of dump to load.
+            total: usize,
+        },
         /// A message for the charts.
         Charts(ChartsMsg),
         /// A filter operation.
