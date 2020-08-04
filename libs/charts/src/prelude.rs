@@ -13,7 +13,7 @@ pub use regex::Regex;
 pub use base::{
     debug_do,
     error_chain::{self, bail},
-    impl_display, lazy_static,
+    impl_display, lazy_static, Either,
 };
 
 /// Re-exports from the `alloc_data` crate.
@@ -92,5 +92,33 @@ where
     fn from_json_bytes(bytes: &[u8]) -> Res<Self> {
         let slf = serde_json::from_slice(bytes)?;
         Ok(slf)
+    }
+}
+
+/// Dump-loading information.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LoadInfo {
+    /// Number of dumps loaded so far.
+    pub loaded: usize,
+    /// Total number of dumps.
+    ///
+    /// Can be `0`, in which case the progress is considered to be `0` as well.
+    pub total: usize,
+}
+impl LoadInfo {
+    /// Unknown info, `loaded` and `total` are set to `0`.
+    pub fn unknown() -> Self {
+        Self {
+            loaded: 0,
+            total: 0,
+        }
+    }
+    /// Percent version of the progress.
+    pub fn percent(&self) -> f64 {
+        if self.total == 0 {
+            0.
+        } else {
+            (self.loaded as f64) * 100. / (self.total as f64)
+        }
     }
 }

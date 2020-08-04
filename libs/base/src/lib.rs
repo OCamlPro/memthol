@@ -3,6 +3,7 @@
 pub extern crate rand;
 
 pub use derive_more::*;
+pub use either::Either;
 pub use lazy_static::lazy_static;
 
 /// Re-exports from `error_chain`.

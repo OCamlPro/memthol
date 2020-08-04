@@ -26,6 +26,8 @@ pub struct Watcher {
     /// **Always** contains `self.tmp_file` and `self.init_file`.
     known_files: Set<OsString>,
 
+    /// Diff paths, used when gathering new diffs.
+    new_diff_paths: Vec<PathBuf>,
     /// New diffs.
     new_diffs: Vec<AllocDiff>,
 
@@ -35,10 +37,10 @@ pub struct Watcher {
 
 impl Watcher {
     /// Spawns a watcher.
-    pub fn spawn(dir: impl Into<String>) {
+    pub fn spawn(dir: impl Into<String>, forever: bool) {
         let mut watcher = Self::new(dir);
 
-        let _ = std::thread::spawn(move || match watcher.run(true) {
+        let _ = std::thread::spawn(move || match watcher.run(forever) {
             Ok(()) => (),
             Err(e) => super::add_err(e.pretty()),
         });
@@ -46,6 +48,8 @@ impl Watcher {
 
     /// Runs the watcher.
     pub fn run(&mut self, forever: bool) -> Res<()> {
+        crate::data::progress::set_unknown()?;
+
         // First init read.
         'first_init: loop {
             if let Some(init) = self.try_read_init()? {
@@ -65,6 +69,11 @@ impl Watcher {
             }
         }
 
+        // Indicates whether an init file was just parsed.
+        //
+        // Used to know if we need to update `crate::data::progress`.
+        let mut just_started = true;
+
         // The call to `register_new_diffs` below can fail if the profiling run is restarted. If it
         // does, the error will be put here. Then, we try to read a new init file, and we drop the
         // error if that's successful. Otherwise, we return the error.
@@ -79,6 +88,7 @@ impl Watcher {
                 // Discard any error that might have happened in previous calls to
                 // `register_new_diffs` below.
                 diff_error = None;
+                just_started = true;
                 self.reset_run(init)
                     .chain_err(|| "while resetting the run after init file was changed")?
             }
@@ -89,7 +99,8 @@ impl Watcher {
                 bail!(e)
             }
 
-            let diff_res = self.register_new_diffs();
+            let diff_res = self.register_new_diffs(just_started);
+            just_started = false;
 
             match diff_res {
                 Ok(true) => {
@@ -123,6 +134,7 @@ impl Watcher {
         let init_file = "init.memthol".into();
         let init_last_modified = None;
         let known_files = Set::new();
+        let new_diff_paths = vec![];
         let new_diffs = vec![];
         let buf = String::new();
         let mut slf = Self {
@@ -131,6 +143,7 @@ impl Watcher {
             init_file,
             init_last_modified,
             known_files,
+            new_diff_paths,
             new_diffs,
             buf,
         };
@@ -257,7 +270,8 @@ impl Watcher {
     /// - sleeps for `100` milliseconds if there are no new diffs;
     /// - asserts `self.new_diffs.is_empty()`.
     /// - returns `true` if something new was discovered.
-    pub fn register_new_diffs(&mut self) -> Res<bool> {
+    /// - `update_progress` indicates that the `crate::data::progress` needs to be updated
+    pub fn register_new_diffs(&mut self, update_progress: bool) -> Res<bool> {
         debug_assert!(self.new_diffs.is_empty());
 
         // I don't know why, but sometimes `gather_new_diffs` will miss diff files when the profiler
@@ -268,36 +282,58 @@ impl Watcher {
         // gathered.
         let upper_bound = self.gather_new_diffs(None)?;
 
+        let new_stuff = upper_bound.is_some();
+
         // Now, `upper_bound.is_none()` iff no diff was found. In this case we do nothing.
-        if upper_bound.is_some() {
+        if new_stuff {
             // If `upper_bound.is_some()`, we gather new diffs again but this time we give the upper
             // bound we got previously. This tells diff gathering to ignore everything more recent
             // than `upper_bound`. So, we will catch any intermediary diff we might have missed.
             self.gather_new_diffs(upper_bound)?;
 
-            if !self.new_diffs.is_empty() {
+            if !self.new_diff_paths.is_empty() {
+                if update_progress {
+                    crate::data::progress::set_total(self.new_diff_paths.len())?;
+                }
+
+                {
+                    let data = super::get().chain_err(|| "while accessing init info from data")?;
+                    let init = data.init.as_ref().ok_or_else(|| {
+                        "trying to parse diffs when no init file has been parsed yet"
+                    })?;
+
+                    while let Some(diff_path) = self.new_diff_paths.pop() {
+                        let diff = self.load(init, diff_path)?;
+                        if update_progress {
+                            crate::data::progress::inc_loaded()?;
+                        }
+                        self.new_diffs.push(diff);
+                    }
+                }
+
                 // Sort the diffs. This could be more efficient by having `gather_new_diffs` insert
                 // in a sorted list.
                 self.new_diffs
                     .sort_by(|diff_1, diff_2| diff_1.time.cmp(&diff_2.time));
 
                 for diff in self.new_diffs.drain(0..) {
-                    super::add_diff(diff)?
+                    super::add_diff(diff)?;
                 }
-
-                return Ok(true);
             }
         }
 
-        Ok(false)
+        data::progress::set_done()?;
+
+        Ok(new_stuff)
     }
 
     /// Gathers the new diff files.
     ///
     /// - diff files to send will be in `self.new_diffs`.
     /// - assumes `self.new_diffs.is_empty()`.
-    /// - returns `true` if there was at list one new diff found (equivalent to
+    /// - returns `Some` if there was at list one new diff found (equivalent to
     ///     `!self.new_diffs.is_empty()`)
+    /// - returns the most recent date of last modification
     pub fn gather_new_diffs(&mut self, upper_bound: Option<SystemTime>) -> Res<Option<SystemTime>> {
         use std::fs::read_dir;
 
@@ -358,11 +394,13 @@ impl Watcher {
                     .map(|ubound| &last_modified > ubound)
                     .unwrap_or(false)
             {
-                // Note that we remove the file from `known_files`in this case. This is because we
-                // don't want to ignore this file in the future, as it might be overwritten and
-                // become relevant.
-                let was_there = self.known_files.remove(&file.file_name());
-                debug_assert!(was_there);
+                if last_modified >= init_last_modified {
+                    // Note that we remove the file from `known_files`in this case. This is because
+                    // we don't want to ignore this file in the future, as it might be overwritten
+                    // and become relevant.
+                    let was_there = self.known_files.remove(&file.file_name());
+                    debug_assert!(was_there);
+                }
                 continue;
             }
 
@@ -376,27 +414,17 @@ impl Watcher {
                 last_modified
             });
 
-            let data = super::get().chain_err(|| "while accessing init info from data")?;
-            let init = data
-                .init
-                .as_ref()
-                .ok_or_else(|| "trying to parse diffs when no init file has been parsed yet")?;
-
-            let diff = self
-                .read_content(&file_path, |content| {
-                    use alloc_data::parser::Parseable;
-                    let diff = AllocDiff::parse_with(content, init)?;
-                    Ok(diff)
-                })
-                .chain_err(|| {
-                    format!(
-                        "while reading content of file `{}`",
-                        file_path.to_string_lossy()
-                    )
-                })?;
-
-            self.new_diffs.push(diff)
+            self.new_diff_paths.push(file_path.into())
         }
         Ok(highest_last_modified)
+    }
+
+    fn load(&mut self, init: &AllocInit, path: PathBuf) -> Res<AllocDiff> {
+        self.read_content(&path, |content| {
+            use alloc_data::parser::Parseable;
+            let diff = AllocDiff::parse_with(content, init)?;
+            Ok(diff)
+        })
+        .chain_err(|| format!("while reading content of file `{}`", path.to_string_lossy()))
     }
 }

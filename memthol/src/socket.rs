@@ -233,8 +233,28 @@ impl Handler {
             .chain_err(|| "while splitting the client into receive/send pair")?;
 
         let ping_label = vec![6u8, 6u8, 6u8];
-        let com = Com::new(log, ping_label.clone(), ip, sender, receiver)
+        let mut com = Com::new(log, ping_label.clone(), ip, sender, receiver)
             .chain_err(|| "during communicator construction")?;
+
+        // Wait until data has been loaded.
+        if let Some(mut info) = charts::data::progress::get()? {
+            macro_rules! send {
+                () => {
+                    com.send(msg::to_client::Msg::load_progress(info.clone()))?
+                };
+            }
+
+            send!();
+
+            while let Some(nu_info) = charts::data::progress::get()? {
+                if nu_info != info {
+                    info = nu_info;
+                    send!();
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200))
+            }
+        }
+        com.send(msg::to_client::Msg::DoneLoading)?;
 
         let mut charts = Charts::new();
 
