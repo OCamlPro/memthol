@@ -147,6 +147,7 @@ name = "base"
 version = "0.1.0"
 dependencies = [
  "derive_more",
+ "either",
  "error-chain",
  "lazy_static",
  "rand 0.7.3",

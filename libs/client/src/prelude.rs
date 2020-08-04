@@ -24,7 +24,7 @@ pub use base::{
     impl_display, lazy_static, svec, SVec,
 };
 
-pub use charts::prelude::{alloc, time, Alloc, AllocDiff, AllocUid, Json, Regex};
+pub use charts::prelude::{alloc, time, Alloc, AllocDiff, AllocUid, Json, LoadInfo, Regex};
 
 /// Wasm-bindgen re-exports.
 pub mod wasm {
@@ -71,11 +71,3 @@ pub type Action = Callback<Model>;
 
 /// Type of HTML elements in the client.
 pub type Html = yew::Html;
-
-/// Information about the loading state of the server.
-pub struct LoadInfo {
-    /// Number of dumps loaded so far.
-    pub loaded: usize,
-    /// Total number of dumps.
-    pub total: usize,
-}

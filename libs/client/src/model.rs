@@ -68,13 +68,13 @@ impl Model {
             }
             Msg::Charts(msg) => self.charts.server_update(&self.filters, msg),
             Msg::Filters(msg) => self.filters.server_update(msg),
-            Msg::LoadProgress { loaded, total } => {
-                self.progress = if loaded == total {
-                    None
-                } else {
-                    Some(LoadInfo { loaded, total })
-                };
+            Msg::LoadProgress(info) => {
+                self.progress = Some(info);
                 Ok(true)
+            }
+            Msg::DoneLoading => {
+                self.progress = None;
+                Ok(false)
             }
         }
     }
@@ -110,7 +110,10 @@ impl Component for Model {
             charts,
             filters,
             footer: footer::Footer::new(),
-            progress: None,
+            progress: Some(LoadInfo {
+                loaded: 70,
+                total: 105,
+            }),
         }
     }
 

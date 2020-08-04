@@ -206,12 +206,9 @@ pub mod to_client {
         ///
         /// Sent by the server when it is loading data, *i.e.* not ready to actually produce charts
         /// yet.
-        LoadProgress {
-            /// Number of dump loaded.
-            loaded: usize,
-            /// Total number of dump to load.
-            total: usize,
-        },
+        LoadProgress(LoadInfo),
+        /// Sent by the server when it is done loading dumps.
+        DoneLoading,
         /// A message for the charts.
         Charts(ChartsMsg),
         /// A filter operation.
@@ -226,9 +223,13 @@ pub mod to_client {
         pub fn alert(msg: impl Into<String>) -> Self {
             Self::Alert { msg: msg.into() }
         }
-        /// Constructor for `Charts`.
+        /// Constructor for chart messages.
         pub fn charts(msg: ChartsMsg) -> Self {
             Self::Charts(msg)
+        }
+        /// Constructor for a load progress message.
+        pub fn load_progress(info: LoadInfo) -> Self {
+            Self::LoadProgress(info)
         }
     }
 

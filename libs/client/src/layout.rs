@@ -8,6 +8,7 @@ pub mod button;
 pub mod chart;
 pub mod foot;
 pub mod input;
+pub mod progress;
 pub mod table;
 pub mod tabs;
 
@@ -61,7 +62,13 @@ pub fn render(model: &Model) -> Html {
                     &*COLLAPSED_FOOTER_BODY_STYLE
                 }
             >
-                { model.charts.render(model) }
+                {
+                    if let Some(load_info) = model.progress.as_ref() {
+                        progress::render(load_info)
+                    } else {
+                        model.charts.render(model)
+                    }
+                }
             </div>
             { model.footer.render(model) }
         </>

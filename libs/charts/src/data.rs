@@ -12,16 +12,80 @@ pub use watcher::Watcher;
 ///
 /// - runs the file watcher daemon.
 pub fn start(dir: impl Into<String>) -> Res<()> {
-    let mut watcher = Watcher::new(dir);
-    // base::time! {
-    watcher.run(false)
-    //     ,|time| println!("startup time: {}", time)
-    // }
+    Watcher::spawn(dir, false);
+    Ok(())
 }
 
 lazy_static! {
+    /// Progress indicator, used during loading.
+    static ref PROG: RwLock<Option<LoadInfo>> = RwLock::new(Some(LoadInfo::unknown()));
     /// Global state.
     static ref DATA: RwLock<Data> = RwLock::new(Data::new());
+}
+
+/// Handles progress information.
+pub mod progress {
+    use super::*;
+
+    fn read<'a>() -> Res<RwLockReadGuard<'a, Option<LoadInfo>>> {
+        PROG.read()
+            .map_err(|e| {
+                let e: err::Err = e.to_string().into();
+                e
+            })
+            .chain_err(|| "while reading the progress status")
+    }
+    fn write<'a>() -> Res<RwLockWriteGuard<'a, Option<LoadInfo>>> {
+        PROG.write()
+            .map_err(|e| {
+                let e: err::Err = e.to_string().into();
+                e
+            })
+            .chain_err(|| "while writing the progress status")
+    }
+
+    /// Sets the progress to *unknown*.
+    ///
+    /// Used by the watcher before it knows how many dumps it needs to parse.
+    pub fn set_unknown() -> Res<()> {
+        write().map(|mut prog| *prog = Some(LoadInfo::unknown()))
+    }
+
+    /// Removes the progress, meaning loading is over.
+    pub fn set_done() -> Res<()> {
+        *write()? = None;
+        Ok(())
+    }
+
+    /// Sets the total number of dumps to load.
+    ///
+    /// Also sets the number of dumps loaded to `0`.
+    pub fn set_total(total: usize) -> Res<()> {
+        let mut prog = write()?;
+        *prog = Some(LoadInfo { total, loaded: 0 });
+        Ok(())
+    }
+    /// Sets the number of dumps loaded.
+    pub fn set_loaded(loaded: usize) -> Res<()> {
+        let mut prog = write()?;
+        if let Some(prog) = prog.as_mut() {
+            prog.loaded = loaded;
+        }
+        Ok(())
+    }
+
+    /// Increments the number of dumps loaded.
+    pub fn inc_loaded() -> Res<()> {
+        if let Some(mut prog) = write()?.as_mut() {
+            prog.loaded += 1;
+        }
+        Ok(())
+    }
+
+    /// Retrieves the progress, if any.
+    pub fn get() -> Res<Option<LoadInfo>> {
+        read().map(|info| info.clone())
+    }
 }
 
 /// Global state accessor.
@@ -232,9 +296,9 @@ impl Data {
 /// Adds an error.
 pub fn add_err(err: impl Into<String>) {
     let err = err.into();
-    println!("Error:");
+    println!("[data] Error:");
     for line in err.lines() {
-        println!("| {}", line)
+        println!("[data] | {}", line)
     }
     get_mut()
         .chain_err(|| format!("while adding error:\n{}", err))
