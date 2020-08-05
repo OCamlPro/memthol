@@ -253,6 +253,7 @@ impl Data {
 
         if let Some(stats) = self.stats.as_mut() {
             stats.alloc_count += diff.new.len();
+            stats.duration = diff.time;
         } else {
             if self.init.is_some() {
                 bail!("inconsistent state, adding diff to data with init but no statistics")

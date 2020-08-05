@@ -568,28 +568,7 @@ impl<Y> PointValExt<Date> for PolyPoints<Date, Y> {
         x.date().clone() - range.min.date().clone()
     }
     fn val_label_formatter(date: &<Date as CoordExt>::Coord) -> String {
-        let date = date.to_std().unwrap();
-        let mut secs = date.as_secs();
-        let mut mins = secs / 60;
-        secs = secs - mins * 60;
-        let hours = mins / 60;
-        mins = mins - hours * 60;
-        let mut s = String::with_capacity(10);
-        use std::fmt::Write;
-        if hours > 0 {
-            write!(&mut s, "{}h", hours).unwrap()
-        }
-        if mins > 0 {
-            write!(&mut s, "{}m", mins).unwrap()
-        }
-        write!(&mut s, "{}", secs).unwrap();
-        let millis = date.subsec_millis();
-        if millis != 0 {
-            write!(&mut s, ".{}", millis).unwrap()
-        }
-        write!(&mut s, "s").unwrap();
-        s.shrink_to_fit();
-        s
+        time::SinceStart::from(date.to_std().unwrap()).to_string()
     }
 }
 

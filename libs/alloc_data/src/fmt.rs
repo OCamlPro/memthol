@@ -10,23 +10,25 @@ impl_display! {
     Uid = self.uid.fmt(fmt);
 
     SinceStart = {
-        let mut nanos = format!(".{:>09}", (*self).subsec_nanos());
-        // Remove trailing zeros.
-        loop {
-            match nanos.pop() {
-                // Remove zeros.
-                Some('0') => (),
-                // There was nothing but zeros, remove dot as well (last character).
-                Some('.') => break,
-                // Otherwise it's a number, we must keep it and stop removing stuff.
-                Some(c) => {
-                    nanos.push(c);
-                    break;
-                }
-                None => unreachable!(),
-            }
+        let date = self;
+        let mut secs = date.as_secs();
+        let mut mins = secs / 60;
+        secs = secs - mins * 60;
+        let hours = mins / 60;
+        mins = mins - hours * 60;
+
+        if hours > 0 {
+            write!(fmt, "{}h", hours)?
         }
-        write!(fmt, "{}{}", (*self).as_secs(), nanos)
+        if mins > 0 {
+            write!(fmt, "{}m", mins)?
+        }
+        write!(fmt, "{}", secs)?;
+        let millis = date.subsec_millis();
+        if millis != 0 {
+            write!(fmt, ".{}", millis)?
+        }
+        write!(fmt, "s")
     }
     Date = write!(fmt, "{}", self.date());
 

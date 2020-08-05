@@ -623,7 +623,8 @@ macro_rules! css {
     (@($str:expr) font($val:tt $unit:tt)) => {{
         write!(
             $str,
-            "font: {} SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif; ",
+            "font: \
+            {}{} SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif; ",
             $crate::css!(@arg $val),
             stringify!($unit),
         );

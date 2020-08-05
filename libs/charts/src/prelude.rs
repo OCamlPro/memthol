@@ -137,6 +137,8 @@ pub struct AllocStats {
     pub alloc_count: usize,
     /// Date at which the run started.
     pub start_date: time::Date,
+    /// Duration of the run.
+    pub duration: time::SinceStart,
 }
 impl AllocStats {
     /// Constructor.
@@ -144,6 +146,7 @@ impl AllocStats {
         Self {
             alloc_count: 0,
             start_date,
+            duration: time::SinceStart::zero(),
         }
     }
 

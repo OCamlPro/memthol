@@ -56,13 +56,14 @@ impl TabProps {
     }
 
     pub fn to_box_props(&self) -> layout::button::BoxProps {
+        let active = self.active.to_bool();
         layout::button::BoxProps::new_tab("black")
-            .with_gradient_top(&self.color)
-            .with_gradient_bot(if self.active.to_bool() {
-                "white"
+            .with_gradient_top(if active {
+                layout::DARK_GREY_BG
             } else {
-                "black"
+                &self.color
             })
+            .with_gradient_bot(if active { &self.color } else { "black" })
             .with_stroke_px(1)
             .with_radius_px(10)
             .revert_if(self.rev)

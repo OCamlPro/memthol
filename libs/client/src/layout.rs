@@ -13,7 +13,7 @@ pub mod progress;
 pub mod table;
 pub mod tabs;
 
-pub const DARK_GREY_BG: &'static str = "#505050";
+pub const DARK_GREY_BG: &'static str = "#313131";
 pub const LIGHT_BLUE_FG: &'static str = "#8dedff";
 
 define_style! {
@@ -50,7 +50,7 @@ pub fn render(model: &Model) -> Html {
         COLLAPSED_FOOTER_BODY_STYLE = {
             extends(body_style),
             padding(
-                {header::HEADER_HEIGHT_PX + 10}px,
+                {header::HEADER_HEIGHT_PX + 30}px,
                 0%,
                 {foot::collapsed_height_px}px,
                 0%,
@@ -59,7 +59,7 @@ pub fn render(model: &Model) -> Html {
         EXPANDED_FOOTER_BODY_STYLE = {
             extends(body_style),
             padding(
-                {header::HEADER_HEIGHT_PX + 10}px,
+                {header::HEADER_HEIGHT_PX + 30}px,
                 0%,
                 {foot::expanded_height_px}px,
                 0%,
