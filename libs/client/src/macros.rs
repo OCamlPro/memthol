@@ -573,9 +573,14 @@ macro_rules! css {
     (@pos(relative)) => ("relative; ");
     (@pos(absolute)) => ("absolute; ");
     (@pos(fixed)) => ("fixed; ");
+
     (@($str:expr) fixed(bottom)) => {{
         $crate::css!(@($str) pos(fixed));
         write!($str, "bottom: 0; ");
+    }};
+    (@($str:expr) fixed(top)) => {{
+        $crate::css!(@($str) pos(fixed));
+        write!($str, "top: 0; ");
     }};
 
     // #z_index

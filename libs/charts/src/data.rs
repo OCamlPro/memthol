@@ -120,6 +120,8 @@ pub struct Data {
     errors: Vec<String>,
     /// Time of the latest diff.
     current_time: time::SinceStart,
+    /// Statistics.
+    stats: Option<AllocStats>,
 }
 
 impl Data {
@@ -131,7 +133,27 @@ impl Data {
             tod_map: Map::new(),
             errors: vec![],
             current_time: time::SinceStart::zero(),
+            stats: None,
         }
+    }
+
+    /// Init accessor.
+    pub fn init(&self) -> Option<&AllocInit> {
+        self.init.as_ref()
+    }
+    /// True if the data is initialized.
+    pub fn has_init(&self) -> bool {
+        self.init().is_some()
+    }
+
+    /// Allocation statistics stored in the global data.
+    pub fn get_stats() -> Res<Option<AllocStats>> {
+        get().map(|data| data.stats())
+    }
+
+    /// Allocation statistics.
+    pub fn stats(&self) -> Option<AllocStats> {
+        self.stats.clone()
     }
 
     /// Current time accessor.
@@ -218,15 +240,26 @@ impl Data {
     ///
     /// Called when the init file of a run has changed.
     pub fn reset(&mut self, init: AllocInit) {
+        self.stats = Some(AllocStats::new(init.start_time));
         self.init = Some(init);
         self.uid_map.clear();
         self.tod_map.clear();
-        self.current_time = time::SinceStart::zero()
+        self.current_time = time::SinceStart::zero();
     }
 
     /// Registers a diff.
     pub fn add_diff(&mut self, diff: AllocDiff) -> Res<()> {
         self.current_time = diff.time;
+
+        if let Some(stats) = self.stats.as_mut() {
+            stats.alloc_count += diff.new.len();
+        } else {
+            if self.init.is_some() {
+                bail!("inconsistent state, adding diff to data with init but no statistics")
+            } else {
+                bail!("inconsistent state, adding diff to data with no init")
+            }
+        }
 
         for mut alloc in diff.new {
             // Force the allocation to have toc/tod map the diff's time.
@@ -290,6 +323,20 @@ impl Data {
     fn check_invariants(&self) -> Res<()> {
         invariants::uid_order_is_toc_order(self)?;
         Ok(())
+    }
+
+    /// Retrieves the global errors.
+    pub fn get_errors() -> Res<Option<Vec<String>>> {
+        get_mut().map(|mut data| data.errors())
+    }
+
+    /// Retrieves the errors.
+    pub fn errors(&mut self) -> Option<Vec<String>> {
+        if self.errors.is_empty() {
+            None
+        } else {
+            Some(std::mem::replace(&mut self.errors, vec![]))
+        }
     }
 }
 

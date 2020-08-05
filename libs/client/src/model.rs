@@ -20,6 +20,8 @@ pub struct Model {
 
     /// If not `None`, then the server is currently loading the dumps.
     pub progress: Option<LoadInfo>,
+    /// Allocation statistics, for the header.
+    pub alloc_stats: Option<AllocStats>,
 }
 
 impl Model {
@@ -68,13 +70,28 @@ impl Model {
             }
             Msg::Charts(msg) => self.charts.server_update(&self.filters, msg),
             Msg::Filters(msg) => self.filters.server_update(msg),
+
+            Msg::AllocStats(stats) => {
+                let redraw = self
+                    .alloc_stats
+                    .as_ref()
+                    .map(|s| s != &stats)
+                    .unwrap_or(true);
+                self.alloc_stats = Some(stats);
+                info!("alloc stats, redraw: {}", redraw);
+                Ok(redraw)
+            }
             Msg::LoadProgress(info) => {
+                let redraw = self.progress.as_ref().map(|s| s != &info).unwrap_or(true);
                 self.progress = Some(info);
-                Ok(true)
+                info!("load progress, redraw: {}", redraw);
+                Ok(redraw)
             }
             Msg::DoneLoading => {
+                let redraw = self.progress.is_some();
                 self.progress = None;
-                Ok(false)
+                info!("done loading, redraw: {}", redraw);
+                Ok(redraw)
             }
         }
     }
@@ -110,10 +127,8 @@ impl Component for Model {
             charts,
             filters,
             footer: footer::Footer::new(),
-            progress: Some(LoadInfo {
-                loaded: 70,
-                total: 105,
-            }),
+            progress: Some(LoadInfo::unknown()),
+            alloc_stats: None,
         }
     }
 

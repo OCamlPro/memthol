@@ -207,6 +207,8 @@ pub mod to_client {
         /// Sent by the server when it is loading data, *i.e.* not ready to actually produce charts
         /// yet.
         LoadProgress(LoadInfo),
+        /// Allocation statistics.
+        AllocStats(AllocStats),
         /// Sent by the server when it is done loading dumps.
         DoneLoading,
         /// A message for the charts.
@@ -230,6 +232,10 @@ pub mod to_client {
         /// Constructor for a load progress message.
         pub fn load_progress(info: LoadInfo) -> Self {
             Self::LoadProgress(info)
+        }
+        /// Constructor for an allocation-statistics message.
+        pub fn alloc_stats(stats: AllocStats) -> Self {
+            Self::AllocStats(stats)
         }
     }
 
