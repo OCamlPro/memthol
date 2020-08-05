@@ -56,10 +56,10 @@ impl Watcher {
                 let mut data =
                     super::get_mut().chain_err(|| "while registering the initial state")?;
 
-                if data.init.is_some() {
+                if data.has_init() {
                     bail!("live profiling restart is not supported yet")
                 } else {
-                    data.init = Some(init)
+                    data.reset(init)
                 }
 
                 break 'first_init;
@@ -112,9 +112,13 @@ impl Watcher {
                     sleep(Duration::from_millis(100))
                 }
                 Err(e) => {
-                    // There was a problem, remember it in `diff_error` and loop to check whether
-                    // a restart happened.
-                    diff_error = Some(e)
+                    if forever {
+                        // There was a problem, remember it in `diff_error` and loop to check
+                        // whether a restart happened.
+                        diff_error = Some(e)
+                    } else {
+                        bail!(e)
+                    }
                 }
             }
 

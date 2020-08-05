@@ -116,6 +116,23 @@ impl Com {
         Ok(())
     }
 
+    fn send_stats(&mut self) -> Res<()> {
+        use charts::prelude::AllocStats;
+        if let Some(stats) = AllocStats::get()? {
+            self.send(msg::to_client::Msg::alloc_stats(stats))?
+        }
+        Ok(())
+    }
+
+    fn send_errors(&mut self) -> Res<()> {
+        if let Some(errs) = charts::prelude::get_errors()? {
+            for err in errs {
+                self.send(msg::to_client::Msg::alert(err))?
+            }
+        }
+        Ok(())
+    }
+
     pub fn receiver(&self) -> &Receiver {
         &self.receiver
     }
@@ -236,6 +253,8 @@ impl Handler {
         let mut com = Com::new(log, ping_label.clone(), ip, sender, receiver)
             .chain_err(|| "during communicator construction")?;
 
+        com.send_errors()?;
+
         // Wait until data has been loaded.
         if let Some(mut info) = charts::data::progress::get()? {
             macro_rules! send {
@@ -247,6 +266,7 @@ impl Handler {
             send!();
 
             while let Some(nu_info) = charts::data::progress::get()? {
+                com.send_errors()?;
                 if nu_info != info {
                     info = nu_info;
                     send!();
@@ -254,6 +274,7 @@ impl Handler {
                 std::thread::sleep(std::time::Duration::from_millis(200))
             }
         }
+
         com.send(msg::to_client::Msg::DoneLoading)?;
 
         let mut charts = Charts::new();
@@ -299,6 +320,7 @@ impl Handler {
 
         // Let's do this.
         loop {
+            self.com.send_errors()?;
             self.set_last_frame();
             self.send_ping()?;
 
@@ -358,6 +380,8 @@ impl Handler {
                 self.send(msg)
                     .chain_err(|| "while sending points to the client")?
             }
+
+            self.com.send_stats()?
         }
 
         Ok(())
@@ -393,6 +417,9 @@ impl Handler {
             axis::{XAxis, YAxis},
             Chart,
         };
+
+        self.com.send_stats()?;
+
         let chart = Chart::new(self.charts.filters(), XAxis::Time, YAxis::TotalSize)?;
         self.charts.push(chart);
         self.send_filters()

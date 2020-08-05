@@ -122,3 +122,36 @@ impl LoadInfo {
         }
     }
 }
+
+/// Retrieve data errors.
+pub fn get_errors() -> Res<Option<Vec<String>>> {
+    data::Data::get_errors()
+}
+
+/// Allocation statistics.
+///
+/// Sent to the client so that it can display basic informations (run date, allocation count...).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AllocStats {
+    /// Total number of allocations.
+    pub alloc_count: usize,
+    /// Date at which the run started.
+    pub start_date: time::Date,
+    /// Duration of the run.
+    pub duration: time::SinceStart,
+}
+impl AllocStats {
+    /// Constructor.
+    pub fn new(start_date: time::Date) -> Self {
+        Self {
+            alloc_count: 0,
+            start_date,
+            duration: time::SinceStart::zero(),
+        }
+    }
+
+    /// Allocation statistics accessor for the global data server-side.
+    pub fn get() -> Res<Option<AllocStats>> {
+        data::Data::get_stats()
+    }
+}

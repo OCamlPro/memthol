@@ -7,10 +7,14 @@ prelude! {}
 pub mod button;
 pub mod chart;
 pub mod foot;
+pub mod header;
 pub mod input;
 pub mod progress;
 pub mod table;
 pub mod tabs;
+
+pub const DARK_GREY_BG: &'static str = "#313131";
+pub const LIGHT_BLUE_FG: &'static str = "#8dedff";
 
 define_style! {
     SECTION_STYLE = {
@@ -45,16 +49,27 @@ pub fn render(model: &Model) -> Html {
 
         COLLAPSED_FOOTER_BODY_STYLE = {
             extends(body_style),
-            padding(2%, 0%, {foot::collapsed_height_px}px, 0%),
+            padding(
+                {header::HEADER_HEIGHT_PX + 30}px,
+                0%,
+                {foot::collapsed_height_px}px,
+                0%,
+            ),
         };
         EXPANDED_FOOTER_BODY_STYLE = {
             extends(body_style),
-            padding(2%, 0%, {foot::expanded_height_px}px, 0%),
+            padding(
+                {header::HEADER_HEIGHT_PX + 30}px,
+                0%,
+                {foot::expanded_height_px}px,
+                0%,
+            ),
         };
     }
 
     html! {
         <>
+            { header::render(model) }
             <div
                 style = if model.footer.is_expanded() {
                     &*EXPANDED_FOOTER_BODY_STYLE

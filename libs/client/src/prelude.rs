@@ -24,7 +24,9 @@ pub use base::{
     impl_display, lazy_static, svec, SVec,
 };
 
-pub use charts::prelude::{alloc, time, Alloc, AllocDiff, AllocUid, Json, LoadInfo, Regex};
+pub use charts::prelude::{
+    alloc, time, Alloc, AllocDiff, AllocStats, AllocUid, Json, LoadInfo, Regex,
+};
 
 /// Wasm-bindgen re-exports.
 pub mod wasm {

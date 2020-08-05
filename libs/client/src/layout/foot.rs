@@ -23,12 +23,11 @@ pub const right_tile_width: usize = left_tile_width;
 define_style! {
     footer_style! = {
         font(default),
-        fg(black),
+        fg({layout::LIGHT_BLUE_FG}),
         bg(transparent),
         fixed(bottom),
         z_index(600),
         width({width_wrt_full}%),
-        // bg(yellow),
     };
 
     COLLAPSED_STYLE = {
@@ -55,11 +54,11 @@ define_style! {
     };
 
     menu_style! = {
-        fg(white),
-        bg(black),
+        fg({layout::LIGHT_BLUE_FG}),
+        bg({layout::DARK_GREY_BG}),
         bottom,
         width({width_wrt_full}%),
-        box_shadow(0 px, {-7} px, 50 px, 1 px, black),
+        box_shadow(0 px, {-7} px, 50 px, 1 px, {layout::DARK_GREY_BG}),
         border_radius(20 px, 20 px, 0 px, 0 px),
         z_index(600),
         pos(relative),
@@ -137,7 +136,7 @@ pub mod menu {
 
     define_style! {
         menu_fg! = {
-            fg({"#8dedff"}),
+            fg({layout::LIGHT_BLUE_FG}),
         };
         MENU_LEFT_TILE = {
             extends(menu_fg),
@@ -747,7 +746,6 @@ pub mod tabs {
                 extends(tile_style),
                 width({left_tile_width}%),
                 table,
-                // bg(red),
             };
         }
         pub fn render(model: &Model) -> Html {
@@ -803,7 +801,6 @@ pub mod tabs {
                 extends(tile_style),
                 width({right_tile_width}%),
                 table,
-                // bg(green),
             };
         }
 
@@ -851,7 +848,6 @@ pub mod tabs {
                 width({center_tile_width}%),
                 block,
                 overflow(x: auto),
-                // bg(blue),
             };
             TABS_ROW = {
                 height(100%),

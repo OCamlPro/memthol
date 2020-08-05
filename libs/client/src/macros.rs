@@ -573,9 +573,14 @@ macro_rules! css {
     (@pos(relative)) => ("relative; ");
     (@pos(absolute)) => ("absolute; ");
     (@pos(fixed)) => ("fixed; ");
+
     (@($str:expr) fixed(bottom)) => {{
         $crate::css!(@($str) pos(fixed));
         write!($str, "bottom: 0; ");
+    }};
+    (@($str:expr) fixed(top)) => {{
+        $crate::css!(@($str) pos(fixed));
+        write!($str, "top: 0; ");
     }};
 
     // #z_index
@@ -618,7 +623,8 @@ macro_rules! css {
     (@($str:expr) font($val:tt $unit:tt)) => {{
         write!(
             $str,
-            "font: {} SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif; ",
+            "font: \
+            {}{} SF Pro Display, SF Pro Icons, Helvetica Neue, Helvetica, Arial, sans-serif; ",
             $crate::css!(@arg $val),
             stringify!($unit),
         );

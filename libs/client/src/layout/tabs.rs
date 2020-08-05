@@ -56,9 +56,14 @@ impl TabProps {
     }
 
     pub fn to_box_props(&self) -> layout::button::BoxProps {
+        let active = self.active.to_bool();
         layout::button::BoxProps::new_tab("black")
-            .with_gradient_top(&self.color)
-            .with_gradient_bot("black")
+            .with_gradient_top(if active {
+                layout::DARK_GREY_BG
+            } else {
+                &self.color
+            })
+            .with_gradient_bot(if active { &self.color } else { "black" })
             .with_stroke_px(1)
             .with_radius_px(10)
             .revert_if(self.rev)
@@ -144,11 +149,11 @@ impl IsActive {
 
 pub fn style(props: &TabProps) -> String {
     let active = props.active.to_bool();
-    let rev = props.rev;
+    // let rev = props.rev;
 
-    let shadow_h_off = 4;
-    let shadow_v_off = if rev { 2 } else { -2 };
-    let (shadow_blur, shadow_spread) = if active { (34, 7) } else { (20, 1) };
+    // let shadow_h_off = 4;
+    // let shadow_v_off = if rev { 2 } else { -2 };
+    // let (shadow_blur, shadow_spread) = if active { (34, 7) } else { (20, 1) };
 
     inline_css!(
         height(100%),
@@ -169,14 +174,6 @@ pub fn style(props: &TabProps) -> String {
         if(
             props.edited,
             italic,
-        ),
-
-        box_shadow(
-            {shadow_h_off} px,
-            {shadow_v_off} px,
-            {shadow_blur} px,
-            {shadow_spread} px,
-            {&props.color},
         ),
     )
 }
