@@ -239,8 +239,8 @@ impl Data {
     /// Resets the data.
     ///
     /// Called when the init file of a run has changed.
-    pub fn reset(&mut self, init: AllocInit) {
-        self.stats = Some(AllocStats::new(init.start_time));
+    pub fn reset(&mut self, dump_dir: impl Into<std::path::PathBuf>, init: AllocInit) {
+        self.stats = Some(AllocStats::new(dump_dir, init.start_time));
         self.init = Some(init);
         self.uid_map.clear();
         self.tod_map.clear();

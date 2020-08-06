@@ -25,7 +25,7 @@ pub use base::{
 };
 
 pub use charts::prelude::{
-    alloc, time, Alloc, AllocDiff, AllocStats, AllocUid, Json, LoadInfo, Regex,
+    alloc, num_fmt, time, Alloc, AllocDiff, AllocStats, AllocUid, Json, LoadInfo, Regex,
 };
 
 /// Wasm-bindgen re-exports.

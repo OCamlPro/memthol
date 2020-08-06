@@ -58,7 +58,7 @@ define_style! {
         bg({layout::DARK_GREY_BG}),
         bottom,
         width({width_wrt_full}%),
-        box_shadow(0 px, {-7} px, 50 px, 1 px, {layout::DARK_GREY_BG}),
+        // box_shadow(0 px, {-7} px, 50 px, 1 px, {layout::DARK_GREY_BG}),
         border_radius(20 px, 20 px, 0 px, 0 px),
         z_index(600),
         pos(relative),
