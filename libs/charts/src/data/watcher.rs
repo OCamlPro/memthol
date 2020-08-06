@@ -59,7 +59,7 @@ impl Watcher {
                 if data.has_init() {
                     bail!("live profiling restart is not supported yet")
                 } else {
-                    data.reset(init)
+                    data.reset(&self.dir, init)
                 }
 
                 break 'first_init;
@@ -174,7 +174,7 @@ impl Watcher {
     pub fn reset_run(&mut self, init: AllocInit) -> Res<()> {
         self.reset();
         let mut data = super::get_mut().chain_err(|| "while resetting the data")?;
-        data.reset(init);
+        data.reset(&self.dir, init);
         Ok(())
     }
 

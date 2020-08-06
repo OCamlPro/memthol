@@ -133,6 +133,8 @@ pub fn get_errors() -> Res<Option<Vec<String>>> {
 /// Sent to the client so that it can display basic informations (run date, allocation count...).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AllocStats {
+    /// Dump directory.
+    pub dump_dir: std::path::PathBuf,
     /// Total number of allocations.
     pub alloc_count: usize,
     /// Date at which the run started.
@@ -142,8 +144,11 @@ pub struct AllocStats {
 }
 impl AllocStats {
     /// Constructor.
-    pub fn new(start_date: time::Date) -> Self {
+    pub fn new(dump_dir: impl Into<std::path::PathBuf>, start_date: time::Date) -> Self {
+        let dump_dir = dump_dir.into();
+        // let dump_dir = dump_dir.canonicalize().unwrap_or(dump_dir);
         Self {
+            dump_dir,
             alloc_count: 0,
             start_date,
             duration: time::SinceStart::zero(),

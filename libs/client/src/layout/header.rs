@@ -3,6 +3,7 @@
 prelude! {}
 
 pub const HEADER_HEIGHT_PX: usize = 60;
+pub const FONT_SIZE: usize = 130;
 
 pub fn render(model: &Model) -> Html {
     const center_width_pc: usize = 70;
@@ -11,7 +12,7 @@ pub fn render(model: &Model) -> Html {
 
     define_style! {
         HEADER_STYLE = {
-            font(130%),
+            font({FONT_SIZE}%),
 
             width(100%),
             height({HEADER_HEIGHT_PX}px),
@@ -26,28 +27,31 @@ pub fn render(model: &Model) -> Html {
             z_index(600),
         };
 
-        LFT_STYLE = {
+        tile_style! = {
+            block,
             float(left),
             height({HEADER_HEIGHT_PX}px),
-            width({lft_width_pc}%),
+            overflow(scroll),
+        };
+        TABLE_STYLE = {
             table,
+            width(100%),
+            height(100%),
+            table,
+        };
+
+        LFT_STYLE = {
+            extends(tile_style),
+            width({lft_width_pc}%),
         };
         CENTER_STYLE = {
-            float(left),
-            height({HEADER_HEIGHT_PX}px),
+            extends(tile_style),
+            block,
             width({center_width_pc}%),
-            table,
         };
         RGT_STYLE = {
-            float(left),
-            height({HEADER_HEIGHT_PX}px),
+            extends(tile_style),
             width({rgt_width_pc}%),
-            table,
-            // width({
-            //     ((HEADER_HEIGHT_PX * 35) / 10) - 1
-            // }px),
-            // margin(0 px, 2%),
-            // float(right),
         };
 
         CENTER_CONTENT_STYLE = {
@@ -76,22 +80,30 @@ pub fn render(model: &Model) -> Html {
                 style = CENTER_STYLE
             >
                 <div
-                    style = CENTER_CONTENT_STYLE
+                    style = TABLE_STYLE
                 >
-                    {format_stats(model)}
+                    <div
+                        style = CENTER_CONTENT_STYLE
+                    >
+                        {format_stats(model)}
+                    </div>
                 </div>
             </div>
 
             <div
                 style = RGT_STYLE
             >
-                <a
-                    href = "https://www.ocamlpro.com"
-                    target = "_blank"
-                    style = RGT_CONTENT_STYLE
+                <div
+                    style = TABLE_STYLE
                 >
-                    {ocp_pic()}
-                </a>
+                    <a
+                        href = "https://www.ocamlpro.com"
+                        target = "_blank"
+                        style = RGT_CONTENT_STYLE
+                    >
+                        {ocp_pic()}
+                    </a>
+                </div>
             </div>
         </header>
     }
@@ -106,6 +118,22 @@ fn emph(s: impl std::fmt::Display) -> Html {
     html! {
         <b
             style = EMPH_STYLE
+        >
+            {s}
+        </b>
+    }
+}
+
+fn code(s: impl std::fmt::Display) -> Html {
+    define_style! {
+        CODE_STYLE = {
+            font(code, 100%),
+            fg({"#ffb961"}),
+        };
+    }
+    html! {
+        <b
+            style = CODE_STYLE
         >
             {s}
         </b>
@@ -137,8 +165,9 @@ fn format_stats(model: &Model) -> Html {
                 {", ran for "}
                 {emph(stats.duration)}
                 {" with "}
-                {emph(stats.alloc_count.to_string())}
-                {" allocations"}
+                {emph(num_fmt::str_do(stats.alloc_count as f64, base::identity))}
+                {" allocations | "}
+                {code(stats.dump_dir.display())}
             </p>
         }
     } else {
