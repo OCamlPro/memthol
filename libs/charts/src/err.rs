@@ -57,19 +57,22 @@ impl Err {
 }
 
 #[macro_export]
-macro_rules! unwrap {
-    ($e:expr) => {
+macro_rules! unwrap_or {
+    ($e:expr, exit) => {
+        $crate::unwrap_or!($e, std::process::exit(2))
+    };
+    ($e:expr, $action:expr) => {
         match $e {
             Ok(res) => res,
             Err(e) => {
-                println!("|===| Error:");
+                println!("|===| Error ({}:{})", file!(), line!());
                 for e in e.iter() {
                     for line in format!("{}", e).lines() {
                         println!("| {}", line)
                     }
                 }
                 println!("|===|");
-                std::process::exit(2)
+                $action
             }
         }
     };

@@ -21,7 +21,17 @@ pub fn verb() -> bool {
     *IS_VERBOSE.read().expect("`IS_VERBOSE` flag is poisoned...")
 }
 
+/// Displays some information, same as `println`.
+#[macro_export]
+macro_rules! info {
+    ($pref:expr => $($stuff:tt)*) => (
+        $crate::info!("[{}] {}", $pref, format_args!($($stuff)*))
+    );
+    ($($stuff:tt)*) => (println!($($stuff)*));
+}
+
 /// Logs something on stdout if `crate::conf::verb()`.
+#[macro_export]
 macro_rules! log {
     (active => $stuff:expr) => (
         if $crate::conf::verb() {
@@ -29,7 +39,7 @@ macro_rules! log {
         }
     );
     ($pref:expr => $($stuff:tt)*) => (
-        log!("[{}] {}", $pref, format!($($stuff)*))
+        log!("[{}] {}", $pref, format_args!($($stuff)*))
     );
     ($($stuff:tt)*) => (
         if $crate::conf::verb() {

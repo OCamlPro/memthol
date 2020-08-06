@@ -9,14 +9,18 @@ fn new_server(addr: &str, port: usize) -> Res<Server> {
     Ok(server)
 }
 
-fn handle_requests(log: bool, server: Server) -> Res<()> {
+fn handle_requests(log: bool, server: Server) {
     for request in server.filter_map(Result::ok) {
-        let mut handler =
-            Handler::new(log, request).chain_err(|| "while creating request handler")?;
+        let mut handler = err::unwrap_or! {
+            Handler::new(log, request).chain_err(|| "while creating request handler"),
+            {
+                log!("failed to start request handler");
+                return ()
+            }
+        };
         std::thread::spawn(move || handler.run());
         ()
     }
-    Ok(())
 }
 
 pub fn spawn_server(addr: &str, port: usize, log: bool) -> Res<()> {
@@ -119,6 +123,16 @@ impl Com {
     fn send_stats(&mut self) -> Res<()> {
         use charts::prelude::AllocStats;
         if let Some(stats) = AllocStats::get()? {
+            if let Some(log) = self.log.as_mut() {
+                use std::io::Write;
+                writeln!(
+                    log,
+                    "[{}] sending stats message to client\n",
+                    alloc_data::time::now(),
+                )
+                .chain_err(|| "while writing to log file")?;
+            }
+
             self.send(msg::to_client::Msg::alloc_stats(stats))?
         }
         Ok(())
@@ -303,7 +317,7 @@ impl Handler {
 
     /// Runs the handler.
     pub fn run(&mut self) {
-        unwrap!(self.internal_run())
+        err::unwrap_or!(self.internal_run(), info!(self.ip() => "connection lost"))
     }
 
     /// Sets the time of the last frame to now.

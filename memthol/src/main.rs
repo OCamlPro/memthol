@@ -78,18 +78,18 @@ pub fn main() {
     let router = memthol::router::new();
 
     println!("initializing assets...");
-    memthol::unwrap! {
-        memthol::assets::init(&addr, port)
+    memthol::err::unwrap_or! {
+        memthol::assets::init(&addr, port), exit
     }
 
     println!("starting data monitoring...");
-    memthol::unwrap! {
-        charts::data::start(dump_dir)
+    memthol::err::unwrap_or! {
+        charts::data::start(dump_dir), exit
     }
 
     println!("starting socket listeners...");
-    memthol::unwrap! {
-        memthol::socket::spawn_server(addr, port + 1, log)
+    memthol::err::unwrap_or! {
+        memthol::socket::spawn_server(addr, port + 1, log), exit
     }
 
     gotham::start(path, router)
