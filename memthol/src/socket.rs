@@ -120,7 +120,7 @@ impl Com {
         Ok(())
     }
 
-    fn send_stats(&mut self) -> Res<()> {
+    fn send_stats(&mut self, charts: &Charts) -> Res<()> {
         use charts::prelude::AllocStats;
         if let Some(stats) = AllocStats::get()? {
             if let Some(log) = self.log.as_mut() {
@@ -133,8 +133,12 @@ impl Com {
                 .chain_err(|| "while writing to log file")?;
             }
 
-            self.send(msg::to_client::Msg::alloc_stats(stats))?
+            self.send(msg::to_client::Msg::alloc_stats(stats))?;
+            self.send(msg::to_client::Msg::filter_stats(
+                charts.filters().filter_stats()?,
+            ))?
         }
+
         Ok(())
     }
 
@@ -392,13 +396,16 @@ impl Handler {
             if overwrite || !points.is_empty() {
                 let msg = msg::to_client::ChartsMsg::points(points, overwrite);
                 self.send(msg)
-                    .chain_err(|| "while sending points to the client")?
+                    .chain_err(|| "while sending points to the client")?;
+                self.send_stats()?
             }
-
-            self.com.send_stats()?
         }
 
         Ok(())
+    }
+
+    fn send_stats(&mut self) -> Res<()> {
+        self.com.send_stats(&self.charts)
     }
 
     fn send_all_charts(&mut self) -> Res<()> {
@@ -422,7 +429,8 @@ impl Handler {
     fn send_all_points(&mut self) -> Res<()> {
         let (points, overwrite) = self.charts.new_points(true)?;
         let msg = msg::to_client::ChartsMsg::points(points, overwrite);
-        self.send(msg)
+        self.send(msg)?;
+        self.send_stats()
     }
 
     /// Initializes a client.
@@ -432,7 +440,7 @@ impl Handler {
             Chart,
         };
 
-        self.com.send_stats()?;
+        self.send_stats()?;
 
         let chart = Chart::new(self.charts.filters(), XAxis::Time, YAxis::TotalSize)?;
         self.charts.push(chart);

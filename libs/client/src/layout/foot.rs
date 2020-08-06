@@ -871,40 +871,46 @@ pub mod tabs {
             let is_edited =
                 |filter: &filter::FilterSpec| model.filters.is_filter_edited(filter.uid());
 
-            let push_spec = |tabs: &mut layout::tabs::Tabs, filter: &filter::FilterSpec| {
-                tabs.push_tab(
-                    model,
-                    filter.name(),
-                    TabProps::new_footer(filter.color().to_string())
+            let push_spec =
+                |tabs: &mut layout::tabs::Tabs,
+                 filter: &filter::FilterSpec,
+                 index_uid_opt: Option<(usize, filter::FilterUid)>| {
+                    let edited = is_edited(filter);
+
+                    let name = match model.filter_stats.get(filter.uid()) {
+                        Some(stats) if !edited => {
+                            format!("{} ({})", filter.name(), stats.alloc_count)
+                        }
+                        _ => filter.name().into(),
+                    };
+
+                    let props = TabProps::new_footer(filter.color().to_string())
                         .set_active(is_active(filter))
-                        .set_edited(is_edited(filter)),
-                    callback(filter.uid()),
-                )
-            };
+                        .set_edited(edited);
+                    let props = if let Some((index, f_uid)) = index_uid_opt {
+                        props.with_first_last_uid(|| {
+                            (
+                                0 < index,
+                                index + 1 < model.footer_filters().filters.len(),
+                                f_uid,
+                            )
+                        })
+                    } else {
+                        props
+                    };
+
+                    tabs.push_tab(model, &name, props, callback(filter.uid()))
+                };
 
             let push_filter =
                 |tabs: &mut layout::tabs::Tabs, index: usize, filter: &filter::Filter| {
-                    tabs.push_tab(
-                        model,
-                        filter.spec().name(),
-                        TabProps::new_footer(filter.spec().color().to_string())
-                            .set_active(is_active(filter.spec()))
-                            .with_first_last_uid(|| {
-                                (
-                                    0 < index,
-                                    index + 1 < model.footer_filters().filters.len(),
-                                    filter.uid(),
-                                )
-                            })
-                            .set_edited(is_edited(filter.spec())),
-                        callback(filter.spec().uid()),
-                    )
+                    push_spec(tabs, filter.spec(), Some((index, filter.uid())))
                 };
 
             let mut tabs = layout::tabs::Tabs::new();
 
             tabs.push_sep();
-            push_spec(&mut tabs, everything);
+            push_spec(&mut tabs, everything, None);
 
             if let Some((catch_all, filters)) = others {
                 tabs.push_sep();
@@ -914,7 +920,7 @@ pub mod tabs {
                 }
 
                 tabs.push_sep();
-                push_spec(&mut tabs, catch_all);
+                push_spec(&mut tabs, catch_all, None);
             }
 
             html! {

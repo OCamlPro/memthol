@@ -14,6 +14,8 @@ pub struct Model {
     pub charts: Charts,
     /// Allocation filters.
     pub filters: filter::Filters,
+    /// Filter statistics.
+    pub filter_stats: AllFilterStats,
 
     /// Footer DOM element.
     pub footer: footer::Footer,
@@ -78,19 +80,22 @@ impl Model {
                     .map(|s| s != &stats)
                     .unwrap_or(true);
                 self.alloc_stats = Some(stats);
-                info!("alloc stats, redraw: {}", redraw);
                 Ok(redraw)
             }
+            Msg::FilterStats(stats) => {
+                info!("updating filter stats");
+                self.filter_stats = stats;
+                Ok(true)
+            }
+
             Msg::LoadProgress(info) => {
                 let redraw = self.progress.as_ref().map(|s| s != &info).unwrap_or(true);
                 self.progress = Some(info);
-                info!("load progress, redraw: {}", redraw);
                 Ok(redraw)
             }
             Msg::DoneLoading => {
                 let redraw = self.progress.is_some();
                 self.progress = None;
-                info!("done loading, redraw: {}", redraw);
                 Ok(redraw)
             }
         }
@@ -126,6 +131,7 @@ impl Component for Model {
             errors,
             charts,
             filters,
+            filter_stats: AllFilterStats::new(),
             footer: footer::Footer::new(),
             progress: Some(LoadInfo::unknown()),
             alloc_stats: None,

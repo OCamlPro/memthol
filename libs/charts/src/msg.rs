@@ -215,6 +215,8 @@ pub mod to_client {
         Charts(ChartsMsg),
         /// A filter operation.
         Filters(FiltersMsg),
+        /// Some filter statistics.
+        FilterStats(filter::stats::AllFilterStats),
     }
     impl Msg {
         /// Constructor for `Info`.
@@ -236,6 +238,10 @@ pub mod to_client {
         /// Constructor for an allocation-statistics message.
         pub fn alloc_stats(stats: AllocStats) -> Self {
             Self::AllocStats(stats)
+        }
+        /// Constructor for a filter-statistics message.
+        pub fn filter_stats(stats: filter::stats::AllFilterStats) -> Self {
+            Self::FilterStats(stats)
         }
     }
 
