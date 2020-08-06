@@ -8,6 +8,7 @@ pub mod label;
 pub mod loc;
 pub mod ord;
 mod spec;
+pub mod stats;
 pub mod string_like;
 pub mod sub;
 
@@ -310,6 +311,33 @@ impl Filters {
         let filter = Filter::new(spec).chain_err(|| "while creating new filter")?;
         let msg = msg::to_client::FiltersMsg::add(filter);
         Ok(vec![msg])
+    }
+
+    /// Extract filter statistics.
+    pub fn filter_stats(&self) -> Res<stats::AllFilterStats> {
+        let mut stats = stats::AllFilterStats::new();
+        let mut registered = 0;
+
+        for (_, filter) in &self.memory {
+            registered += 1;
+            stats.stats_do((*filter).into(), |stats| stats.inc())
+        }
+
+        let total = data::alloc_count()?;
+        if registered > total {
+            bail!(
+                "inconsistent state, extracted filter stats for {} allocation, \
+                but allocation count is {}",
+                registered,
+                total,
+            )
+        }
+
+        stats.stats_do(uid::LineUid::CatchAll, |stats| {
+            stats.alloc_count = total - registered
+        });
+
+        Ok(stats)
     }
 }
 

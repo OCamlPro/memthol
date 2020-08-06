@@ -87,15 +87,15 @@ impl AllocSite {
 
         let mut colors = Color::randoms(filter_count).into_iter();
 
-        for (file, count) in self.map {
-            if validate(count) {
+        for (file, count) in &self.map {
+            if validate(*count) {
                 let sub_filter = Self::generate_subfilter(&file);
 
                 let color = colors.next().expect(
                     "internal error, `filter_count` is not consistant with the actual filter count",
                 );
                 let mut spec = filter::FilterSpec::new(color);
-                spec.set_name(file);
+                spec.set_name(file.clone());
 
                 let mut filter = filter::Filter::new(spec)?;
                 filter.insert(sub_filter)?;
@@ -103,6 +103,17 @@ impl AllocSite {
                 res.push(filter)
             }
         }
+
+        res.shrink_to_fit();
+
+        // Rev-sorting by number of allocations. Note that the order does not matter as the filter
+        // exact-match different allocation-site-files.
+        res.sort_by(|lft, rgt| {
+            let lft = self.map.get(lft.name()).cloned().unwrap_or(0);
+            let rgt = self.map.get(rgt.name()).cloned().unwrap_or(0);
+            // rev-sorting
+            rgt.cmp(&lft)
+        });
 
         Ok(res)
     }

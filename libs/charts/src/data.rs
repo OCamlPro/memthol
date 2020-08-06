@@ -98,6 +98,11 @@ pub fn get<'a>() -> Res<RwLockReadGuard<'a, Data>> {
         .chain_err(|| "while reading the global state")
 }
 
+/// Total number of allocations.
+pub fn alloc_count() -> Res<usize> {
+    get().map(|data| data.uid_map.len())
+}
+
 /// Global state mutable accessor.
 fn get_mut<'a>() -> Res<RwLockWriteGuard<'a, Data>> {
     DATA.write()
@@ -144,6 +149,11 @@ impl Data {
     /// True if the data is initialized.
     pub fn has_init(&self) -> bool {
         self.init().is_some()
+    }
+
+    /// Total number of allocations.
+    pub fn alloc_count(&self) -> usize {
+        self.uid_map.len()
     }
 
     /// Allocation statistics stored in the global data.
