@@ -1,0 +1,99 @@
+env_scripts = [
+'''
+#!@duckscript
+here = pwd
+set_env "target_path" "${here}/target"
+''',
+]
+
+[config]
+default_to_workspace = false
+
+[env]
+target_path = { unset = true }
+client_crate_path = "libs/client"
+
+# Fails if `target_path` is not set.
+[tasks.fail_if_target_path_not_set]
+condition = { env_not_set = ["target_path"] }
+script = [
+'''
+#!@shell
+echo "[internal] fatal, env-var 'target_path' not set"
+exit 1
+'''
+]
+
+[tasks.need_wasm_pack]
+condition_script = [
+'''#!@shell
+! wasm-pack --version &> /dev/null
+'''
+]
+script = [
+'''#!@shell
+echo "fatal, 'wasm-pack' is not installed, please refer to the readme"
+exit 1
+'''
+]
+
+[tasks.build_wasm]
+dependencies = [
+    "need_wasm_pack",
+    "fail_if_target_path_not_set",
+]
+command = "wasm-pack"
+args = [
+    "build", "--dev",
+    "--target", "web",
+    "--out-name", "client",
+    "--out-dir", "${target_path}/client.wasm/debug",
+    "${client_crate_path}",
+]
+
+[tasks.release_wasm]
+dependencies = [
+    "need_wasm_pack",
+    "fail_if_target_path_not_set",
+]
+command = "wasm-pack"
+args = [
+    "build", "--release",
+    "--target", "web",
+    "--out-name", "client",
+    "--out-dir", "${target_path}/client.wasm/release",
+    "${client_crate_path}",
+]
+
+[tasks.build]
+dependencies = [
+    "build_wasm",
+]
+command = "cargo"
+args = [
+    "build",
+]
+
+[tasks.build_release]
+dependencies = [
+    "release_wasm",
+]
+command = "cargo"
+args = [
+    "build", "--release",
+]
+
+[tasks.release]
+dependencies = [
+    "build_release",
+]
+script = [
+'''
+#!@shell
+cp target/release/memthol ./memthol_ui
+'''
+]
+
+[tasks.clean]
+command = "cargo"
+args = ["clean"]

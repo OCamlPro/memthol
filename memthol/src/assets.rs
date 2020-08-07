@@ -45,7 +45,7 @@ macro_rules! asset_file {
 
 macro_rules! asset_source {
     (build_dir $key:tt / $path:expr) => {
-        concat!("", base::client_get_build_dir!(), "/", $path)
+        concat!("../../", base::client_wasm_build_dir!(), "/", $path)
     };
     (lib $key:tt / $path:expr) => {
         concat!("../../libs/client/", asset_file!($key / $path))
@@ -187,7 +187,7 @@ pub mod content {
         };
     }
 
-    /// Generates CSS-related files.
+    /// Generates static files.
     pub mod top {
         make_generator_for! {
             /// Main HTML file.
