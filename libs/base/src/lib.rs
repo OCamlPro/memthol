@@ -37,22 +37,38 @@ pub mod macros;
 
 #[macro_use]
 pub mod client {
-    /// Environment variable indicating the path to the (wasm) client's build dir.
     #[macro_export]
-    macro_rules! build_dir_env_var {
-        () => {
-            "WASM_CLIENT_DIR"
+    macro_rules! client_wasm_build_dir_for {
+        (release) => {
+            "target/client.wasm/release/"
         };
-    }
-    /// Retrieves the path to the client's build dir.
-    ///
-    /// Compile-time error if the environment variable for `BUILD_DIR_ENV_VAR` is not set.
-    #[macro_export]
-    macro_rules! client_get_build_dir {
-        () => {
-            env!($crate::build_dir_env_var!())
+        (debug) => {
+            "target/client.wasm/debug/"
+        };
+        ($profile:tt bins) => {
+            vec![
+                concat!(
+                    $crate::client_wasm_build_dir_for!($profile),
+                    "client_bg.wasm"
+                ),
+                concat!($crate::client_wasm_build_dir_for!($profile), "client.js"),
+            ]
         };
     }
 
-    pub const WASM_TARGET_DIR: &str = "target/client.wasm";
+    #[macro_export]
+    #[cfg(debug_assertions)]
+    macro_rules! client_wasm_build_dir {
+        () => {
+            $crate::client_wasm_build_dir_for!(debug)
+        };
+    }
+
+    #[macro_export]
+    #[cfg(not(debug_assertions))]
+    macro_rules! client_wasm_build_dir {
+        () => {
+            $crate::client_wasm_build_dir_for!(release)
+        };
+    }
 }
