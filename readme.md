@@ -60,6 +60,8 @@ assembly] (wasm). To do this, you need to have the [rust toolchain].
     installation instructions [here][install wasm-pack], although `cargo install wasm-pack` should
     work
 
+- install [`cargo-make`][cargo make] with `cargo install cargo-make`
+
 Memthol UI's dependencies rely on some OS-level packages. Please make sure they are installed and in
 your path:
 
@@ -68,35 +70,28 @@ your path:
 - freetype
 - expat
 
-## From sources
+## `debug`
 
-### `debug`
+> **NB**: memthol is quite slow in `debug` mode. If you have a lot of data to process, definitely
+> build in release instead.
 
-At the root of this repository, simply run `cargo build`. The binary will be located at
-`target/debug/memthol`.
+To build memthol in `debug` mode, run
+
+```bash
+cargo make build
+```
+
+The memthol binary will be in `target/debug/memthol`
 
 ### `release`
 
-At the root of this repository, run `./rsc/scripts/release.sh`. The binary will be located at
-`target/release/memthol`, with a copy at the root of the repository for convenience. Note that the
-`release.sh` scripts accepts arguments, which will be passed to the call to `cargo build --release`.
-
-<!-- ## Using cargo
-
-> **NB**: this workflow may fail because the BUI's repository is currently private. The commands
-> above will fail if git's `credential.helper` does not contain the appropriate credentials.
-
-You can install memthol's BUI by running
+To build memthol in `release` mode, run
 
 ```bash
-cargo install --git <memthol's BUI repository>
+cargo make release
 ```
 
-To update, run the same command with `--force`
-
-```bash
-cargo install --force --git <memthol's BUI repository>
-``` -->
+The memthol binary will be in `./memthol_ui`, also available as `target/release/memthol`.
 
 # Testing
 
@@ -107,19 +102,19 @@ First, make sure you run the bash script that prepares all the test-profiling-du
 ```
 
 Run memthol-ui on the test files located on this repository, in `rsc/ackermann_with_sets` to make
-sure it works:
+sure it works. Assuming your binary is called `memthol` and is in you path, and you are at the root
+of this repository:
 
-- if your binary is called `memthol` and is in you path, and you are at the root of this repository:
+```bash
+memthol rsc/dumps/ackermann_with_sets
+```
 
-    ```bash
-    memthol rsc/dumps/ackermann_with_sets
-    ```
+There is a bigger set of data you can use for testing, although we recommend you build in `release`
+mode for this one:
 
-- if you are at the root of the repo and want build-and-run the sources:
-
-    ```bash
-    cargo run -- rsc/dumps/ackermann_with_sets
-    ```
+```bash
+memthol rsc/dumps/dolmen
+```
 
 
 # Other Resources
@@ -133,7 +128,7 @@ sure it works:
 
 # Icons
 
-All icons come from the [bootstrap library][bootstrap].
+Most icons used in memthol come from the [bootstrap library][bootstrap].
 
 [OCaml]: https://ocaml.org/ (OCaml official page)
 [web assembly]: https://webassembly.org/ (Web Assembly official page)
@@ -147,3 +142,4 @@ All icons come from the [bootstrap library][bootstrap].
 [string filters]: ./rsc/docs/string_like_filters.md (String-like filters)
 [install wasm-pack]: https://rustwasm.github.io/wasm-pack/installer (wasm-pack install instructions)
 [bootstrap]: https://icons.getbootstrap.com (the bootstrap library)
+[cargo make]: https://crates.io/crates/cargo-make (cargo-make on crates.io)
