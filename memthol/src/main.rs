@@ -77,11 +77,6 @@ pub fn main() {
 
     let router = memthol::router::new();
 
-    println!("initializing assets...");
-    memthol::err::unwrap_or! {
-        memthol::assets::init(&addr, port), exit
-    }
-
     println!("starting data monitoring...");
     memthol::err::unwrap_or! {
         charts::data::start(dump_dir), exit
