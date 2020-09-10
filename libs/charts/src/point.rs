@@ -309,22 +309,23 @@ where
             + Ord
             + PartialEq,
     {
-        if settings.stacked_area().unwrap_or(false) {
-            self.chart_render(
+        use chart::settings::DisplayMode;
+        match settings.display_mode() {
+            DisplayMode::Normal => self.chart_render(
                 settings,
                 chart_builder,
                 style_conf,
                 is_active,
                 active_filters,
-            )
-        } else {
-            self.stacked_area_chart_render(
-                settings,
-                chart_builder,
-                style_conf,
-                is_active,
-                active_filters,
-            )
+            ),
+            DisplayMode::StackedArea | DisplayMode::StackedAreaPercent => self
+                .stacked_area_chart_render(
+                    settings,
+                    chart_builder,
+                    style_conf,
+                    is_active,
+                    active_filters,
+                ),
         }
     }
 
@@ -480,7 +481,7 @@ where
                                 ",
                             )
                         };
-                        println!("y_val: {}, sum: {}", y_val, sum);
+                        // println!("y_val: {}, sum: {}", y_val, sum);
                         *sum = *sum + y_val;
                         (Self::x_coord_processor(&raw_ranges.x, &point.key), *sum)
                     })
@@ -759,22 +760,23 @@ impl Points {
     where
         DB: plotters::prelude::DrawingBackend,
     {
-        if settings.stacked_area().unwrap_or(false) {
-            self.stacked_area_chart_render(
+        use chart::settings::DisplayMode;
+        match settings.display_mode() {
+            DisplayMode::Normal => self.chart_render(
                 settings,
                 chart_builder,
                 style_conf,
                 is_active,
                 active_filters,
-            )
-        } else {
-            self.chart_render(
-                settings,
-                chart_builder,
-                style_conf,
-                is_active,
-                active_filters,
-            )
+            ),
+            DisplayMode::StackedArea | DisplayMode::StackedAreaPercent => self
+                .stacked_area_chart_render(
+                    settings,
+                    chart_builder,
+                    style_conf,
+                    is_active,
+                    active_filters,
+                ),
         }
     }
 }

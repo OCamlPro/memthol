@@ -7,7 +7,7 @@ use filter::*;
 pub enum ChartSettingsMsg {
     ToggleVisible,
     ChangeTitle(String),
-    ToggleStackedArea,
+    SetDisplayMode(chart::settings::DisplayMode),
 }
 
 impl ChartSettingsMsg {
@@ -17,11 +17,11 @@ impl ChartSettingsMsg {
     {
         (uid, Self::ToggleVisible).into()
     }
-    pub fn toggle_stacked_area<Res>(uid: uid::ChartUid) -> Res
+    pub fn set_display_mode<Res>(uid: uid::ChartUid, mode: chart::settings::DisplayMode) -> Res
     where
         (uid::ChartUid, Self): Into<Res>,
     {
-        (uid, Self::ToggleStackedArea).into()
+        (uid, Self::SetDisplayMode(mode)).into()
     }
     pub fn change_title<Res>(uid: uid::ChartUid, title: impl Into<String>) -> Res
     where
@@ -35,7 +35,7 @@ impl fmt::Display for ChartSettingsMsg {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::ToggleVisible => write!(fmt, "toggle visible"),
-            Self::ToggleStackedArea => write!(fmt, "toggle stacked aread"),
+            Self::SetDisplayMode(mode) => write!(fmt, "set display mode: {}", mode.desc()),
             Self::ChangeTitle(title) => write!(fmt, "title: {}", title),
         }
     }
