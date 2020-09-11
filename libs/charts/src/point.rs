@@ -137,7 +137,8 @@ where
     Self: Clone,
     Self::Coord: 'static + std::fmt::Debug + Clone,
     Self::Range: 'static
-        + plotters::coord::Ranged<ValueType = Self::Coord>
+        + coord::ValueFormatter<Self::Coord>
+        + coord::Ranged<ValueType = Self::Coord>
         + From<std::ops::Range<Self::Coord>>,
 {
     type Coord;
@@ -149,7 +150,7 @@ where
 }
 impl CoordExt for Date {
     type Coord = time::chrono::Duration;
-    type Range = plotters::coord::RangedDuration;
+    type Range = coord::RangedDuration;
     fn zero() -> time::chrono::Duration {
         time::chrono::Duration::seconds(0)
     }
@@ -165,7 +166,7 @@ impl CoordExt for Date {
 }
 impl CoordExt for u32 {
     type Coord = u32;
-    type Range = plotters::coord::RangedCoordu32;
+    type Range = coord::RangedCoordu32;
     fn zero() -> u32 {
         0
     }
@@ -181,7 +182,7 @@ impl CoordExt for u32 {
 }
 impl CoordExt for f32 {
     type Coord = f32;
-    type Range = plotters::coord::RangedCoordf32;
+    type Range = coord::RangedCoordf32;
     fn zero() -> f32 {
         0.0
     }
@@ -251,7 +252,7 @@ pub trait StyleExt {
     ) where
         X: CoordExt,
         Y: CoordExt,
-        DB: plotters::drawing::DrawingBackend;
+        DB: plotters::prelude::DrawingBackend;
     fn shape_conf(&self, color: &Color) -> plotters::style::ShapeStyle;
 }
 
@@ -318,14 +319,20 @@ where
                 is_active,
                 active_filters,
             ),
-            DisplayMode::StackedArea | DisplayMode::StackedAreaPercent => self
-                .stacked_area_chart_render(
-                    settings,
-                    chart_builder,
-                    style_conf,
-                    is_active,
-                    active_filters,
-                ),
+            DisplayMode::StackedArea => self.chart_render_stacked_area(
+                settings,
+                chart_builder,
+                style_conf,
+                is_active,
+                active_filters,
+            ),
+            DisplayMode::StackedAreaPercent => self.chart_render_stacked_area_percent(
+                settings,
+                chart_builder,
+                style_conf,
+                is_active,
+                active_filters,
+            ),
         }
     }
 
@@ -340,6 +347,7 @@ where
     where
         DB: plotters::prelude::DrawingBackend,
     {
+        println!("rendering, normal");
         let opt_ranges = self.ranges(is_active);
         let raw_ranges = Self::ranges_processor(opt_ranges)?;
         let ranges = Self::coord_ranges_processor(&raw_ranges)?;
@@ -350,8 +358,8 @@ where
         let y_range: Y::Range = (ranges.y.min..ranges.y.max).into();
 
         // Alright, time to build the actual chart context used for drawing.
-        let mut chart_cxt: ChartContext<DB, RangedCoord<X::Range, Y::Range>> = chart_builder
-            .build_ranged(x_range, y_range)
+        let mut chart_cxt: ChartContext<DB, coord::Cartesian2d<X::Range, Y::Range>> = chart_builder
+            .build_cartesian_2d(x_range, y_range)
             .map_err(|e| e.to_string())?;
 
         // Mesh configuration.
@@ -391,7 +399,7 @@ where
         Ok(())
     }
 
-    fn stacked_area_chart_render<'spec, DB>(
+    fn chart_render_stacked_area<'spec, DB>(
         &self,
         _settings: &ChartSettings,
         mut chart_builder: plotters::prelude::ChartBuilder<DB>,
@@ -410,6 +418,111 @@ where
             + PartialEq,
         Self: ChartRender<X, Y>,
     {
+        println!("rendering, stacked area");
+        let opt_ranges = self.ranges(&is_active);
+        let raw_ranges = Self::ranges_processor(opt_ranges)?;
+        let ranges = Self::coord_ranges_processor(&raw_ranges)?;
+
+        use plotters::prelude::*;
+
+        let (y_min, mut y_max) = (ranges.y.min, Y::zero());
+
+        // Stores all the maximum values and the sum of the values for each filter that has been
+        // processed so far (used in the loop below).
+        let mut memory: Vec<_> = self
+            .points()
+            .map(|point| {
+                let mut max = Y::zero();
+                for (uid, val) in &point.vals.map {
+                    if !uid.is_everything() && is_active(*uid) {
+                        max = max + Self::y_coord_processor(&raw_ranges.y, val);
+                    }
+                }
+                if max > y_max {
+                    y_max = max.clone()
+                }
+                (max, Y::zero())
+            })
+            .collect();
+
+        let x_range: X::Range = (ranges.x.min..ranges.x.max).into();
+        let y_range: Y::Range = (y_min..y_max).into();
+
+        // Alright, time to build the actual chart context used for drawing.
+        let mut chart_cxt: ChartContext<DB, coord::Cartesian2d<X::Range, Y::Range>> = chart_builder
+            .build_cartesian_2d(x_range, y_range)
+            .map_err(|e| e.to_string())?;
+
+        // Mesh configuration.
+        {
+            let mut mesh = chart_cxt.configure_mesh();
+
+            // Apply caller's configuration.
+            style_conf.mesh_conf::<X, Y, DB>(&mut mesh);
+
+            // Set x/y formatters and draw this thing.
+            mesh.x_label_formatter(&Self::x_label_formatter)
+                .y_label_formatter(&Self::y_label_formatter)
+                .draw()
+                .map_err(|e| e.to_string())?;
+        }
+
+        // Invariant: `memory.len()` is the same length as `self.points()`.
+
+        // Time to add some points.
+        for filter_spec in active_filters.clone() {
+            let f_uid = filter_spec.uid();
+            if f_uid.is_everything() {
+                continue;
+            }
+
+            let points = self
+                .points()
+                .enumerate()
+                .filter_map(|(point_index, point)| {
+                    let (ref max, ref mut sum) = memory[point_index];
+                    point.vals.map.get(&f_uid).map(|val| {
+                        let y_val = Self::y_coord_processor(&raw_ranges.y, val);
+                        assert!(*max >= y_val);
+                        // println!("y_val: {}, sum: {}", y_val, sum);
+                        *sum = sum.clone() + y_val;
+                        (
+                            Self::x_coord_processor(&raw_ranges.x, &point.key),
+                            sum.clone(),
+                        )
+                    })
+                });
+
+            let style = style_conf.shape_conf(filter_spec.color()).filled();
+
+            chart_cxt
+                .draw_series(LineSeries::new(points, style))
+                .map_err(|e| e.to_string())?;
+        }
+
+        Ok(())
+    }
+
+    fn chart_render_stacked_area_percent<'spec, DB>(
+        &self,
+        _settings: &ChartSettings,
+        mut chart_builder: plotters::prelude::ChartBuilder<DB>,
+        style_conf: &impl StyleExt,
+        is_active: impl Fn(uid::LineUid) -> bool,
+        active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
+    ) -> Res<()>
+    where
+        DB: plotters::prelude::DrawingBackend,
+        Y::Coord: RatioExt
+            + std::ops::Add<Output = Y::Coord>
+            + std::ops::Sub<Output = Y::Coord>
+            + Clone
+            + PartialOrd
+            + Ord
+            + PartialEq,
+        Self: ChartRender<X, Y>,
+    {
+        println!("rendering, stacked area %");
         let opt_ranges = self.ranges(&is_active);
         let raw_ranges = Self::ranges_processor(opt_ranges)?;
         let ranges = Self::coord_ranges_processor(&raw_ranges)?;
@@ -417,12 +530,13 @@ where
         use plotters::prelude::*;
 
         let x_range: X::Range = (ranges.x.min..ranges.x.max).into();
-        let y_range: RangedCoordf32 = (0. ..100.).into();
+        let y_range: coord::RangedCoordf32 = (0. ..100.).into();
 
         // Alright, time to build the actual chart context used for drawing.
-        let mut chart_cxt: ChartContext<DB, RangedCoord<X::Range, RangedCoordf32>> = chart_builder
-            .build_ranged(x_range, y_range)
-            .map_err(|e| e.to_string())?;
+        let mut chart_cxt: ChartContext<DB, coord::Cartesian2d<X::Range, coord::RangedCoordf32>> =
+            chart_builder
+                .build_cartesian_2d(x_range, y_range)
+                .map_err(|e| e.to_string())?;
 
         // Mesh configuration.
         {
@@ -630,29 +744,7 @@ impl TimePoints {
         Ok(new_stuff)
     }
 
-    pub fn chart_render<'spec, DB>(
-        &self,
-        settings: &ChartSettings,
-        chart_builder: plotters::prelude::ChartBuilder<DB>,
-        style_conf: &impl StyleExt,
-        is_active: impl Fn(uid::LineUid) -> bool,
-        active_filters: impl Iterator<Item = &'spec filter::FilterSpec>,
-    ) -> Res<()>
-    where
-        DB: plotters::prelude::DrawingBackend,
-    {
-        match self {
-            Self::Size(points) => points.chart_render(
-                settings,
-                chart_builder,
-                style_conf,
-                is_active,
-                active_filters,
-            ),
-        }
-    }
-
-    pub fn stacked_area_chart_render<'spec, DB>(
+    pub fn render<'spec, DB>(
         &self,
         settings: &ChartSettings,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
@@ -664,7 +756,7 @@ impl TimePoints {
         DB: plotters::prelude::DrawingBackend,
     {
         match self {
-            Self::Size(points) => points.stacked_area_chart_render(
+            Self::Size(points) => points.render(
                 settings,
                 chart_builder,
                 style_conf,
@@ -705,50 +797,6 @@ impl Points {
         }
     }
 
-    pub fn chart_render<'spec, DB>(
-        &self,
-        settings: &ChartSettings,
-        chart_builder: plotters::prelude::ChartBuilder<DB>,
-        style_conf: &impl StyleExt,
-        is_active: impl Fn(uid::LineUid) -> bool,
-        active_filters: impl Iterator<Item = &'spec filter::FilterSpec>,
-    ) -> Res<()>
-    where
-        DB: plotters::prelude::DrawingBackend,
-    {
-        match self {
-            Self::Time(points) => points.chart_render(
-                settings,
-                chart_builder,
-                style_conf,
-                is_active,
-                active_filters,
-            ),
-        }
-    }
-
-    pub fn stacked_area_chart_render<'spec, DB>(
-        &self,
-        settings: &ChartSettings,
-        chart_builder: plotters::prelude::ChartBuilder<DB>,
-        style_conf: &impl StyleExt,
-        is_active: impl Fn(uid::LineUid) -> bool,
-        active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
-    ) -> Res<()>
-    where
-        DB: plotters::prelude::DrawingBackend,
-    {
-        match self {
-            Self::Time(points) => points.stacked_area_chart_render(
-                settings,
-                chart_builder,
-                style_conf,
-                is_active,
-                active_filters,
-            ),
-        }
-    }
-
     pub fn render<'spec, DB>(
         &self,
         settings: &ChartSettings,
@@ -760,23 +808,14 @@ impl Points {
     where
         DB: plotters::prelude::DrawingBackend,
     {
-        use chart::settings::DisplayMode;
-        match settings.display_mode() {
-            DisplayMode::Normal => self.chart_render(
+        match self {
+            Self::Time(points) => points.render(
                 settings,
                 chart_builder,
                 style_conf,
                 is_active,
                 active_filters,
             ),
-            DisplayMode::StackedArea | DisplayMode::StackedAreaPercent => self
-                .stacked_area_chart_render(
-                    settings,
-                    chart_builder,
-                    style_conf,
-                    is_active,
-                    active_filters,
-                ),
         }
     }
 }

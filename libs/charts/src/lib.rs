@@ -13,6 +13,9 @@
 //! [`Watcher`]: ./data/struct.Watcher.html (The Watcher struct in module data)
 //! [`start`]: ./data/fn.start.html (The start function in module data)
 
+pub extern crate palette;
+pub extern crate plotters;
+
 #[macro_use]
 pub mod prelude;
 

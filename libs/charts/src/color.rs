@@ -33,6 +33,14 @@ pub struct Color {
     pub b: u8,
 }
 
+impl plotters_backend::BackendStyle for Color {
+    fn color(&self) -> plotters_backend::BackendColor {
+        plotters_backend::BackendColor {
+            alpha: 1.0,
+            rgb: (self.r, self.g, self.b),
+        }
+    }
+}
 impl plotters::style::Color for Color {
     fn rgb(&self) -> (u8, u8, u8) {
         (self.r, self.g, self.b)
@@ -102,10 +110,8 @@ impl Color {
     }
 
     /// Turns itself in a `plotters`-compliant color.
-    pub fn to_plotters(
-        &self,
-    ) -> plotters::palette::rgb::Rgb<plotters::palette::encoding::srgb::Srgb, u8> {
-        plotters::palette::rgb::Rgb::new(self.r, self.g, self.b)
+    pub fn to_plotters(&self) -> palette::rgb::Rgb<palette::encoding::srgb::Srgb, u8> {
+        palette::rgb::Rgb::new(self.r, self.g, self.b)
     }
 
     pub fn from_hue(hue: f32, saturation: f32, lightness: f32) -> Self {
