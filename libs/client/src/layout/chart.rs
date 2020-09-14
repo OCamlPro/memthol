@@ -229,8 +229,9 @@ pub mod tiles {
         }
 
         let mut title = chart.title().to_string();
-        if chart.settings().stacked_area().unwrap_or(false) {
-            title.push_str(" (stacked area)")
+        if !chart.settings().display_mode().is_normal() {
+            title.push_str(" | ");
+            title.push_str(chart.settings().display_mode().desc());
         }
 
         html! {
@@ -438,21 +439,44 @@ pub mod settings {
     }
 
     pub fn options(model: &Model, chart: &Chart) -> Html {
-        let chart_uid = chart.uid();
-        let mut row = layout::table::TableRow::new_menu(false, html! { "options" })
-            .black_sep()
-            .height_px(LINE_HEIGHT_PX);
+        let settings = chart.settings();
 
-        let stacked_area = layout::input::checkbox(
-            chart.settings().stacked_area().unwrap_or(false),
-            format!("stacked_area_chart_{}", chart.uid()),
-            "stacked area",
-            model.link.callback(move |_| {
-                msg::ChartSettingsMsg::toggle_stacked_area::<msg::ChartsMsg>(chart_uid)
-            }),
-        );
-        row.push_single_value(stacked_area);
-        row.render()
+        if let Some(modes) = settings.legal_display_modes() {
+            let chart_uid = chart.uid();
+            let mut row = layout::table::TableRow::new_menu(false, html! { "display" })
+                .black_sep()
+                .height_px(LINE_HEIGHT_PX);
+            let mut is_first = true;
+
+            let select_mode = html! {
+                <>
+                    {for modes.into_iter().map(|mode| {
+                        let radio = layout::input::radio(
+                            mode == settings.display_mode(),
+                            format!("chart_{}_{}", chart_uid, mode.to_uname()),
+                            mode.desc(),
+                            model.link.callback(move |_| {
+                                msg::ChartSettingsMsg::set_display_mode::<msg::ChartsMsg>(
+                                    chart_uid, mode
+                                )
+                            }),
+                            model.link.callback(move |_| {
+                                msg::ChartSettingsMsg::set_display_mode::<msg::ChartsMsg>(
+                                    chart_uid, mode
+                                )
+                            }),
+                            !is_first,
+                        );
+                        is_first = false;
+                        radio
+                    })}
+                </>
+            };
+            row.push_single_value(select_mode);
+            row.render()
+        } else {
+            html!()
+        }
     }
 }
 

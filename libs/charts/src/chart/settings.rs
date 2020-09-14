@@ -2,10 +2,65 @@
 
 prelude! {}
 
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+pub enum DisplayMode {
+    Normal,
+    StackedArea,
+    StackedAreaPercent,
+}
+impl DisplayMode {
+    pub fn desc(self) -> &'static str {
+        match self {
+            Self::Normal => "normal",
+            Self::StackedArea => "stacked area",
+            Self::StackedAreaPercent => "stacked area (%)",
+        }
+    }
+
+    pub fn is_normal(self) -> bool {
+        match self {
+            Self::Normal => true,
+            Self::StackedArea | Self::StackedAreaPercent => false,
+        }
+    }
+    pub fn is_stacked_area(self) -> bool {
+        match self {
+            Self::Normal => false,
+            Self::StackedArea | Self::StackedAreaPercent => true,
+        }
+    }
+
+    pub fn all() -> Vec<Self> {
+        vec![Self::Normal, Self::StackedArea, Self::StackedAreaPercent]
+    }
+
+    pub fn to_uname(self) -> &'static str {
+        match self {
+            Self::Normal => "normal",
+            Self::StackedArea => "stacked_area",
+            Self::StackedAreaPercent => "stacked_area_percent",
+        }
+    }
+    pub fn from_uname(uname: &'static str) -> Option<Self> {
+        Some(match uname {
+            "normal" => Self::Normal,
+            "stacked_area" => Self::StackedArea,
+            "stacked_area_percent" => Self::StackedAreaPercent,
+            _ => return None,
+        })
+    }
+}
+impl fmt::Display for DisplayMode {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.desc().fmt(fmt)
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ChartSettings {
     title: String,
-    stacked_area: Option<bool>,
+    display_mode: DisplayMode,
+    can_stacked_area: bool,
     visible: bool,
     x_log: bool,
     y_log: bool,
@@ -15,7 +70,8 @@ impl ChartSettings {
     pub fn new(title: impl Into<String>, can_stacked_area: bool) -> Self {
         Self {
             title: title.into(),
-            stacked_area: if can_stacked_area { Some(false) } else { None },
+            display_mode: DisplayMode::Normal,
+            can_stacked_area,
             visible: true,
             x_log: false,
             y_log: false,
@@ -37,7 +93,7 @@ impl ChartSettings {
         match msg {
             ToggleVisible => self.toggle_visible(),
             ChangeTitle(title) => self.set_title(title),
-            ToggleStackedArea => self.toggle_stacked_area(),
+            SetDisplayMode(mode) => self.set_display_mode(mode),
         }
     }
 
@@ -50,8 +106,12 @@ impl ChartSettings {
         self.visible
     }
     /// Stacked-area setting accessor.
-    pub fn stacked_area(&self) -> Option<bool> {
-        self.stacked_area
+    pub fn display_mode(&self) -> DisplayMode {
+        self.display_mode
+    }
+    /// True if the chart can render itself in stacked-area mode.
+    pub fn can_stacked_area(&self) -> bool {
+        self.can_stacked_area
     }
     /// X-axis log setting accessor.
     pub fn x_log(&self) -> bool {
@@ -76,20 +136,20 @@ impl ChartSettings {
         self.visible = !self.visible
     }
 
-    /// Sets the stacked-area setting.
-    ///
-    /// Does nothing if stacked-area is not allowed.
-    pub fn set_stacked_area(&mut self, stacked_area: bool) {
-        if let Some(val) = self.stacked_area.as_mut() {
-            *val = stacked_area
+    /// Sets the display setting.
+    pub fn set_display_mode(&mut self, setting: DisplayMode) {
+        if self.can_stacked_area || !setting.is_stacked_area() {
+            self.display_mode = setting
         }
     }
-    /// Toggles the value of the stacked-area setting.
+    /// List of legal display modes for this chart.
     ///
-    /// Does nothing if stacked-area is not allowed.
-    pub fn toggle_stacked_area(&mut self) {
-        if let Some(val) = self.stacked_area.as_mut() {
-            *val = !*val
+    /// None if the chart supports only one display mode.
+    pub fn legal_display_modes(&self) -> Option<Vec<DisplayMode>> {
+        if !self.can_stacked_area {
+            None
+        } else {
+            Some(DisplayMode::all())
         }
     }
 

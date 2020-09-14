@@ -24,6 +24,14 @@ pub use base::{
     impl_display, lazy_static, svec, SVec,
 };
 
+pub use charts::palette;
+
+/// Re-exports from `plotters`, `plotters_canvas`, and `palette`.
+pub mod plotters {
+    pub use charts::plotters::*;
+    pub use plotters_canvas::CanvasBackend;
+}
+
 pub use charts::prelude::{
     alloc, filter::stats::AllFilterStats, num_fmt, time, Alloc, AllocDiff, AllocStats, AllocUid,
     Json, LoadInfo, Regex,

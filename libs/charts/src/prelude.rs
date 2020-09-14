@@ -21,6 +21,15 @@ pub mod alloc {
     pub use alloc_data::prelude::*;
 }
 
+/// Re-exports from `plotters`'s `coord` module.
+pub mod coord {
+    pub use plotters::coord::{
+        cartesian::Cartesian2d,
+        ranged1d::{AsRangedCoord, Ranged, ValueFormatter},
+        types::{RangedCoordf32, RangedCoordu32, RangedDuration},
+    };
+}
+
 pub use alloc::serderive::*;
 
 pub use alloc::{

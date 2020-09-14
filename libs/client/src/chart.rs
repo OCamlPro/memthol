@@ -264,8 +264,8 @@ pub struct Chart {
     /// Chart drawing area.
     // chart: Option<DrawingArea<CanvasBackend, plotters::coord::Shift>>,
     chart: Option<(
-        DrawingArea<CanvasBackend, plotters::coord::Shift>,
-        web_sys::Element,
+        plotters::drawing::DrawingArea<plotters::CanvasBackend, plotters::coord::Shift>,
+        web_sys::HtmlCanvasElement,
     )>,
     /// The points.
     points: Option<point::Points>,
@@ -520,14 +520,25 @@ impl Chart {
                 bail!("asked to build and bind a chart that's already built and binded")
             }
 
-            let backend: CanvasBackend =
-                plotters::prelude::CanvasBackend::new(&self.canvas).expect("could not find canvas");
+            use wasm_bindgen::JsCast;
+            let canvas: web_sys::HtmlCanvasElement = self
+                .get_canvas()?
+                .clone()
+                .dyn_into()
+                .expect("failed to retrieve chart canvas");
+            let width = canvas.client_width();
+            canvas.set_width(if width >= 0 { width as u32 } else { 0 });
+            let height = canvas.client_height();
+            canvas.set_height(if height >= 0 { height as u32 } else { 0 });
 
-            let chart: DrawingArea<CanvasBackend, plotters::coord::Shift> =
-                backend.into_drawing_area();
-            chart.fill(&WHITE).unwrap();
+            let backend: plotters::CanvasBackend =
+                plotters::CanvasBackend::new(&self.canvas).expect("could not find canvas");
 
-            let canvas = self.get_canvas()?.clone();
+            let chart: plotters::prelude::DrawingArea<
+                plotters::CanvasBackend,
+                plotters::coord::Shift,
+            > = backend.into_drawing_area();
+            chart.fill(&plotters::style::colors::WHITE).unwrap();
 
             self.chart = Some((chart, canvas));
         }
@@ -543,16 +554,16 @@ impl charts::point::StyleExt for Styler {
     where
         X: charts::point::CoordExt,
         Y: charts::point::CoordExt,
-        DB: plotters::drawing::DrawingBackend,
+        DB: plotters::prelude::DrawingBackend,
     {
         mesh.disable_x_mesh()
             .label_style(("sans-serif", 20).into_font())
             .axis_style(&plotters::prelude::BLACK)
-            .line_style_1(
+            .bold_line_style(
                 plotters::prelude::ShapeStyle::from(&plotters::prelude::BLACK.mix(0.2))
                     .stroke_width(1),
             )
-            .line_style_2(&plotters::prelude::BLACK.mix(0.0));
+            .light_line_style(&plotters::prelude::BLACK.mix(0.0));
     }
 
     fn shape_conf(&self, color: &charts::color::Color) -> plotters::style::ShapeStyle {
@@ -566,12 +577,6 @@ impl Chart {
     ///
     /// If the chart is not visible, drawing is postponed until the chart becomes visible. Meaning
     /// that this function does nothing if the chart is not visible.
-    ///
-    /// # TODO
-    ///
-    /// - this function contains code that's highly specific to the kind of points we are drawing.
-    ///   It should be exported, probably in the `charts` crate, to keep this function focused on
-    ///   what it does.
     pub fn draw(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
         // If the chart's not visible, do nothing. We will draw once the chart becomes visible
         // again.
@@ -582,29 +587,12 @@ impl Chart {
         let visible_filters = &self.filters;
 
         if let Some((chart, canvas)) = &mut self.chart {
-            let (chart_w, chart_h) = chart.dim_in_pixel();
-            // debug!("w: {}, h: {}", chart_w, chart_h);
-            // let (w, h) = (canvas.client_width(), canvas.client_height());
-            // debug!("w: {}, h: {}", w, h);
-            // info!("dpr: {}", web_sys::window().unwrap().device_pixel_ratio());
-            // let (width, height) = (
-            //     match canvas.client_width() {
-            //         n if n >= 0 => n as u32,
-            //         _ => {
-            //             alert!("An error occured while resizing a chart's canvas: negative width.");
-            //             panic!("fatal")
-            //         }
-            //     },
-            //     match canvas.client_height() {
-            //         n if n >= 0 => n as u32,
-            //         _ => {
-            //             alert!(
-            //                 "An error occured while resizing a chart's canvas: negative height."
-            //             );
-            //             panic!("fatal")
-            //         }
-            //     },
-            // );
+            let width = canvas.client_width();
+            canvas.set_width(if width >= 0 { width as u32 } else { 0 });
+            let height = canvas.client_height();
+            canvas.set_height(if height >= 0 { height as u32 } else { 0 });
+
+            let (chart_w, chart_h) = (canvas.width(), canvas.height());
 
             use wasm_bindgen::JsCast;
             let html_canvas: web_sys::HtmlCanvasElement = canvas.clone().dyn_into().unwrap();
@@ -617,12 +605,12 @@ impl Chart {
             }
 
             if let Some(points) = &self.points {
-                chart.fill(&WHITE).unwrap();
+                chart.fill(&plotters::style::colors::WHITE).unwrap();
 
                 let (x_label_area, y_label_area) = (30, 100);
                 let (margin_top, margin_right) = (x_label_area / 3, y_label_area / 3);
 
-                let mut builder = ChartBuilder::on(&chart);
+                let mut builder = plotters::prelude::ChartBuilder::on(&chart);
                 builder
                     .margin_top(margin_top)
                     .margin_right(margin_right)

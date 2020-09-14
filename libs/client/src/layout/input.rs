@@ -153,3 +153,50 @@ pub fn checkbox(
         </div>
     }
 }
+
+pub fn radio(
+    checked: bool,
+    name: impl Into<String>,
+    text: impl Into<String>,
+    onchange: OnChangeAction,
+    onclick: OnClickAction,
+    pre_space: bool,
+) -> Html {
+    define_style! {
+        POINTER = {
+            pointer,
+        };
+        PRE_SPACE = {
+            inline block,
+            width(20 px),
+        };
+    }
+
+    let name = name.into();
+    let pre_space = if pre_space {
+        html! {
+            <span style = PRE_SPACE/>
+        }
+    } else {
+        html!()
+    };
+    html! {
+        <>
+            {pre_space}
+            <input
+                style = POINTER
+                type = "radio"
+                onchange = onchange
+                checked = checked
+                name = name
+            />
+            <label
+                style = POINTER
+                onclick = onclick
+                for = name
+            >
+                {text.into()}
+            </label>
+        </>
+    }
+}
