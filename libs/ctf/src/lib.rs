@@ -13,10 +13,11 @@ mod test;
 pub mod prelude;
 
 pub mod ast;
+pub mod loc;
 
 prelude! {}
 
-use ast::*;
+use ast::{event::Event, *};
 
 pub struct RawParser<'data> {
     data: &'data [u8],
@@ -662,6 +663,60 @@ impl<'data> RawParser<'data> {
         Ok(res)
     }
 
+    pub fn loc(&mut self) -> Res<ast::Loc> {
+        let low = self.i32()?;
+        let high = self.i16()?;
+        // Mimicing the caml code:
+        //
+        // ```ocaml
+        // let encoded = Int64.(
+        //     logor (shift_left (of_int high) 32)
+        //     (logand (of_int32 low) 0xffffffffL)
+        // );
+        // ```
+        let encoded = ((high as i64) << 32) | ((low as i64) & 0xffffffffi64);
+
+        /// Used to convert between integer representations.
+        fn convert<In, Out>(n: In, from: &'static str) -> Out
+        where
+            In: TryInto<Out>,
+            In::Error: fmt::Display,
+        {
+            match n.try_into() {
+                Ok(res) => res,
+                Err(e) => panic!("[fatal] while converting {}: {}", from, e),
+            }
+        }
+
+        // Now we're doing this:
+        //
+        // ```ocaml
+        // let line, start_char, end_char, filename_code, defname_code = Int64.(
+        //     to_int (logand 0xfffffL encoded),
+        //     to_int (logand 0xffL (shift_right encoded 20)),
+        //     to_int (logand 0x3ffL (shift_right encoded (20 + 8))),
+        //     to_int (logand 0x1fL (shift_right encoded (20 + 8 + 10))),
+        //     to_int (logand 0x1fL (shift_right encoded (20 + 8 + 10 + 5))))
+        // );
+        // ```
+        let line = convert(0xfffffi64 & encoded, "loc: line");
+        let start_char = convert(0xffi64 & (encoded >> 20), "loc: start_char");
+        let end_char = convert(0x3ffi64 & (encoded >> 20 + 8), "loc: end_char");
+        let file_path_code = convert(0x1fi64 & (encoded >> (20 + 8 + 10)), "loc: file_path_code");
+        let def_name_code = convert(
+            0x1fi64 & (encoded >> (20 + 8 + 10 + 5)),
+            "loc: def_name_code",
+        );
+
+        Ok(ast::Loc {
+            line,
+            start_char,
+            end_char,
+            file_path_code,
+            def_name_code,
+        })
+    }
+
     pub fn cache_check(&mut self) -> Res<CacheCheck> {
         let ix = self.i16()?;
         let pred = self.i16()?;
@@ -669,7 +724,7 @@ impl<'data> RawParser<'data> {
         Ok(CacheCheck { ix, pred, value })
     }
 
-    pub fn event_kind(&mut self, header: &header::Ctf) -> Res<(event::Kind, Clock)> {
+    pub fn event_kind(&mut self, header: &header::Header) -> Res<(event::Kind, Clock)> {
         pinfo!(self, "    parsing event kind");
         const EVENT_HEADER_TIME_MASK: i32 = 0x1ffffff;
         const EVENT_HEADER_TIME_LEN: i32 = 25;
@@ -831,11 +886,17 @@ impl<'data> RawParser<'data> {
         let header_size = (self.pos() - start) as u32;
 
         if packet_size_bits % 8 != 0 {
-            bail!("illegal packet size {}, not a legal number of bytes")
+            bail!("illegal packet size {}, not a legal number of bits")
         }
 
         let content_size = (packet_size_bits / 8) - header_size;
-        pinfo!(self, "    content size in bytes {}", content_size);
+        pinfo!(
+            self,
+            "    content size in bytes {} = ({} / 8) - {}",
+            content_size,
+            packet_size_bits,
+            header_size,
+        );
 
         Ok((
             header::Header {
@@ -927,7 +988,7 @@ impl<'data> Parser<'data> {
 
 /// Pseudo-parsers: parses a very tiny amout of data to produce a subparser.
 impl<'data> Parser<'data> {
-    pub fn packets<'me>(&'me mut self) -> Res<Vec<PacketParser<'data, 'me>>> {
+    pub fn packets(&mut self) -> Res<Vec<PacketParser<'data>>> {
         let parser = &mut self.parser;
         let header = &self.header;
 
@@ -939,22 +1000,27 @@ impl<'data> Parser<'data> {
             let packet_end = parser.cursor + content_len;
             println!(
                 "next packet: {} bytes -> {}/{}",
+                content_len,
                 packet_end,
-                parser.data.len(),
                 parser.data.len()
             );
-            let parser: RawParser<'data> = RawParser::new(&parser.data[parser.cursor..packet_end]);
-            res.push(PacketParser {
-                parser,
-                header,
+            if packet_end > parser.data.len() {
+                bail!(err!(expected format!(
+                    "legal packet size: not enough data left ({}/{})",
+                    content_len, parser.data.len() - parser.cursor,
+                )))
+            }
+            res.push(PacketParser::new(
+                &parser.data[parser.cursor..packet_end],
                 my_header,
-            })
+            ));
+            parser.cursor = packet_end;
         }
         res.shrink_to_fit();
         Ok(res)
     }
 
-    pub fn work(&mut self) -> Res<()> {
+    pub fn work(&mut self) -> Res<Vec<PacketParser<'data>>> {
         let _trace_info = self.parser.trace_info(&self.header)?;
         pinfo!(self, "done parsing trace info");
         let packets = self.packets()?;
@@ -963,17 +1029,47 @@ impl<'data> Parser<'data> {
             packets.len(),
             self.is_eof()
         );
-        Ok(())
+        Ok(packets)
     }
 }
 
-pub struct PacketParser<'data, 'parser> {
+pub struct PacketParser<'data> {
     parser: RawParser<'data>,
-    header: &'parser header::Ctf,
     my_header: header::Packet,
 }
 
-impl<'data, 'parser> PacketParser<'data, 'parser> {}
+impl<'data> PacketParser<'data> {
+    pub fn new(input: &'data [u8], my_header: header::Packet) -> Self {
+        Self {
+            parser: RawParser::new(input),
+            my_header,
+        }
+    }
+
+    pub fn work(mut self) -> Res<Vec<Event>> {
+        let (event_kind, event_time) = self.parser.event_kind(&self.my_header)?;
+        println!("event: {:?} ({})", event_kind, event_time);
+
+        let mut res = Vec::with_capacity(133);
+
+        match event_kind {
+            event::Kind::Alloc => {}
+            event::Kind::SmallAlloc(n) => {}
+            event::Kind::Promotion => {}
+            event::Kind::Collection => {}
+            event::Kind::Locs => {}
+
+            // Can't have more than two info events.
+            event::Kind::Info => {
+                bail!(err!(expected "non-info event: having more than two info events is illegal"))
+            }
+        }
+
+        res.shrink_to_fit();
+
+        Ok(res)
+    }
+}
 
 mod impls {
     use std::ops::{Deref, DerefMut};
@@ -992,15 +1088,15 @@ mod impls {
         }
     }
 
-    //     impl<'data> Deref for PacketParser<'data> {
-    //         type Target = RawParser<'data>;
-    //         fn deref(&self) -> &RawParser<'data> {
-    //             &self.parser
-    //         }
-    //     }
-    //     impl<'data> DerefMut for PacketParser<'data> {
-    //         fn deref_mut(&mut self) -> &mut RawParser<'data> {
-    //             &mut self.parser
-    //         }
-    //     }
+    impl<'data> Deref for PacketParser<'data> {
+        type Target = RawParser<'data>;
+        fn deref(&self) -> &RawParser<'data> {
+            &self.parser
+        }
+    }
+    impl<'data> DerefMut for PacketParser<'data> {
+        fn deref_mut(&mut self) -> &mut RawParser<'data> {
+            &mut self.parser
+        }
+    }
 }

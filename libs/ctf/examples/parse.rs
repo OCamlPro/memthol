@@ -22,7 +22,15 @@ fn run() -> Res<()> {
     let data = read_file(&path)?;
 
     let mut parser = ctf::Parser::new(&data)?;
-    parser.work()?;
+    let packet_parsers = parser.work()?;
+
+    for packet_parser in packet_parsers {
+        let events = packet_parser.work()?;
+        println!("events:");
+        for event in events {
+            println!("    {:?}", event)
+        }
+    }
 
     Ok(())
 }

@@ -210,15 +210,15 @@ pub mod event {
         }
     }
 
-    // #[derive(Debug, Clone)]
-    // pub enum Event {
-    //     Info(Info),
-    //     Locs(Locs),
-    //     Alloc(Alloc),
-    //     Promotion(Promotion),
-    //     Collection(Collection),
-    //     SmallAlloc(SmallAlloc),
-    // }
+    #[derive(Debug, Clone)]
+    pub enum Event {
+        // Info(Info),
+        Locs(Locs),
+        Alloc(Alloc),
+        Promotion(Promotion),
+        Collection(Collection),
+        SmallAlloc(SmallAlloc),
+    }
     // impl Event {
     //     pub fn of_code(code: i32) -> Res<Self>
     // }
@@ -313,11 +313,11 @@ pub enum CachedVal<T> {
 
 #[derive(Debug, Clone)]
 pub struct Loc {
-    pub line: u32,
-    pub chart_start: u8,
-    pub chart_end: u16,
-    pub file_name: CachedVal<String>,
-    pub def_name: CachedVal<String>,
+    pub line: usize,
+    pub start_char: usize,
+    pub end_char: usize,
+    pub file_path_code: u8,
+    pub def_name_code: u8,
 }
 
 #[derive(Debug, Clone)]

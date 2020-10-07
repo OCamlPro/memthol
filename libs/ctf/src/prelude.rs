@@ -1,4 +1,4 @@
-pub use std::convert::TryInto;
+pub use std::{convert::TryInto, fmt};
 
 // pub use log::info;
 
@@ -18,7 +18,10 @@ macro_rules! pdebug {
     }};
 }
 
-pub use crate::ast::{self, Span};
+pub use crate::{
+    ast::{self, Span},
+    loc, RawParser,
+};
 
 pub use pos::Pos;
 
