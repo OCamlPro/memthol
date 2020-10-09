@@ -4,7 +4,7 @@ pub extern crate log;
 #[macro_use]
 mod macros;
 
-pub const VERSION: i16 = 2;
+pub const VERSION: u16 = 2;
 
 #[cfg(test)]
 mod test;
@@ -13,6 +13,7 @@ mod test;
 pub mod prelude;
 
 pub mod ast;
+pub mod btrace;
 pub mod loc;
 
 prelude! {}
@@ -599,9 +600,9 @@ impl<'data> RawParser<'data> {
     }
 
     /// Parses a clock value.
-    pub fn clock(&mut self) -> Res<i64> {
+    pub fn clock(&mut self) -> Res<u64> {
         pdebug!(self, "        parsing clock");
-        self.i64().subst_err(err!(|| expected "clock value"))
+        self.u64().subst_err(err!(|| expected "clock value"))
     }
 
     pub fn f64(&mut self) -> Res<f64> {
@@ -648,109 +649,127 @@ impl<'data> RawParser<'data> {
 
 /// More advanced parsers.
 impl<'data> RawParser<'data> {
-    /// Parses an `u64` in memtrace's concise format.
-    pub fn concise_u64(&mut self) -> Res<u64> {
-        pdebug!(self, "    parsing concise u64");
-        let variant: u8 = self.u8().chain_err(err!(|| expected "concise u64"))?;
+    /// Parses a `usize` in memtrace's variable-length format.
+    pub fn v_usize(&mut self) -> Res<usize> {
+        pdebug!(self, "    parsing v_usize");
+        let variant: u8 = self
+            .u8()
+            .chain_err(err!(|| expected "variable-length usize"))?;
 
         let res = match variant {
-            0..=252 => self.u8()? as u64,
-            253 => self.u16()? as u64,
-            254 => self.u32()? as u64,
-            255 => self.u64()?,
+            0..=252 => convert(variant, "v_usize: u8"),
+            253 => convert(self.u16()?, "v_usize: u16"),
+            254 => convert(self.u32()?, "v_usize: u32"),
+            255 => convert(self.u64()?, "v_usize: u64"),
         };
 
         Ok(res)
     }
 
-    pub fn loc(&mut self) -> Res<ast::Loc> {
-        let low = self.i32()?;
-        let high = self.i16()?;
-        // Mimicing the caml code:
-        //
-        // ```ocaml
-        // let encoded = Int64.(
-        //     logor (shift_left (of_int high) 32)
-        //     (logand (of_int32 low) 0xffffffffL)
-        // );
-        // ```
-        let encoded = ((high as i64) << 32) | ((low as i64) & 0xffffffffi64);
+    pub fn alloc(&mut self, cxt: &mut Cxt<'data>, short: Option<usize>) -> Res<ast::event::Alloc> {
+        pinfo!(self, "parsing alloc");
+        let alloc_id = cxt.next_alloc_id();
+        let (is_short, len, nsamples, is_major) = if let Some(len) = short {
+            (true, len, 1, false)
+        } else {
+            let len = self.v_usize()?;
+            let nsample = self.v_usize()?;
+            let is_major = match self.u8()? {
+                0 => false,
+                1 => true,
+                n => bail!(err!(expected format!("boolean as a 0- or 1-valued u8, found {}", n))),
+            };
+            (false, len, nsample, is_major)
+        };
+        let common_pref_len = self.v_usize()?;
+        let nencoded = if is_short {
+            self.u8()? as usize
+        } else {
+            self.u16()? as usize
+        };
 
-        /// Used to convert between integer representations.
-        fn convert<In, Out>(n: In, from: &'static str) -> Out
-        where
-            In: TryInto<Out>,
-            In::Error: fmt::Display,
-        {
-            match n.try_into() {
-                Ok(res) => res,
-                Err(e) => panic!("[fatal] while converting {}: {}", from, e),
-            }
-        }
-
-        // Now we're doing this:
-        //
-        // ```ocaml
-        // let line, start_char, end_char, filename_code, defname_code = Int64.(
-        //     to_int (logand 0xfffffL encoded),
-        //     to_int (logand 0xffL (shift_right encoded 20)),
-        //     to_int (logand 0x3ffL (shift_right encoded (20 + 8))),
-        //     to_int (logand 0x1fL (shift_right encoded (20 + 8 + 10))),
-        //     to_int (logand 0x1fL (shift_right encoded (20 + 8 + 10 + 5))))
-        // );
-        // ```
-        let line = convert(0xfffffi64 & encoded, "loc: line");
-        let start_char = convert(0xffi64 & (encoded >> 20), "loc: start_char");
-        let end_char = convert(0x3ffi64 & (encoded >> 20 + 8), "loc: end_char");
-        let file_path_code = convert(0x1fi64 & (encoded >> (20 + 8 + 10)), "loc: file_path_code");
-        let def_name_code = convert(
-            0x1fi64 & (encoded >> (20 + 8 + 10 + 5)),
-            "loc: def_name_code",
+        pinfo!(
+            self,
+            "    nencoded: {}, common_pref_len: {}",
+            nencoded,
+            common_pref_len
         );
 
-        Ok(ast::Loc {
-            line,
-            start_char,
-            end_char,
-            file_path_code,
-            def_name_code,
+        let (backtrace, backtrace_len) =
+            cxt.btrace.get_backtrace(self, nencoded, common_pref_len)?;
+
+        Ok(ast::event::Alloc {
+            id: alloc_id,
+            len,
+            nsamples,
+            is_major,
+            common_pref_len,
+            backtrace,
+            backtrace_len,
         })
     }
 
+    pub fn id_from_delta(&mut self, cxt: &mut Cxt<'data>) -> Res<u64> {
+        let id_delta = self.v_usize()? as u64;
+        Ok(cxt.current_alloc_id() - 1 - id_delta)
+    }
+
+    pub fn locs(&mut self, cxt: &mut Cxt<'data>) -> Res<ast::Locs<'data>> {
+        pinfo!(self, "    parsing locations");
+        let id = convert(self.u64()?, "locs: id");
+        let len = convert(self.u8()?, "locs: len");
+        pinfo!(self, "    -> parsing {} location(s)", len);
+        let mut locs = SVec16::with_capacity(len);
+        for _ in 0..len {
+            let loc = loc::Location::parse(self, &mut cxt.loc)?;
+            locs.push(loc)
+        }
+        Ok(ast::Locs { id, locs })
+    }
+
     pub fn cache_check(&mut self) -> Res<CacheCheck> {
-        let ix = self.i16()?;
-        let pred = self.i16()?;
-        let value = self.i64()?;
+        let ix = self.u16()?;
+        let pred = self.u16()?;
+        let value = self.u64()?;
         Ok(CacheCheck { ix, pred, value })
     }
 
     pub fn event_kind(&mut self, header: &header::Header) -> Res<(event::Kind, Clock)> {
         pinfo!(self, "    parsing event kind");
-        const EVENT_HEADER_TIME_MASK: i32 = 0x1ffffff;
-        const EVENT_HEADER_TIME_LEN: i32 = 25;
+        const EVENT_HEADER_TIME_MASK: u32 = 0x1ffffff;
+        const EVENT_HEADER_TIME_MASK_I64: u64 = EVENT_HEADER_TIME_MASK as u64;
+        const EVENT_HEADER_TIME_LEN: u32 = 25;
 
-        let code = self.i32()?;
-        let start_low = EVENT_HEADER_TIME_MASK & (header.timestamp.begin as i32);
-        let time_low = {
-            let time_low = EVENT_HEADER_TIME_MASK & code;
-            if time_low < start_low {
-                // Overflow.
-                time_low + (1 << EVENT_HEADER_TIME_LEN)
-            } else {
-                time_low
-            }
-        };
-        let time = ((header.timestamp.begin as i64) & (!(EVENT_HEADER_TIME_MASK as i64)))
-            + (time_low as i64);
-        if !header.timestamp.contains(time) {
-            bail!(
-                "inconsistent event header time, expected `{} <= {} <= {}`",
-                header.timestamp.begin,
-                time,
-                header.timestamp.end
-            )
-        }
+        let code = self.u32()?;
+        pinfo!(self, "code: {}", code);
+        pinfo!(self, "timestamp begin: {}", header.timestamp.begin);
+        // This conversion will pretty much always be OOB.
+        let timestamp_begin = header.timestamp.begin as u32;
+        let start_low = EVENT_HEADER_TIME_MASK & timestamp_begin;
+        let time_low: u64 = convert(
+            {
+                let time_low = EVENT_HEADER_TIME_MASK & code;
+                if time_low < start_low {
+                    // Overflow.
+                    time_low + (1u32.rotate_left(EVENT_HEADER_TIME_LEN))
+                } else {
+                    time_low
+                }
+            },
+            "event_kind: time_low",
+        );
+
+        let time = (header.timestamp.begin & (!EVENT_HEADER_TIME_MASK_I64)) + time_low;
+        // if !header.timestamp.contains(time) {
+        //     bail!(
+        //         "inconsistent event header time, expected `{} <= {} <= {}`",
+        //         header.timestamp.begin,
+        //         time,
+        //         header.timestamp.end
+        //     )
+        // }
         let ev_code = code >> EVENT_HEADER_TIME_LEN;
+        pinfo!(self, "ev code: {}, time: {}", ev_code, time);
         let ev = event::Kind::from_code(ev_code)?;
         Ok((ev, time))
     }
@@ -852,15 +871,15 @@ impl<'data> RawParser<'data> {
         let _flush_duration = self.u32()?;
         pinfo!(self, "    flush duration {}", _flush_duration);
 
-        let version = self.i16()?;
+        let version = self.u16()?;
         pinfo!(self, "    version {}", version);
 
-        let pid = self.i64()?;
+        let pid = self.u64()?;
         pinfo!(self, "    pid {}", pid);
 
         let cache_check = self.cache_check()?;
 
-        let (alloc_begin, alloc_end) = (self.i64()?, self.i64()?);
+        let (alloc_begin, alloc_end) = (self.u64()?, self.u64()?);
         pinfo!(
             self,
             "    alloc begin/end times {}/{}",
@@ -883,13 +902,14 @@ impl<'data> RawParser<'data> {
             }
         }
 
-        let header_size = (self.pos() - start) as u32;
+        let header_size: u32 = convert(self.pos() - start, "raw_package_header: header_size");
 
         if packet_size_bits % 8 != 0 {
             bail!("illegal packet size {}, not a legal number of bits")
         }
 
-        let content_size = (packet_size_bits / 8) - header_size;
+        let total_content_size = packet_size_bits / 8;
+        let content_size = total_content_size - header_size;
         pinfo!(
             self,
             "    content size in bytes {} = ({} / 8) - {}",
@@ -901,6 +921,7 @@ impl<'data> RawParser<'data> {
         Ok((
             header::Header {
                 content_size,
+                total_content_size,
                 timestamp,
                 alloc_id,
                 pid,
@@ -916,11 +937,7 @@ impl<'data> RawParser<'data> {
         let sample_rate = self.f64()?;
         pinfo!(self, "    sample rate {}", sample_rate);
 
-        let word_size = {
-            let tmp = self.i8()?;
-            let tmp: Result<u8, _> = tmp.try_into();
-            tmp.map_err(|e| e.to_string())?
-        };
+        let word_size = self.u8()?;
         pinfo!(self, "    word size {}", word_size);
 
         let exe_name = self.string()?;
@@ -932,11 +949,7 @@ impl<'data> RawParser<'data> {
         let exe_params = self.string()?;
         pinfo!(self, "    exe params {:?}", exe_params);
 
-        let pid = {
-            let tmp = self.i64()?;
-            let tmp: Result<u64, _> = tmp.try_into();
-            tmp.map_err(|e| e.to_string())?
-        };
+        let pid = self.u64()?;
         pinfo!(self, "    pid {}", pid);
 
         let context = if header.has_context() {
@@ -966,17 +979,15 @@ pub struct Parser<'data> {
 impl<'data> Parser<'data> {
     /// Constructor.
     pub fn new(data: &'data [u8]) -> Res<Self> {
-        println!("creating parser");
         let mut parser = RawParser::new(data);
         let header = parser.ctf_header()?;
-        let (event_kind, event_time) = parser.event_kind(&header)?;
+        let (event_kind, _event_time) = parser.event_kind(&header)?;
         if !event_kind.is_info() {
             bail!(
                 "expected initial event to be an info event, found {:?}",
                 event_kind
             )
         }
-        println!("event_kind: {:?}", event_kind);
         Ok(Self { parser, header })
     }
 
@@ -988,17 +999,26 @@ impl<'data> Parser<'data> {
 
 /// Pseudo-parsers: parses a very tiny amout of data to produce a subparser.
 impl<'data> Parser<'data> {
-    pub fn packets(&mut self) -> Res<Vec<PacketParser<'data>>> {
+    pub fn work_on_packets(
+        &mut self,
+        mut event_action: impl FnMut(usize, Event<'data>) -> Res<()>,
+    ) -> Res<()> {
         let parser = &mut self.parser;
-        let header = &self.header;
+        let mut cxt = Cxt::new();
+        let mut package_count = 0;
 
-        let mut res = Vec::with_capacity(103);
         while !parser.is_eof() {
-            println!("currently at {}/{}", parser.cursor, parser.data.len());
+            pinfo!(
+                parser,
+                "currently at {}/{}",
+                parser.cursor,
+                parser.data.len()
+            );
             let my_header = parser.packet_header()?;
-            let content_len = my_header.content_size as usize;
+            let content_len: usize = convert(my_header.content_size, "packets: content_len");
             let packet_end = parser.cursor + content_len;
-            println!(
+            pinfo!(
+                parser,
                 "next packet: {} bytes -> {}/{}",
                 content_len,
                 packet_end,
@@ -1010,26 +1030,45 @@ impl<'data> Parser<'data> {
                     content_len, parser.data.len() - parser.cursor,
                 )))
             }
-            res.push(PacketParser::new(
-                &parser.data[parser.cursor..packet_end],
-                my_header,
-            ));
+            PacketParser::new(&parser.data[parser.cursor..packet_end], my_header)
+                .iter_events(&mut cxt, |event| event_action(package_count, event))?;
             parser.cursor = packet_end;
+            package_count += 1;
         }
-        res.shrink_to_fit();
-        Ok(res)
+
+        pinfo!(self, "parsed {} package(s)", package_count);
+
+        Ok(())
     }
 
-    pub fn work(&mut self) -> Res<Vec<PacketParser<'data>>> {
+    pub fn work(&mut self, event_action: impl FnMut(usize, Event<'data>) -> Res<()>) -> Res<()> {
         let _trace_info = self.parser.trace_info(&self.header)?;
         pinfo!(self, "done parsing trace info");
-        let packets = self.packets()?;
-        println!(
-            "parsed {} packets (is_eof: {})",
-            packets.len(),
-            self.is_eof()
-        );
-        Ok(packets)
+        self.work_on_packets(event_action)?;
+        Ok(())
+    }
+}
+
+pub struct Cxt<'data> {
+    loc: loc::Cxt<'data>,
+    btrace: btrace::Cxt,
+    alloc_count: u64,
+}
+impl<'data> Cxt<'data> {
+    pub fn new() -> Self {
+        Self {
+            loc: loc::Cxt::new(),
+            btrace: btrace::Cxt::new(),
+            alloc_count: 0u64,
+        }
+    }
+    pub fn next_alloc_id(&mut self) -> u64 {
+        let mut next = self.alloc_count + 1;
+        std::mem::swap(&mut self.alloc_count, &mut next);
+        next
+    }
+    pub fn current_alloc_id(&self) -> u64 {
+        self.alloc_count
     }
 }
 
@@ -1046,28 +1085,52 @@ impl<'data> PacketParser<'data> {
         }
     }
 
-    pub fn work(mut self) -> Res<Vec<Event>> {
+    fn event(&mut self, cxt: &mut Cxt<'data>) -> Res<Event<'data>> {
         let (event_kind, event_time) = self.parser.event_kind(&self.my_header)?;
-        println!("event: {:?} ({})", event_kind, event_time);
+        pinfo!(self, "event: {:?} ({})", event_kind, event_time);
 
-        let mut res = Vec::with_capacity(133);
-
-        match event_kind {
-            event::Kind::Alloc => {}
-            event::Kind::SmallAlloc(n) => {}
-            event::Kind::Promotion => {}
-            event::Kind::Collection => {}
-            event::Kind::Locs => {}
+        let event = match event_kind {
+            event::Kind::Alloc => {
+                let alloc = self.alloc(cxt, None)?;
+                Event::Alloc(alloc)
+            }
+            event::Kind::SmallAlloc(n) => {
+                let alloc = self.alloc(cxt, Some(convert(n, "event: SmallAlloc(n)")))?;
+                Event::Alloc(alloc)
+            }
+            event::Kind::Promotion => {
+                let alloc_id = self.id_from_delta(cxt)?;
+                Event::Promotion(alloc_id)
+            }
+            event::Kind::Collection => {
+                let alloc_id = self.id_from_delta(cxt)?;
+                Event::Collection(alloc_id)
+            }
+            event::Kind::Locs => {
+                let locs = self.locs(cxt)?;
+                Event::Locs(locs)
+            }
 
             // Can't have more than two info events.
             event::Kind::Info => {
                 bail!(err!(expected "non-info event: having more than two info events is illegal"))
             }
+        };
+
+        pinfo!(self, "    {:?}", event);
+
+        Ok(event)
+    }
+
+    pub fn iter_events(
+        mut self,
+        cxt: &mut Cxt<'data>,
+        mut event_do: impl FnMut(Event<'data>) -> Res<()>,
+    ) -> Res<()> {
+        while !self.is_eof() {
+            event_do(self.event(cxt)?)?
         }
-
-        res.shrink_to_fit();
-
-        Ok(res)
+        Ok(())
     }
 }
 

@@ -1,12 +1,21 @@
 pub use std::{convert::TryInto, fmt};
 
+pub use base::SVec16;
+
+pub use crate::{
+    ast::{self, Span},
+    loc,
+    prelude::pos::Pos,
+    RawParser,
+};
+
 // pub use log::info;
 
-pub const VERB: bool = true;
+pub const VERB: bool = false;
 pub const DEBUG_VERB: bool = false;
 
 macro_rules! pinfo {
-    ($parser:expr, $($blah:tt)*) => {if prelude::VERB {
+    ($parser:expr, $($blah:tt)*) => {if $crate::prelude::VERB {
         let (pos, max) = $parser.position();
         println!("[{}/{}] {}", pos, max, format_args!($($blah)*))
     }};
@@ -18,12 +27,19 @@ macro_rules! pdebug {
     }};
 }
 
-pub use crate::{
-    ast::{self, Span},
-    loc, RawParser,
-};
+pub fn destroy<T>(_: T) {}
 
-pub use pos::Pos;
+/// Used to convert between integer representations.
+pub fn convert<In, Out>(n: In, from: &'static str) -> Out
+where
+    In: TryInto<Out> + fmt::Display + Copy,
+    In::Error: fmt::Display,
+{
+    match n.try_into() {
+        Ok(res) => res,
+        Err(e) => panic!("[fatal] while converting {} ({}): {}", n, from, e),
+    }
+}
 
 pub type Res<T> = Result<T, String>;
 
@@ -76,7 +92,7 @@ where
     }
 }
 
-pub type Clock = i64;
+pub type Clock = u64;
 
 pub fn id<T>(t: T) -> T {
     t
@@ -86,9 +102,9 @@ pub fn res_id<T, Err>(t: T) -> Result<T, Err> {
 }
 pub fn ignore<T>(_t: T) {}
 
-pub type AllocId = i64;
+pub type AllocId = u64;
 
-pub type Pid = i64;
+pub type Pid = u64;
 
 mod pos {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]

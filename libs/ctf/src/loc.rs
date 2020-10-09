@@ -5,7 +5,7 @@ prelude! {}
 pub type Data<'data, T> = (&'data str, T);
 pub type Entry<'data, T> = Option<Data<'data, T>>;
 
-const FIRST_IDX: Idx = Idx { idx: 0 };
+// const FIRST_IDX: Idx = Idx { idx: 0 };
 const LAST_IDX: u8 = 30;
 const MAX_IDX: u8 = LAST_IDX + 1;
 
@@ -15,25 +15,14 @@ pub struct Idx {
 }
 impl Idx {
     fn new(idx: u8) -> Self {
-        let res = Self { idx };
-        res.check("creation");
-        res
+        Self { idx }
     }
-    fn not_found() -> Self {
-        Self { idx: MAX_IDX }
-    }
+    // fn not_found() -> Self {
+    //     Self { idx: MAX_IDX }
+    // }
 
     pub fn is_not_found(self) -> bool {
-        true
-    }
-
-    fn check(self, from: &'static str) {
-        if self.idx >= MAX_IDX {
-            panic!(
-                "[fatal] during {}: illegal MFT map index {} (should be < {})",
-                from, self.idx, MAX_IDX,
-            )
-        }
+        self.idx > LAST_IDX
     }
 }
 impl fmt::Display for Idx {
@@ -100,7 +89,6 @@ impl<'data, T> MtfMap<'data, T> {
     /// Slides all elements before `idx` to the right.
     fn move_to_front(&mut self, idx: u8) {
         self.check("before move_to_front");
-        Idx::new(idx).check("swap");
         let idx = idx as usize;
         if self.vec[idx].is_none() {
             panic!(
@@ -126,46 +114,57 @@ impl<'data, T> MtfMap<'data, T> {
         self.check("after pushing");
     }
 
-    pub fn encode(&mut self, key: &'data str, if_absent: impl FnOnce() -> T) -> Idx {
-        let mut key_idx = MAX_IDX;
-        for (idx, entry) in self.vec.iter().enumerate() {
-            match *entry {
-                None => break,
-                Some((k, _)) => {
-                    if k == key {
-                        key_idx = idx as u8;
-                        break;
-                    }
-                }
-            }
-        }
+    // pub fn encode(&mut self, key: &'data str, if_absent: impl FnOnce() -> T) -> Idx {
+    //     let mut key_idx = MAX_IDX;
+    //     for (idx, entry) in self.vec.iter().enumerate() {
+    //         match *entry {
+    //             None => break,
+    //             Some((k, _)) => {
+    //                 if k == key {
+    //                     key_idx = idx as u8;
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        if key_idx < MAX_IDX {
-            self.move_to_front(key_idx);
-            Idx::new(key_idx)
-        } else {
-            let val = if_absent();
-            self.push(key, val);
-            Idx::not_found()
-        }
-    }
+    //     if key_idx < MAX_IDX {
+    //         self.move_to_front(key_idx);
+    //         Idx::new(key_idx)
+    //     } else {
+    //         let val = if_absent();
+    //         self.push(key, val);
+    //         Idx::not_found()
+    //     }
+    // }
 
-    pub fn decode(&mut self, idx: Idx, if_absent: impl FnOnce() -> (&'data str, T)) -> Idx {
+    pub fn decode<Out>(
+        &mut self,
+        parser: &mut RawParser<'data>,
+        idx: Idx,
+        if_absent: impl FnOnce(&mut RawParser<'data>) -> Res<(&'data str, T)>,
+        binding_do: impl FnOnce(&mut RawParser<'data>, &'data str, &mut T) -> Res<Out>,
+    ) -> Res<Out> {
         if idx.is_not_found() {
-            let (key, val) = if_absent();
+            pinfo!(parser, "index {} is not found", idx.idx);
+            let (key, mut val) = if_absent(parser)?;
+            let res = binding_do(parser, key, &mut val);
             self.push(key, val);
-            FIRST_IDX
-        } else if self[idx].is_some() {
-            self.move_to_front(idx.idx);
-            FIRST_IDX
+            res
         } else {
-            panic!("[fatal] trying to decode an empty entry")
+            pinfo!(parser, "index {} is NOT not found", idx.idx);
+            let res = match &mut self[idx] {
+                Some((key, val)) => binding_do(parser, *key, val),
+                None => panic!("[fatal] trying to decode an empty entry"),
+            };
+            self.move_to_front(idx.idx);
+            res
         }
     }
 
-    pub fn last(&self) -> Option<&(&'data str, T)> {
-        self.vec[LAST_IDX as usize].as_ref()
-    }
+    // pub fn last(&self) -> Option<&(&'data str, T)> {
+    //     self.vec[LAST_IDX as usize].as_ref()
+    // }
 }
 
 impl<'data, T> std::ops::Index<Idx> for MtfMap<'data, T> {
@@ -180,14 +179,16 @@ impl<'data, T> std::ops::IndexMut<Idx> for MtfMap<'data, T> {
     }
 }
 
-pub struct LocationCxt<'data> {
+pub struct Cxt<'data> {
     map: MtfMap<'data, MtfMap<'data, ()>>,
 }
-impl<'data> LocationCxt<'data> {
+impl<'data> Cxt<'data> {
     pub fn new() -> Self {
         Self { map: MtfMap::new() }
     }
 }
+
+pub type Locs<'data> = SVec16<Location<'data>>;
 
 #[derive(Debug, Clone)]
 pub struct Location<'data> {
@@ -208,10 +209,10 @@ impl<'data> Location<'data> {
         }
     }
 
-    /// Parses a location by overwriting itself.
-    fn parse(&mut self, cxt: &mut LocationCxt, parser: &mut RawParser<'data>) -> Res<()> {
-        let low = parser.i32()?;
-        let high = parser.i16()?;
+    pub fn parse(parser: &mut RawParser<'data>, cxt: &mut Cxt<'data>) -> Res<Self> {
+        let low: i64 = convert(parser.i32()?, "loc: low");
+        let high: i64 = convert(parser.i16()?, "loc: high");
+        pinfo!(parser, "    loc {{ low: {}, high: {} }}", low, high);
         // Mimicing the caml code:
         //
         // ```ocaml
@@ -220,7 +221,8 @@ impl<'data> Location<'data> {
         //     (logand (of_int32 low) 0xffffffffL)
         // );
         // ```
-        let encoded = ((high as i64) << 32) | ((low as i64) & 0xffffffffi64);
+        let encoded = (high << 32) | (low & 0xffffffffi64);
+
         // Now we're doing this:
         //
         // ```ocaml
@@ -232,25 +234,56 @@ impl<'data> Location<'data> {
         //     to_int (logand 0x1fL (shift_right encoded (20 + 8 + 10 + 5))))
         // );
         // ```
-        let line = 0xfffffi64 & encoded;
-        let start_char = 0xffi64 & (encoded >> 20);
-        let end_char = 0x3ffi64 & (encoded >> 20 + 8);
-        let file_path_code = 0x1fi64 & (encoded >> (20 + 8 + 10));
-        let def_name_code = 0x1fi64 & (encoded >> (20 + 8 + 10 + 5));
-        todo!("parse location")
-    }
+        let line = convert(0xfffffi64 & encoded, "loc: line");
+        let start_char = convert(0xffi64 & (encoded >> 20), "loc: start_char");
+        let end_char = convert(0x3ffi64 & (encoded >> 20 + 8), "loc: end_char");
+        let col = Span::new(start_char, end_char)?;
+        let file_path_code = convert(0x1fi64 & (encoded >> (20 + 8 + 10)), "loc: file_path_code");
+        let def_name_code = convert(
+            0x1fi64 & (encoded >> (20 + 8 + 10 + 5)),
+            "loc: def_name_code",
+        );
 
-    pub fn parse_list(
-        cxt: &mut LocationCxt,
-        parser: &mut RawParser<'data>,
-    ) -> Res<Vec<Location<'data>>> {
-        let id = parser.i64()?;
-        let nlocs = parser.i8()?;
-        let mut res = vec![Self::unknown(); nlocs as usize];
-        for slf in &mut res {
-            slf.parse(cxt, parser)?
-        }
-        Ok(res)
+        pinfo!(
+            parser,
+            "    file_path_code: {}, def_name_code: {}",
+            file_path_code,
+            def_name_code
+        );
+
+        let (file_path, def_name) = {
+            cxt.map.decode(
+                parser,
+                Idx::new(file_path_code),
+                // if absent, parse a string and bind it to a new map
+                |parser| {
+                    pinfo!(parser, "        parsing file path");
+                    Ok((parser.string()?, MtfMap::new()))
+                },
+                // given the parser and the file path/map binding, do this
+                |parser, file_path, map| {
+                    map.decode(
+                        parser,
+                        Idx::new(def_name_code),
+                        // if absent, parse a string and bind it to unit
+                        |parser| {
+                            pinfo!(parser, "        parsing def name");
+                            Ok((parser.string()?, ()))
+                        },
+                        // given the parser and the def name/unit binding, return file path and def
+                        // name
+                        |_, def_name, _| Ok((file_path, def_name)),
+                    )
+                },
+            )?
+        };
+
+        Ok(Location {
+            line,
+            col,
+            file_path,
+            def_name,
+        })
     }
 }
 

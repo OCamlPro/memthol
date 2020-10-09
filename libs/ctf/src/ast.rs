@@ -71,10 +71,12 @@ pub mod header {
     pub struct Header {
         /// Size of the content of the packet/stream, **without the header**.
         pub content_size: u32,
+        /// Size of the content of the packet/stream, **with the header**.
+        pub total_content_size: u32,
         pub timestamp: Span<Clock>,
         pub alloc_id: Span<AllocId>,
         pub pid: Pid,
-        pub version: i16,
+        pub version: u16,
     }
     impl Header {
         pub fn has_context(&self) -> bool {
@@ -120,6 +122,9 @@ pub mod header {
                 cache_check,
             }
         }
+        pub fn header(&self) -> &Header {
+            &self.header
+        }
         pub fn cache_check(&self) -> &ast::CacheCheck {
             &self.cache_check
         }
@@ -136,16 +141,16 @@ pub mod event {
     use super::*;
     // prelude! {}
 
-    const INFO_CODE: i32 = 0;
-    const LOCS_CODE: i32 = 1;
-    const ALLOC_CODE: i32 = 2;
-    const PROMOTION_CODE: i32 = 3;
-    const COLLECTION_CODE: i32 = 4;
+    const INFO_CODE: u32 = 0;
+    const LOCS_CODE: u32 = 1;
+    const ALLOC_CODE: u32 = 2;
+    const PROMOTION_CODE: u32 = 3;
+    const COLLECTION_CODE: u32 = 4;
 
-    const SMALL_ALLOC_REDUCED_CODES: Span<i32> = Span { begin: 1, end: 16 };
-    const SMALL_ALLOC_OFFSET: i32 = 100;
+    const SMALL_ALLOC_REDUCED_CODES: Span<u32> = Span { begin: 1, end: 16 };
+    const SMALL_ALLOC_OFFSET: u32 = 100;
 
-    const SMALL_ALLOC_CODES: Span<i32> = Span {
+    const SMALL_ALLOC_CODES: Span<u32> = Span {
         begin: SMALL_ALLOC_REDUCED_CODES.begin + SMALL_ALLOC_OFFSET,
         end: SMALL_ALLOC_REDUCED_CODES.end + SMALL_ALLOC_OFFSET,
     };
@@ -158,10 +163,10 @@ pub mod event {
         Promotion,
         Collection,
         /// Stores a value between `1` and `16`.
-        SmallAlloc(i32),
+        SmallAlloc(u32),
     }
     impl Kind {
-        fn small_alloc_invariant(code: i32) {
+        fn small_alloc_invariant(code: u32) {
             if !SMALL_ALLOC_REDUCED_CODES.contains(code) {
                 panic!(
                     "illegal small allocation reduced code, expected {} <= {} <= {}",
@@ -174,7 +179,7 @@ pub mod event {
             self == Self::Info
         }
 
-        pub fn from_code(code: i32) -> Res<Self> {
+        pub fn from_code(code: u32) -> Res<Self> {
             let res = if code == INFO_CODE {
                 Self::Info
             } else if code == LOCS_CODE {
@@ -190,12 +195,12 @@ pub mod event {
                 Self::small_alloc_invariant(reduced_code);
                 Self::SmallAlloc(reduced_code)
             } else {
-                bail!("expected event code `{}`", code)
+                bail!("unexpected event code `{}`", code)
             };
             Ok(res)
         }
 
-        pub fn code(self) -> i32 {
+        pub fn code(self) -> u32 {
             match self {
                 Self::Info => INFO_CODE,
                 Self::Locs => LOCS_CODE,
@@ -211,17 +216,23 @@ pub mod event {
     }
 
     #[derive(Debug, Clone)]
-    pub enum Event {
+    pub enum Event<'data> {
         // Info(Info),
-        Locs(Locs),
+        Locs(Locs<'data>),
         Alloc(Alloc),
-        Promotion(Promotion),
-        Collection(Collection),
-        SmallAlloc(SmallAlloc),
+        Promotion(u64),
+        Collection(u64),
     }
-    // impl Event {
-    //     pub fn of_code(code: i32) -> Res<Self>
-    // }
+    impl<'data> Event<'data> {
+        pub fn name(&self) -> &'static str {
+            match self {
+                Self::Locs(_) => "locations",
+                Self::Alloc(_) => "allocation",
+                Self::Promotion(_) => "promotion",
+                Self::Collection(_) => "collection",
+            }
+        }
+    }
 
     #[derive(Debug, Clone)]
     pub struct Info {
@@ -234,7 +245,7 @@ pub mod event {
         pub context: Option<String>,
     }
     impl Info {
-        pub const fn event_id() -> i32 {
+        pub const fn event_id() -> u32 {
             INFO_CODE
         }
         pub const fn name() -> &'static str {
@@ -243,29 +254,17 @@ pub mod event {
     }
 
     #[derive(Debug, Clone)]
-    pub struct Locs {
-        pub code: u64,
-        pub trace: Vec<Loc>,
-    }
-    impl Locs {
-        pub const fn event_id() -> i32 {
-            LOCS_CODE
-        }
-        pub const fn name() -> &'static str {
-            "location"
-        }
-    }
-
-    #[derive(Debug, Clone)]
     pub struct Alloc {
-        pub len: u64,
-        pub samples: u64,
+        pub id: u64,
+        pub len: usize,
+        pub nsamples: usize,
         pub is_major: bool,
-        pub common_prefix: u64,
-        pub backtrace: Vec<BacktraceCode>,
+        pub backtrace: SVec16<usize>,
+        pub backtrace_len: usize,
+        pub common_pref_len: usize,
     }
     impl Alloc {
-        pub const fn event_id() -> i32 {
+        pub const fn event_id() -> u32 {
             ALLOC_CODE
         }
         pub const fn name() -> &'static str {
@@ -278,7 +277,7 @@ pub mod event {
         pub id_delta: u64,
     }
     impl Promotion {
-        pub const fn event_id() -> i32 {
+        pub const fn event_id() -> u32 {
             PROMOTION_CODE
         }
         pub const fn name() -> &'static str {
@@ -291,17 +290,12 @@ pub mod event {
         pub id_delta: u64,
     }
     impl Collection {
-        pub const fn event_id() -> i32 {
+        pub const fn event_id() -> u32 {
             COLLECTION_CODE
         }
         pub const fn name() -> &'static str {
             "collect"
         }
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct SmallAlloc {
-        pub alloc: ShortAlloc,
     }
 }
 
@@ -316,8 +310,14 @@ pub struct Loc {
     pub line: usize,
     pub start_char: usize,
     pub end_char: usize,
-    pub file_path_code: u8,
-    pub def_name_code: u8,
+    pub file_path_code: String,
+    pub def_name_code: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct Locs<'data> {
+    pub id: u64,
+    pub locs: SVec16<loc::Location<'data>>,
 }
 
 #[derive(Debug, Clone)]
@@ -342,7 +342,7 @@ pub struct ShortAlloc {
 
 #[derive(Debug, Clone)]
 pub struct CacheCheck {
-    pub ix: i16,
-    pub pred: i16,
-    pub value: i64,
+    pub ix: u16,
+    pub pred: u16,
+    pub value: u64,
 }

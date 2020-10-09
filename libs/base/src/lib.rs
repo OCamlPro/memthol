@@ -1,6 +1,7 @@
 //! Re-exports, types and helpers for all crates in this project.
 
 pub extern crate rand;
+pub extern crate smallvec;
 
 pub use derive_more::*;
 pub use either::Either;
@@ -24,6 +25,9 @@ pub fn now() -> std::time::Instant {
 
 /// Alias type for `SmallVec` of max stack-size 8.
 pub type SVec<T> = smallvec::SmallVec<[T; 8]>;
+/// Alias type for `SmallVec` of max stack-size 16.
+pub type SVec16<T> = smallvec::SmallVec<[T; 16]>;
+
 /// Alias macro for smallvec construction.
 #[macro_export]
 macro_rules! svec {

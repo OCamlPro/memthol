@@ -22,14 +22,23 @@ fn run() -> Res<()> {
     let data = read_file(&path)?;
 
     let mut parser = ctf::Parser::new(&data)?;
-    let packet_parsers = parser.work()?;
-
-    for packet_parser in packet_parsers {
-        let events = packet_parser.work()?;
-        println!("events:");
-        for event in events {
-            println!("    {:?}", event)
+    let mut last_package_idx = None;
+    let mut event_count = 0;
+    parser.work(|package_idx, event| {
+        if Some(package_idx) != last_package_idx {
+            event_count = 0;
+            if package_idx > 0 {
+                println!("}}")
+            }
+            last_package_idx = Some(package_idx);
+            println!("package {} {{", package_idx)
         }
+        println!("    event[{}]: {}", event_count, event.name());
+        event_count += 1;
+        Ok(())
+    })?;
+    if last_package_idx.is_some() {
+        println!("}}")
     }
 
     Ok(())
