@@ -737,7 +737,7 @@ impl<'data> RawParser<'data> {
     pub fn event_kind(&mut self, header: &header::Header) -> Res<(event::Kind, Clock)> {
         pinfo!(self, "    parsing event kind");
         const EVENT_HEADER_TIME_MASK: u32 = 0x1ffffff;
-        const EVENT_HEADER_TIME_MASK_I64: u64 = EVENT_HEADER_TIME_MASK as u64;
+        const EVENT_HEADER_TIME_MASK_U64: u64 = EVENT_HEADER_TIME_MASK as u64;
         const EVENT_HEADER_TIME_LEN: u32 = 25;
 
         let code = self.u32()?;
@@ -759,7 +759,7 @@ impl<'data> RawParser<'data> {
             "event_kind: time_low",
         );
 
-        let time = (header.timestamp.begin & (!EVENT_HEADER_TIME_MASK_I64)) + time_low;
+        let time = (header.timestamp.begin & (!EVENT_HEADER_TIME_MASK_U64)) + time_low;
         // if !header.timestamp.contains(time) {
         //     bail!(
         //         "inconsistent event header time, expected `{} <= {} <= {}`",

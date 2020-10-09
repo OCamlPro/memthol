@@ -15,6 +15,9 @@ if [ ! -d "$dump_dir" ] ; then
 fi
 
 for test_dir in $dump_dir/* ; do
+    if [[ "$test_dir" == */ctf ]] ; then
+        continue
+    fi
     printf "preparing $test_dir ..."
 
     if [ ! -d "$test_dir" ] ; then

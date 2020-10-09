@@ -45,15 +45,32 @@ impl<'data, T> MtfMap<'data, T> {
         }
     }
 
-    pub fn check(&self, from: &'static str) {
+    pub fn remove_last(&mut self) -> Entry<'data, T> {
+        if let Some(last) = self.vec.last_mut() {
+            std::mem::replace(last, None)
+        } else {
+            None
+        }
+    }
+
+    #[cfg(not(any(test, not(release))))]
+    #[inline]
+    fn check(&self, _: &'static str) -> Res<()> {
+        Ok(())
+    }
+
+    #[cfg(any(test, not(release)))]
+    fn check(&self, from: &'static str) -> Res<()> {
         let mut none_count = 0;
         for (idx, entry) in self.vec.iter().enumerate() {
             if none_count > 0 {
                 if entry.is_some() {
-                    panic!(
+                    bail!(
                         "[fatal] during {}: mtf map has an entry at {}, \
                         but it is preceeded by {} none-bindings",
-                        from, idx, none_count,
+                        from,
+                        idx,
+                        none_count,
                     )
                 } else {
                     none_count += 1
@@ -62,6 +79,7 @@ impl<'data, T> MtfMap<'data, T> {
                 none_count += 1
             }
         }
+        Ok(())
     }
 
     #[cfg(test)]
@@ -87,11 +105,11 @@ impl<'data, T> MtfMap<'data, T> {
     /// Moves the element at `idx` to the front of the MTF.
     ///
     /// Slides all elements before `idx` to the right.
-    fn move_to_front(&mut self, idx: u8) {
-        self.check("before move_to_front");
+    fn move_to_front(&mut self, idx: u8) -> Res<()> {
+        self.check("before move_to_front")?;
         let idx = idx as usize;
         if self.vec[idx].is_none() {
-            panic!(
+            bail!(
                 "[fatal] trying to swap at index {}, but that index has no entry",
                 idx
             )
@@ -99,11 +117,11 @@ impl<'data, T> MtfMap<'data, T> {
         for (idx_1, idx_2) in (0..idx).into_iter().map(|idx| (idx, idx + 1)).rev() {
             self.vec.swap(idx_1, idx_2);
         }
-        self.check("after move_to_front");
+        self.check("after move_to_front")
     }
 
-    fn push(&mut self, key: &'data str, val: T) {
-        self.check("before pushing");
+    fn push(&mut self, key: &'data str, val: T) -> Res<()> {
+        self.check("before pushing")?;
         let mut tmp = Some((key, val));
         for entry in &mut self.vec {
             std::mem::swap(&mut tmp, entry);
@@ -111,53 +129,31 @@ impl<'data, T> MtfMap<'data, T> {
                 break;
             }
         }
-        self.check("after pushing");
+        self.check("after pushing")
     }
-
-    // pub fn encode(&mut self, key: &'data str, if_absent: impl FnOnce() -> T) -> Idx {
-    //     let mut key_idx = MAX_IDX;
-    //     for (idx, entry) in self.vec.iter().enumerate() {
-    //         match *entry {
-    //             None => break,
-    //             Some((k, _)) => {
-    //                 if k == key {
-    //                     key_idx = idx as u8;
-    //                     break;
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     if key_idx < MAX_IDX {
-    //         self.move_to_front(key_idx);
-    //         Idx::new(key_idx)
-    //     } else {
-    //         let val = if_absent();
-    //         self.push(key, val);
-    //         Idx::not_found()
-    //     }
-    // }
 
     pub fn decode<Out>(
         &mut self,
         parser: &mut RawParser<'data>,
         idx: Idx,
-        if_absent: impl FnOnce(&mut RawParser<'data>) -> Res<(&'data str, T)>,
+        if_absent: impl FnOnce(&mut RawParser<'data>, Entry<'data, T>) -> Res<(&'data str, T)>,
         binding_do: impl FnOnce(&mut RawParser<'data>, &'data str, &mut T) -> Res<Out>,
     ) -> Res<Out> {
+        self.check("decode")?;
         if idx.is_not_found() {
             pinfo!(parser, "index {} is not found", idx.idx);
-            let (key, mut val) = if_absent(parser)?;
+            let last = self.remove_last();
+            let (key, mut val) = if_absent(parser, last)?;
             let res = binding_do(parser, key, &mut val);
-            self.push(key, val);
+            self.push(key, val)?;
             res
         } else {
             pinfo!(parser, "index {} is NOT not found", idx.idx);
             let res = match &mut self[idx] {
                 Some((key, val)) => binding_do(parser, *key, val),
-                None => panic!("[fatal] trying to decode an empty entry"),
+                None => bail!("[fatal] trying to decode an empty entry at {}", idx),
             };
-            self.move_to_front(idx.idx);
+            self.move_to_front(idx.idx)?;
             res
         }
     }
@@ -186,6 +182,41 @@ impl<'data> Cxt<'data> {
     pub fn new() -> Self {
         Self { map: MtfMap::new() }
     }
+
+    pub fn to_ml_string(&self) -> String {
+        let mut s = format!("{{");
+        let mut count = 0;
+
+        for (idx, entry) in self.map.vec.iter().enumerate() {
+            if let Some((key, val)) = entry {
+                s.push_str(&format!("\n    {: >2} -> {} {{", idx, key));
+                let mut sub_count = 0;
+
+                for (idx, entry) in val.vec.iter().enumerate() {
+                    if let Some((key, ())) = entry {
+                        s.push_str(&format!("\n        {: >2} -> {},", idx, key));
+                        sub_count += 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                if sub_count > 0 {
+                    s.push('\n')
+                }
+                s.push_str("    },");
+                count += 1
+            } else {
+                break;
+            }
+        }
+
+        if count > 0 {
+            s.push('\n')
+        }
+        s.push('}');
+        s
+    }
 }
 
 pub type Locs<'data> = SVec16<Location<'data>>;
@@ -210,9 +241,10 @@ impl<'data> Location<'data> {
     }
 
     pub fn parse(parser: &mut RawParser<'data>, cxt: &mut Cxt<'data>) -> Res<Self> {
-        let low: i64 = convert(parser.i32()?, "loc: low");
-        let high: i64 = convert(parser.i16()?, "loc: high");
+        let low: u64 = convert(parser.u32()?, "loc: low");
+        let high: u64 = convert(parser.u16()?, "loc: high");
         pinfo!(parser, "    loc {{ low: {}, high: {} }}", low, high);
+        println!("    loc {{ low: {}, high: {} }}", low, high);
         // Mimicing the caml code:
         //
         // ```ocaml
@@ -221,7 +253,7 @@ impl<'data> Location<'data> {
         //     (logand (of_int32 low) 0xffffffffL)
         // );
         // ```
-        let encoded = (high << 32) | (low & 0xffffffffi64);
+        let encoded = (high << 32) | (low & 0xffffffffu64);
 
         // Now we're doing this:
         //
@@ -234,48 +266,63 @@ impl<'data> Location<'data> {
         //     to_int (logand 0x1fL (shift_right encoded (20 + 8 + 10 + 5))))
         // );
         // ```
-        let line = convert(0xfffffi64 & encoded, "loc: line");
-        let start_char = convert(0xffi64 & (encoded >> 20), "loc: start_char");
-        let end_char = convert(0x3ffi64 & (encoded >> 20 + 8), "loc: end_char");
+        let line = convert(0xfffffu64 & encoded, "loc: line");
+        let start_char = convert(0xffu64 & (encoded >> 20), "loc: start_char");
+        let end_char = convert(0x3ffu64 & (encoded >> 20 + 8), "loc: end_char");
         let col = Span::new(start_char, end_char)?;
-        let file_path_code = convert(0x1fi64 & (encoded >> (20 + 8 + 10)), "loc: file_path_code");
+        let file_path_code = convert(0x1fu64 & (encoded >> (20 + 8 + 10)), "loc: file_path_code");
         let def_name_code = convert(
-            0x1fi64 & (encoded >> (20 + 8 + 10 + 5)),
+            0x1fu64 & (encoded >> (20 + 8 + 10 + 5)),
             "loc: def_name_code",
         );
 
-        pinfo!(
-            parser,
+        println!(
             "    file_path_code: {}, def_name_code: {}",
-            file_path_code,
-            def_name_code
+            file_path_code, def_name_code
         );
 
+        let idx = Idx::new(file_path_code);
+
         let (file_path, def_name) = {
-            cxt.map.decode(
-                parser,
-                Idx::new(file_path_code),
-                // if absent, parse a string and bind it to a new map
-                |parser| {
-                    pinfo!(parser, "        parsing file path");
-                    Ok((parser.string()?, MtfMap::new()))
-                },
-                // given the parser and the file path/map binding, do this
-                |parser, file_path, map| {
-                    map.decode(
-                        parser,
-                        Idx::new(def_name_code),
-                        // if absent, parse a string and bind it to unit
-                        |parser| {
-                            pinfo!(parser, "        parsing def name");
-                            Ok((parser.string()?, ()))
-                        },
-                        // given the parser and the def name/unit binding, return file path and def
-                        // name
-                        |_, def_name, _| Ok((file_path, def_name)),
-                    )
-                },
-            )?
+            cxt.map
+                .decode(
+                    parser,
+                    idx,
+                    // if absent, parse a string and bind it to a new map
+                    |parser, last| {
+                        let map = if let Some((_, map)) = last {
+                            map
+                        } else {
+                            MtfMap::new()
+                        };
+                        pinfo!(parser, "        parsing file path");
+                        Ok((parser.string()?, map))
+                    },
+                    // given the parser and the file path/map binding, do this
+                    |parser, file_path, map| {
+                        map.decode(
+                            parser,
+                            Idx::new(def_name_code),
+                            // if absent, parse a string and bind it to unit
+                            |parser, _| {
+                                pinfo!(parser, "        parsing def name");
+                                Ok((parser.string()?, ()))
+                            },
+                            // given the parser and the def name/unit binding, return file path and def
+                            // name
+                            |_, def_name, _| Ok((file_path, def_name)),
+                        )
+                        .map_err(|e| {
+                            format!(
+                                "while working on sub-MTF-map at {} ({})\n{}",
+                                idx,
+                                idx.is_not_found(),
+                                e
+                            )
+                        })
+                    },
+                )
+                .map_err(|e| format!("location context {}\n{}", cxt.to_ml_string(), e))?
         };
 
         Ok(Location {
@@ -335,7 +382,7 @@ mod test {
             ",
         );
 
-        mtf.move_to_front(0);
+        mtf.move_to_front(0).unwrap();
         check(
             &mtf,
             "\
@@ -349,7 +396,7 @@ mod test {
             ",
         );
 
-        mtf.move_to_front(1);
+        mtf.move_to_front(1).unwrap();
         check(
             &mtf,
             "\
@@ -363,7 +410,7 @@ mod test {
             ",
         );
 
-        mtf.move_to_front(2);
+        mtf.move_to_front(2).unwrap();
         check(
             &mtf,
             "\
@@ -377,7 +424,7 @@ mod test {
             ",
         );
 
-        mtf.move_to_front(3);
+        mtf.move_to_front(3).unwrap();
         check(
             &mtf,
             "\
@@ -391,7 +438,7 @@ mod test {
             ",
         );
 
-        mtf.move_to_front(4);
+        mtf.move_to_front(4).unwrap();
         check(
             &mtf,
             "\
@@ -413,7 +460,7 @@ mod test {
 
         check(&mtf, "{}");
 
-        mtf.push(data[0], '🙀');
+        mtf.push(data[0], '🙀').unwrap();
         check(
             &mtf,
             "\
@@ -423,7 +470,7 @@ mod test {
             ",
         );
 
-        mtf.push(data[1], '🙀');
+        mtf.push(data[1], '🙀').unwrap();
         check(
             &mtf,
             "\
@@ -434,7 +481,7 @@ mod test {
             ",
         );
 
-        mtf.push(data[2], '🙀');
+        mtf.push(data[2], '🙀').unwrap();
         check(
             &mtf,
             "\
@@ -446,7 +493,7 @@ mod test {
             ",
         );
 
-        mtf.push(data[3], '🙀');
+        mtf.push(data[3], '🙀').unwrap();
         check(
             &mtf,
             "\
@@ -459,7 +506,7 @@ mod test {
             ",
         );
 
-        mtf.push(data[4], '🙀');
+        mtf.push(data[4], '🙀').unwrap();
         check(
             &mtf,
             "\
