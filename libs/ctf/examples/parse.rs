@@ -5,8 +5,12 @@ fn main() {
         Ok(()) => std::process::exit(0),
         Err(e) => {
             eprintln!("|===| Error");
-            for line in e.to_string().lines() {
-                eprintln!("| {}", line)
+            for e in e.iter() {
+                let mut pref = "| - ";
+                for line in e.to_string().lines() {
+                    eprintln!("{}{}", pref, line);
+                    pref = "|   "
+                }
             }
             eprintln!("|===|");
             std::process::exit(2)
@@ -48,7 +52,7 @@ fn get_path() -> Res<String> {
     let mut args = std::env::args();
     ignore(args.next());
     args.next()
-        .ok_or_else(|| "expected file path as argument, found nothing".to_string())
+        .ok_or_else(|| "expected file path as argument, found nothing".into())
 }
 fn read_file(path: impl AsRef<std::path::Path>) -> Res<Vec<u8>> {
     let mut file = std::fs::OpenOptions::new()

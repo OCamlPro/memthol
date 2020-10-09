@@ -57,6 +57,8 @@ pub mod err {
         links {}
         errors {}
     }
+
+    pub use crate::prelude::error_chain::bail;
 }
 
 #[cfg(test)]
@@ -96,6 +98,11 @@ impl std::ops::Deref for Uid {
 impl From<BigUint> for Uid {
     fn from(uid: BigUint) -> Self {
         Self { uid }
+    }
+}
+impl From<u64> for Uid {
+    fn from(uid: u64) -> Self {
+        Self { uid: uid.into() }
     }
 }
 
@@ -235,7 +242,7 @@ pub struct Alloc {
 impl Alloc {
     /// Constructor.
     pub fn new(
-        uid: Uid,
+        uid: impl Into<Uid>,
         kind: AllocKind,
         size: u32,
         trace: Trace,
@@ -243,6 +250,7 @@ impl Alloc {
         toc: SinceStart,
         tod: Option<SinceStart>,
     ) -> Self {
+        let uid = uid.into();
         Self {
             uid,
             kind,

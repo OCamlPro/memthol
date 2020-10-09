@@ -244,7 +244,6 @@ impl<'data> Location<'data> {
         let low: u64 = convert(parser.u32()?, "loc: low");
         let high: u64 = convert(parser.u16()?, "loc: high");
         pinfo!(parser, "    loc {{ low: {}, high: {} }}", low, high);
-        println!("    loc {{ low: {}, high: {} }}", low, high);
         // Mimicing the caml code:
         //
         // ```ocaml
@@ -276,9 +275,11 @@ impl<'data> Location<'data> {
             "loc: def_name_code",
         );
 
-        println!(
+        pinfo!(
+            parser,
             "    file_path_code: {}, def_name_code: {}",
-            file_path_code, def_name_code
+            file_path_code,
+            def_name_code
         );
 
         let idx = Idx::new(file_path_code);
@@ -312,17 +313,16 @@ impl<'data> Location<'data> {
                             // name
                             |_, def_name, _| Ok((file_path, def_name)),
                         )
-                        .map_err(|e| {
+                        .chain_err(|| {
                             format!(
-                                "while working on sub-MTF-map at {} ({})\n{}",
+                                "while working on sub-MTF-map at {} ({})",
                                 idx,
                                 idx.is_not_found(),
-                                e
                             )
                         })
                     },
                 )
-                .map_err(|e| format!("location context {}\n{}", cxt.to_ml_string(), e))?
+                .chain_err(|| format!("location context {}", cxt.to_ml_string()))?
         };
 
         Ok(Location {

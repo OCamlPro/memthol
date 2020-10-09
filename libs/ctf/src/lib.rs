@@ -6,6 +6,8 @@ mod macros;
 
 pub const VERSION: u16 = 2;
 
+pub use alloc_data::err;
+
 #[cfg(test)]
 mod test;
 
@@ -15,6 +17,13 @@ pub mod prelude;
 pub mod ast;
 pub mod btrace;
 pub mod loc;
+
+/// Activates verbose parsing, only active in debug and test.
+#[cfg(any(test, not(release)))]
+const VERB: bool = false;
+/// Activates debug parsing, only active in debug and test.
+#[cfg(any(test, not(release)))]
+const DEBUG_VERB: bool = false;
 
 prelude! {}
 
@@ -45,11 +54,14 @@ impl<'data> RawParser<'data> {
 
 /// RawParser helpers.
 impl<'data> RawParser<'data> {
-    pub fn check(&self, can_parse: usize, err: impl FnOnce() -> String) -> Res<()> {
+    pub fn check<E>(&self, can_parse: usize, err: impl FnOnce() -> E) -> Res<()>
+    where
+        E: Into<err::Err>,
+    {
         if self.cursor + can_parse <= self.data.len() {
             Ok(())
         } else {
-            Err(err())
+            Err(err().into().into())
         }
     }
 
@@ -136,10 +148,10 @@ impl<'data> RawParser<'data> {
                     self.cursor = end + 1;
                     Ok(res)
                 }
-                Err(e) => bail!(err!(expected format!("legal utf8 string: {}", e))),
+                Err(e) => bail!(parse_error!(expected format!("legal utf8 string: {}", e))),
             }
         } else {
-            bail!(err!(expected "string"))
+            bail!(parse_error!(expected "string"))
         }
     }
 
@@ -162,12 +174,12 @@ impl<'data> RawParser<'data> {
     /// let data = 213u8.to_le_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.u8_le(), Ok(213));
+    /// assert_eq!(parser.u8_le().unwrap(), 213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn u8_le(&mut self) -> Res<u8> {
         pdebug!(self, "        parsing u8 (le)");
-        self.check(1, err!(|| expected "u8"))?;
+        self.check(1, parse_error!(|| expected "u8"))?;
         let res = u8::from_le_bytes([self.data[self.cursor]]);
         self.cursor += 1;
         Ok(res)
@@ -182,12 +194,12 @@ impl<'data> RawParser<'data> {
     /// let data = 213u8.to_be_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.u8_be(), Ok(213));
+    /// assert_eq!(parser.u8_be().unwrap(), 213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn u8_be(&mut self) -> Res<u8> {
         pdebug!(self, "        parsing u8 (be)");
-        self.check(1, err!(|| expected "u8"))?;
+        self.check(1, parse_error!(|| expected "u8"))?;
         let res = u8::from_be_bytes([self.data[self.cursor]]);
         self.cursor += 1;
         Ok(res)
@@ -212,12 +224,12 @@ impl<'data> RawParser<'data> {
     /// let data = 1_213u16.to_le_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.u16_le(), Ok(1_213));
+    /// assert_eq!(parser.u16_le().unwrap(), 1_213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn u16_le(&mut self) -> Res<u16> {
         pdebug!(self, "        parsing u16 (le)");
-        self.check(2, err!(|| expected "u16"))?;
+        self.check(2, parse_error!(|| expected "u16"))?;
         let res = u16::from_le_bytes([self.data[self.cursor], self.data[self.cursor + 1]]);
         self.cursor += 2;
         Ok(res)
@@ -232,12 +244,12 @@ impl<'data> RawParser<'data> {
     /// let data = 1_213u16.to_be_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.u16_be(), Ok(1_213));
+    /// assert_eq!(parser.u16_be().unwrap(), 1_213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn u16_be(&mut self) -> Res<u16> {
         pdebug!(self, "        parsing u16 (be)");
-        self.check(2, err!(|| expected "u16"))?;
+        self.check(2, parse_error!(|| expected "u16"))?;
         let res = u16::from_be_bytes([self.data[self.cursor], self.data[self.cursor + 1]]);
         self.cursor += 2;
         Ok(res)
@@ -262,12 +274,12 @@ impl<'data> RawParser<'data> {
     /// let data = 1_701_213u32.to_le_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.u32_le(), Ok(1_701_213));
+    /// assert_eq!(parser.u32_le().unwrap(), 1_701_213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn u32_le(&mut self) -> Res<u32> {
         pdebug!(self, "        parsing u32 (le)");
-        self.check(4, err!(|| expected "u32"))?;
+        self.check(4, parse_error!(|| expected "u32"))?;
         let res = u32::from_le_bytes([
             self.data[self.cursor],
             self.data[self.cursor + 1],
@@ -287,12 +299,12 @@ impl<'data> RawParser<'data> {
     /// let data = 1_701_213u32.to_be_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.u32_be(), Ok(1_701_213));
+    /// assert_eq!(parser.u32_be().unwrap(), 1_701_213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn u32_be(&mut self) -> Res<u32> {
         pdebug!(self, "        parsing u32 (be)");
-        self.check(4, err!(|| expected "u32"))?;
+        self.check(4, parse_error!(|| expected "u32"))?;
         let res = u32::from_be_bytes([
             self.data[self.cursor],
             self.data[self.cursor + 1],
@@ -322,12 +334,12 @@ impl<'data> RawParser<'data> {
     /// let data = 7_501_701_213u64.to_be_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.u64_be(), Ok(7_501_701_213));
+    /// assert_eq!(parser.u64_be().unwrap(), 7_501_701_213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn u64_be(&mut self) -> Res<u64> {
         pdebug!(self, "        parsing u64 (be)");
-        self.check(8, err!(|| expected "u64"))?;
+        self.check(8, parse_error!(|| expected "u64"))?;
         let res = u64::from_be_bytes([
             self.data[self.cursor],
             self.data[self.cursor + 1],
@@ -351,12 +363,12 @@ impl<'data> RawParser<'data> {
     /// let data = 7_501_701_213u64.to_le_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.u64_le(), Ok(7_501_701_213));
+    /// assert_eq!(parser.u64_le().unwrap(), 7_501_701_213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn u64_le(&mut self) -> Res<u64> {
         pdebug!(self, "        parsing u64 (le)");
-        self.check(8, err!(|| expected "u64"))?;
+        self.check(8, parse_error!(|| expected "u64"))?;
         let res = u64::from_le_bytes([
             self.data[self.cursor],
             self.data[self.cursor + 1],
@@ -390,12 +402,12 @@ impl<'data> RawParser<'data> {
     /// let data = 7i8.to_le_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.i8_le(), Ok(7));
+    /// assert_eq!(parser.i8_le().unwrap(), 7);
     /// assert!(parser.is_eof());
     /// ```
     pub fn i8_le(&mut self) -> Res<i8> {
         pdebug!(self, "        parsing i8 (le)");
-        self.check(1, err!(|| expected "i8"))?;
+        self.check(1, parse_error!(|| expected "i8"))?;
         let res = i8::from_le_bytes([self.data[self.cursor]]);
         self.cursor += 1;
         Ok(res)
@@ -410,12 +422,12 @@ impl<'data> RawParser<'data> {
     /// let data = 7i8.to_be_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.i8_be(), Ok(7));
+    /// assert_eq!(parser.i8_be().unwrap(), 7);
     /// assert!(parser.is_eof());
     /// ```
     pub fn i8_be(&mut self) -> Res<i8> {
         pdebug!(self, "        parsing i8 (be)");
-        self.check(1, err!(|| expected "i8"))?;
+        self.check(1, parse_error!(|| expected "i8"))?;
         let res = i8::from_be_bytes([self.data[self.cursor]]);
         self.cursor += 1;
         Ok(res)
@@ -440,12 +452,12 @@ impl<'data> RawParser<'data> {
     /// let data = 1_213i16.to_le_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.i16_le(), Ok(1_213));
+    /// assert_eq!(parser.i16_le().unwrap(), 1_213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn i16_le(&mut self) -> Res<i16> {
         pdebug!(self, "        parsing i16 (le)");
-        self.check(2, err!(|| expected "i16"))?;
+        self.check(2, parse_error!(|| expected "i16"))?;
         let res = i16::from_le_bytes([self.data[self.cursor], self.data[self.cursor + 1]]);
         self.cursor += 2;
         Ok(res)
@@ -460,12 +472,12 @@ impl<'data> RawParser<'data> {
     /// let data = 1_213i16.to_be_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.i16_be(), Ok(1_213));
+    /// assert_eq!(parser.i16_be().unwrap(), 1_213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn i16_be(&mut self) -> Res<i16> {
         pdebug!(self, "        parsing i16 (be)");
-        self.check(2, err!(|| expected "i16"))?;
+        self.check(2, parse_error!(|| expected "i16"))?;
         let res = i16::from_be_bytes([self.data[self.cursor], self.data[self.cursor + 1]]);
         self.cursor += 2;
         Ok(res)
@@ -490,12 +502,12 @@ impl<'data> RawParser<'data> {
     /// let data = 1_701_213i32.to_le_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.i32_le(), Ok(1_701_213));
+    /// assert_eq!(parser.i32_le().unwrap(), 1_701_213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn i32_le(&mut self) -> Res<i32> {
         pdebug!(self, "        parsing i32 (le)");
-        self.check(4, err!(|| expected "i32"))?;
+        self.check(4, parse_error!(|| expected "i32"))?;
         let res = i32::from_le_bytes([
             self.data[self.cursor],
             self.data[self.cursor + 1],
@@ -515,12 +527,12 @@ impl<'data> RawParser<'data> {
     /// let data = 1_701_213i32.to_be_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.i32_be(), Ok(1_701_213));
+    /// assert_eq!(parser.i32_be().unwrap(), 1_701_213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn i32_be(&mut self) -> Res<i32> {
         pdebug!(self, "        parsing i32 (be)");
-        self.check(4, err!(|| expected "i32"))?;
+        self.check(4, parse_error!(|| expected "i32"))?;
         let res = i32::from_be_bytes([
             self.data[self.cursor],
             self.data[self.cursor + 1],
@@ -550,12 +562,12 @@ impl<'data> RawParser<'data> {
     /// let data = 7_501_701_213i64.to_le_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.i64_le(), Ok(7_501_701_213));
+    /// assert_eq!(parser.i64_le().unwrap(), 7_501_701_213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn i64_le(&mut self) -> Res<i64> {
         pdebug!(self, "        parsing i64 (le)");
-        self.check(8, err!(|| expected "i64"))?;
+        self.check(8, parse_error!(|| expected "i64"))?;
         let res = i64::from_le_bytes([
             self.data[self.cursor],
             self.data[self.cursor + 1],
@@ -579,12 +591,12 @@ impl<'data> RawParser<'data> {
     /// let data = 7_501_701_213i64.to_be_bytes();
     /// let mut parser = RawParser::new(&data);
     /// # println!("state: {}", parser.state());
-    /// assert_eq!(parser.i64_be(), Ok(7_501_701_213));
+    /// assert_eq!(parser.i64_be().unwrap(), 7_501_701_213);
     /// assert!(parser.is_eof());
     /// ```
     pub fn i64_be(&mut self) -> Res<i64> {
         pdebug!(self, "        parsing i64 (be)");
-        self.check(8, err!(|| expected "i64"))?;
+        self.check(8, parse_error!(|| expected "i64"))?;
         let res = i64::from_be_bytes([
             self.data[self.cursor],
             self.data[self.cursor + 1],
@@ -602,7 +614,8 @@ impl<'data> RawParser<'data> {
     /// Parses a clock value.
     pub fn clock(&mut self) -> Res<u64> {
         pdebug!(self, "        parsing clock");
-        self.u64().subst_err(err!(|| expected "clock value"))
+        self.u64()
+            .map_err(|_| parse_error!(expected "clock value").into())
     }
 
     pub fn f64(&mut self) -> Res<f64> {
@@ -615,7 +628,7 @@ impl<'data> RawParser<'data> {
     }
     pub fn f64_be(&mut self) -> Res<f64> {
         pdebug!(self, "        parsing f64 (be)");
-        self.check(8, err!(|| expected "f64"))?;
+        self.check(8, parse_error!(|| expected "f64"))?;
         let res = f64::from_be_bytes([
             self.data[self.cursor],
             self.data[self.cursor + 1],
@@ -631,7 +644,7 @@ impl<'data> RawParser<'data> {
     }
     pub fn f64_le(&mut self) -> Res<f64> {
         pdebug!(self, "        parsing f64 (le)");
-        self.check(8, err!(|| expected "f64"))?;
+        self.check(8, parse_error!(|| expected "f64"))?;
         let res = f64::from_le_bytes([
             self.data[self.cursor],
             self.data[self.cursor + 1],
@@ -654,7 +667,7 @@ impl<'data> RawParser<'data> {
         pdebug!(self, "    parsing v_usize");
         let variant: u8 = self
             .u8()
-            .chain_err(err!(|| expected "variable-length usize"))?;
+            .chain_err(parse_error!(|| expected "variable-length usize"))?;
 
         let res = match variant {
             0..=252 => convert(variant, "v_usize: u8"),
@@ -677,7 +690,9 @@ impl<'data> RawParser<'data> {
             let is_major = match self.u8()? {
                 0 => false,
                 1 => true,
-                n => bail!(err!(expected format!("boolean as a 0- or 1-valued u8, found {}", n))),
+                n => bail!(
+                    parse_error!(expected format!("boolean as a 0- or 1-valued u8, found {}", n))
+                ),
             };
             (false, len, nsample, is_major)
         };
@@ -813,24 +828,24 @@ impl<'data> RawParser<'data> {
             for idx in 0..25 {
                 if full
                     .get_bit(idx)
-                    .to_res()
+                    .map_err(err::Err::from)
                     .chain_err(err!(get idx, on u32))?
                 {
                     timestamp = timestamp
                         .set_bit(31 - idx)
-                        .to_res()
+                        .map_err(err::Err::from)
                         .chain_err(err!(set 31 - idx, on u32))?;
                 }
             }
             for idx in 0..7 {
                 if full
                     .get_bit(25 + idx)
-                    .to_res()
+                    .map_err(err::Err::from)
                     .chain_err(err!(get 25 + idx, on u32))?
                 {
                     id = id
                         .set_bit(7 - idx)
-                        .to_res()
+                        .map_err(err::Err::from)
                         .chain_err(err!(set 7 - idx, on u8))?;
                 }
             }
@@ -1025,7 +1040,7 @@ impl<'data> Parser<'data> {
                 parser.data.len()
             );
             if packet_end > parser.data.len() {
-                bail!(err!(expected format!(
+                bail!(parse_error!(expected format!(
                     "legal packet size: not enough data left ({}/{})",
                     content_len, parser.data.len() - parser.cursor,
                 )))
@@ -1112,9 +1127,9 @@ impl<'data> PacketParser<'data> {
             }
 
             // Can't have more than two info events.
-            event::Kind::Info => {
-                bail!(err!(expected "non-info event: having more than two info events is illegal"))
-            }
+            event::Kind::Info => bail!(
+                parse_error!(expected "non-info event: having more than two info events is illegal")
+            ),
         };
 
         pinfo!(self, "    {:?}", event);

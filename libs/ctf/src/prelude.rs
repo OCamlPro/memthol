@@ -2,30 +2,19 @@ pub use std::{convert::TryInto, fmt};
 
 pub use base::SVec16;
 
+pub use alloc_data::{
+    err::{bail, Res, ResExt},
+    Uid,
+};
+
 pub use crate::{
     ast::{self, Span},
-    loc,
+    err, loc,
     prelude::pos::Pos,
     RawParser,
 };
 
 // pub use log::info;
-
-pub const VERB: bool = false;
-pub const DEBUG_VERB: bool = false;
-
-macro_rules! pinfo {
-    ($parser:expr, $($blah:tt)*) => {if $crate::prelude::VERB {
-        let (pos, max) = $parser.position();
-        println!("[{}/{}] {}", pos, max, format_args!($($blah)*))
-    }};
-}
-macro_rules! pdebug {
-    ($parser:expr, $($blah:tt)*) => {if prelude::DEBUG_VERB {
-        let (pos, max) = $parser.position();
-        println!("[{}/{}] {}", pos, max, format_args!($($blah)*))
-    }};
-}
 
 pub fn destroy<T>(_: T) {}
 
@@ -38,57 +27,6 @@ where
     match n.try_into() {
         Ok(res) => res,
         Err(e) => panic!("[fatal] while converting {} ({}): {}", n, from, e),
-    }
-}
-
-pub type Res<T> = Result<T, String>;
-
-pub trait ResExt {
-    fn chain_err<F, S>(self, err: F) -> Self
-    where
-        S: AsRef<str>,
-        F: FnOnce() -> S;
-    fn subst_err<F, S>(self, err: F) -> Self
-    where
-        S: Into<String>,
-        F: FnOnce() -> S;
-}
-impl<T> ResExt for Res<T> {
-    fn chain_err<F, S>(mut self, err: F) -> Self
-    where
-        S: AsRef<str>,
-        F: FnOnce() -> S,
-    {
-        if let Some(e) = self.as_mut().err() {
-            e.push_str("\n");
-            e.push_str(err().as_ref())
-        }
-        self
-    }
-    fn subst_err<F, S>(mut self, err: F) -> Self
-    where
-        S: Into<String>,
-        F: FnOnce() -> S,
-    {
-        if let Some(e) = self.as_mut().err() {
-            let _old = std::mem::replace(e, err().into());
-        }
-        self
-    }
-}
-
-pub trait StringResExt<T> {
-    fn to_res(self) -> Res<T>;
-}
-impl<T, E> StringResExt<T> for Result<T, E>
-where
-    E: std::fmt::Display,
-{
-    fn to_res(self) -> Res<T> {
-        match self {
-            Ok(res) => Ok(res),
-            Err(e) => Err(e.to_string()),
-        }
     }
 }
 

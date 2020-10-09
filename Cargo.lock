@@ -586,6 +586,7 @@ dependencies = [
 name = "ctf"
 version = "0.1.0"
 dependencies = [
+ "alloc_data",
  "base",
  "bitlab",
  "log 0.3.9",
