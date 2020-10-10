@@ -184,7 +184,7 @@ peg::parser! {
         = secs: secs() {?
             let (secs, sub_secs) = secs;
             i64::try_from(secs).map(
-                |secs| Date::of_timestamp(secs, sub_secs)
+                |secs| Date::from_timestamp(secs, sub_secs)
             ).map_err(|_| "illegal amount of seconds for a date")
         }
 

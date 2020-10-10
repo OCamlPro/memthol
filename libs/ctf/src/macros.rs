@@ -5,6 +5,38 @@ macro_rules! prelude {
     };
 }
 
+#[macro_export]
+macro_rules! parse {
+    (
+        $parser_disj:expr => join |mut $parser_id:ident| {
+            $($stuff:tt)*
+        }
+    ) => {
+        match $parser_disj {
+            $crate::prelude::Either::Left(mut $parser_id) => {
+                $($stuff)*
+            }
+            $crate::prelude::Either::Right(mut $parser_id) => {
+                $($stuff)*
+            }
+        }
+    };
+    (
+        $parser_disj:expr => map |mut $parser_id:ident| {
+            $($stuff:tt)*
+        }
+    ) => {
+        match $parser_disj {
+            $crate::prelude::Either::Left(mut $parser_id) => $crate::prelude::Either::Left({
+                $($stuff)*
+            }),
+            $crate::prelude::Either::Right(mut $parser_id) => $crate::prelude::Either::Right({
+                $($stuff)*
+            }),
+        }
+    };
+}
+
 macro_rules! parse_error {
     (|| $($tail:tt)*) => {
         || { parse_error!($($tail)*) }

@@ -61,9 +61,9 @@ impl Cxt {
         }
     }
 
-    pub fn get_backtrace(
+    pub fn get_backtrace<'data>(
         &mut self,
-        parser: &mut RawParser,
+        parser: &mut impl CanParse<'data>,
         nencoded: usize,
         common_pref_len: usize,
     ) -> Res<(SVec16<usize>, usize)> {
@@ -133,9 +133,9 @@ impl Cxt {
         Ok(res)
     }
 
-    pub fn skip_backtrace(
+    pub fn skip_backtrace<'data>(
         &mut self,
-        parser: &mut RawParser,
+        parser: &mut impl CanParse<'data>,
         nencoded: i8,
         _common_pref_len: i8,
     ) -> Res<()> {
@@ -150,7 +150,7 @@ impl Cxt {
         Ok(())
     }
 
-    pub fn check_cache_verifier(&self, parser: &mut RawParser) -> Res<()> {
+    pub fn check_cache_verifier<'data>(&self, parser: &mut impl CanParse<'data>) -> Res<()> {
         let ix: usize = convert(parser.u16()?, "check_cache_verifier: ix");
         let pred = parser.u16()? as usize;
         let value = parser.u64()?;
@@ -191,7 +191,7 @@ impl Cxt {
 
         Ok(())
     }
-    pub fn skip_cache_verifier(&self, parser: &mut RawParser) -> Res<()> {
+    pub fn skip_cache_verifier<'data>(&self, parser: &mut impl CanParse<'data>) -> Res<()> {
         let _ix = parser.u16()?;
         let _pred = parser.u16()?;
         let _value = parser.u64()?;

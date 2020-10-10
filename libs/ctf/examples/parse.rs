@@ -25,23 +25,36 @@ fn run() -> Res<()> {
 
     let data = read_file(&path)?;
 
-    let mut parser = ctf::Parser::new(&data)?;
-    let mut last_package_idx = None;
+    let mut last_packet_id = None;
     let mut event_count = 0;
-    parser.work(|package_idx, event| {
-        if Some(package_idx) != last_package_idx {
-            event_count = 0;
-            if package_idx > 0 {
-                println!("}}")
+
+    ctf::parse(
+        &data,
+        |packet_header: &ctf::ast::header::Packet, event_time, event: ctf::ast::event::Event| {
+            let packet_id = packet_header.id;
+            if Some(packet_id) != last_packet_id {
+                event_count = 0;
+                if packet_id > 0 {
+                    println!("}}")
+                }
+                last_packet_id = Some(packet_id);
+                println!(
+                    "packet #{} {} {{",
+                    packet_id,
+                    packet_header.header.timestamp.pretty_time(),
+                )
             }
-            last_package_idx = Some(package_idx);
-            println!("package {} {{", package_idx)
-        }
-        println!("    event[{}]: {}", event_count, event.name());
-        event_count += 1;
-        Ok(())
-    })?;
-    if last_package_idx.is_some() {
+            println!(
+                "    event #{} @{}: {}",
+                event_count,
+                event_time,
+                event.desc()
+            );
+            event_count += 1;
+            Ok(())
+        },
+    )?;
+    if last_packet_id.is_some() {
         println!("}}")
     }
 

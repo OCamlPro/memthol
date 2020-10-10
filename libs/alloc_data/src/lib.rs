@@ -341,15 +341,6 @@ impl Diff {
 }
 
 /// Data from a memthol init file.
-///
-/// # Construction From String Slices
-///
-/// ```rust
-/// # alloc_data::prelude! {}
-/// let txt = "start: 1566489242.007000572\nword_size: 4\n";
-/// let init = Init::parse(txt).unwrap();
-/// assert_eq! { init.to_string(), "start: 2019-08-22 15:54:02.007000572 UTC\nword_size: 4\n" }
-/// ```
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Init {
     /// The start time of the run: an absolute date.
@@ -363,7 +354,7 @@ pub struct Init {
 impl Default for Init {
     fn default() -> Self {
         Self {
-            start_time: Date::of_timestamp(0, 0),
+            start_time: Date::from_timestamp(0, 0),
             word_size: 8,
             callstack_is_rev: false,
         }

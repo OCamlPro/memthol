@@ -15,15 +15,50 @@ where
         }
         Ok(Self { begin, end })
     }
+
     pub fn contains(&self, value: T) -> bool {
         (self.begin <= value) && (value <= self.end)
     }
+
     pub fn contains_ref(&self, value: impl AsRef<T>) -> bool
     where
         for<'a> &'a T: PartialOrd + Ord,
     {
         let value = value.as_ref();
         (&self.begin <= value) && (value <= &self.end)
+    }
+}
+
+impl<T> Span<T> {
+    pub fn map<U>(self, f: impl Fn(T) -> U) -> Span<U> {
+        Span {
+            begin: f(self.begin),
+            end: f(self.end),
+        }
+    }
+    pub fn as_ref(&self) -> Span<&T> {
+        Span {
+            begin: &self.begin,
+            end: &self.end,
+        }
+    }
+}
+
+impl Span<Clock> {
+    pub fn pretty_time(&self) -> Span<Date> {
+        Span {
+            begin: date_of_timestamp(self.begin),
+            end: date_of_timestamp(self.end),
+        }
+    }
+}
+
+impl<T> fmt::Display for Span<T>
+where
+    T: fmt::Display,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "[{}, {}]", self.begin, self.end)
     }
 }
 
@@ -106,8 +141,9 @@ pub mod header {
 
     #[derive(Debug, Clone)]
     pub struct Packet {
-        header: Header,
-        cache_check: ast::CacheCheck,
+        pub header: Header,
+        pub cache_check: ast::CacheCheck,
+        pub id: usize,
     }
     impl Deref for Packet {
         type Target = Header;
@@ -116,8 +152,9 @@ pub mod header {
         }
     }
     impl Packet {
-        pub fn new(header: Header, cache_check: ast::CacheCheck) -> Self {
+        pub fn new(id: usize, header: Header, cache_check: ast::CacheCheck) -> Self {
             Self {
+                id,
                 header,
                 cache_check,
             }
@@ -133,7 +170,13 @@ pub mod header {
     #[derive(Debug, Clone)]
     pub struct Event {
         pub timestamp: u32,
-        pub id: u8,
+        pub code: u8,
+    }
+    impl Event {
+        /// Constructor.
+        pub fn new(timestamp: u32, code: u8) -> Self {
+            Self { timestamp, code }
+        }
     }
 }
 
@@ -217,7 +260,6 @@ pub mod event {
 
     #[derive(Debug, Clone)]
     pub enum Event<'data> {
-        // Info(Info),
         Locs(Locs<'data>),
         Alloc(Alloc),
         Promotion(u64),
@@ -232,19 +274,29 @@ pub mod event {
                 Self::Collection(_) => "collection",
             }
         }
+
+        pub fn desc(&self) -> String {
+            let name = self.name();
+            match self {
+                Self::Alloc(alloc) => format!("{}({} @ {})", name, alloc.id, alloc.alloc_time),
+                Self::Collection(id) => format!("{}({})", name, id),
+                Self::Promotion(id) => format!("{}({})", name, id),
+                _ => name.into(),
+            }
+        }
     }
 
     #[derive(Debug, Clone)]
-    pub struct Info {
+    pub struct Info<'data> {
         pub sample_rate: f64,
         pub word_size: u8,
         pub exe_name: String,
         pub host_name: String,
         pub exe_params: String,
         pub pid: u64,
-        pub context: Option<String>,
+        pub context: Option<&'data str>,
     }
-    impl Info {
+    impl<'data> Info<'data> {
         pub const fn event_id() -> u32 {
             INFO_CODE
         }
@@ -257,6 +309,7 @@ pub mod event {
     pub struct Alloc {
         pub id: u64,
         pub len: usize,
+        pub alloc_time: Date,
         pub nsamples: usize,
         pub is_major: bool,
         pub backtrace: SVec16<usize>,

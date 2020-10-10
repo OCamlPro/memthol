@@ -12,7 +12,7 @@ pub mod chrono {
     pub use chrono::*;
 }
 
-pub type DateTime = time::chrono::DateTime<self::chrono::Utc>;
+pub type DateTime = time::chrono::DateTime<self::chrono::offset::Local>;
 
 pub fn now() -> time::chrono::DateTime<chrono::offset::Local> {
     time::chrono::offset::Local::now()
@@ -195,22 +195,23 @@ pub struct Date {
 }
 impl Default for Date {
     fn default() -> Self {
-        Self::of_timestamp(0, 0)
+        Self::from_timestamp(0, 0)
     }
 }
 impl Date {
-    /// Constructor from a unix UTC timestamp.
+    /// Constructor from a unix timestamp.
     ///
     /// # Examples
     ///
     /// ```rust
     /// use alloc_data::Date;
-    /// let date = Date::of_timestamp(1566489242, 7000572);
-    /// assert_eq! { date.to_string(), "2019-08-22 15:54:02.007000572 UTC" }
+    /// let (secs, subsec_nanos) = (1566489242, 7000572);
+    /// let date = Date::from_timestamp(secs, subsec_nanos);
+    /// assert_eq! { date.timestamp(), (secs, subsec_nanos) }
     /// ```
-    pub fn of_timestamp(secs: i64, nanos: u32) -> Self {
-        use time::chrono::{offset::TimeZone, Utc};
-        let date = Utc.timestamp(secs, nanos);
+    pub fn from_timestamp(secs: i64, nanos: u32) -> Self {
+        use time::chrono::offset::{Local, TimeZone};
+        let date = Local.timestamp(secs, nanos);
         Date { date }
     }
 
@@ -227,8 +228,8 @@ impl Date {
     ///
     /// ```rust
     /// use alloc_data::Date;
-    /// let (secs, subsec_nanos): (i64, u32) = (1566489242, 7000572);
-    /// let date = Date::of_timestamp(secs, subsec_nanos);
+    /// let (secs, subsec_nanos) = (1_566_489_242, 7_000_572);
+    /// let date = Date::from_timestamp(secs, subsec_nanos);
     /// assert_eq! { date.timestamp(), (secs, subsec_nanos) }
     /// ```
     pub fn timestamp(&self) -> (i64, u32) {
@@ -241,11 +242,11 @@ impl Date {
     ///
     /// ```rust
     /// use alloc_data::{Date, SinceStart};
-    /// let mut date = Date::of_timestamp(1566489242, 7000572);
-    /// assert_eq! { date.to_string(), "2019-08-22 15:54:02.007000572 UTC" }
+    /// let (secs, subsec_nanos) = (1_566_489_242, 7_000_572);
+    /// let mut date = Date::from_timestamp(secs, subsec_nanos);
     /// let duration = SinceStart::from_str("7.003000001").unwrap();
     /// date.add(duration);
-    /// assert_eq! { date.to_string(), "2019-08-22 15:54:09.010000573 UTC" }
+    /// assert_eq! { date.timestamp(), (secs + 7, subsec_nanos + 3_000_001) }
     /// ```
     pub fn add(&mut self, duration: SinceStart) {
         self.date = self.date + chrono::Duration::from_std(duration.duration).unwrap()
@@ -257,22 +258,6 @@ impl Date {
         date
     }
 
-    // /// JS version of a date.
-    // pub fn as_js(&self) -> Value {
-    //     use chrono::{Datelike, Timelike};
-    //     js!(
-    //         return new Date(Date.UTC(
-    //             @{self.date.year()},
-    //             @{self.date.month0()},
-    //             @{self.date.day()},
-    //             @{self.date.hour()},
-    //             @{self.date.minute()},
-    //             @{self.date.second()},
-    //             @{self.date.nanosecond() / 1_000_000},
-    //         ))
-    //     )
-    // }
-
     /// The hours/minutes/seconds/millis of a date.
     ///
     /// This is currently used only for debugging purposes.
@@ -281,10 +266,9 @@ impl Date {
     ///
     /// ```rust
     /// use alloc_data::{Date, SinceStart};
-    /// let mut date = Date::of_timestamp(1566489242, 7000572);
-    /// assert_eq! { date.to_string(), "2019-08-22 15:54:02.007000572 UTC" }
-    /// let (h, m, s, mi) = date.time_info();
-    /// assert_eq! {  h, 15 }
+    /// let mut date = Date::from_timestamp(1566489242, 7000572);
+    /// let (_h, m, s, mi) = date.time_info();
+    /// // Can't check the hours as this depends on the local system time.
     /// assert_eq! {  m, 54 }
     /// assert_eq! {  s, 2 }
     /// assert_eq! { mi, 7 }

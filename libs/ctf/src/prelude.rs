@@ -1,18 +1,20 @@
 pub use std::{convert::TryInto, fmt};
 
-pub use base::SVec16;
+pub use base::{Either, SVec16};
 
 pub use alloc_data::{
     err::{bail, Res, ResExt},
+    time::Date,
     Uid,
 };
 
-pub use crate::{
-    ast::{self, Span},
-    err, loc,
-    prelude::pos::Pos,
-    RawParser,
-};
+pub use crate::{ast::Span, parse::CanParse, *};
+
+pub fn date_of_timestamp(ts: u64) -> Date {
+    let secs = ts / 1_000_000;
+    let micros = ts - secs * 1_000_000;
+    Date::from_timestamp(secs as i64, (micros as u32) * 1_000)
+}
 
 // pub use log::info;
 
@@ -31,6 +33,7 @@ where
 }
 
 pub type Clock = u64;
+pub type DeltaClock = u64;
 
 pub fn id<T>(t: T) -> T {
     t
@@ -43,48 +46,3 @@ pub fn ignore<T>(_t: T) {}
 pub type AllocId = u64;
 
 pub type Pid = u64;
-
-mod pos {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct Pos {
-        pos: usize,
-    }
-    impl std::ops::Sub for Pos {
-        type Output = usize;
-        fn sub(self, other: Self) -> usize {
-            self.pos - other.pos
-        }
-    }
-    impl std::ops::Deref for Pos {
-        type Target = usize;
-        fn deref(&self) -> &usize {
-            &self.pos
-        }
-    }
-    impl std::fmt::Display for Pos {
-        fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            self.pos.fmt(fmt)
-        }
-    }
-    impl<'data> crate::RawParser<'data> {
-        /// Position accessor.
-        pub fn pos(&self) -> Pos {
-            Pos { pos: self.cursor }
-        }
-        /// Retrieves the byte at some position.
-        pub fn get(&self, pos: Pos) -> Option<u8> {
-            self.data.get(pos.pos).cloned()
-        }
-        /// Backtracks the parser to a **previous** position.
-        pub fn backtrack(&mut self, pos: Pos) {
-            debug_assert!(self.cursor >= pos.pos);
-            self.cursor = pos.pos
-        }
-    }
-    impl<'data> std::ops::Index<Pos> for crate::RawParser<'data> {
-        type Output = u8;
-        fn index(&self, pos: Pos) -> &u8 {
-            &self.data[pos.pos]
-        }
-    }
-}

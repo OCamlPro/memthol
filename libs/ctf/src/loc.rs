@@ -132,13 +132,16 @@ impl<'data, T> MtfMap<'data, T> {
         self.check("after pushing")
     }
 
-    pub fn decode<Out>(
+    pub fn decode<Out, Parser>(
         &mut self,
-        parser: &mut RawParser<'data>,
+        parser: &mut Parser,
         idx: Idx,
-        if_absent: impl FnOnce(&mut RawParser<'data>, Entry<'data, T>) -> Res<(&'data str, T)>,
-        binding_do: impl FnOnce(&mut RawParser<'data>, &'data str, &mut T) -> Res<Out>,
-    ) -> Res<Out> {
+        if_absent: impl FnOnce(&mut Parser, Entry<'data, T>) -> Res<(&'data str, T)>,
+        binding_do: impl FnOnce(&mut Parser, &'data str, &mut T) -> Res<Out>,
+    ) -> Res<Out>
+    where
+        Parser: CanParse<'data>,
+    {
         self.check("decode")?;
         if idx.is_not_found() {
             pinfo!(parser, "index {} is not found", idx.idx);
@@ -240,7 +243,7 @@ impl<'data> Location<'data> {
         }
     }
 
-    pub fn parse(parser: &mut RawParser<'data>, cxt: &mut Cxt<'data>) -> Res<Self> {
+    pub fn parse(parser: &mut impl CanParse<'data>, cxt: &mut Cxt<'data>) -> Res<Self> {
         let low: u64 = convert(parser.u32()?, "loc: low");
         let high: u64 = convert(parser.u16()?, "loc: high");
         pinfo!(parser, "    loc {{ low: {}, high: {} }}", low, high);
