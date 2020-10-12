@@ -9,7 +9,7 @@ pub use std::time::Duration;
 
 /// Re-exports from `chrono`.
 pub mod chrono {
-    pub use chrono::*;
+    pub use base::chrono::*;
 }
 
 pub type DateTime = time::chrono::DateTime<self::chrono::offset::Local>;
@@ -187,7 +187,7 @@ impl SinceStart {
 /// In practice, this type is just a wrapper around a [`chrono`] date.
 ///
 /// [`chrono`]: https://crates.io/crates/chrono (The chrono crate on crates.io)
-/// [`SinceStart`]: struct.sincestart.html (The SincStart struct)
+/// [`SinceStart`]: struct.sincestart.html (The SinceStart struct)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Date {
     /// Actual date.
@@ -212,6 +212,13 @@ impl Date {
     pub fn from_timestamp(secs: i64, nanos: u32) -> Self {
         use time::chrono::offset::{Local, TimeZone};
         let date = Local.timestamp(secs, nanos);
+        Date { date }
+    }
+
+    /// Constructor from a stdlib duration.
+    pub fn from_millis(millis: i64) -> Self {
+        use time::chrono::offset::{Local, TimeZone};
+        let date = Local.timestamp_millis(millis);
         Date { date }
     }
 
@@ -250,6 +257,12 @@ impl Date {
     /// ```
     pub fn add(&mut self, duration: SinceStart) {
         self.date = self.date + chrono::Duration::from_std(duration.duration).unwrap()
+    }
+
+    /// Subtraction.
+    pub fn sub(self, rhs: Self) -> Res<SinceStart> {
+        let duration = (self.date - rhs.date).to_std().map_err(|e| e.to_string())?;
+        Ok(SinceStart { duration })
     }
 
     pub fn copy_add(&self, duration: SinceStart) -> Date {

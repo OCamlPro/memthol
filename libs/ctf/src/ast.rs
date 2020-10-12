@@ -45,10 +45,10 @@ impl<T> Span<T> {
 }
 
 impl Span<Clock> {
-    pub fn pretty_time(&self) -> Span<Date> {
+    pub fn pretty_time(&self) -> Span<Duration> {
         Span {
-            begin: date_of_timestamp(self.begin),
-            end: date_of_timestamp(self.end),
+            begin: duration_from_millis(self.begin),
+            end: duration_from_millis(self.end),
         }
     }
 }
@@ -121,7 +121,7 @@ pub mod header {
 
     #[derive(Debug, Clone)]
     pub struct Ctf {
-        header: Header,
+        pub header: Header,
         big_e: bool,
     }
     impl Deref for Ctf {
@@ -258,6 +258,47 @@ pub mod event {
         }
     }
 
+    // #[derive(Debug, Clone)]
+    // pub enum AllocEvent {
+    //     Alloc(Alloc),
+    //     Promotion(u64),
+    //     Collection(u64),
+    // }
+    // impl AllocEvent {
+    //     pub fn name(&self) -> &'static str {
+    //         match self {
+    //             Self::Alloc(_) => "allocation",
+    //             Self::Promotion(_) => "promotion",
+    //             Self::Collection(_) => "collection",
+    //         }
+    //     }
+
+    //     pub fn desc(&self) -> String {
+    //         let name = self.name();
+    //         match self {
+    //             Self::Alloc(alloc) => {
+    //                 let mut s = format!(
+    //                     "{}({} @ {}) ",
+    //                     name,
+    //                     alloc.id,
+    //                     base::pretty_time(alloc.alloc_time)
+    //                 );
+    //                 s.push_str("[");
+    //                 for n in &alloc.backtrace {
+    //                     s.push_str(&format!(" {},", n))
+    //                 }
+    //                 s.push_str(&format!(
+    //                     " ] ({}/{})",
+    //                     alloc.common_pref_len, alloc.backtrace_len
+    //                 ));
+    //                 s
+    //             }
+    //             Self::Collection(id) => format!("{}({})", name, id),
+    //             Self::Promotion(id) => format!("{}({})", name, id),
+    //         }
+    //     }
+    // }
+
     #[derive(Debug, Clone)]
     pub enum Event<'data> {
         Locs(Locs<'data>),
@@ -278,7 +319,12 @@ pub mod event {
         pub fn desc(&self) -> String {
             let name = self.name();
             match self {
-                Self::Alloc(alloc) => format!("{}({} @ {})", name, alloc.id, alloc.alloc_time),
+                Self::Alloc(alloc) => format!(
+                    "{}({} @ {})",
+                    name,
+                    alloc.id,
+                    base::pretty_time(alloc.alloc_time)
+                ),
                 Self::Collection(id) => format!("{}({})", name, id),
                 Self::Promotion(id) => format!("{}({})", name, id),
                 _ => name.into(),
@@ -309,7 +355,7 @@ pub mod event {
     pub struct Alloc {
         pub id: u64,
         pub len: usize,
-        pub alloc_time: Date,
+        pub alloc_time: Duration,
         pub nsamples: usize,
         pub is_major: bool,
         pub backtrace: SVec16<usize>,
@@ -360,6 +406,7 @@ pub enum CachedVal<T> {
 
 #[derive(Debug, Clone)]
 pub struct Loc {
+    pub encoded: u32,
     pub line: usize,
     pub start_char: usize,
     pub end_char: usize,

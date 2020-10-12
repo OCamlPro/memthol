@@ -170,7 +170,7 @@ impl<'data> RawParser<'data> {
     }
 
     /// Yields the current position and the total length of the input text.
-    pub fn position(&self) -> (usize, usize) {
+    pub fn real_position(&self) -> (usize, usize) {
         (self.cursor + self.offset, self.data.len())
     }
 
@@ -684,7 +684,7 @@ decl_impl_trait! {
                 cxt.btrace
                     .get_backtrace(self, nencoded, common_pref_len)?;
 
-            let alloc_time = date_of_timestamp(timestamp);
+            let alloc_time = duration_from_millis(timestamp);
 
             Ok(ast::event::Alloc {
                 id: alloc_id,
@@ -1028,6 +1028,40 @@ pub struct CtfParser<'data, Endian> {
     parser: Parser<'data, Endian>,
     header: header::Ctf,
     trace_info: ast::event::Info<'data>,
+    cxt: Cxt<'data>,
+    packet_count: usize,
+}
+impl<'data> CtfParser<'data, ()> {
+    /// Constructor.
+    ///
+    /// Yields either a big-endian or a low-endian parser, based on the magic-number starting the
+    /// sequence of bytes. This function is not meant to be used directly, use the [`parse` macro]
+    /// instead, which hides the details of handling the `Either` part.
+    ///
+    /// [`parse` macro]: ../macro.parse.html (parse macro)
+    pub fn new(bytes: &'data [u8]) -> Res<Either<BeCtfParser<'data>, LeCtfParser<'data>>> {
+        let parser = RawParser::new(bytes, 0);
+        let parser_disj = parser.try_magic()?;
+
+        let res = parser_do! {
+            parser_disj => map |mut parser| {
+                let header = parser.ctf_header()?;
+                let (event_kind, _event_time) = parser.event_kind(&header)?;
+                if !event_kind.is_info() {
+                    bail!(
+                        "expected initial event to be an info event, found {:?}",
+                        event_kind
+                    )
+                }
+                let trace_info = parser.trace_info(&header)?;
+                CtfParser {
+                    parser, header, trace_info, cxt: Cxt::new(), packet_count: 0,
+                }
+            }
+        };
+
+        Ok(res)
+    }
 }
 
 impl<'data, Endian> std::ops::Deref for CtfParser<'data, Endian> {
@@ -1042,41 +1076,12 @@ impl<'data, Endian> std::ops::DerefMut for CtfParser<'data, Endian> {
     }
 }
 
+/// Low-endian CTF parser.
 pub type LeCtfParser<'data> = CtfParser<'data, LowEndian>;
+/// Big-endian CTF parser.
 pub type BeCtfParser<'data> = CtfParser<'data, BigEndian>;
 
-/// Constructor.
-///
-/// Both the CTF (top-level) header and the trace info are parsed on creation.
-pub fn parse_ctf<'data>(data: &'data [u8], event_action: impl EventAction<'data>) -> Res<()> {
-    let parser = RawParser::new(data, 0);
-    let parser_disj = parser.try_magic()?;
-
-    parse! {
-        parser_disj => join |mut parser| {
-            let header = parser.ctf_header()?;
-            let (event_kind, _event_time) = parser.event_kind(&header)?;
-            if !event_kind.is_info() {
-                bail!(
-                    "expected initial event to be an info event, found {:?}",
-                    event_kind
-                )
-            }
-            let trace_info = parser.trace_info(&header)?;
-            let mut parser = CtfParser {
-                parser,
-                header,
-                trace_info,
-            };
-
-            parser.work(event_action)?
-        }
-    }
-
-    Ok(())
-}
-
-impl<'data, P: CanParse<'data>> CtfParser<'data, P> {
+impl<'data, Endian> CtfParser<'data, Endian> {
     /// Header accessor.
     pub fn header(&self) -> &header::Ctf {
         &self.header
@@ -1092,58 +1097,40 @@ impl<'data, Endian> CtfParser<'data, Endian>
 where
     Parser<'data, Endian>: CanParse<'data>,
 {
-    /// Iterates over the events of all the packets and applies an action.
+    /// Yields a [`PacketParser`] for the next packet, if any.
     ///
-    /// Action `event_action` takes
-    ///
-    /// - the ID of the packet (counter, from `0`), and
-    /// - the current event.
-    pub fn work_on_packets(&mut self, mut event_action: impl EventAction<'data>) -> Res<()> {
+    /// [`PacketParser`]: struct.PacketParser.html (PacketParser struct)
+    pub fn next_packet<'me>(&'me mut self) -> Res<Option<PacketParser<'me, 'data, Endian>>> {
         let parser = &mut self.parser;
-        let mut cxt = Cxt::new();
-        let mut package_count = 0;
+        let cxt = &mut self.cxt;
+        let packet_count = &mut self.packet_count;
 
-        while !parser.is_eof() {
-            pinfo!(
-                parser,
-                "currently at {}/{}",
-                parser.pos(),
-                parser.data().len()
-            );
-            let my_header = parser.packet_header(package_count)?;
-            let content_len: usize = convert(my_header.content_size, "packets: content_len");
-            let packet_end = *parser.pos() + content_len;
-            pinfo!(
-                parser,
-                "next packet: {} bytes -> {}/{}",
-                content_len,
-                packet_end,
-                parser.data().len()
-            );
-            if packet_end > parser.data().len() {
-                bail!(parse_error!(expected format!(
-                    "legal packet size: not enough data left ({}/{})",
-                    content_len, parser.data().len() - *parser.pos(),
-                )))
-            }
+        if parser.is_eof() {
+            return Ok(None);
+        }
+        pinfo!(parser, "parsing packet header");
 
-            let event_bytes = parser.take(content_len);
-
-            PacketParser::<Endian>::new(event_bytes, *parser.pos(), my_header)
-                .iter_events(&mut cxt, &mut event_action)?;
-
-            package_count += 1;
+        let packet_header = parser.packet_header(*packet_count)?;
+        let content_len: usize = convert(packet_header.content_size, "next_packet: content_len");
+        pinfo!(
+            parser,
+            "next packet: {} bytes -> {}/{}",
+            content_len,
+            *parser.pos() + content_len,
+            parser.data().len()
+        );
+        if *parser.pos() + content_len > parser.data().len() {
+            bail!(parse_error!(expected format!(
+                "legal packet size: not enough data left ({}/{})",
+                content_len, parser.data().len() - *parser.pos(),
+            )))
         }
 
-        pinfo!(self, "parsed {} package(s)", package_count);
+        let event_bytes = parser.take(content_len);
+        let next = PacketParser::<Endian>::new(event_bytes, *parser.pos(), packet_header, cxt);
+        *packet_count += 1;
 
-        Ok(())
-    }
-
-    pub fn work(&mut self, event_action: impl EventAction<'data>) -> Res<()> {
-        pinfo!(self, "done parsing trace info");
-        self.work_on_packets(event_action)?;
-        Ok(())
+        Ok(Some(next))
     }
 }
 
@@ -1154,7 +1141,7 @@ where
 /// already been parsed.
 ///
 /// [`RawParser`]: struct.RawParser.html (RawParser struct)
-pub struct PacketParser<'data, Endian> {
+pub struct PacketParser<'cxt, 'data, Endian> {
     /// Internal parser over the bytes of the events of the packet.
     ///
     /// Does **not** contain the packet header's bytes.
@@ -1163,23 +1150,28 @@ pub struct PacketParser<'data, Endian> {
     header: header::Packet,
     /// Event counter.
     event_cnt: usize,
+    /// Parsing context.
+    cxt: &'cxt mut Cxt<'data>,
 }
-impl<'data, Endian> std::ops::Deref for PacketParser<'data, Endian> {
+
+impl<'cxt, 'data, Endian> std::ops::Deref for PacketParser<'cxt, 'data, Endian> {
     type Target = Parser<'data, Endian>;
     fn deref(&self) -> &Parser<'data, Endian> {
         &self.parser
     }
 }
-impl<'data, Endian> std::ops::DerefMut for PacketParser<'data, Endian> {
+impl<'cxt, 'data, Endian> std::ops::DerefMut for PacketParser<'cxt, 'data, Endian> {
     fn deref_mut(&mut self) -> &mut Parser<'data, Endian> {
         &mut self.parser
     }
 }
 
-pub type LePacketParser<'data> = PacketParser<'data, LowEndian>;
-pub type BePacketParser<'data> = PacketParser<'data, BigEndian>;
+/// Low-endian packet parser.
+pub type LePacketParser<'cxt, 'data> = PacketParser<'cxt, 'data, LowEndian>;
+/// Big-endian packet parser.
+pub type BePacketParser<'cxt, 'data> = PacketParser<'cxt, 'data, BigEndian>;
 
-impl<'data, Endian> PacketParser<'data, Endian>
+impl<'cxt, 'data, Endian> PacketParser<'cxt, 'data, Endian>
 where
     Parser<'data, Endian>: CanParse<'data>,
 {
@@ -1188,29 +1180,48 @@ where
     /// - `input`: should contain the bytes of all the events in the packet, and nothing more (in
     ///   particular *not* the packet's header);
     /// - `offset`: offset from the start of the original input, for error-reporting;
-    /// - `header`: packet header, must be parsed beforehand.
-    pub fn new(input: &'data [u8], offset: usize, header: header::Packet) -> Self {
+    /// - `header`: packet header, must be parsed beforehand,
+    /// - `cxt`: parsing context, borrowed from the [`CtfParser`].
+    ///
+    /// [`CtfParser`]: struct.CtfParser.html (CtfParser struct)
+    fn new(
+        input: &'data [u8],
+        offset: usize,
+        header: header::Packet,
+        cxt: &'cxt mut Cxt<'data>,
+    ) -> Self {
         Self {
             parser: Parser::new(input, offset),
             header,
             event_cnt: 0,
+            cxt,
         }
     }
 
-    /// Parses an event.
-    ///
-    /// Context sensitive.
-    fn event(&mut self, cxt: &mut Cxt<'data>, mut event_do: impl EventAction<'data>) -> Res<()> {
+    /// Header accessor.
+    pub fn header(&self) -> &header::Packet {
+        &self.header
+    }
+
+    /// Returns the next event of the packet, if any.
+    pub fn next_event(&mut self) -> Res<Option<(Clock, Event<'data>)>> {
+        if self.is_eof() {
+            return Ok(None);
+        }
+
         let (event_kind, event_timestamp) = self.parser.event_kind(&self.header)?;
         pinfo!(self, "event: {:?} ({})", event_kind, event_timestamp);
 
+        let parser = &mut self.parser;
+        let cxt = &mut self.cxt;
+
         let event = match event_kind {
             event::Kind::Alloc => {
-                let alloc = self.alloc(event_timestamp, cxt, None)?;
+                let alloc = parser.alloc(event_timestamp, cxt, None)?;
                 Event::Alloc(alloc)
             }
             event::Kind::SmallAlloc(n) => {
-                let alloc = self.alloc(
+                let alloc = parser.alloc(
                     event_timestamp,
                     cxt,
                     Some(convert(n, "event: SmallAlloc(n)")),
@@ -1218,15 +1229,15 @@ where
                 Event::Alloc(alloc)
             }
             event::Kind::Promotion => {
-                let alloc_id = self.alloc_uid_from_delta(cxt)?;
+                let alloc_id = parser.alloc_uid_from_delta(cxt)?;
                 Event::Promotion(alloc_id)
             }
             event::Kind::Collection => {
-                let alloc_id = self.alloc_uid_from_delta(cxt)?;
+                let alloc_id = parser.alloc_uid_from_delta(cxt)?;
                 Event::Collection(alloc_id)
             }
             event::Kind::Locs => {
-                let locs = self.locs(cxt)?;
+                let locs = parser.locs(cxt)?;
                 Event::Locs(locs)
             }
 
@@ -1236,22 +1247,10 @@ where
             ),
         };
 
-        pinfo!(self, "    {:?}", event);
+        pinfo!(parser, "    {:?}", event);
 
         self.event_cnt += 1;
 
-        event_do(&self.header, event_timestamp, event)
-    }
-
-    /// Applies an action to all the events in the packet.
-    pub fn iter_events(
-        mut self,
-        cxt: &mut Cxt<'data>,
-        mut event_do: impl EventAction<'data>,
-    ) -> Res<()> {
-        while !self.is_eof() {
-            self.event(cxt, &mut event_do)?
-        }
-        Ok(())
+        Ok(Some((event_timestamp, event)))
     }
 }

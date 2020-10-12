@@ -35,7 +35,7 @@ name = "alloc_data"
 version = "0.1.0"
 dependencies = [
  "base",
- "chrono",
+ "ctf",
  "num-bigint 0.3.0",
  "num-traits",
  "peg",
@@ -152,10 +152,12 @@ dependencies = [
 name = "base"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "derive_more",
  "either",
  "error-chain",
  "lazy_static",
+ "peg",
  "rand 0.7.3",
  "smallvec 1.4.2",
 ]
@@ -586,7 +588,6 @@ dependencies = [
 name = "ctf"
 version = "0.1.0"
 dependencies = [
- "alloc_data",
  "base",
  "bitlab",
  "log 0.3.9",

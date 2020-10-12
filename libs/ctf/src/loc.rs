@@ -226,6 +226,7 @@ pub type Locs<'data> = SVec16<Location<'data>>;
 
 #[derive(Debug, Clone)]
 pub struct Location<'data> {
+    pub encoded: usize,
     pub file_path: &'data str,
     /// Line index (from zero).
     pub line: usize,
@@ -234,19 +235,11 @@ pub struct Location<'data> {
     pub def_name: &'data str,
 }
 impl<'data> Location<'data> {
-    pub fn unknown() -> Self {
-        Self {
-            file_path: "unknown",
-            line: 0,
-            col: Span { begin: 0, end: 0 },
-            def_name: "??",
-        }
-    }
-
     pub fn parse(parser: &mut impl CanParse<'data>, cxt: &mut Cxt<'data>) -> Res<Self> {
         let low: u64 = convert(parser.u32()?, "loc: low");
         let high: u64 = convert(parser.u16()?, "loc: high");
         pinfo!(parser, "    loc {{ low: {}, high: {} }}", low, high);
+
         // Mimicing the caml code:
         //
         // ```ocaml
@@ -329,6 +322,7 @@ impl<'data> Location<'data> {
         };
 
         Ok(Location {
+            encoded: convert(encoded, "ctf location parser: encoded"),
             line,
             col,
             file_path,

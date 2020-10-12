@@ -6,7 +6,7 @@ mod macros;
 
 pub const VERSION: u16 = 2;
 
-pub use alloc_data::err;
+pub use base::err;
 
 #[macro_use]
 pub mod prelude;
@@ -27,13 +27,11 @@ const DEBUG_VERB: bool = false;
 
 use ast::{event::Event, *};
 
-pub use parse::parse_ctf as parse;
-
 pub trait EventAction<'data>:
-    FnMut(&ast::header::Packet, Clock, Event<'data>) -> err::Res<()>
+    FnMut(Option<&ast::header::Packet>, Clock, Event<'data>) -> err::Res<()>
 {
 }
 impl<'data, T> EventAction<'data> for T where
-    T: FnMut(&ast::header::Packet, Clock, Event<'data>) -> err::Res<()>
+    T: FnMut(Option<&ast::header::Packet>, Clock, Event<'data>) -> err::Res<()>
 {
 }

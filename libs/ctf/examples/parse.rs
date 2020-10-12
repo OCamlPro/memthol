@@ -25,38 +25,35 @@ fn run() -> Res<()> {
 
     let data = read_file(&path)?;
 
-    let mut last_packet_id = None;
-    let mut event_count = 0;
+    ctf::parse! {
+        &data => |mut parser| {
+            let (header, trace_info) = (parser.header(), parser.trace_info());
+            println!("ctf header {{");
+            println!("    time span {}", header.header.timestamp);
+            println!("}}\n\ntrace info {{");
+            println!("    sample rate: {}", trace_info.sample_rate);
+            println!("    word size: {}", trace_info.word_size);
+            println!("    exe name: {:?}", trace_info.exe_name);
+            println!("    pid: {:?}", trace_info.pid);
+            println!("}}\n");
 
-    ctf::parse(
-        &data,
-        |packet_header: &ctf::ast::header::Packet, event_time, event: ctf::ast::event::Event| {
-            let packet_id = packet_header.id;
-            if Some(packet_id) != last_packet_id {
-                event_count = 0;
-                if packet_id > 0 {
-                    println!("}}")
+            println!("parsing packets...\n");
+
+            while let Some(mut packet_parser) = parser.next_packet()? {
+                let header = packet_parser.header();
+                println!("packet {}", header.id);
+                println!("    time span: {}", header.header.timestamp);
+                println!("    alloc span: {}", header.header.alloc_id);
+                println!("{{");
+
+                while let Some((clock, event)) = packet_parser.next_event()? {
+                    println!("    {} @ {}", event.desc(), clock)
                 }
-                last_packet_id = Some(packet_id);
-                println!(
-                    "packet #{} {} {{",
-                    packet_id,
-                    packet_header.header.timestamp.pretty_time(),
-                )
+
+                println!("}}\n")
             }
-            println!(
-                "    event #{} @{}: {}",
-                event_count,
-                event_time,
-                event.desc()
-            );
-            event_count += 1;
-            Ok(())
-        },
-    )?;
-    if last_packet_id.is_some() {
-        println!("}}")
-    }
+        }
+    };
 
     Ok(())
 }

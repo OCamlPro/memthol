@@ -6,8 +6,8 @@ edition = "2018"
 
 [dependencies]
 base = { path = "../base" }
+ctf = { path = "../ctf" }
 
-chrono = { version = "*", features = ["serde", "wasmbind"] }
 num-bigint = { version = "*", features = ["serde"] }
 num-traits = "*"
 peg = "*"

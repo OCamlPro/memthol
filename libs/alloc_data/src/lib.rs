@@ -20,9 +20,6 @@
 //! [`Date`]: struct.date.html (The Date struct)
 //! [`SinceStart`]: struct.sincestart.html (The SinceStart struct)
 
-pub extern crate chrono;
-pub extern crate peg;
-
 pub use error_chain::bail;
 pub use num_bigint::BigUint;
 
@@ -43,22 +40,7 @@ pub use time::{Date, Duration, SinceStart};
 
 /// Errors, handled by `error_chain`.
 pub mod err {
-    crate::prelude::error_chain::error_chain! {
-        types {
-            Err, ErrKind, ResExt, Res;
-        }
-
-        foreign_links {
-            Peg(peg::error::ParseError<peg::str::LineCol>)
-            /// Parse error from `peg`.
-            ;
-        }
-
-        links {}
-        errors {}
-    }
-
-    pub use crate::prelude::error_chain::bail;
+    pub use base::err::*;
 }
 
 #[cfg(test)]

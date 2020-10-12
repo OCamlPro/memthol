@@ -5,18 +5,30 @@ macro_rules! prelude {
     };
 }
 
+/// Applies some action to a `CtfParser` applied to some bytes.
 #[macro_export]
 macro_rules! parse {
     (
-        $parser_disj:expr => join |mut $parser_id:ident| {
+        $bytes:expr => |$parser_pat:pat| $action:expr
+    ) => {{
+        match $crate::parse::CtfParser::new($bytes)? {
+            $crate::prelude::Either::Left($parser_pat) => $action,
+            $crate::prelude::Either::Right($parser_pat) => $action,
+        }
+    }};
+}
+
+macro_rules! parser_do {
+    (
+        $parser_disj:expr => join |$parser_pat:pat| {
             $($stuff:tt)*
         }
     ) => {
         match $parser_disj {
-            $crate::prelude::Either::Left(mut $parser_id) => {
+            $crate::prelude::Either::Left($parser_pat) => {
                 $($stuff)*
             }
-            $crate::prelude::Either::Right(mut $parser_id) => {
+            $crate::prelude::Either::Right($parser_pat) => {
                 $($stuff)*
             }
         }
@@ -59,7 +71,7 @@ macro_rules! pinfo {
 #[cfg(any(test, not(release)))]
 macro_rules! pinfo {
     ($parser:expr, $($blah:tt)*) => {if $crate::VERB {
-        let (pos, max) = $parser.position();
+        let (pos, max) = $parser.real_position();
         println!("[{}/{}] {}", pos, max, format_args!($($blah)*))
     }};
 }
@@ -72,7 +84,7 @@ macro_rules! pdebug {
 #[cfg(any(test, not(release)))]
 macro_rules! pdebug {
     ($parser:expr, $($blah:tt)*) => {if $crate::DEBUG_VERB {
-        let (pos, max) = $parser.position();
+        let (pos, max) = $parser.real_position();
         println!("[{}/{}] {}", pos, max, format_args!($($blah)*))
     }};
 }
