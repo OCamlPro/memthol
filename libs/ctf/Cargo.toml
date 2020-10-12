@@ -12,5 +12,4 @@ edition = "2018"
 
 [dependencies]
 base = { path = "../base" }
-bitlab = "*"
 log = "*"

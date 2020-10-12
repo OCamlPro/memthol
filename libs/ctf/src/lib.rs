@@ -1,4 +1,3 @@
-pub extern crate bitlab;
 pub extern crate log;
 
 #[macro_use]
