@@ -21,6 +21,7 @@ pub mod prelude;
 
 pub mod chart;
 pub mod color;
+#[cfg(any(test, feature = "server"))]
 pub mod data;
 pub mod err;
 pub mod filter;
@@ -83,6 +84,7 @@ impl Charts {
     /// Runs filter generation.
     ///
     /// Returns the number of filter generated.
+    #[cfg(any(test, feature = "server"))]
     pub fn auto_gen(&mut self, generator: impl Into<filter::gen::FilterGen>) -> Res<usize> {
         self.filters.auto_gen(data::get()?.deref(), generator)
     }
@@ -103,6 +105,7 @@ impl Charts {
     }
 }
 
+#[cfg(any(test, feature = "server"))]
 impl Charts {
     /// Restarts the charts and the filters if needed.
     fn restart_if_needed(&mut self) -> Res<bool> {

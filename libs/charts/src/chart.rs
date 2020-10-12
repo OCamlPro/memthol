@@ -20,6 +20,7 @@ pub enum RawChart {
     Time(time::TimeChart),
 }
 
+#[cfg(any(test, feature = "server"))]
 impl ChartExt for RawChart {
     fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points> {
         match self {
@@ -49,6 +50,7 @@ impl RawChart {
 pub struct Chart {
     spec: ChartSpec,
     settings: ChartSettings,
+    #[allow(dead_code)]
     chart: RawChart,
 }
 impl Chart {
@@ -97,6 +99,7 @@ impl Chart {
     }
 }
 
+#[cfg(any(test, feature = "server"))]
 impl ChartExt for Chart {
     fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points> {
         self.chart.new_points(filters, init)

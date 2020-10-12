@@ -6,10 +6,10 @@ pub use std::{
     fmt,
 };
 
+pub use crate::parser::{self, Parseable};
 pub use crate::{
     err::{self, bail, Res, ResExt},
     mem::{self, labels::Labels, str::Str, trace::Trace},
-    parser::{self, Parseable},
     time::{self, Lifetime, SinceStart},
     Alloc, AllocKind, BigUint, CLoc, Date, Diff, Duration, Init, Loc, Span, Uid,
 };

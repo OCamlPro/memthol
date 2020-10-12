@@ -2,6 +2,7 @@
 
 prelude! {}
 
+#[cfg(any(test, feature = "server"))]
 use point::TimeSizePoints;
 
 /// Initial size value.
@@ -29,6 +30,7 @@ impl TimeSize {
     }
 }
 
+#[cfg(any(test, feature = "server"))]
 impl ChartExt for TimeSize {
     fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points> {
         self.get_allocs(filters, init)?;
@@ -61,6 +63,7 @@ impl TimeSize {
     }
 }
 
+#[cfg(any(test, feature = "server"))]
 macro_rules! map {
     (entry $map:expr, with $filters:expr => at $date:expr) => {
         $map.entry($date).or_insert(PointVal::new((0, 0), $filters))
@@ -68,6 +71,7 @@ macro_rules! map {
 }
 
 /// # Helpers for point generation
+#[cfg(any(test, feature = "server"))]
 impl TimeSize {
     /// Generates points from what's in `self.map`.
     ///

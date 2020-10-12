@@ -43,10 +43,13 @@ macro_rules! prelude {
     };
 }
 
+#[cfg(any(test, feature = "server"))]
+pub use crate::data;
+
 pub use crate::{
     chart::{self, settings::ChartSettings},
     color::Color,
-    data, err,
+    err,
     err::{Res, ResExt},
     filter::{self, Filter, Filters},
     msg, point,
@@ -133,6 +136,7 @@ impl LoadInfo {
 }
 
 /// Retrieve data errors.
+#[cfg(any(test, feature = "server"))]
 pub fn get_errors() -> Res<Option<Vec<String>>> {
     data::Data::get_errors()
 }
@@ -151,6 +155,7 @@ pub struct AllocStats {
     /// Duration of the run.
     pub duration: time::SinceStart,
 }
+#[cfg(any(test, feature = "server"))]
 impl AllocStats {
     /// Constructor.
     pub fn new(dump_dir: impl Into<std::path::PathBuf>, start_date: time::Date) -> Self {

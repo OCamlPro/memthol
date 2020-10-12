@@ -20,6 +20,7 @@ impl TimeChart {
     }
 }
 
+#[cfg(any(test, feature = "server"))]
 impl ChartExt for TimeChart {
     fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points> {
         match self {

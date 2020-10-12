@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 alloc_data = { path = "../libs/alloc_data" }
 base = { path = "../libs/base" }
-charts = { path = "../libs/charts" }
+charts = { path = "../libs/charts", features = ["server"] }
 
 gotham = "*"
 error-chain = "*"

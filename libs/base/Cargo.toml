@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = { version = "*", features = ["serde", "wasmbind"] }
+chrono = { version = "*", features = ["serde"] }
 either = "*"
 error-chain = "*"
 derive_more = "*"
@@ -15,3 +15,8 @@ lazy_static = "*"
 peg = "*"
 rand = { version = "*", features = ["small_rng"] }
 smallvec = "*"
+
+[features]
+client = [ "chrono/wasmbind" ]
+server = []
+default = []

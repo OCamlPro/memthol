@@ -14,3 +14,8 @@ rayon = "*"
 serde = "*"
 serde_derive = "*"
 toml = "*"
+
+[features]
+server = [ "base/server" ]
+client = [ "base/client" ]
+default = []

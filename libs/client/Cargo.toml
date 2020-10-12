@@ -10,9 +10,9 @@ crate-type = ["cdylib", "rlib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-alloc_data = { path = "../alloc_data" }
-base = { path = "../base" }
-charts = { path = "../charts" }
+alloc_data = { path = "../alloc_data", features = ["client"] }
+base = { path = "../base", features = ["client"] }
+charts = { path = "../charts", features = ["client"] }
 
 chrono = "*"
 error-chain = "*"
