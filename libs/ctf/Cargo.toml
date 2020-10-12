@@ -12,4 +12,6 @@ edition = "2018"
 
 [dependencies]
 base = { path = "../base" }
+alloc_data = { path = "../alloc_data" }
+
 log = "*"

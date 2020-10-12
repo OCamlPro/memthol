@@ -11,8 +11,8 @@ pub use watcher::Watcher;
 /// Starts global data handling.
 ///
 /// - runs the file watcher daemon.
-pub fn start(dir: impl Into<String>) -> Res<()> {
-    Watcher::spawn(dir, false);
+pub fn start(target: impl AsRef<std::path::Path>) -> Res<()> {
+    Watcher::spawn(target, false);
     Ok(())
 }
 

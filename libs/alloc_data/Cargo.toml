@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 base = { path = "../base" }
-ctf = { path = "../ctf" }
 
 num-bigint = { version = "*", features = ["serde"] }
 num-traits = "*"

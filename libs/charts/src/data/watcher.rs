@@ -37,13 +37,61 @@ pub struct Watcher {
 
 impl Watcher {
     /// Spawns a watcher.
-    pub fn spawn(dir: impl Into<String>, forever: bool) {
-        let mut watcher = Self::new(dir);
+    pub fn spawn(target: impl AsRef<Path>, forever: bool) {
+        let path = target.as_ref();
 
-        let _ = std::thread::spawn(move || match watcher.run(forever) {
-            Ok(()) => (),
-            Err(e) => super::add_err(e.pretty()),
-        });
+        if path.is_file() {
+            let path = path.display().to_string();
+            let _ = std::thread::spawn(move || match Self::ctf_run(path) {
+                Ok(()) => (),
+                Err(e) => super::add_err(e.pretty()),
+            });
+        } else if path.is_dir() {
+            let mut watcher = Self::new(target);
+
+            let _ = std::thread::spawn(move || match watcher.run(forever) {
+                Ok(()) => (),
+                Err(e) => super::add_err(e.pretty()),
+            });
+        } else {
+            super::add_err(format!(
+                "expected dump directory or memtrace CTF file, got `{}`",
+                path.display()
+            ))
+        }
+    }
+
+    /// Runs on a memtrace CTF file.
+    pub fn ctf_run(target: impl AsRef<Path>) -> Res<()> {
+        let target = target.as_ref();
+
+        let bytes = {
+            use std::io::Read;
+            let mut file = std::fs::OpenOptions::new()
+                .read(true)
+                .open(target)
+                .chain_err(|| format!("while opening ctf file `{}`", target.display()))?;
+            let mut buff = Vec::with_capacity(150_000);
+            file.read(&mut buff)
+                .chain_err(|| format!("while reading ctf file `{}`", target.display()))?;
+            buff.shrink_to_fit();
+            buff
+        };
+        let (init, diffs) = ctf::parse(&bytes)
+            .chain_err(|| format!("while parsing ctf file `{}`", target.display()))?;
+
+        let mut data = super::get_mut().chain_err(|| "while registering the initial state")?;
+
+        if data.has_init() {
+            bail!("live profiling restart is not supported yet")
+        } else {
+            data.reset(target, init)
+        }
+
+        for diff in diffs {
+            super::add_diff(diff)?
+        }
+        todo!()
     }
 
     /// Runs the watcher.
@@ -132,8 +180,8 @@ impl Watcher {
 /// # Generic helpers.
 impl Watcher {
     /// Constructor.
-    pub fn new(dir: impl Into<String>) -> Self {
-        let dir = dir.into();
+    pub fn new(dir: impl AsRef<Path>) -> Self {
+        let dir = dir.as_ref().display().to_string();
         let tmp_file = "tmp.memthol".into();
         let init_file = "init.memthol".into();
         let init_last_modified = None;

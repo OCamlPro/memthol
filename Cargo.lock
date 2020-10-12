@@ -35,7 +35,6 @@ name = "alloc_data"
 version = "0.1.0"
 dependencies = [
  "base",
- "ctf",
  "num-bigint",
  "num-traits",
  "peg",
@@ -361,6 +360,7 @@ dependencies = [
  "alloc_data",
  "anyhow",
  "base",
+ "ctf",
  "number_prefix",
  "palette",
  "plotters",
@@ -420,6 +420,7 @@ dependencies = [
  "plotters-canvas",
  "safe_index",
  "serde",
+ "serde_derive",
  "strum 0.19.5",
  "strum_macros 0.19.4",
  "typed-html",
@@ -587,6 +588,7 @@ dependencies = [
 name = "ctf"
 version = "0.1.0"
 dependencies = [
+ "alloc_data",
  "base",
  "log 0.4.11",
 ]

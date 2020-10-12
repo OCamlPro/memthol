@@ -21,6 +21,7 @@ log = "*"
 plotters-canvas = "*"
 safe_index = "*"
 serde = "*"
+serde_derive = "*"
 strum = "*"
 strum_macros = "*"
 typed-html = { git = "https://github.com/bodil/typed-html" }

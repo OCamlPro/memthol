@@ -1,6 +1,5 @@
 //! Allocation data parsers.
 
-pub mod ctf;
 pub mod memthol;
 
 prelude! {}

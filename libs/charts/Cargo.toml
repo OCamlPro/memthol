@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 base = { path = "../base" }
 alloc_data = { path = "../alloc_data" }
+ctf = { path = "../ctf" }
 
 anyhow = "*"
 number_prefix = "*"
