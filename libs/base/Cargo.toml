@@ -1,6 +1,6 @@
 [package]
 name = "base"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Adrien Champion <adrien.champion@email.com>"]
 edition = "2018"
 
@@ -13,7 +13,7 @@ error-chain = "*"
 derive_more = "*"
 lazy_static = "*"
 peg = "*"
-rand = { version = "*", features = ["small_rng"] }
+rand = { version = "^0.7.3", features = ["small_rng"] }
 smallvec = "*"
 
 [features]

@@ -32,7 +32,7 @@ dependencies = [
 
 [[package]]
 name = "alloc_data"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base",
  "num-bigint",
@@ -149,7 +149,7 @@ dependencies = [
 
 [[package]]
 name = "base"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "derive_more",
@@ -355,7 +355,7 @@ checksum = "8100e46ff92eb85bf6dc2930c73f2a4f7176393c84a9446b3d501e1b354e7b34"
 
 [[package]]
 name = "charts"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "alloc_data",
  "anyhow",
@@ -408,7 +408,7 @@ dependencies = [
 
 [[package]]
 name = "client"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "alloc_data",
  "base",
@@ -586,11 +586,10 @@ dependencies = [
 
 [[package]]
 name = "ctf"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "alloc_data",
  "base",
- "log 0.4.11",
 ]
 
 [[package]]
@@ -1439,7 +1438,7 @@ checksum = "8452105ba047068f40ff7093dd1d9da90898e63dd61736462e9cdda6a90ad3c3"
 
 [[package]]
 name = "memthol"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "alloc_data",
  "base",

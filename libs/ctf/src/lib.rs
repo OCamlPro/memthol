@@ -1,5 +1,3 @@
-pub extern crate log;
-
 #[macro_use]
 mod macros;
 

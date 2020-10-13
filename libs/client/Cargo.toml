@@ -1,6 +1,6 @@
 [package]
 name = "client"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["AdrienChampion <adrien.champion@email.com>"]
 edition = "2018"
 
@@ -17,7 +17,7 @@ charts = { path = "../charts", features = ["client"] }
 chrono = "*"
 error-chain = "*"
 lazy_static = "*"
-log = "*"
+log = "^0.4"
 plotters-canvas = "*"
 safe_index = "*"
 serde = "*"
