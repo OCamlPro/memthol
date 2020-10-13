@@ -38,6 +38,8 @@ pub mod err {
 }
 
 /// Used to convert between integer representations.
+#[cfg(any(test, not(release)))]
+#[inline]
 pub fn convert<In, Out>(n: In, from: &'static str) -> Out
 where
     In: std::convert::TryInto<Out> + std::fmt::Display + Copy,
@@ -47,6 +49,17 @@ where
         Ok(res) => res,
         Err(e) => panic!("[fatal] while converting {} ({}): {}", n, from, e),
     }
+}
+
+/// Used to convert between integer representations.
+#[cfg(not(any(test, not(release))))]
+#[inline]
+pub fn convert<In, Out>(n: In, from: &'static str) -> Out
+where
+    In: std::convert::TryInto<Out> + std::fmt::Display + Copy,
+    In::Error: std::fmt::Display,
+{
+    unsafe { std::mem::transmute(n) }
 }
 
 /// Returns what it's given.
@@ -76,6 +89,8 @@ pub fn now() -> std::time::Instant {
 pub type SVec<T> = smallvec::SmallVec<[T; 8]>;
 /// Alias type for `SmallVec` of max stack-size 16.
 pub type SVec16<T> = smallvec::SmallVec<[T; 16]>;
+/// Alias type for `SmallVec` of max stack-size 16.
+pub type SVec32<T> = smallvec::SmallVec<[T; 32]>;
 
 /// Alias macro for smallvec construction.
 #[macro_export]

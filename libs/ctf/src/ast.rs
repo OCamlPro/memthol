@@ -358,7 +358,7 @@ pub mod event {
         pub alloc_time: Duration,
         pub nsamples: usize,
         pub is_major: bool,
-        pub backtrace: SVec16<usize>,
+        pub backtrace: SVec32<usize>,
         pub backtrace_len: usize,
         pub common_pref_len: usize,
     }
@@ -417,7 +417,7 @@ pub struct Loc {
 #[derive(Debug, Clone)]
 pub struct Locs<'data> {
     pub id: u64,
-    pub locs: SVec16<loc::Location<'data>>,
+    pub locs: SVec32<loc::Location<'data>>,
 }
 
 #[derive(Debug, Clone)]

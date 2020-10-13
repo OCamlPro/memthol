@@ -150,6 +150,19 @@ impl SinceStart {
             duration: std::time::Duration::new(0, 0),
         }
     }
+    pub fn is_zero(&self) -> bool {
+        self.duration.subsec_nanos() == 0 && self.duration.as_secs() == 0
+    }
+
+    pub fn from_timestamp(secs: u64, nanos: u32) -> Self {
+        Self {
+            duration: Duration::new(secs, nanos),
+        }
+    }
+
+    pub fn add(&mut self, other: Self) {
+        self.duration = self.duration + other.duration
+    }
 
     /// Duration parser.
     ///

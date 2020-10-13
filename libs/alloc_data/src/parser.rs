@@ -78,8 +78,8 @@ peg::parser! {
         / expected!("list of whitespace-separated, backquote-delimited strings")
 
         /// A whitespace-separated list of shared strings.
-        pub rule str_list(f: &mut Factory) -> Vec<Str>
-        = "[" list: ( (_ s: str(f) { s })* ) _ "]" { list }
+        pub rule str_list(f: &mut Factory) -> SVec32<Str>
+        = "[" list: ( (_ s: str(f) { s })* ) _ "]" { list.into() }
         / expected!("list of whitespace-separated, backquote-delimited strings")
 
         /// Parses a location.
@@ -101,8 +101,8 @@ peg::parser! {
         = loc: loc(f) "#" count: usize() { CLoc::new(loc, count) }
 
         /// A whitespace-separated list of locations.
-        pub rule loc_list(f: &mut Factory) -> Vec<CLoc>
-        = "[" list: ( (_ loc: counted_loc(f) { loc })* ) _ "]" { list }
+        pub rule loc_list(f: &mut Factory) -> SVec32<CLoc>
+        = "[" list: ( (_ loc: counted_loc(f) { loc })* ) _ "]" { list.into() }
         / expected!("list of whitespace-separated locations")
 
 
@@ -277,7 +277,7 @@ peg::parser! {
             _ stack_is_rev: callstack_is_reversed()
             _
         {
-            Init::new(start_time, word_size, stack_is_rev)
+            Init::new(start_time, None, word_size, stack_is_rev)
         }
     }
 }

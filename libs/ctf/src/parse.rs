@@ -215,6 +215,11 @@ impl<'data> RawParser<'data> {
         }
     }
 
+    #[inline(always)]
+    unsafe fn get_unchecked(&self, pos: usize) -> u8 {
+        *self.data.get_unchecked(pos)
+    }
+
     /// Parses a `u8`.
     ///
     /// # Examples
@@ -230,7 +235,7 @@ impl<'data> RawParser<'data> {
     pub fn u8_le(&mut self) -> Res<u8> {
         pdebug!(self, "        parsing u8 (le)");
         self.check(1, parse_error!(|| expected "u8"))?;
-        let res = u8::from_le_bytes([self.data[self.cursor]]);
+        let res = u8::from_le_bytes(unsafe { [self.get_unchecked(self.cursor)] });
         self.cursor += 1;
         Ok(res)
     }
@@ -250,7 +255,7 @@ impl<'data> RawParser<'data> {
     pub fn u8_be(&mut self) -> Res<u8> {
         pdebug!(self, "        parsing u8 (be)");
         self.check(1, parse_error!(|| expected "u8"))?;
-        let res = u8::from_be_bytes([self.data[self.cursor]]);
+        let res = u8::from_be_bytes(unsafe { [self.get_unchecked(self.cursor)] });
         self.cursor += 1;
         Ok(res)
     }
@@ -270,7 +275,12 @@ impl<'data> RawParser<'data> {
     pub fn u16_le(&mut self) -> Res<u16> {
         pdebug!(self, "        parsing u16 (le)");
         self.check(2, parse_error!(|| expected "u16"))?;
-        let res = u16::from_le_bytes([self.data[self.cursor], self.data[self.cursor + 1]]);
+        let res = u16::from_le_bytes(unsafe {
+            [
+                self.get_unchecked(self.cursor),
+                self.get_unchecked(self.cursor + 1),
+            ]
+        });
         self.cursor += 2;
         Ok(res)
     }
@@ -290,7 +300,12 @@ impl<'data> RawParser<'data> {
     pub fn u16_be(&mut self) -> Res<u16> {
         pdebug!(self, "        parsing u16 (be)");
         self.check(2, parse_error!(|| expected "u16"))?;
-        let res = u16::from_be_bytes([self.data[self.cursor], self.data[self.cursor + 1]]);
+        let res = u16::from_be_bytes(unsafe {
+            [
+                self.get_unchecked(self.cursor),
+                self.get_unchecked(self.cursor + 1),
+            ]
+        });
         self.cursor += 2;
         Ok(res)
     }
@@ -310,12 +325,14 @@ impl<'data> RawParser<'data> {
     pub fn u32_le(&mut self) -> Res<u32> {
         pdebug!(self, "        parsing u32 (le)");
         self.check(4, parse_error!(|| expected "u32"))?;
-        let res = u32::from_le_bytes([
-            self.data[self.cursor],
-            self.data[self.cursor + 1],
-            self.data[self.cursor + 2],
-            self.data[self.cursor + 3],
-        ]);
+        let res = u32::from_le_bytes(unsafe {
+            [
+                self.get_unchecked(self.cursor),
+                self.get_unchecked(self.cursor + 1),
+                self.get_unchecked(self.cursor + 2),
+                self.get_unchecked(self.cursor + 3),
+            ]
+        });
         self.cursor += 4;
         Ok(res)
     }
@@ -335,12 +352,14 @@ impl<'data> RawParser<'data> {
     pub fn u32_be(&mut self) -> Res<u32> {
         pdebug!(self, "        parsing u32 (be)");
         self.check(4, parse_error!(|| expected "u32"))?;
-        let res = u32::from_be_bytes([
-            self.data[self.cursor],
-            self.data[self.cursor + 1],
-            self.data[self.cursor + 2],
-            self.data[self.cursor + 3],
-        ]);
+        let res = u32::from_be_bytes(unsafe {
+            [
+                self.get_unchecked(self.cursor),
+                self.get_unchecked(self.cursor + 1),
+                self.get_unchecked(self.cursor + 2),
+                self.get_unchecked(self.cursor + 3),
+            ]
+        });
         self.cursor += 4;
         Ok(res)
     }
@@ -360,16 +379,18 @@ impl<'data> RawParser<'data> {
     pub fn u64_be(&mut self) -> Res<u64> {
         pdebug!(self, "        parsing u64 (be)");
         self.check(8, parse_error!(|| expected "u64"))?;
-        let res = u64::from_be_bytes([
-            self.data[self.cursor],
-            self.data[self.cursor + 1],
-            self.data[self.cursor + 2],
-            self.data[self.cursor + 3],
-            self.data[self.cursor + 4],
-            self.data[self.cursor + 5],
-            self.data[self.cursor + 6],
-            self.data[self.cursor + 7],
-        ]);
+        let res = u64::from_be_bytes(unsafe {
+            [
+                self.get_unchecked(self.cursor),
+                self.get_unchecked(self.cursor + 1),
+                self.get_unchecked(self.cursor + 2),
+                self.get_unchecked(self.cursor + 3),
+                self.get_unchecked(self.cursor + 4),
+                self.get_unchecked(self.cursor + 5),
+                self.get_unchecked(self.cursor + 6),
+                self.get_unchecked(self.cursor + 7),
+            ]
+        });
         self.cursor += 8;
         Ok(res)
     }
@@ -389,16 +410,18 @@ impl<'data> RawParser<'data> {
     pub fn u64_le(&mut self) -> Res<u64> {
         pdebug!(self, "        parsing u64 (le)");
         self.check(8, parse_error!(|| expected "u64"))?;
-        let res = u64::from_le_bytes([
-            self.data[self.cursor],
-            self.data[self.cursor + 1],
-            self.data[self.cursor + 2],
-            self.data[self.cursor + 3],
-            self.data[self.cursor + 4],
-            self.data[self.cursor + 5],
-            self.data[self.cursor + 6],
-            self.data[self.cursor + 7],
-        ]);
+        let res = u64::from_le_bytes(unsafe {
+            [
+                self.get_unchecked(self.cursor),
+                self.get_unchecked(self.cursor + 1),
+                self.get_unchecked(self.cursor + 2),
+                self.get_unchecked(self.cursor + 3),
+                self.get_unchecked(self.cursor + 4),
+                self.get_unchecked(self.cursor + 5),
+                self.get_unchecked(self.cursor + 6),
+                self.get_unchecked(self.cursor + 7),
+            ]
+        });
         self.cursor += 8;
         Ok(res)
     }
@@ -406,32 +429,36 @@ impl<'data> RawParser<'data> {
     pub fn f64_be(&mut self) -> Res<f64> {
         pdebug!(self, "        parsing f64 (be)");
         self.check(8, parse_error!(|| expected "f64"))?;
-        let res = f64::from_be_bytes([
-            self.data[self.cursor],
-            self.data[self.cursor + 1],
-            self.data[self.cursor + 2],
-            self.data[self.cursor + 3],
-            self.data[self.cursor + 4],
-            self.data[self.cursor + 5],
-            self.data[self.cursor + 6],
-            self.data[self.cursor + 7],
-        ]);
+        let res = f64::from_be_bytes(unsafe {
+            [
+                self.get_unchecked(self.cursor),
+                self.get_unchecked(self.cursor + 1),
+                self.get_unchecked(self.cursor + 2),
+                self.get_unchecked(self.cursor + 3),
+                self.get_unchecked(self.cursor + 4),
+                self.get_unchecked(self.cursor + 5),
+                self.get_unchecked(self.cursor + 6),
+                self.get_unchecked(self.cursor + 7),
+            ]
+        });
         self.cursor += 8;
         Ok(res)
     }
     pub fn f64_le(&mut self) -> Res<f64> {
         pdebug!(self, "        parsing f64 (le)");
         self.check(8, parse_error!(|| expected "f64"))?;
-        let res = f64::from_le_bytes([
-            self.data[self.cursor],
-            self.data[self.cursor + 1],
-            self.data[self.cursor + 2],
-            self.data[self.cursor + 3],
-            self.data[self.cursor + 4],
-            self.data[self.cursor + 5],
-            self.data[self.cursor + 6],
-            self.data[self.cursor + 7],
-        ]);
+        let res = f64::from_le_bytes(unsafe {
+            [
+                self.get_unchecked(self.cursor),
+                self.get_unchecked(self.cursor + 1),
+                self.get_unchecked(self.cursor + 2),
+                self.get_unchecked(self.cursor + 3),
+                self.get_unchecked(self.cursor + 4),
+                self.get_unchecked(self.cursor + 5),
+                self.get_unchecked(self.cursor + 6),
+                self.get_unchecked(self.cursor + 7),
+            ]
+        });
         self.cursor += 8;
         Ok(res)
     }
@@ -467,6 +494,7 @@ impl<'data> RawParser<'data> {
     }
 
     pub fn try_magic(mut self) -> Res<Either<BeParser<'data>, LeParser<'data>>> {
+        pinfo!(self, "parsing magic number");
         let start = self.pos();
         let magic = self.u32_be()?;
         if magic == MAGIC {
@@ -728,7 +756,7 @@ decl_impl_trait! {
             let id = convert(self.u64()?, "locs: id");
             let len = convert(self.u8()?, "locs: len");
             pinfo!(self, "    -> parsing {} location(s)", len);
-            let mut locs = SVec16::with_capacity(len);
+            let mut locs = SVec32::with_capacity(len);
             for _ in 0..len {
                 let loc = loc::Location::parse(self, &mut cxt.loc)?;
                 locs.push(loc)

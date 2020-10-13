@@ -40,84 +40,203 @@ pub use diff_parse::parse;
 mod diff_parse {
     use alloc_data::prelude::*;
 
-    type Encoded = usize;
-    type LocMap = Map<Encoded, Loc>;
+    type Encoded = u64;
+    type LocMap = std::collections::HashMap<Encoded, Vec<Loc>>;
 
-    fn build_trace(loc_map: &LocMap, trace: SVec16<usize>) -> Res<Trace> {
-        let mut res = Vec::with_capacity(trace.len());
-        let mut trace = trace.into_iter();
-        let mut next = trace.next();
+    #[inline]
+    fn build_trace<I>(factory: &mut mem::Factory, loc_map: &LocMap, trace: I) -> Res<Trace>
+    where
+        I: Iterator<Item = usize> + ExactSizeIterator,
+    {
+        let mut res: SVec32<CLoc> = SVec32::with_capacity(trace.len());
 
-        while let Some(encoded) = next {
-            let loc = if let Some(loc) = loc_map.get(&encoded).cloned() {
-                loc
-            } else {
-                bail!("[ctf parser] unknown encoded location {:?}", encoded)
-            };
-
-            let mut cnt = 1;
-
-            'while_same_encoded: loop {
-                match trace.next() {
-                    Some(enc) if encoded == enc => cnt += 1,
-                    new_next => {
-                        next = new_next;
-                        break 'while_same_encoded;
+        for code in trace {
+            let sub_trace = match loc_map.get(&(code as u64)) {
+                Some(sub_trace) => {
+                    if sub_trace.is_empty() {
+                        continue;
+                    } else {
+                        sub_trace
                     }
                 }
-            }
+                None => bail!("[ctf parser] unknown location code `{}`", code),
+            };
 
-            let cloc = CLoc::new(loc, cnt);
-            res.push(cloc)
+            for loc in sub_trace {
+                if let Some(cloc) = res.last_mut() {
+                    if loc == &cloc.loc {
+                        cloc.cnt += 1
+                    } else {
+                        res.push(CLoc::new(loc.clone(), 1));
+                    }
+                } else {
+                    res.push(CLoc::new(loc.clone(), 1))
+                };
+            }
         }
 
         res.shrink_to_fit();
-        Ok(Trace::new(res))
+
+        Ok(factory.register_trace(res))
     }
 
     fn date_from_millis(date: crate::prelude::Clock) -> Date {
         Date::from_millis(convert(date, "date_from_millis"))
     }
 
-    pub fn parse(bytes: &[u8]) -> Res<(Init, Vec<Diff>)> {
-        let mut factory = mem::Factory::new(false);
+    // pub fn parse(bytes: &[u8], mut bytes_progress: impl FnMut(usize)) -> Res<(Init, Vec<Diff>)> {
+    //     let mut factory = mem::Factory::new(false);
 
+    //     // Maps location encoded identifiers to actual locations.
+    //     let mut loc_id_to_loc = LocMap::new();
+
+    //     // Maps allocation UIDs to the index of the diff it appears in (as a new allocation), and
+    //     // the index of that allocation.
+    //     let mut alloc_uid_to_diff_idx: Map<Uid, (usize, usize)> = Map::new();
+
+    //     parse! {
+    //         bytes => |mut parser| {
+    //             let header = parser.header();
+
+    //             // Start time of the run, used for init and to compute the time-since-start of all
+    //             // events.
+    //             let start_time = date_from_millis(header.header.timestamp.begin);
+    //             let end_time = date_from_millis(header.header.timestamp.end).sub(start_time)?;
+
+    //             // Init info.
+    //             let init = {
+    //                 let trace_info = parser.trace_info();
+    //                 Init::new(start_time, Some(end_time), trace_info.word_size as usize, false)
+    //             };
+
+    //             // List of diffs yielded by the function. One diff per packet.
+    //             let mut diffs = Vec::with_capacity(123);
+
+    //             // Iterate over the packet of the trace.
+    //             while let Some(mut packet_parser) = parser.next_packet()? {
+    //                 bytes_progress(packet_parser.real_position().0);
+    //                 let header = packet_parser.header();
+    //                 // Header gives us the number of new allocation, used to set the capacity of the
+    //                 // `new` list in the diff to avoid reallocation.
+    //                 let new_len = (header.header.alloc_id.end - header.header.alloc_id.begin) as usize;
+
+    //                 // Index of the current diff in `diffs`.
+    //                 let diff_idx = diffs.len();
+    //                 // Empty diff we will fill as we parse the packet.
+    //                 let diff = Diff {
+    //                     time: date_from_millis(packet_parser.header().timestamp.begin)
+    //                         .sub(start_time)?,
+    //                     new: Vec::with_capacity(new_len),
+    //                     dead: Vec::with_capacity(0),
+    //                 };
+    //                 diffs.push(diff);
+
+    //                 // Iterate over the events of the packet.
+    //                 while let Some((clock, event)) = packet_parser.next_event()? {
+    //                     use crate::ast::event::Event;
+
+    //                     match event {
+    //                         Event::Alloc(alloc) => {
+    //                             let uid = Uid::from(alloc.id);
+
+    //                             // Remember the index of the allocation in `diff.new` to propagate
+    //                             // the time of death later if needed.
+    //                             let prev = alloc_uid_to_diff_idx.insert(
+    //                                 uid.clone(), (diff_idx, diffs[diff_idx].new.len())
+    //                             );
+    //                             if prev.is_some() {
+    //                                 bail!(
+    //                                     "[ctf parser] trying to register allocation #{} twice",
+    //                                     uid,
+    //                                 )
+    //                             }
+
+    //                             // Build the allocation.
+    //                             let alloc = {
+    //                                 let time_since_start = date_from_millis(clock).sub(start_time)?;
+    //                                 let trace = build_trace(
+    //                                     &mut factory,
+    //                                     &loc_id_to_loc,
+    //                                     alloc.backtrace.into_iter().take(alloc.backtrace_len),
+    //                                 )?;
+    //                                 let labels = factory.register_labels(SVec32::new());
+    //                                 Alloc::new(
+    //                                     uid,
+    //                                     AllocKind::Minor,
+    //                                     convert(alloc.len, "ctf parser: alloc size"),
+    //                                     trace,
+    //                                     labels,
+    //                                     time_since_start,
+    //                                     None
+    //                                 )
+    //                             };
+
+    //                             // Push as a new allocation.
+    //                             diffs[diff_idx].new.push(alloc)
+    //                         },
+
+    //                         Event::Collection(alloc_uid) => {
+    //                             let uid = Uid::from(alloc_uid);
+    //                             let time_since_start = date_from_millis(clock).sub(start_time)?;
+
+    //                             if let Some((diff_idx, alloc_idx)) = alloc_uid_to_diff_idx.get(&uid) {
+    //                                 diffs[*diff_idx].new[*alloc_idx].set_tod(time_since_start)?
+    //                             } else {
+    //                                 bail!("[ctf parser] collection for unknown allocation #{}", uid)
+    //                             }
+    //                         },
+    //                         Event::Locs(crate::ast::Locs { id, locs }) => {
+    //                             let locs = locs.into_iter().map(|loc| {
+    //                                 let file = factory.register_str(loc.file_path);
+    //                                 let line = loc.line;
+    //                                 let col = loc.col;
+
+    //                                 Loc::new(
+    //                                     file,
+    //                                     line,
+    //                                     Span {
+    //                                         start: col.begin,
+    //                                         end: col.end,
+    //                                     },
+    //                                 )
+    //                             }).collect();
+
+    //                             let prev = loc_id_to_loc.insert(id, locs);
+    //                             if prev.is_some() && prev.as_ref() != loc_id_to_loc.get(&id) {
+    //                                 bail!("[ctf parser] trying to register locations #{} twice", id)
+    //                             }
+    //                         },
+    //                         Event::Promotion(_) => {
+    //                             ()
+    //                         },
+    //                     }
+    //                 }
+
+    //                 debug_assert_eq!(diffs[diff_idx].new.len(), new_len);
+    //                 debug_assert_eq!(diffs[diff_idx].new.len(), diffs[diff_idx].new.capacity());
+    //                 debug_assert!(diffs[diff_idx].dead.is_empty());
+    //             }
+
+    //             diffs.shrink_to_fit();
+
+    //             Ok((init, diffs))
+    //         }
+    //     }
+    // }
+
+    pub fn parse<'a, F>(
+        bytes: &[u8],
+        mut factory: &mut F,
+        mut bytes_progress: impl FnMut(usize),
+        init_action: impl FnOnce(&mut F, Init),
+        mut new_action: impl FnMut(&mut F, Alloc),
+        mut dead_action: impl FnMut(&mut F, SinceStart, Uid),
+    ) -> Res<()>
+    where
+        F: std::ops::DerefMut<Target = mem::Factory<'a>>,
+    {
         // Maps location encoded identifiers to actual locations.
-        let mut loc_id_to_loc = LocMap::new();
-
-        // Registers a bunch of locations.
-        macro_rules! register_locs {
-        ($locs:expr) => {
-            for loc in $locs {
-                register_locs!(@one loc)
-            }
-        };
-        (@one $loc:expr) => {{
-            let encoded = $loc.encoded;
-            let file = factory.register_str($loc.file_path);
-            let line = $loc.line;
-            let col = $loc.col;
-
-            let loc = Loc::new(
-                file,
-                line,
-                Span {
-                    start: col.begin,
-                    end: col.end,
-                },
-            );
-
-            let prev = loc_id_to_loc.insert(encoded, loc);
-
-            if prev.is_some() {
-                bail!("[ctf parser] trying to register encoded location #{} twice", encoded)
-            }
-        }};
-    }
-
-        // Maps allocation UIDs to the index of the diff it appears in (as a new allocation), and the
-        // index of that allocation.
-        let mut alloc_uid_to_diff_idx: Map<Uid, (usize, usize)> = Map::new();
+        let mut loc_id_to_loc = LocMap::with_capacity(1001);
 
         parse! {
             bytes => |mut parser| {
@@ -126,32 +245,25 @@ mod diff_parse {
                 // Start time of the run, used for init and to compute the time-since-start of all
                 // events.
                 let start_time = date_from_millis(header.header.timestamp.begin);
+                // let end_time = date_from_millis(header.header.timestamp.end).sub(start_time)?;
 
                 // Init info.
                 let init = {
                     let trace_info = parser.trace_info();
-                    Init::new(start_time, trace_info.word_size as usize, false)
+                    Init::new(
+                        start_time,
+                        None,
+                        convert(trace_info.word_size, "ctf parser: word_size"),
+                        false,
+                    )
                 };
 
-                // List of diffs yielded by the function. One diff per packet.
-                let mut diffs = Vec::with_capacity(123);
+                init_action(factory, init);
 
                 // Iterate over the packet of the trace.
                 while let Some(mut packet_parser) = parser.next_packet()? {
-                    let header = packet_parser.header();
-                    // Header gives us the number of new allocation, used to set the capacity of the
-                    // `new` list in the diff to avoid reallocation.
-                    let new_len = (header.header.alloc_id.end - header.header.alloc_id.begin) as usize;
-
-                    // Index of the current diff in `diffs`.
-                    let diff_idx = diffs.len();
-                    // Empty diff we will fill as we parse the packet.
-                    let diff = Diff {
-                        time: date_from_millis(packet_parser.header().timestamp.begin).sub(start_time)?,
-                        new: Vec::with_capacity(new_len),
-                        dead: Vec::with_capacity(0),
-                    };
-                    diffs.push(diff);
+                    bytes_progress(packet_parser.real_position().0);
+                    let _header = packet_parser.header();
 
                     // Iterate over the events of the packet.
                     while let Some((clock, event)) = packet_parser.next_event()? {
@@ -161,61 +273,65 @@ mod diff_parse {
                             Event::Alloc(alloc) => {
                                 let uid = Uid::from(alloc.id);
 
-                                // Remember the index of the allocation in `diff.new` to propagate the
-                                // time of death later if needed.
-                                let prev = alloc_uid_to_diff_idx.insert(
-                                    uid.clone(), (diff_idx, diffs[diff_idx].new.len())
-                                );
-                                if prev.is_some() {
-                                    bail!("[ctf parser] trying to register allocation #{} twice", uid)
-                                }
-
                                 // Build the allocation.
                                 let alloc = {
                                     let time_since_start = date_from_millis(clock).sub(start_time)?;
-                                    let trace = build_trace(&loc_id_to_loc, alloc.backtrace)?;
-                                    Alloc::new(
+                                    let trace = build_trace(
+                                        factory,
+                                        &loc_id_to_loc,
+                                        alloc.backtrace.into_iter().take(alloc.backtrace_len),
+                                    )?;
+                                    let labels = factory.register_labels(SVec32::new());
+                                    let alloc = Alloc::new(
                                         uid,
                                         AllocKind::Minor,
                                         convert(alloc.len, "ctf parser: alloc size"),
                                         trace,
-                                        Labels::new(vec![]),
+                                        labels,
                                         time_since_start,
                                         None
-                                    )
+                                    );
+                                    alloc
                                 };
 
-                                // Push as a new allocation.
-                                diffs[diff_idx].new.push(alloc)
+                                new_action(factory, alloc)
                             },
 
                             Event::Collection(alloc_uid) => {
                                 let uid = Uid::from(alloc_uid);
-                                let time_since_start = date_from_millis(clock).sub(start_time)?;
+                                let timestamp = date_from_millis(clock).sub(start_time)?;
 
-                                if let Some((diff_idx, alloc_idx)) = alloc_uid_to_diff_idx.get(&uid) {
-                                    diffs[*diff_idx].new[*alloc_idx].set_tod(time_since_start)?
-                                } else {
-                                    bail!("[ctf parser] collection for unknown allocation #{}", uid)
+                                dead_action(&mut factory, timestamp, uid)
+                            },
+                            Event::Locs(crate::ast::Locs { id, locs }) => {
+                                let locs = locs.into_iter().map(|loc| {
+                                    let file = factory.register_str(loc.file_path);
+                                    let line = loc.line;
+                                    let col = loc.col;
+
+                                    Loc::new(
+                                        file,
+                                        line,
+                                        Span {
+                                            start: col.begin,
+                                            end: col.end,
+                                        },
+                                    )
+                                }).collect();
+
+                                let prev = loc_id_to_loc.insert(id, locs);
+                                if prev.is_some() && prev.as_ref() != loc_id_to_loc.get(&id) {
+                                    bail!("[ctf parser] trying to register locations #{} twice", id)
                                 }
                             },
-                            Event::Locs(locs) => register_locs!(locs.locs),
-                            Event::Promotion(_) => (),
+                            Event::Promotion(_) => {
+                                ()
+                            },
                         }
-                    }
-
-                    debug_assert_eq!(diffs[diff_idx].new.len(), new_len);
-                    debug_assert_eq!(diffs[diff_idx].new.len(), diffs[diff_idx].new.capacity());
-                    debug_assert!(diffs[diff_idx].dead.is_empty());
-
-                    if diffs[diff_idx].new.is_empty() {
-                        let _ = diffs.pop();
                     }
                 }
 
-                diffs.shrink_to_fit();
-
-                Ok((init, diffs))
+                Ok(())
             }
         }
     }

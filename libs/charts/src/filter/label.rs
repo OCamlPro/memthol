@@ -51,7 +51,7 @@ impl string_like::SpecExt for LabelSpec {
         }
     }
 
-    fn data_of_alloc(alloc: &Alloc) -> Arc<Vec<Self::Data>> {
+    fn data_of_alloc(alloc: &Alloc) -> Arc<base::SVec32<Self::Data>> {
         alloc.labels()
     }
 

@@ -11,7 +11,7 @@ prelude! {}
 type Memory = crate::mem::Memory<[u8]>;
 
 /// Stores a UID, cannot be constructed outside of the module it's declared in.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
 pub struct Str {
     uid: usize,
 }
@@ -75,6 +75,21 @@ impl PartialEq<&str> for Str {
 impl PartialEq<Str> for &str {
     fn eq(&self, other: &Str) -> bool {
         &*other.get() == self.as_bytes()
+    }
+}
+impl PartialEq<Str> for Str {
+    fn eq(&self, other: &Str) -> bool {
+        self.uid == other.uid
+    }
+}
+impl<'a> PartialEq<Str> for &'a Str {
+    fn eq(&self, other: &Str) -> bool {
+        self.uid == other.uid
+    }
+}
+impl<'a> PartialEq<&'a Str> for Str {
+    fn eq(&self, other: &&'a Str) -> bool {
+        self.uid == other.uid
     }
 }
 

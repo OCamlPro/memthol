@@ -66,7 +66,7 @@ impl Cxt {
         parser: &mut impl CanParse<'data>,
         nencoded: usize,
         common_pref_len: usize,
-    ) -> Res<(SVec16<usize>, usize)> {
+    ) -> Res<(SVec32<usize>, usize)> {
         assert!(common_pref_len <= self.last_backtrace.len());
 
         let Self {
@@ -88,15 +88,16 @@ impl Cxt {
             }
 
             let codeword = parser.u16()?;
-            let bucket = (codeword >> 2) as usize;
+            let bucket: usize = convert(codeword >> 2, "ctf backtrace: bucket");
             let tag = codeword & 3;
 
             cache_pred[pred] = bucket;
+            pred = bucket;
 
             predict_current = match tag {
                 // Cache hit, 0, 1 or N prediction(s).
                 0..=2 => {
-                    Self::put(buf, pos as usize, cache_loc[bucket as usize]);
+                    Self::put(buf, pos, cache_loc[bucket]);
                     pos += 1;
                     decode_current -= 1;
                     if tag == 2 {
@@ -109,8 +110,8 @@ impl Cxt {
                 // Cache miss.
                 _ => {
                     let lit = convert(parser.u64()?, "get_backtrace: lit");
-                    cache_loc[bucket as usize] = lit;
-                    Self::put(buf, pos as usize, lit);
+                    cache_loc[bucket] = lit;
+                    Self::put(buf, pos, lit);
                     pos += 1;
                     decode_current -= 1;
                     continue 'decode;
@@ -122,7 +123,7 @@ impl Cxt {
                     continue 'decode;
                 } else {
                     pred = convert(cache_pred[pred], "get_backtrace: pred");
-                    Self::put(buf, pos as usize, cache_loc[pred]);
+                    Self::put(buf, pos, cache_loc[pred]);
                     pos += 1;
                     predict_current -= 1;
                     continue 'predict;
@@ -151,6 +152,7 @@ impl Cxt {
     }
 
     pub fn check_cache_verifier<'data>(&self, parser: &mut impl CanParse<'data>) -> Res<()> {
+        println!("checking cache");
         let ix: usize = convert(parser.u16()?, "check_cache_verifier: ix");
         let pred = parser.u16()? as usize;
         let value = parser.u64()?;

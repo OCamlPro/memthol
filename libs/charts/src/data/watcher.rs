@@ -71,27 +71,36 @@ impl Watcher {
                 .read(true)
                 .open(target)
                 .chain_err(|| format!("while opening ctf file `{}`", target.display()))?;
-            let mut buff = Vec::with_capacity(150_000);
-            file.read(&mut buff)
+            let len = file
+                .metadata()
+                .map(|meta| meta.len() as usize)
+                .unwrap_or(150_000);
+            let mut buff = Vec::with_capacity(len);
+            let data_len = file
+                .read_to_end(&mut buff)
                 .chain_err(|| format!("while reading ctf file `{}`", target.display()))?;
-            buff.shrink_to_fit();
+            super::progress::set_total(data_len)?;
             buff
         };
-        let (init, diffs) = ctf::parse(&bytes)
-            .chain_err(|| format!("while parsing ctf file `{}`", target.display()))?;
 
-        let mut data = super::get_mut().chain_err(|| "while registering the initial state")?;
+        let mut factory = data::FullFactory::new(false);
+        ctf::parse(
+            &bytes,
+            &mut factory,
+            |bytes_progress| super::progress::add_loaded(bytes_progress).unwrap(),
+            |factory, init| {
+                if factory.data.has_init() {
+                    panic!("live profiling restart is not supported yet")
+                } else {
+                    factory.data.reset(target, init)
+                }
+            },
+            |factory, alloc| factory.add_new(alloc).unwrap(),
+            |factory, timestamp, uid| factory.add_dead(timestamp, uid).unwrap(),
+        )
+        .chain_err(|| format!("while parsing ctf file `{}`", target.display()))?;
 
-        if data.has_init() {
-            bail!("live profiling restart is not supported yet")
-        } else {
-            data.reset(target, init)
-        }
-
-        for diff in diffs {
-            super::add_diff(diff)?
-        }
-        todo!()
+        Ok(())
     }
 
     /// Runs the watcher.

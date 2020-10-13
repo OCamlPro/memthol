@@ -8,6 +8,37 @@ mod watcher;
 
 pub use watcher::Watcher;
 
+pub struct FullFactory<'a> {
+    factory: alloc_data::mem::Factory<'a>,
+    data: std::sync::RwLockWriteGuard<'a, Data>,
+}
+impl<'a> std::ops::Deref for FullFactory<'a> {
+    type Target = alloc_data::mem::Factory<'a>;
+    fn deref(&self) -> &Self::Target {
+        &self.factory
+    }
+}
+impl<'a> std::ops::DerefMut for FullFactory<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.factory
+    }
+}
+impl<'a> FullFactory<'a> {
+    pub fn new(callstack_is_rev: bool) -> Self {
+        Self {
+            factory: alloc_data::mem::Factory::new(callstack_is_rev),
+            data: get_mut().unwrap(),
+        }
+    }
+
+    pub fn add_new(&mut self, alloc: Alloc) -> Res<()> {
+        self.data.add_new(alloc)
+    }
+    pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: alloc_data::Uid) -> Res<()> {
+        self.data.add_dead(timestamp, uid)
+    }
+}
+
 /// Starts global data handling.
 ///
 /// - runs the file watcher daemon.
@@ -78,6 +109,13 @@ pub mod progress {
     pub fn inc_loaded() -> Res<()> {
         if let Some(mut prog) = write()?.as_mut() {
             prog.loaded += 1;
+        }
+        Ok(())
+    }
+    /// Adds to the number of dumps loaded.
+    pub fn add_loaded(n: usize) -> Res<()> {
+        if let Some(mut prog) = write()?.as_mut() {
+            prog.loaded += n;
         }
         Ok(())
     }
@@ -198,9 +236,10 @@ impl Data {
         time: &time::SinceStart,
         mut new_alloc: impl FnMut(&Alloc) -> Res<()>,
     ) -> Res<()> {
+        let time_is_zero = time.is_zero();
         // Reverse iter allocations.
         for (_, alloc) in self.uid_map.iter().rev() {
-            if &alloc.toc <= time {
+            if !time_is_zero && &alloc.toc <= time {
                 break;
             } else {
                 new_alloc(alloc)?
@@ -226,9 +265,10 @@ impl Data {
         time: &time::SinceStart,
         mut new_death: impl FnMut(&AllocUidSet, &time::SinceStart) -> Res<()>,
     ) -> Res<()> {
+        let time_is_zero = time.is_zero();
         // Reverse iter death.
         for (tod, uid) in self.tod_map.iter().rev() {
-            if tod <= time {
+            if !time_is_zero && tod <= time {
                 break;
             } else {
                 new_death(uid, tod)?
@@ -255,6 +295,41 @@ impl Data {
         self.uid_map.clear();
         self.tod_map.clear();
         self.current_time = time::SinceStart::zero();
+    }
+
+    pub fn add_new(&mut self, alloc: Alloc) -> Res<()> {
+        if self.current_time != alloc.toc {
+            self.current_time = alloc.toc.clone()
+        }
+        let uid = alloc.uid.clone();
+
+        if let Some(tod) = alloc.tod.clone() {
+            self.add_dead(tod, uid.clone())?
+        }
+
+        let prev = self.uid_map.insert(uid.clone(), alloc);
+        if prev.is_some() {
+            bail!(
+                "allocation UID collision (2): two allocations have UID #{}",
+                uid
+            )
+        }
+
+        Ok(())
+    }
+
+    pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: alloc_data::Uid) -> Res<()> {
+        if self.current_time != timestamp {
+            self.current_time = timestamp.clone()
+        }
+        let is_new = self.tod_map_get_mut(timestamp).insert(uid.clone());
+        if !is_new {
+            bail!(
+                "allocation UID collision (1): two allocations have UID #{}",
+                uid
+            )
+        }
+        Ok(())
     }
 
     /// Registers a diff.

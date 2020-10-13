@@ -89,7 +89,7 @@ impl From<u64> for Uid {
 }
 
 /// A span.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, base::From, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, base::From, Serialize, Deserialize)]
 pub struct Span {
     /// Start of the span.
     pub start: usize,
@@ -111,7 +111,7 @@ pub struct Span {
 /// assert_eq! { loc.line, 325 }
 /// assert_eq! { loc.span, (7, 38).into() }
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Loc {
     /// File the location is for.
     pub file: Str,
@@ -148,7 +148,7 @@ impl Loc {
 /// assert_eq! { loc.span, (7, 38).into() }
 /// assert_eq! { cnt, 5 }
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct CLoc {
     /// Location.
     pub loc: Loc,
@@ -279,7 +279,7 @@ impl Alloc {
     }
 
     /// Trace accessor.
-    pub fn trace(&self) -> std::sync::Arc<Vec<CLoc>> {
+    pub fn trace(&self) -> std::sync::Arc<SVec32<CLoc>> {
         self.trace.get()
     }
     /// Allocation-site of the allocation.
@@ -289,7 +289,7 @@ impl Alloc {
     }
 
     /// Labels accessor.
-    pub fn labels(&self) -> std::sync::Arc<Vec<Str>> {
+    pub fn labels(&self) -> std::sync::Arc<SVec32<Str>> {
         self.labels.get()
     }
     /// Time of creation accessor.
@@ -327,6 +327,8 @@ impl Diff {
 pub struct Init {
     /// The start time of the run: an absolute date.
     pub start_time: Date,
+    /// Optional end time.
+    pub end_time: Option<SinceStart>,
     /// Size of machine words in bytes.
     pub word_size: usize,
     /// True if the callstack go from `main` to allocation site, called *reversed order*.
@@ -337,6 +339,7 @@ impl Default for Init {
     fn default() -> Self {
         Self {
             start_time: Date::from_timestamp(0, 0),
+            end_time: None,
             word_size: 8,
             callstack_is_rev: false,
         }
@@ -345,9 +348,15 @@ impl Default for Init {
 
 impl Init {
     /// Constructor.
-    pub fn new(start_time: Date, word_size: usize, callstack_is_rev: bool) -> Self {
+    pub fn new(
+        start_time: Date,
+        end_time: Option<SinceStart>,
+        word_size: usize,
+        callstack_is_rev: bool,
+    ) -> Self {
         Self {
             start_time,
+            end_time,
             word_size,
             callstack_is_rev,
         }

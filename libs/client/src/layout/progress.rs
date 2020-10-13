@@ -23,7 +23,7 @@ pub fn render(info: &LoadInfo) -> Html {
             <br/>
             <div>
                 {format!(
-                    "{} / {} allocation dump(s) loaded",
+                    "{} / {}",
                     info.loaded, info.total,
                 )}
             </div>

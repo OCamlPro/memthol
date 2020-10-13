@@ -1,6 +1,6 @@
 //! Provides a generic factory-like type to share labels and locations across allocations.
 
-use std::{collections::BTreeMap as Map, sync::Arc};
+use std::{collections::HashMap as Map, sync::Arc};
 
 prelude! {}
 
@@ -112,13 +112,16 @@ impl<'a> Factory<'a> {
         }
     }
 
+    #[inline]
     pub fn register_str(&mut self, s: &str) -> Str {
         self.str.get_uid(s)
     }
-    pub fn register_labels(&mut self, labels: Vec<Str>) -> Labels {
+    #[inline]
+    pub fn register_labels(&mut self, labels: SVec32<Str>) -> Labels {
         self.labels.get_uid(labels)
     }
-    pub fn register_trace(&mut self, mut trace: Vec<CLoc>) -> Trace {
+    #[inline]
+    pub fn register_trace(&mut self, mut trace: SVec32<CLoc>) -> Trace {
         if self.callstack_is_rev {
             trace.reverse()
         }
@@ -154,12 +157,13 @@ impl<Elm: ?Sized + Ord> Memory<Elm> {
 
 impl<Elm> Memory<Elm>
 where
-    Elm: Ord + Sized,
+    Elm: Ord + Sized + std::hash::Hash,
 {
     /// The UID associated to some element.
     ///
     /// Generates a fresh one if none exists. Biased towards the case when the element is already
     /// registered.
+    #[inline]
     pub fn get_uid(&mut self, elm: Elm) -> usize {
         if let Some(uid) = self.map.get(&elm) {
             *uid
