@@ -10,7 +10,7 @@ mod default {
     /// Default port.
     pub const PORT: &str = "7878";
     /// Default directory.
-    pub const DIR: &str = ".";
+    pub const INPUT: &str = ".";
 }
 
 /// Fails if the input string is not a `usize`.
@@ -47,10 +47,10 @@ pub fn main() {
             -l --log !required
             "activates (separate) socket logging"
         )
-        (@arg DIR:
+        (@arg INPUT:
             !required
-            default_value(default::DIR)
-            "path to the directory containing memthol's dump files"
+            default_value(default::INPUT)
+            "path to either a directory containing memthol's dump files, or a memtrace CTF file"
         )
     )
     .get_matches();
@@ -66,7 +66,7 @@ pub fn main() {
     let verb = matches.occurrences_of("VERB") > 0;
     memthol::conf::set_verb(verb);
 
-    let target = matches.value_of("DIR").expect("argument with default");
+    let target = matches.value_of("INPUT").expect("argument with default");
 
     let path = format!("{}:{}", addr, port);
     println!("|===| Config");

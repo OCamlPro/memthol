@@ -428,7 +428,6 @@ impl Handler {
     }
     fn send_all_points(&mut self) -> Res<()> {
         let (points, overwrite) = self.charts.new_points(true)?;
-        println!("sending {} points", points.len());
         let msg = msg::to_client::ChartsMsg::points(points, overwrite);
         self.send(msg)?;
         self.send_stats()
