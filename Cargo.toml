@@ -2,11 +2,13 @@
 members = [
     "libs/base",
     "libs/alloc_data",
+    "libs/ctf",
     "libs/charts",
     "libs/client",
 
     "memthol",
 ]
+
 # The client is not in the `default-members` since it can only be built for the wasm target. This
 # prevents `cargo test` from failing to compile the client.
 # 
@@ -15,6 +17,7 @@ members = [
 default-members = [
     "libs/base",
     "libs/alloc_data",
+    "libs/ctf",
     "libs/charts",
 
     "memthol",

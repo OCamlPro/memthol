@@ -12,8 +12,10 @@ pub mod stats;
 pub mod string_like;
 pub mod sub;
 
+#[cfg(any(test, feature = "server"))]
 pub mod gen;
 
+#[cfg(any(test, feature = "server"))]
 pub use gen::FilterGen;
 pub use label::LabelFilter;
 pub use loc::LocFilter;
@@ -181,6 +183,7 @@ impl Filters {
     /// Runs filter generation.
     ///
     /// Returns the number of filter generated.
+    #[cfg(any(test, feature = "server"))]
     pub fn auto_gen(
         &mut self,
         data: &data::Data,
@@ -314,6 +317,7 @@ impl Filters {
     }
 
     /// Extract filter statistics.
+    #[cfg(any(test, feature = "server"))]
     pub fn filter_stats(&self) -> Res<stats::AllFilterStats> {
         let mut stats = stats::AllFilterStats::new();
         let mut registered = 0;

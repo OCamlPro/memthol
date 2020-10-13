@@ -65,6 +65,15 @@ args = [
     "${client_crate_path}",
 ]
 
+[tasks.test]
+dependencies = [
+    "build_wasm",
+]
+command = "cargo"
+args = [
+    "test", "--all"
+]
+
 [tasks.build]
 dependencies = [
     "build_wasm",

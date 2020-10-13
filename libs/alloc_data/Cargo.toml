@@ -1,13 +1,12 @@
 [package]
 name = "alloc_data"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Adrien Champion <adrien.champion@email.com>"]
 edition = "2018"
 
 [dependencies]
 base = { path = "../base" }
 
-chrono = { version = "*", features = ["serde", "wasmbind"] }
 num-bigint = { version = "*", features = ["serde"] }
 num-traits = "*"
 peg = "*"
@@ -15,3 +14,8 @@ rayon = "*"
 serde = "*"
 serde_derive = "*"
 toml = "*"
+
+[features]
+server = [ "base/server" ]
+client = [ "base/client" ]
+default = []

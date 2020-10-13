@@ -20,9 +20,6 @@
 //! [`Date`]: struct.date.html (The Date struct)
 //! [`SinceStart`]: struct.sincestart.html (The SinceStart struct)
 
-pub extern crate chrono;
-pub extern crate peg;
-
 pub use error_chain::bail;
 pub use num_bigint::BigUint;
 
@@ -43,20 +40,7 @@ pub use time::{Date, Duration, SinceStart};
 
 /// Errors, handled by `error_chain`.
 pub mod err {
-    crate::prelude::error_chain::error_chain! {
-        types {
-            Err, ErrKind, ResExt, Res;
-        }
-
-        foreign_links {
-            Peg(peg::error::ParseError<peg::str::LineCol>)
-            /// Parse error from `peg`.
-            ;
-        }
-
-        links {}
-        errors {}
-    }
+    pub use base::err::*;
 }
 
 #[cfg(test)]
@@ -98,9 +82,14 @@ impl From<BigUint> for Uid {
         Self { uid }
     }
 }
+impl From<u64> for Uid {
+    fn from(uid: u64) -> Self {
+        Self { uid: uid.into() }
+    }
+}
 
 /// A span.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, base::From, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, base::From, Serialize, Deserialize)]
 pub struct Span {
     /// Start of the span.
     pub start: usize,
@@ -122,7 +111,7 @@ pub struct Span {
 /// assert_eq! { loc.line, 325 }
 /// assert_eq! { loc.span, (7, 38).into() }
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Loc {
     /// File the location is for.
     pub file: Str,
@@ -159,7 +148,7 @@ impl Loc {
 /// assert_eq! { loc.span, (7, 38).into() }
 /// assert_eq! { cnt, 5 }
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct CLoc {
     /// Location.
     pub loc: Loc,
@@ -235,7 +224,7 @@ pub struct Alloc {
 impl Alloc {
     /// Constructor.
     pub fn new(
-        uid: Uid,
+        uid: impl Into<Uid>,
         kind: AllocKind,
         size: u32,
         trace: Trace,
@@ -243,6 +232,7 @@ impl Alloc {
         toc: SinceStart,
         tod: Option<SinceStart>,
     ) -> Self {
+        let uid = uid.into();
         Self {
             uid,
             kind,
@@ -289,7 +279,7 @@ impl Alloc {
     }
 
     /// Trace accessor.
-    pub fn trace(&self) -> std::sync::Arc<Vec<CLoc>> {
+    pub fn trace(&self) -> std::sync::Arc<SVec32<CLoc>> {
         self.trace.get()
     }
     /// Allocation-site of the allocation.
@@ -299,7 +289,7 @@ impl Alloc {
     }
 
     /// Labels accessor.
-    pub fn labels(&self) -> std::sync::Arc<Vec<Str>> {
+    pub fn labels(&self) -> std::sync::Arc<SVec32<Str>> {
         self.labels.get()
     }
     /// Time of creation accessor.
@@ -333,19 +323,12 @@ impl Diff {
 }
 
 /// Data from a memthol init file.
-///
-/// # Construction From String Slices
-///
-/// ```rust
-/// # alloc_data::prelude! {}
-/// let txt = "start: 1566489242.007000572\nword_size: 4\n";
-/// let init = Init::parse(txt).unwrap();
-/// assert_eq! { init.to_string(), "start: 2019-08-22 15:54:02.007000572 UTC\nword_size: 4\n" }
-/// ```
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Init {
     /// The start time of the run: an absolute date.
     pub start_time: Date,
+    /// Optional end time.
+    pub end_time: Option<SinceStart>,
     /// Size of machine words in bytes.
     pub word_size: usize,
     /// True if the callstack go from `main` to allocation site, called *reversed order*.
@@ -355,7 +338,8 @@ pub struct Init {
 impl Default for Init {
     fn default() -> Self {
         Self {
-            start_time: Date::of_timestamp(0, 0),
+            start_time: Date::from_timestamp(0, 0),
+            end_time: None,
             word_size: 8,
             callstack_is_rev: false,
         }
@@ -364,9 +348,15 @@ impl Default for Init {
 
 impl Init {
     /// Constructor.
-    pub fn new(start_time: Date, word_size: usize, callstack_is_rev: bool) -> Self {
+    pub fn new(
+        start_time: Date,
+        end_time: Option<SinceStart>,
+        word_size: usize,
+        callstack_is_rev: bool,
+    ) -> Self {
         Self {
             start_time,
+            end_time,
             word_size,
             callstack_is_rev,
         }

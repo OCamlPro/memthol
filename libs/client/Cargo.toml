@@ -1,6 +1,6 @@
 [package]
 name = "client"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["AdrienChampion <adrien.champion@email.com>"]
 edition = "2018"
 
@@ -10,17 +10,18 @@ crate-type = ["cdylib", "rlib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-alloc_data = { path = "../alloc_data" }
-base = { path = "../base" }
-charts = { path = "../charts" }
+alloc_data = { path = "../alloc_data", features = ["client"] }
+base = { path = "../base", features = ["client"] }
+charts = { path = "../charts", features = ["client"] }
 
 chrono = "*"
 error-chain = "*"
 lazy_static = "*"
-log = "*"
+log = "^0.4"
 plotters-canvas = "*"
 safe_index = "*"
 serde = "*"
+serde_derive = "*"
 strum = "*"
 strum_macros = "*"
 typed-html = { git = "https://github.com/bodil/typed-html" }

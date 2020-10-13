@@ -1,15 +1,22 @@
 [package]
 name = "base"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Adrien Champion <adrien.champion@email.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chrono = { version = "*", features = ["serde"] }
 either = "*"
 error-chain = "*"
 derive_more = "*"
 lazy_static = "*"
-rand = { version = "*", features = ["small_rng"] }
+peg = "*"
+rand = { version = "^0.7.3", features = ["small_rng"] }
 smallvec = "*"
+
+[features]
+client = [ "chrono/wasmbind" ]
+server = []
+default = []

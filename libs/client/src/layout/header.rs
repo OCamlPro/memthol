@@ -159,7 +159,7 @@ fn format_stats(model: &Model) -> Html {
                 style = TXT_STYLE
             >
                 {"run started at "}
-                {emph(format!("{} (LT)", start.time()))}
+                {emph(format!("{} (LT)", start.time().format("%H:%M:%S")))}
                 {", on "}
                 {emph(start.date().naive_local())}
                 {", ran for "}

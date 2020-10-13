@@ -1,0 +1,15 @@
+[package]
+name = "ctf"
+version = "0.2.0"
+authors = ["Adrien Champion <adrien.champion@email.com>"]
+edition = "2018"
+
+# [[bin]]
+# name = "ctf_bin"
+# path = "src/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+base = { path = "../base", features = ["server"] }
+alloc_data = { path = "../alloc_data", features = ["server"] }

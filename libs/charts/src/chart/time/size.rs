@@ -2,6 +2,7 @@
 
 prelude! {}
 
+#[cfg(any(test, feature = "server"))]
 use point::TimeSizePoints;
 
 /// Initial size value.
@@ -29,6 +30,7 @@ impl TimeSize {
     }
 }
 
+#[cfg(any(test, feature = "server"))]
 impl ChartExt for TimeSize {
     fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points> {
         self.get_allocs(filters, init)?;
@@ -61,6 +63,7 @@ impl TimeSize {
     }
 }
 
+#[cfg(any(test, feature = "server"))]
 macro_rules! map {
     (entry $map:expr, with $filters:expr => at $date:expr) => {
         $map.entry($date).or_insert(PointVal::new((0, 0), $filters))
@@ -68,6 +71,7 @@ macro_rules! map {
 }
 
 /// # Helpers for point generation
+#[cfg(any(test, feature = "server"))]
 impl TimeSize {
     /// Generates points from what's in `self.map`.
     ///
@@ -87,6 +91,28 @@ impl TimeSize {
             self.size = point_val.clone();
             let point = Point::new(time, point_val);
             points.push(point)
+        }
+
+        if points.len() == 1 {
+            let mut before = points[0].clone();
+            for value in before.vals.map.values_mut() {
+                *value = 0
+            }
+
+            let (before_key, after_key) = {
+                let (secs, nanos) = before.key.timestamp();
+                (
+                    Date::from_timestamp(secs - 1, nanos),
+                    Date::from_timestamp(secs + 1, nanos),
+                )
+            };
+
+            before.key = before_key;
+            let mut after = before.clone();
+            after.key = after_key;
+
+            points.insert(0, before);
+            points.push(after)
         }
 
         Ok(points)
@@ -114,10 +140,13 @@ impl TimeSize {
             ()
         }
 
+        let mut new_stuff = false;
+
         data.iter_new_since(
             timestamp,
             // New allocation.
             |alloc| {
+                new_stuff = true;
                 // Filter UID that matches the allocation, or catch-all.
                 let uid = if let Some(uid) = filters.find_match(data.current_time(), alloc) {
                     uid::LineUid::Filter(uid)
@@ -144,6 +173,9 @@ impl TimeSize {
             timestamp,
             // New dead allocation.
             |uids, tod| {
+                if !uids.is_empty() {
+                    new_stuff = true
+                }
                 for uid in uids {
                     // Potentially update the map, some filters are time-sensitive so matches can
                     // change.
@@ -171,7 +203,10 @@ impl TimeSize {
             },
         )?;
 
-        self.timestamp = data.current_time().clone();
+        if new_stuff {
+            self.timestamp = data.current_time().clone();
+            self.timestamp.add(time::SinceStart::from_timestamp(0, 1));
+        }
 
         Ok(())
     }

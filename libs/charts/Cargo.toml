@@ -1,6 +1,6 @@
 [package]
 name = "charts"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Adrien Champion <adrien.champion@email.com>"]
 edition = "2018"
 
@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 base = { path = "../base" }
 alloc_data = { path = "../alloc_data" }
+ctf = { path = "../ctf", optional = true }
 
 anyhow = "*"
 number_prefix = "*"
@@ -23,3 +24,8 @@ serde_regex = "*"
 strum = "*"
 strum_macros = "*"
 yew = "*"
+
+[features]
+server = [ "ctf", "alloc_data/server", "base/server" ]
+client = [ "alloc_data/client", "base/client" ]
+default = []

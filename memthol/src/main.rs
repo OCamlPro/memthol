@@ -10,7 +10,7 @@ mod default {
     /// Default port.
     pub const PORT: &str = "7878";
     /// Default directory.
-    pub const DIR: &str = ".";
+    pub const INPUT: &str = ".";
 }
 
 /// Fails if the input string is not a `usize`.
@@ -25,33 +25,33 @@ fn usize_validator(s: String) -> Result<(), String> {
 
 pub fn main() {
     let matches = clap_app!(memthol =>
-            (author: crate_authors!())
-            (version: crate_version!())
-            (about: "Memthol's UI.")
-            (@arg VERB:
-                -v --verbose
-                "activates verbose output"
-            )
-            (@arg ADDR:
-                -a --addr +takes_value !required
-                default_value(default::ADDR)
-                "the address to serve the UI at"
-            )
-            (@arg PORT:
-                -p --port +takes_value !required
-                default_value(default::PORT)
-                { usize_validator }
-                "the port to serve the UI at"
-            )
-            (@arg LOG:
-                -l --log !required
-                "activates (separate) socket logging"
-            )
-            (@arg DIR:
-                !required
-                default_value(default::DIR)
-                "path to the directory containing memthol's dump files"
-            )
+        (author: crate_authors!())
+        (version: crate_version!())
+        (about: "Memthol's UI.")
+        (@arg VERB:
+            -v --verbose
+            "activates verbose output"
+        )
+        (@arg ADDR:
+            -a --addr +takes_value !required
+            default_value(default::ADDR)
+            "the address to serve the UI at"
+        )
+        (@arg PORT:
+            -p --port +takes_value !required
+            default_value(default::PORT)
+            { usize_validator }
+            "the port to serve the UI at"
+        )
+        (@arg LOG:
+            -l --log !required
+            "activates (separate) socket logging"
+        )
+        (@arg INPUT:
+            !required
+            default_value(default::INPUT)
+            "path to either a directory containing memthol's dump files, or a memtrace CTF file"
+        )
     )
     .get_matches();
 
@@ -66,12 +66,12 @@ pub fn main() {
     let verb = matches.occurrences_of("VERB") > 0;
     memthol::conf::set_verb(verb);
 
-    let dump_dir = matches.value_of("DIR").expect("argument with default");
+    let target = matches.value_of("INPUT").expect("argument with default");
 
     let path = format!("{}:{}", addr, port);
     println!("|===| Config");
     println!("| url: http://{}", path);
-    println!("| dump directory: `{}`", dump_dir);
+    println!("| target: `{}`", target);
     println!("|===|");
     println!();
 
@@ -79,7 +79,7 @@ pub fn main() {
 
     println!("starting data monitoring...");
     memthol::err::unwrap_or! {
-        charts::data::start(dump_dir), exit
+        charts::data::start(target), exit
     }
 
     println!("starting socket listeners...");

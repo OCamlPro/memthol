@@ -1,7 +1,5 @@
 //! Allocation data parsers.
 
-pub mod memthol;
-
 prelude! {}
 
 use mem::Factory;
