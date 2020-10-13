@@ -37,6 +37,10 @@ impl<'a> FullFactory<'a> {
     pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: alloc_data::Uid) -> Res<()> {
         self.data.add_dead(timestamp, uid)
     }
+
+    pub fn fill_stats(&mut self) -> Res<()> {
+        self.data.fill_stats()
+    }
 }
 
 /// Starts global data handling.
@@ -284,6 +288,22 @@ impl Data {
     /// Mutable reference to `self.tod_map[tod]`.
     fn tod_map_get_mut(&mut self, time: time::SinceStart) -> &mut AllocUidSet {
         self.tod_map.entry(time).or_insert_with(AllocUidSet::new)
+    }
+
+    pub fn stats_do(&mut self, action: impl FnOnce(&mut AllocStats)) {
+        if let Some(stats) = self.stats.as_mut() {
+            action(stats)
+        }
+    }
+
+    pub fn fill_stats(&mut self) -> Res<()> {
+        let stats = self
+            .stats
+            .as_mut()
+            .ok_or_else(|| "[charts data] trying to fill stats of uninitialized data")?;
+        stats.alloc_count = self.uid_map.len();
+        stats.duration = self.current_time;
+        Ok(())
     }
 
     /// Resets the data.

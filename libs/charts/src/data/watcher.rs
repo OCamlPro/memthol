@@ -100,6 +100,8 @@ impl Watcher {
         )
         .chain_err(|| format!("while parsing ctf file `{}`", target.display()))?;
 
+        factory.fill_stats()?;
+
         super::progress::set_done()?;
 
         Ok(())

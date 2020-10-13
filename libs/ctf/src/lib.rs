@@ -80,8 +80,8 @@ mod diff_parse {
         Ok(factory.register_trace(res))
     }
 
-    fn date_from_millis(date: crate::prelude::Clock) -> Date {
-        Date::from_millis(convert(date, "date_from_millis"))
+    fn date_from_microsecs(date: crate::prelude::Clock) -> Date {
+        Date::from_microsecs(convert(date, "date_from_microsecs"))
     }
 
     // pub fn parse(bytes: &[u8], mut bytes_progress: impl FnMut(usize)) -> Res<(Init, Vec<Diff>)> {
@@ -100,8 +100,8 @@ mod diff_parse {
 
     //             // Start time of the run, used for init and to compute the time-since-start of all
     //             // events.
-    //             let start_time = date_from_millis(header.header.timestamp.begin);
-    //             let end_time = date_from_millis(header.header.timestamp.end).sub(start_time)?;
+    //             let start_time = date_from_microsecs(header.header.timestamp.begin);
+    //             let end_time = date_from_microsecs(header.header.timestamp.end).sub(start_time)?;
 
     //             // Init info.
     //             let init = {
@@ -124,7 +124,7 @@ mod diff_parse {
     //                 let diff_idx = diffs.len();
     //                 // Empty diff we will fill as we parse the packet.
     //                 let diff = Diff {
-    //                     time: date_from_millis(packet_parser.header().timestamp.begin)
+    //                     time: date_from_microsecs(packet_parser.header().timestamp.begin)
     //                         .sub(start_time)?,
     //                     new: Vec::with_capacity(new_len),
     //                     dead: Vec::with_capacity(0),
@@ -153,7 +153,7 @@ mod diff_parse {
 
     //                             // Build the allocation.
     //                             let alloc = {
-    //                                 let time_since_start = date_from_millis(clock).sub(start_time)?;
+    //                                 let time_since_start = date_from_microsecs(clock).sub(start_time)?;
     //                                 let trace = build_trace(
     //                                     &mut factory,
     //                                     &loc_id_to_loc,
@@ -177,7 +177,7 @@ mod diff_parse {
 
     //                         Event::Collection(alloc_uid) => {
     //                             let uid = Uid::from(alloc_uid);
-    //                             let time_since_start = date_from_millis(clock).sub(start_time)?;
+    //                             let time_since_start = date_from_microsecs(clock).sub(start_time)?;
 
     //                             if let Some((diff_idx, alloc_idx)) = alloc_uid_to_diff_idx.get(&uid) {
     //                                 diffs[*diff_idx].new[*alloc_idx].set_tod(time_since_start)?
@@ -244,8 +244,8 @@ mod diff_parse {
 
                 // Start time of the run, used for init and to compute the time-since-start of all
                 // events.
-                let start_time = date_from_millis(header.header.timestamp.begin);
-                // let end_time = date_from_millis(header.header.timestamp.end).sub(start_time)?;
+                let start_time = date_from_microsecs(header.header.timestamp.begin);
+                // let end_time = date_from_microsecs(header.header.timestamp.end).sub(start_time)?;
 
                 // Init info.
                 let init = {
@@ -275,7 +275,7 @@ mod diff_parse {
 
                                 // Build the allocation.
                                 let alloc = {
-                                    let time_since_start = date_from_millis(clock).sub(start_time)?;
+                                    let time_since_start = date_from_microsecs(clock).sub(start_time)?;
                                     let trace = build_trace(
                                         factory,
                                         &loc_id_to_loc,
@@ -299,7 +299,7 @@ mod diff_parse {
 
                             Event::Collection(alloc_uid) => {
                                 let uid = Uid::from(alloc_uid);
-                                let timestamp = date_from_millis(clock).sub(start_time)?;
+                                let timestamp = date_from_microsecs(clock).sub(start_time)?;
 
                                 dead_action(&mut factory, timestamp, uid)
                             },

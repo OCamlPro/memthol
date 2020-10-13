@@ -228,10 +228,13 @@ impl Date {
         Date { date }
     }
 
-    /// Constructor from a stdlib duration.
-    pub fn from_millis(millis: i64) -> Self {
+    /// Constructor from an ocaml duration.
+    pub fn from_microsecs(micros: i64) -> Self {
         use time::chrono::offset::{Local, TimeZone};
-        let date = Local.timestamp_millis(millis);
+        let secs = micros / 1_000_000;
+        let subsec_micros: u32 =
+            convert((micros - secs * 1_000_000).abs(), "from_microsecs: nanos");
+        let date = Local.timestamp(secs, subsec_micros * 1_000);
         Date { date }
     }
 
