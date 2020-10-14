@@ -18,7 +18,7 @@ client_crate_path = "libs/client"
 condition = { env_not_set = ["target_path"] }
 script = [
 '''
-#!@shell
+#!@bash
 echo "[internal] fatal, env-var 'target_path' not set"
 exit 1
 '''
@@ -26,12 +26,13 @@ exit 1
 
 [tasks.need_wasm_pack]
 condition_script = [
-'''#!@shell
+'''#!@bash
+echo "testing wasm-pack"
 ! wasm-pack --version &> /dev/null
 '''
 ]
 script = [
-'''#!@shell
+'''#!@bash
 echo "fatal, 'wasm-pack' is not installed, please refer to the readme"
 exit 1
 '''
@@ -98,7 +99,7 @@ dependencies = [
 ]
 script = [
 '''
-#!@shell
+#!@bash
 cp target/release/memthol ./memthol_ui
 '''
 ]
