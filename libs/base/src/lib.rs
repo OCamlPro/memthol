@@ -125,7 +125,7 @@ pub mod client {
 
     /// Directory in which the WASM client is being built (not release version).
     #[macro_export]
-    #[cfg(not(release))]
+    #[cfg(debug_assertions)]
     macro_rules! client_wasm_build_dir {
         () => {
             $crate::client_wasm_build_dir_for!(debug)
@@ -134,7 +134,7 @@ pub mod client {
 
     /// Directory in which the WASM client is being built (release version).
     #[macro_export]
-    #[cfg(release)]
+    #[cfg(not(debug_assertions))]
     macro_rules! client_wasm_build_dir {
         () => {
             $crate::client_wasm_build_dir_for!(release)

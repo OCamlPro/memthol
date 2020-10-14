@@ -53,13 +53,13 @@ impl<'data, T> MtfMap<'data, T> {
         }
     }
 
-    #[cfg(not(any(test, not(release))))]
+    #[cfg(not(debug_assertions))]
     #[inline]
     fn check(&self, _: &'static str) -> Res<()> {
         Ok(())
     }
 
-    #[cfg(any(test, not(release)))]
+    #[cfg(debug_assertions)]
     fn check(&self, from: &'static str) -> Res<()> {
         let mut none_count = 0;
         for (idx, entry) in self.vec.iter().enumerate() {
