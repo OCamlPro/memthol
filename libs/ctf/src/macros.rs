@@ -62,26 +62,26 @@ macro_rules! parse_error {
     };
 }
 
-#[cfg(not(any(test, not(release))))]
+#[cfg(not(debug_assertions))]
 macro_rules! pinfo {
     ($($stuff:tt)*) => {
         ()
     };
 }
-#[cfg(any(test, not(release)))]
+#[cfg(debug_assertions)]
 macro_rules! pinfo {
     ($parser:expr, $($blah:tt)*) => {if $crate::VERB {
         let (pos, max) = $parser.real_position();
         println!("[{}/{}] {}", pos, max, format_args!($($blah)*))
     }};
 }
-#[cfg(not(any(test, not(release))))]
+#[cfg(not(debug_assertions))]
 macro_rules! pdebug {
     ($($stuff:tt)*) => {
         ()
     };
 }
-#[cfg(any(test, not(release)))]
+#[cfg(debug_assertions)]
 macro_rules! pdebug {
     ($parser:expr, $($blah:tt)*) => {if $crate::DEBUG_VERB {
         let (pos, max) = $parser.real_position();

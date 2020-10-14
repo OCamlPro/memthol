@@ -16,10 +16,10 @@ pub mod parse;
 prelude! {}
 
 /// Activates verbose parsing, only active in debug and test.
-#[cfg(any(test, not(release)))]
+#[cfg(debug_assertions)]
 const VERB: bool = false;
 /// Activates debug parsing, only active in debug and test.
-#[cfg(any(test, not(release)))]
+#[cfg(debug_assertions)]
 const DEBUG_VERB: bool = false;
 
 use ast::{event::Event, *};

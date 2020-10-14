@@ -13,18 +13,16 @@ macro_rules! time {
 }
 
 #[macro_export]
-#[cfg(not(release))]
+#[cfg(debug_assertions)]
 macro_rules! debug_do {
     ($($stuff:tt)*) => {{
         $($stuff)*
     }};
 }
 #[macro_export]
-#[cfg(release)]
+#[cfg(not(debug_assertions))]
 macro_rules! debug_do {
-    ($($stuff:tt)*) => {{
-        $($stuff)*
-    }};
+    ($($stuff:tt)*) => {};
 }
 
 #[macro_export]

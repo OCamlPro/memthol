@@ -9,7 +9,7 @@ pub use std::{
 
 pub use error_chain::bail;
 
-pub use websocket::message::CloseData;
+// pub use websocket::message::CloseData;
 
 pub use alloc_data::{Alloc, Diff, Init as AllocInit, SinceStart, Uid as AllocUid};
 pub use charts::{Charts, Json};
@@ -23,21 +23,13 @@ pub use crate::{
 /// A set of allocation UIDs.
 pub type AllocUidSet = Set<AllocUid>;
 
-/// A websocket server.
-pub type Server = websocket::sync::Server<websocket::server::NoTlsAcceptor>;
+pub mod net {
+    pub use std::net::{SocketAddr as IpAddr, TcpListener, TcpStream};
 
-/// A request.
-pub type Request = websocket::server::upgrade::WsUpgrade<
-    std::net::TcpStream,
-    Option<websocket::server::upgrade::sync::Buffer>,
->;
+    pub use tungstenite::{protocol::CloseFrame, Message as Msg};
 
-/// An IP address.
-pub type IpAddr = std::net::SocketAddr;
-/// A receiver for a request.
-pub type Receiver = websocket::receiver::Reader<std::net::TcpStream>;
-/// A sender for a request.
-pub type Sender = websocket::sender::Writer<std::net::TcpStream>;
+    pub type WebSocket = tungstenite::WebSocket<TcpStream>;
+}
 
 /// Type of the result of receiving messages from the client.
 pub struct FromClient {
@@ -45,10 +37,8 @@ pub struct FromClient {
     messages: Vec<msg::from_client::Msg>,
     /// True if the client requested to close the connection.
     closed: bool,
-    /// Optional close data. It can happen that `self.closed` is true while
-    /// `self.close_data.is_none()`. The only invariant here is that `self.close_data.is_some()`
-    /// implies `self.closed`.
-    close_data: Option<CloseData>,
+    ///
+    close_data: Option<net::CloseFrame<'static>>,
 }
 impl FromClient {
     /// Constructor: no messages, not closed and no close data.
@@ -69,7 +59,7 @@ impl FromClient {
     pub fn push(&mut self, msg: msg::from_client::Msg) -> Res<()> {
         // The second part of this disjunction should be redundant. It's there to be safe, in case
         // this struct's workflow changes.
-        if self.closed || self.close_data.is_some() {
+        if self.closed {
             bail!("receiving messages from a closed connection")
         }
         self.messages.push(msg);
@@ -105,20 +95,20 @@ impl FromClient {
     ///
     /// - `self.close()` was **not** called before, or
     /// - `self.set_close_data(data)` was called before and `data.is_some()`.
-    pub fn set_close_data(&mut self, data: Option<CloseData>) -> Res<()> {
+    pub fn set_close_data(&mut self, data: Option<net::CloseFrame<'static>>) -> Res<()> {
         if !self.closed {
             bail!("trying to set close data of an open connection")
         }
         // Set close_data.
         let prev = std::mem::replace(&mut self.close_data, data);
-        if let Some(_) = prev {
+        if prev.is_some() {
             bail!("trying to set the close data of a connection twice")
         }
         Ok(())
     }
 
     /// Close data accessor.
-    pub fn close_data(&self) -> Option<&CloseData> {
+    pub fn close_data(&self) -> Option<&net::CloseFrame<'static>> {
         self.close_data.as_ref()
     }
 }

@@ -27,7 +27,8 @@
 //! [`charts` crate]: ../charts/index.html (Memthol's charts crate)
 
 #[macro_use]
-pub mod base;
+pub mod prelude;
+
 #[macro_use]
 pub mod conf;
 #[macro_use]

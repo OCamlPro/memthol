@@ -14,7 +14,7 @@ charts = { path = "../libs/charts", features = ["server"] }
 gotham = "*"
 error-chain = "*"
 lazy_static = "*"
-websocket = "*"
+tungstenite = "*"
 clap = "*"
 
 [build-dependencies]
