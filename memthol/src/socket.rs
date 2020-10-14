@@ -1,18 +1,18 @@
 //! Websockets used by the server to communicate with the clients.
 
-use crate::base::*;
+use crate::prelude::*;
 
 /// Creates a websocket server at some address.
-fn new_server(addr: &str, port: usize) -> Res<Server> {
-    let server = Server::bind(&format!("{}:{}", addr, port))
+fn new_server(addr: &str, port: usize) -> Res<net::TcpListener> {
+    let server = net::TcpListener::bind(&format!("{}:{}", addr, port))
         .chain_err(|| format!("while binding websocket server at `{}:{}`", addr, port))?;
     Ok(server)
 }
 
-fn handle_requests(log: bool, server: Server) {
-    for request in server.filter_map(Result::ok) {
+fn handle_requests(log: bool, server: net::TcpListener) {
+    for stream in server.incoming().filter_map(Result::ok) {
         let mut handler = err::unwrap_or! {
-            Handler::new(log, request).chain_err(|| "while creating request handler"),
+            Handler::new(log, stream).chain_err(|| "while creating request handler"),
             {
                 log!("failed to start request handler");
                 return ()
@@ -30,22 +30,20 @@ pub fn spawn_server(addr: &str, port: usize, log: bool) -> Res<()> {
 }
 
 pub struct Com {
-    ip: IpAddr,
-    sender: Sender,
-    receiver: Receiver,
+    ip: net::IpAddr,
+    socket: net::WebSocket,
     log: Option<std::fs::File>,
     /// Ping message use for acknowledgments.
-    ping_msg: websocket::message::OwnedMessage,
+    ping_msg: tungstenite::Message,
 }
 impl Com {
-    pub fn new(
-        log: bool,
-        ping_label: Vec<u8>,
-        ip: IpAddr,
-        sender: Sender,
-        receiver: Receiver,
-    ) -> Res<Self> {
-        let ping_msg = websocket::message::OwnedMessage::Ping(ping_label);
+    pub fn new(log: bool, ping_label: Vec<u8>, socket: net::WebSocket) -> Res<Self> {
+        let ping_msg = tungstenite::Message::Ping(ping_label);
+
+        let ip = socket
+            .get_ref()
+            .peer_addr()
+            .map_err(|e| format!("failed to retrieve client IP: {}", e))?;
 
         let log = if log {
             use std::fs::OpenOptions;
@@ -64,18 +62,19 @@ impl Com {
         Ok(Self {
             log,
             ip,
-            sender,
-            receiver,
+            socket,
+            // sender,
+            // receiver,
             ping_msg,
         })
     }
 
-    pub fn ip(&self) -> &IpAddr {
+    pub fn ip(&self) -> &net::IpAddr {
         &self.ip
     }
 
     pub fn send(&mut self, msg: impl Into<msg::to_client::Msg>) -> Res<()> {
-        use websocket::message::OwnedMessage;
+        use tungstenite::Message;
 
         let content = msg
             .into()
@@ -96,9 +95,9 @@ impl Com {
             writeln!(log, "}}\n").chain_err(|| "while writing to log file")?;
         }
 
-        let msg = OwnedMessage::Binary(content.into_bytes());
-        self.sender
-            .send_message(&msg)
+        let msg = Message::Binary(content.into_bytes());
+        self.socket
+            .write_message(msg)
             .chain_err(|| format!("while sending message to client {}", self.ip))?;
         Ok(())
     }
@@ -114,8 +113,8 @@ impl Com {
             .chain_err(|| "while writing to log file")?;
         }
 
-        self.sender
-            .send_message(&self.ping_msg)
+        self.socket
+            .write_message(self.ping_msg.clone())
             .chain_err(|| format!("while sending message to client {}", self.ip))?;
         Ok(())
     }
@@ -151,18 +150,18 @@ impl Com {
         Ok(())
     }
 
-    pub fn receiver(&self) -> &Receiver {
-        &self.receiver
-    }
-    pub fn receiver_mut(&mut self) -> &mut Receiver {
-        &mut self.receiver
-    }
-    fn log_receive_msg(log: &mut std::fs::File, msg: &Res<websocket::OwnedMessage>) -> Res<()> {
+    // pub fn receiver(&self) -> &Receiver {
+    //     &self.receiver
+    // }
+    // pub fn receiver_mut(&mut self) -> &mut Receiver {
+    //     &mut self.receiver
+    // }
+    fn log_receive_msg(log: &mut std::fs::File, msg: &tungstenite::Message) -> Res<()> {
+        use net::Msg::*;
         use std::io::Write;
-        use websocket::OwnedMessage::*;
 
         match msg {
-            Ok(Text(txt)) => {
+            Text(txt) => {
                 writeln!(
                     log,
                     "[{}] received text message from client {{",
@@ -173,7 +172,7 @@ impl Com {
                 }
                 writeln!(log, "}}\n")?
             }
-            Ok(Binary(data)) => {
+            Binary(data) => {
                 let msg = msg::from_client::Msg::from_json_bytes(&data)
                     .chain_err(|| "while parsing message from client")?;
                 writeln!(
@@ -186,54 +185,38 @@ impl Com {
                 }
                 writeln!(log, "}}\n")?
             }
-            Ok(Ping(_)) => writeln!(
+            Ping(_) => writeln!(
                 log,
                 "[{}] received ping message from client\n",
                 alloc_data::time::now()
             )?,
-            Ok(Pong(_)) => writeln!(
+            Pong(_) => writeln!(
                 log,
                 "[{}] received pong message from client\n",
                 alloc_data::time::now()
             )?,
-            Ok(Close(_)) => writeln!(
+            Close(_) => writeln!(
                 log,
                 "[{}] received close message from client\n",
                 alloc_data::time::now()
             )?,
-            Err(e) => {
-                writeln!(
-                    log,
-                    "[{}] received error from client {{    {}    }}\n",
-                    alloc_data::time::now(),
-                    e
-                )?;
-            }
         }
         Ok(())
     }
 
-    pub fn incoming_messages<'a>(
-        &'a mut self,
-    ) -> impl Iterator<Item = Res<websocket::OwnedMessage>> + 'a {
+    pub fn incoming_messages<'a>(&'a mut self) -> Res<net::Msg> {
         let log = &mut self.log;
-        self.receiver.incoming_messages().map(move |res| {
-            let res = res.map_err(|e| e.to_string().into());
-
-            let log_res = if let Some(log) = log {
-                Self::log_receive_msg(log, &res)
-            } else {
-                Ok(())
-            };
-
-            if res.is_ok() {
-                if let Err(e) = log_res {
-                    return Err(e);
+        let ip = &self.ip;
+        self.socket
+            .read_message()
+            .map_err(|e| err::Err::from(format!("failed to receive message from {}: {}", ip, e)))
+            .and_then(move |res| {
+                if let Some(log) = log {
+                    Self::log_receive_msg(log, &res)?
                 }
-            }
 
-            res
-        })
+                Ok(res)
+            })
     }
 }
 
@@ -254,21 +237,15 @@ pub struct Handler {
 
 impl Handler {
     /// Constructor from a request and a dump directory.
-    pub fn new(log: bool, request: Request) -> Res<Self> {
-        let client = request
-            .accept()
-            .map_err(|(_, e)| e)
-            .chain_err(|| "while accepting websocket connection")?;
-        let ip = client
-            .peer_addr()
-            .chain_err(|| "while retrieving client's IP address")?;
+    pub fn new(log: bool, stream: std::net::TcpStream) -> Res<Self> {
+        let socket = tungstenite::server::accept(stream).map_err(|e| e.to_string())?;
 
-        let (receiver, sender) = client
-            .split()
-            .chain_err(|| "while splitting the client into receive/send pair")?;
+        // let (receiver, sender) = client
+        //     .split()
+        //     .chain_err(|| "while splitting the client into receive/send pair")?;
 
         let ping_label = vec![6u8, 6u8, 6u8];
-        let mut com = Com::new(log, ping_label.clone(), ip, sender, receiver)
+        let mut com = Com::new(log, ping_label.clone(), socket)
             .chain_err(|| "during communicator construction")?;
 
         com.send_errors()?;
@@ -315,7 +292,7 @@ impl Handler {
         Ok(slf)
     }
 
-    pub fn ip(&self) -> &IpAddr {
+    pub fn ip(&self) -> &net::IpAddr {
         self.com.ip()
     }
 
@@ -350,19 +327,14 @@ impl Handler {
                 let close_data = self
                     .from_client
                     .close_data()
-                    .map(
-                        |CloseData {
-                             status_code,
-                             reason,
-                         }| {
-                            let mut blah = format!("status code `{}`", status_code);
-                            if !reason.is_empty() {
-                                blah.push_str(": ");
-                                blah.push_str(&reason)
-                            }
-                            blah
-                        },
-                    )
+                    .map(|net::CloseFrame { code, reason }| {
+                        let mut blah = format!("status code `{}`", code);
+                        if !reason.is_empty() {
+                            blah.push_str(": ");
+                            blah.push_str(&reason)
+                        }
+                        blah
+                    })
                     .unwrap_or_else(|| "no information".into());
                 log!(self.ip() => "client closed the connection with {}", close_data);
                 break;
@@ -470,28 +442,23 @@ impl Handler {
     ///
     /// Returns `None` if the client requested to close
     fn receive_messages(&mut self) -> Res<()> {
-        // Used in the `match` below.
-        use websocket::message::OwnedMessage::*;
-
         for message in self.com.incoming_messages() {
-            let message = message.chain_err(|| "while retrieving message")?;
-
             // Let's do this.
             match message {
                 // Normal message(s) from the client.
-                Text(text) => {
+                net::Msg::Text(text) => {
                     let msg = msg::from_client::Msg::from_json(&text)
                         .chain_err(|| "while parsing message from client")?;
                     self.from_client.push(msg)?
                 }
-                Binary(data) => {
+                net::Msg::Binary(data) => {
                     let msg = msg::from_client::Msg::from_json_bytes(&data)
                         .chain_err(|| "while parsing message from client")?;
                     self.from_client.push(msg)?
                 }
 
                 // The client is telling us to stop listening for messages and render.
-                Pong(label) => {
+                net::Msg::Pong(label) => {
                     if self.ping_label == label {
                         break;
                     } else {
@@ -504,14 +471,14 @@ impl Handler {
                 }
 
                 // Client is closing the connection.
-                Close(close_data) => {
+                net::Msg::Close(close_data) => {
                     self.from_client.close()?;
                     self.from_client.set_close_data(close_data)?;
                     break;
                 }
 
                 // Unexpected mesage(s).
-                Ping(label) => bail!(
+                net::Msg::Ping(label) => bail!(
                     "unexpected `Ping({})` message",
                     String::from_utf8_lossy(&label)
                 ),
