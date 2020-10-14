@@ -13,3 +13,10 @@ edition = "2018"
 [dependencies]
 base = { path = "../base", features = ["server"] }
 alloc_data = { path = "../alloc_data", features = ["server"] }
+
+[features]
+default = []
+profiling = [
+    "alloc_data/profiling",
+    "base/profiling",
+]

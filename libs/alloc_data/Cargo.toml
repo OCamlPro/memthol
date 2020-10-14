@@ -19,3 +19,6 @@ toml = "*"
 server = [ "base/server" ]
 client = [ "base/client" ]
 default = []
+profiling = [
+    "base/profiling",
+]

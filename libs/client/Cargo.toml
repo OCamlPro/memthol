@@ -10,7 +10,6 @@ crate-type = ["cdylib", "rlib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-alloc_data = { path = "../alloc_data", features = ["client"] }
 base = { path = "../base", features = ["client"] }
 charts = { path = "../charts", features = ["client"] }
 
@@ -34,3 +33,9 @@ web-sys = { version = "*", features = [
 wee_alloc = "*"
 yew = "*"
 yew-components = "*"
+
+[features]
+default = []
+profiling = [
+    "base/profiling",
+]

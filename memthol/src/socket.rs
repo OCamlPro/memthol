@@ -83,12 +83,8 @@ impl Com {
 
         if let Some(log) = self.log.as_mut() {
             use std::io::Write;
-            writeln!(
-                log,
-                "[{}] sending message to client {{",
-                alloc_data::time::now()
-            )
-            .chain_err(|| "while writing to log file")?;
+            writeln!(log, "[{}] sending message to client {{", time::now())
+                .chain_err(|| "while writing to log file")?;
             for line in content.to_string().lines() {
                 writeln!(log, "    {}", line).chain_err(|| "while writing to log file")?;
             }
@@ -105,12 +101,8 @@ impl Com {
     pub fn send_ping(&mut self) -> Res<()> {
         if let Some(log) = self.log.as_mut() {
             use std::io::Write;
-            writeln!(
-                log,
-                "[{}] sending ping message to client\n",
-                alloc_data::time::now(),
-            )
-            .chain_err(|| "while writing to log file")?;
+            writeln!(log, "[{}] sending ping message to client\n", time::now(),)
+                .chain_err(|| "while writing to log file")?;
         }
 
         self.socket
@@ -124,12 +116,8 @@ impl Com {
         if let Some(stats) = AllocStats::get()? {
             if let Some(log) = self.log.as_mut() {
                 use std::io::Write;
-                writeln!(
-                    log,
-                    "[{}] sending stats message to client\n",
-                    alloc_data::time::now(),
-                )
-                .chain_err(|| "while writing to log file")?;
+                writeln!(log, "[{}] sending stats message to client\n", time::now(),)
+                    .chain_err(|| "while writing to log file")?;
             }
 
             self.send(msg::to_client::Msg::alloc_stats(stats))?;
@@ -165,7 +153,7 @@ impl Com {
                 writeln!(
                     log,
                     "[{}] received text message from client {{",
-                    alloc_data::time::now(),
+                    time::now(),
                 )?;
                 for line in txt.lines() {
                     writeln!(log, "    {}", line)?
@@ -178,27 +166,19 @@ impl Com {
                 writeln!(
                     log,
                     "[{}] received binary message from client {{",
-                    alloc_data::time::now(),
+                    time::now(),
                 )?;
                 for line in msg.as_json() {
                     writeln!(log, "    {}", line)?
                 }
                 writeln!(log, "}}\n")?
             }
-            Ping(_) => writeln!(
-                log,
-                "[{}] received ping message from client\n",
-                alloc_data::time::now()
-            )?,
-            Pong(_) => writeln!(
-                log,
-                "[{}] received pong message from client\n",
-                alloc_data::time::now()
-            )?,
+            Ping(_) => writeln!(log, "[{}] received ping message from client\n", time::now())?,
+            Pong(_) => writeln!(log, "[{}] received pong message from client\n", time::now())?,
             Close(_) => writeln!(
                 log,
                 "[{}] received close message from client\n",
-                alloc_data::time::now()
+                time::now()
             )?,
         }
         Ok(())

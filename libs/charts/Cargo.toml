@@ -29,3 +29,8 @@ yew = "*"
 server = [ "ctf", "alloc_data/server", "base/server" ]
 client = [ "alloc_data/client", "base/client" ]
 default = []
+profiling = [
+    "alloc_data/profiling",
+    "base/profiling",
+    "ctf/profiling",
+]

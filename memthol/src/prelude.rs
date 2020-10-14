@@ -9,10 +9,10 @@ pub use std::{
 
 pub use error_chain::bail;
 
-// pub use websocket::message::CloseData;
-
-pub use alloc_data::{Alloc, Diff, Init as AllocInit, SinceStart, Uid as AllocUid};
-pub use charts::{Charts, Json};
+pub use charts::{
+    alloc_data::{time, Alloc, Diff, Init as AllocInit, SinceStart, Uid as AllocUid},
+    Charts, Json,
+};
 
 pub use crate::{
     err,

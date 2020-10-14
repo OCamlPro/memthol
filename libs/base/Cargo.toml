@@ -20,3 +20,4 @@ smallvec = "*"
 client = [ "chrono/wasmbind" ]
 server = []
 default = []
+profiling = []

@@ -7,7 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-alloc_data = { path = "../libs/alloc_data" }
 base = { path = "../libs/base" }
 charts = { path = "../libs/charts", features = ["server"] }
 
@@ -22,3 +21,10 @@ base = { path = "../libs/base" }
 fs_extra = "*"
 lazy_static = "*"
 walkdir = "*"
+
+[features]
+default = []
+profiling = [
+    "base/profiling",
+    "charts/profiling",
+]
