@@ -26,7 +26,6 @@ exit 1
 [tasks.need_wasm_pack]
 condition_script = [
 '''#!@shell
-echo "testing wasm-pack"
 ! wasm-pack --version >/dev/null 2>/dev/null
 '''
 ]

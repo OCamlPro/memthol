@@ -66,7 +66,7 @@ impl Cxt {
         parser: &mut impl CanParse<'data>,
         nencoded: usize,
         common_pref_len: usize,
-    ) -> Res<(SVec32<usize>, usize)> {
+    ) -> Res<Vec<usize>> {
         assert!(common_pref_len <= self.last_backtrace.len());
 
         let Self {
@@ -84,7 +84,7 @@ impl Cxt {
 
         let res = 'decode: loop {
             if decode_current == 0 {
-                break 'decode (buf.iter().cloned().collect(), pos);
+                break 'decode buf[0..pos].iter().cloned().collect();
             }
 
             let codeword = parser.u16()?;

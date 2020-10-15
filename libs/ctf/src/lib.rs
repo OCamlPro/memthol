@@ -41,41 +41,120 @@ mod diff_parse {
     type Encoded = u64;
     type LocMap = std::collections::HashMap<Encoded, Vec<Loc>>;
 
-    #[inline]
-    fn build_trace<I>(factory: &mut mem::Factory, loc_map: &LocMap, trace: I) -> Res<Trace>
-    where
-        I: Iterator<Item = usize> + ExactSizeIterator,
-    {
-        let mut res: SVec32<CLoc> = SVec32::with_capacity(trace.len());
-
-        for code in trace {
-            let sub_trace = match loc_map.get(&(code as u64)) {
-                Some(sub_trace) => {
-                    if sub_trace.is_empty() {
-                        continue;
-                    } else {
-                        sub_trace
-                    }
-                }
-                None => bail!("[ctf parser] unknown location code `{}`", code),
-            };
-
-            for loc in sub_trace {
-                if let Some(cloc) = res.last_mut() {
-                    if loc == &cloc.loc {
-                        cloc.cnt += 1
-                    } else {
-                        res.push(CLoc::new(loc.clone(), 1));
-                    }
-                } else {
-                    res.push(CLoc::new(loc.clone(), 1))
-                };
+    pub struct TraceBuilder {
+        last_trace: Vec<CLoc>,
+        last_trace_cached: Option<Trace>,
+        cursor: usize,
+        cursor_count_minus: usize,
+    }
+    impl TraceBuilder {
+        fn new() -> Self {
+            Self {
+                last_trace: Vec::with_capacity(32),
+                last_trace_cached: None,
+                cursor: 0,
+                cursor_count_minus: 0,
             }
         }
+        #[inline]
+        fn reset(&mut self) {
+            self.cursor = 0;
+            self.cursor_count_minus = 0;
+        }
 
-        res.shrink_to_fit();
+        #[inline]
+        fn build_trace(
+            &mut self,
+            factory: &mut mem::Factory,
+            loc_map: &LocMap,
+            common_pref_len: usize,
+            trace: Vec<usize>,
+        ) -> Res<Trace> {
+            debug_assert_eq!(self.cursor, 0);
+            debug_assert_eq!(self.cursor_count_minus, 0);
 
-        Ok(factory.register_trace(res))
+            let trace = if common_pref_len != trace.len() {
+                'drain_trace: for (idx, code) in trace.into_iter().enumerate() {
+                    let sub_trace = loc_map
+                        .get(&(code as u64))
+                        .ok_or_else(|| format!("[ctf parser] unknown location code `{}`", code))?;
+
+                    match idx.cmp(&common_pref_len) {
+                        std::cmp::Ordering::Less => {
+                            let mut to_skip = sub_trace.len();
+                            'update_cursor: loop {
+                                let cursor_cnt = self.last_trace[self.cursor].cnt;
+                                let left_at_cursor = cursor_cnt - self.cursor_count_minus;
+                                match left_at_cursor.cmp(&to_skip) {
+                                    std::cmp::Ordering::Less => {
+                                        to_skip -= left_at_cursor;
+                                        self.cursor += 1;
+                                        self.cursor_count_minus = 0;
+                                        continue 'update_cursor;
+                                    }
+                                    std::cmp::Ordering::Equal => {
+                                        self.cursor += 1;
+                                        self.cursor_count_minus = 0;
+                                        continue 'drain_trace;
+                                    }
+                                    std::cmp::Ordering::Greater => {
+                                        self.cursor_count_minus += to_skip;
+                                        continue 'drain_trace;
+                                    }
+                                }
+                            }
+                        }
+                        std::cmp::Ordering::Equal => {
+                            if self.cursor_count_minus == 0 {
+                                self.last_trace.truncate(self.cursor)
+                            } else {
+                                self.last_trace.truncate(self.cursor + 1);
+                                let last = self.last_trace.last_mut().ok_or_else(|| {
+                                    format!("[build_trace] illegal internal state")
+                                })?;
+                                debug_assert!(last.cnt >= self.cursor_count_minus);
+                                last.cnt = self.cursor_count_minus
+                            }
+                        }
+                        std::cmp::Ordering::Greater => (),
+                    }
+
+                    for loc in sub_trace {
+                        if let Some(cloc) = self.last_trace.last_mut() {
+                            if loc == &cloc.loc {
+                                cloc.cnt += 1
+                            } else {
+                                self.last_trace.push(CLoc::new(loc.clone(), 1));
+                            }
+                        } else {
+                            self.last_trace.push(CLoc::new(loc.clone(), 1))
+                        };
+                    }
+                }
+
+                self.reset();
+
+                let mut trace = self.last_trace.clone();
+                trace.shrink_to_fit();
+                let trace = factory.register_trace(trace);
+                self.last_trace_cached = Some(trace.clone());
+                trace
+            } else {
+                if let Some(trace) = self.last_trace_cached.clone() {
+                    trace
+                } else if common_pref_len == 0 {
+                    let mut trace = self.last_trace.clone();
+                    trace.shrink_to_fit();
+                    let trace = factory.register_trace(trace);
+                    self.last_trace_cached = Some(trace.clone());
+                    trace
+                } else {
+                    bail!("[build_trace] illegal internal state: no previous trace exists")
+                }
+            };
+
+            Ok(trace)
+        }
     }
 
     fn date_from_microsecs(date: crate::prelude::Clock) -> Date {
@@ -103,10 +182,13 @@ mod diff_parse {
                 pub locations => "registering locations",
                 pub dead => "handling collections",
                 pub alloc => "handling allocations",
+                pub alloc_action => "allocation action",
             }
         }
         let mut prof = Prof::new();
         prof.total.start();
+
+        let mut trace_builder = TraceBuilder::new();
 
         // Maps location encoded identifiers to actual locations.
         let mut loc_id_to_loc = LocMap::with_capacity(1001);
@@ -149,13 +231,15 @@ mod diff_parse {
                         use crate::ast::event::Event;
 
                         match event {
-                            Event::Alloc(crate::ast::event::Alloc { id: uid, backtrace, backtrace_len, len, .. }) => {
-
+                            Event::Alloc(crate::ast::event::Alloc {
+                                id: uid, backtrace, len, common_pref_len, ..
+                            }) => {
                                 let trace = {
-                                    prof.trace_building.time(|| build_trace(
+                                    prof.trace_building.time(|| trace_builder.build_trace(
                                         factory,
                                         &loc_id_to_loc,
-                                        backtrace.into_iter().take(backtrace_len),
+                                        common_pref_len,
+                                        backtrace,
                                     ))?
                                 };
 
@@ -165,7 +249,7 @@ mod diff_parse {
                                 let alloc = {
                                     let time_since_start =
                                         date_from_microsecs(clock).sub(start_time)?;
-                                    let labels = factory.register_labels(SVec32::new());
+                                    let labels = factory.empty_labels();
                                     let alloc = Alloc::new(
                                         uid,
                                         AllocKind::Minor,
@@ -178,9 +262,9 @@ mod diff_parse {
                                     alloc
                                 };
 
-                                new_action(factory, alloc);
+                                prof.alloc.stop();
 
-                                prof.alloc.stop()
+                                prof.alloc_action.time(|| new_action(factory, alloc))
                             },
 
                             Event::Collection(alloc_uid) => {

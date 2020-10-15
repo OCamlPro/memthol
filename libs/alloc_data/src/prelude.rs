@@ -14,7 +14,7 @@ pub use crate::{
     Alloc, AllocKind, BigUint, CLoc, Date, Diff, Duration, Init, Loc, Span, Uid,
 };
 
-pub use base::{chrono, convert, error_chain, lazy_static, SVec16, SVec32};
+pub use base::{chrono, convert, error_chain, lazy_static, SVec16};
 
 /// Re-exports of the serde traits for auto-implementations.
 pub mod serderive {

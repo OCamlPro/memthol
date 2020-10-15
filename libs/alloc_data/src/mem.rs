@@ -12,7 +12,9 @@ macro_rules! new {
             pub use std::sync::{Arc, RwLock};
 
             /// Stores a UID, cannot be constructed outside of the module it's declared in.
-            #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+            #[derive(
+                Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+            )]
             pub struct $uid {
                 uid: usize,
             }
@@ -100,15 +102,19 @@ pub struct Factory<'a> {
     ///
     /// If true, callstacks must be reversed when registering them.
     callstack_is_rev: bool,
+    empty_labels: Labels,
 }
 impl<'a> Factory<'a> {
     /// Constructor.
     pub fn new(callstack_is_rev: bool) -> Self {
+        let mut labels = Labels::factory_mut();
+        let empty_labels = labels.get_uid(Vec::new());
         Self {
             str: Str::factory_mut(),
-            labels: Labels::factory_mut(),
+            labels,
             trace: Trace::factory_mut(),
             callstack_is_rev,
+            empty_labels,
         }
     }
 
@@ -117,11 +123,15 @@ impl<'a> Factory<'a> {
         self.str.get_uid(s)
     }
     #[inline]
-    pub fn register_labels(&mut self, labels: SVec32<Str>) -> Labels {
+    pub fn register_labels(&mut self, labels: Vec<Str>) -> Labels {
         self.labels.get_uid(labels)
     }
     #[inline]
-    pub fn register_trace(&mut self, mut trace: SVec32<CLoc>) -> Trace {
+    pub fn empty_labels(&self) -> Labels {
+        self.empty_labels.clone()
+    }
+    #[inline]
+    pub fn register_trace(&mut self, mut trace: Vec<CLoc>) -> Trace {
         if self.callstack_is_rev {
             trace.reverse()
         }

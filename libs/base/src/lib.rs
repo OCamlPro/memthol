@@ -94,8 +94,10 @@ pub fn now() -> std::time::Instant {
 pub type SVec<T> = smallvec::SmallVec<[T; 8]>;
 /// Alias type for `SmallVec` of max stack-size 16.
 pub type SVec16<T> = smallvec::SmallVec<[T; 16]>;
-/// Alias type for `SmallVec` of max stack-size 16.
+/// Alias type for `SmallVec` of max stack-size 32.
 pub type SVec32<T> = smallvec::SmallVec<[T; 32]>;
+/// Alias type for `SmallVec` of max stack-size 64.
+pub type SVec64<T> = smallvec::SmallVec<[T; 64]>;
 
 /// Alias macro for smallvec construction.
 #[macro_export]

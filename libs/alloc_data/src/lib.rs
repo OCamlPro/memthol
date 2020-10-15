@@ -65,7 +65,7 @@ mod test;
 /// # println!("uid: {}", uid);
 /// assert_eq! { format!("{}", uid), s }
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Uid {
     /// The actual bigint.
     uid: BigUint,
@@ -179,7 +179,7 @@ impl CLoc {
 ///     assert_eq! { kind, *exp }
 /// }
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AllocKind {
     Minor,
     Major,
@@ -203,7 +203,7 @@ impl AllocKind {
 }
 
 /// Some allocation information.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Alloc {
     /// Uid of the allocation.
     pub uid: Uid,
@@ -279,7 +279,7 @@ impl Alloc {
     }
 
     /// Trace accessor.
-    pub fn trace(&self) -> std::sync::Arc<SVec32<CLoc>> {
+    pub fn trace(&self) -> std::sync::Arc<Vec<CLoc>> {
         self.trace.get()
     }
     /// Allocation-site of the allocation.
@@ -289,7 +289,7 @@ impl Alloc {
     }
 
     /// Labels accessor.
-    pub fn labels(&self) -> std::sync::Arc<SVec32<Str>> {
+    pub fn labels(&self) -> std::sync::Arc<Vec<Str>> {
         self.labels.get()
     }
     /// Time of creation accessor.
