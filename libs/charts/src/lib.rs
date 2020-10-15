@@ -31,7 +31,6 @@ pub mod point;
 pub mod uid;
 
 pub use chart::Chart;
-pub use prelude::Json;
 
 prelude! {}
 

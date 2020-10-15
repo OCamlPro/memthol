@@ -11,8 +11,8 @@ error_chain::error_chain! {
         Io(std::io::Error)
         /// I/O error.
         ;
-        DeJson(serde_json::error::Error)
-        /// Json (de)serialization error.
+        Serde(bincode::Error)
+        /// (De)serialization error.
         ;
 
     }

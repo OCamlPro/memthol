@@ -9,12 +9,13 @@ fn new_server(addr: &str, port: usize) -> Res<net::TcpListener> {
     Ok(server)
 }
 
+/// Spawns a `Handler` for each incoming connection request.
 fn handle_requests(log: bool, server: net::TcpListener) {
     for stream in server.incoming().filter_map(Result::ok) {
         let mut handler = err::unwrap_or! {
             Handler::new(log, stream).chain_err(|| "while creating request handler"),
             {
-                log!("failed to start request handler");
+                log::error!("failed to start request handler");
                 return ()
             }
         };
@@ -23,20 +24,39 @@ fn handle_requests(log: bool, server: net::TcpListener) {
     }
 }
 
+/// Spawns the server that listens for connection requests.
 pub fn spawn_server(addr: &str, port: usize, log: bool) -> Res<()> {
     let server = new_server(addr, port)?;
     std::thread::spawn(move || handle_requests(log, server));
     Ok(())
 }
 
+base::new_time_stats! {
+    struct Prof {
+        total => "total",
+        bytes => "bytes-ser",
+        log => "logging",
+        send => "sending",
+    }
+}
+
+/// Maintains a socket to a client and some information such as the client's IP.
 pub struct Com {
+    /// IP addresse.
     ip: net::IpAddr,
+    /// Socket used for communicating with the client.
     socket: net::WebSocket,
+    /// Optional log file.
     log: Option<std::fs::File>,
     /// Ping message use for acknowledgments.
     ping_msg: tungstenite::Message,
+    prof: Prof,
 }
 impl Com {
+    /// Constructor.
+    ///
+    /// The `log` flag, if `true`, makes the constructor create a log file in the current directory.
+    /// It will contain a log of all the interactions with this client.
     pub fn new(log: bool, ping_label: Vec<u8>, socket: net::WebSocket) -> Res<Self> {
         let ping_msg = tungstenite::Message::Ping(ping_label);
 
@@ -63,41 +83,60 @@ impl Com {
             log,
             ip,
             socket,
-            // sender,
-            // receiver,
             ping_msg,
+            prof: Prof::new(),
         })
     }
 
+    /// IP address of the client.
     pub fn ip(&self) -> &net::IpAddr {
         &self.ip
     }
 
+    /// Sends a message to the client.
     pub fn send(&mut self, msg: impl Into<msg::to_client::Msg>) -> Res<()> {
         use tungstenite::Message;
 
-        let content = msg
-            .into()
-            .as_json()
-            .chain_err(|| "while encoding message as json")?;
+        self.prof.reset();
+        self.prof.total.start();
 
-        if let Some(log) = self.log.as_mut() {
-            use std::io::Write;
-            writeln!(log, "[{}] sending message to client {{", time::now())
-                .chain_err(|| "while writing to log file")?;
-            for line in content.to_string().lines() {
-                writeln!(log, "    {}", line).chain_err(|| "while writing to log file")?;
-            }
-            writeln!(log, "}}\n").chain_err(|| "while writing to log file")?;
+        let msg = msg.into();
+
+        if Prof::TIME_STATS_ACTIVE {
+            log::info!("sending message to client: {}", msg);
+        } else {
+            log::trace!("sending message to client: {}", msg);
         }
 
-        let msg = Message::Binary(content.into_bytes());
+        self.prof.log.start();
+        if let Some(log) = self.log.as_mut() {
+            use std::io::Write;
+            writeln!(log, "[{}] sending message to client: {}", time::now(), msg)
+                .chain_err(|| "while writing to log file")?;
+        }
+        self.prof.log.stop();
+
+        let bytes = self.prof.bytes.time(|| msg.to_bytes())?;
+        log::trace!("sending binary message ({} bytes)", bytes.len());
+        let msg = Message::Binary(bytes);
+
+        self.prof.send.start();
         self.socket
             .write_message(msg)
             .chain_err(|| format!("while sending message to client {}", self.ip))?;
+        self.prof.send.stop();
+
+        self.prof.total.stop();
+
+        self.prof.all_do(
+            || log::info!("message sent"),
+            |desc, sw| log::info!("| {:>16}: {}", desc, sw),
+        );
+
         Ok(())
     }
 
+    /// Sends a ping message to the client.
     pub fn send_ping(&mut self) -> Res<()> {
         if let Some(log) = self.log.as_mut() {
             use std::io::Write;
@@ -111,6 +150,7 @@ impl Com {
         Ok(())
     }
 
+    /// Sends chart statistics to the client.
     fn send_stats(&mut self, charts: &Charts) -> Res<()> {
         use charts::prelude::AllocStats;
         if let Some(stats) = AllocStats::get()? {
@@ -129,6 +169,7 @@ impl Com {
         Ok(())
     }
 
+    /// Send charts-related errors to the client.
     fn send_errors(&mut self) -> Res<()> {
         if let Some(errs) = charts::prelude::get_errors()? {
             for err in errs {
@@ -138,68 +179,39 @@ impl Com {
         Ok(())
     }
 
-    // pub fn receiver(&self) -> &Receiver {
-    //     &self.receiver
-    // }
-    // pub fn receiver_mut(&mut self) -> &mut Receiver {
-    //     &mut self.receiver
-    // }
-    fn log_receive_msg(log: &mut std::fs::File, msg: &tungstenite::Message) -> Res<()> {
-        use net::Msg::*;
-        use std::io::Write;
+    /// Logs the reception of a message.
+    fn log_receive_msg(&mut self, msg: Either<&msg::from_client::Msg, &str>) -> Res<()> {
+        if let Some(log) = self.log.as_mut() {
+            use std::io::Write;
 
-        match msg {
-            Text(txt) => {
-                writeln!(
+            match msg {
+                Either::Left(msg) => writeln!(
                     log,
-                    "[{}] received text message from client {{",
+                    "[{}] received message from client {}",
                     time::now(),
-                )?;
-                for line in txt.lines() {
-                    writeln!(log, "    {}", line)?
-                }
-                writeln!(log, "}}\n")?
-            }
-            Binary(data) => {
-                let msg = msg::from_client::Msg::from_json_bytes(&data)
-                    .chain_err(|| "while parsing message from client")?;
-                writeln!(
+                    msg,
+                )?,
+                Either::Right(desc) => writeln!(
                     log,
-                    "[{}] received binary message from client {{",
+                    "[{}] received message from client {}",
                     time::now(),
-                )?;
-                for line in msg.as_json() {
-                    writeln!(log, "    {}", line)?
-                }
-                writeln!(log, "}}\n")?
+                    desc,
+                )?,
             }
-            Ping(_) => writeln!(log, "[{}] received ping message from client\n", time::now())?,
-            Pong(_) => writeln!(log, "[{}] received pong message from client\n", time::now())?,
-            Close(_) => writeln!(
-                log,
-                "[{}] received close message from client\n",
-                time::now()
-            )?,
         }
+
         Ok(())
     }
 
-    pub fn incoming_messages<'a>(&'a mut self) -> Res<net::Msg> {
-        let log = &mut self.log;
-        let ip = &self.ip;
-        self.socket
-            .read_message()
-            .map_err(|e| err::Err::from(format!("failed to receive message from {}: {}", ip, e)))
-            .and_then(move |res| {
-                if let Some(log) = log {
-                    Self::log_receive_msg(log, &res)?
-                }
-
-                Ok(res)
-            })
+    /// Retrieves a message from the client.
+    pub fn incoming_message<'a>(&'a mut self) -> Res<net::Msg> {
+        self.socket.read_message().map_err(|e| {
+            err::Err::from(format!("failed to receive message from {}: {}", self.ip, e))
+        })
     }
 }
 
+/// Handles communications with a client, maintains the client's state.
 pub struct Handler {
     /// Sends/receives messages to/from the client.
     com: Com,
@@ -267,18 +279,22 @@ impl Handler {
             ping_label,
         };
 
-        log!(slf.ip() => "connection successful");
+        log::trace!("successfully connected to {}", slf.ip());
 
         Ok(slf)
     }
 
+    /// The client's IP address.
     pub fn ip(&self) -> &net::IpAddr {
         self.com.ip()
     }
 
     /// Runs the handler.
     pub fn run(&mut self) {
-        err::unwrap_or!(self.internal_run(), info!(self.ip() => "connection lost"))
+        err::unwrap_or!(
+            self.internal_run(),
+            log::info!("lost connection with {}", self.ip())
+        )
     }
 
     /// Sets the time of the last frame to now.
@@ -288,10 +304,7 @@ impl Handler {
 
     /// Runs the handler, can fail.
     fn internal_run(&mut self) -> Res<()> {
-        log!(self.ip() => "init...");
         self.init()?;
-
-        log!(self.ip() => "running...");
 
         // Let's do this.
         loop {
@@ -316,7 +329,11 @@ impl Handler {
                         blah
                     })
                     .unwrap_or_else(|| "no information".into());
-                log!(self.ip() => "client closed the connection with {}", close_data);
+                log::debug!(
+                    "client {} closed the connection with {}",
+                    self.ip(),
+                    close_data
+                );
                 break;
             }
 
@@ -356,10 +373,12 @@ impl Handler {
         Ok(())
     }
 
+    /// Sends chart-related statistics to the client.
     fn send_stats(&mut self) -> Res<()> {
         self.com.send_stats(&self.charts)
     }
 
+    /// Sends all charts to the client.
     fn send_all_charts(&mut self) -> Res<()> {
         for chart in self.charts.charts() {
             let msg = msg::to_client::ChartsMsg::new_chart(
@@ -370,6 +389,7 @@ impl Handler {
         }
         Ok(())
     }
+    /// Sends all the filters to the client.
     fn send_filters(&mut self) -> Res<()> {
         let msg = msg::to_client::FiltersMsg::revert(
             self.charts.filters().everything().clone(),
@@ -378,6 +398,7 @@ impl Handler {
         );
         self.send(msg)
     }
+    /// Sends all the points in all the charts to the client.
     fn send_all_points(&mut self) -> Res<()> {
         let (points, overwrite) = self.charts.new_points(true)?;
         let msg = msg::to_client::ChartsMsg::points(points, overwrite);
@@ -422,24 +443,25 @@ impl Handler {
     ///
     /// Returns `None` if the client requested to close
     fn receive_messages(&mut self) -> Res<()> {
-        for message in self.com.incoming_messages() {
+        for message in self.com.incoming_message() {
             // Let's do this.
             match message {
                 // Normal message(s) from the client.
-                net::Msg::Text(text) => {
-                    let msg = msg::from_client::Msg::from_json(&text)
-                        .chain_err(|| "while parsing message from client")?;
-                    self.from_client.push(msg)?
-                }
+                net::Msg::Text(_) => bail!(
+                    "trying to receive a message in text format, \
+                        only binary format is supported"
+                ),
                 net::Msg::Binary(data) => {
-                    let msg = msg::from_client::Msg::from_json_bytes(&data)
+                    let msg = msg::from_client::Msg::from_bytes(&data)
                         .chain_err(|| "while parsing message from client")?;
+                    self.com.log_receive_msg(Either::Left(&msg))?;
                     self.from_client.push(msg)?
                 }
 
                 // The client is telling us to stop listening for messages and render.
                 net::Msg::Pong(label) => {
                     if self.ping_label == label {
+                        self.com.log_receive_msg(Either::Right("pong"))?;
                         break;
                     } else {
                         bail!(
@@ -452,6 +474,8 @@ impl Handler {
 
                 // Client is closing the connection.
                 net::Msg::Close(close_data) => {
+                    self.com
+                        .log_receive_msg(Either::Right("close connection"))?;
                     self.from_client.close()?;
                     self.from_client.set_close_data(close_data)?;
                     break;

@@ -730,6 +730,19 @@ impl TimePoints {
         }
     }
 
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Size(points) => points.len(),
+        }
+    }
+    pub fn point_count(&self) -> usize {
+        match self {
+            Self::Size(points) => points
+                .iter()
+                .fold(0, |acc, point| acc + point.vals.map.len()),
+        }
+    }
+
     /// Extends some points with other points, returns `true` iff new points were added.
     ///
     /// Fails if the two kinds of points are not compatible.
@@ -785,6 +798,17 @@ impl Points {
     pub fn is_empty(&self) -> bool {
         match self {
             Self::Time(points) => points.is_empty(),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Time(points) => points.len(),
+        }
+    }
+    pub fn point_count(&self) -> usize {
+        match self {
+            Self::Time(points) => points.point_count(),
         }
     }
 

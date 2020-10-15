@@ -18,7 +18,7 @@ toml = "*"
 [features]
 server = [ "base/server" ]
 client = [ "base/client" ]
-default = []
-profiling = [
-    "base/profiling",
+default = [ "server" ]
+time_stats = [
+    "base/time_stats",
 ]

@@ -8,13 +8,14 @@ edition = "2018"
 
 [dependencies]
 base = { path = "../libs/base" }
-charts = { path = "../libs/charts", features = ["server"] }
+charts = { path = "../libs/charts" }
 
-gotham = "*"
-error-chain = "*"
-lazy_static = "*"
-tungstenite = "*"
 clap = "*"
+error-chain = "*"
+gotham = "*"
+lazy_static = "*"
+pretty_env_logger = "^0.4"
+tungstenite = "*"
 
 [build-dependencies]
 base = { path = "../libs/base" }
@@ -24,7 +25,7 @@ walkdir = "*"
 
 [features]
 default = []
-profiling = [
-    "base/profiling",
-    "charts/profiling",
+time_stats = [
+    "base/time_stats",
+    "charts/time_stats",
 ]

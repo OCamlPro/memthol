@@ -3,7 +3,7 @@ pub use std::{convert::TryInto, fmt, time::Duration};
 pub use base::{
     convert, destroy, duration_from_millis,
     err::{bail, Res, ResExt},
-    pretty_time, Either, SVec32,
+    log, pretty_time, Either, SVec32,
 };
 
 pub use crate::{ast::Span, parse::CanParse, *};

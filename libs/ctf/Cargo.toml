@@ -11,12 +11,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-base = { path = "../base", features = ["server"] }
-alloc_data = { path = "../alloc_data", features = ["server"] }
+base = { path = "../base" }
+alloc_data = { path = "../alloc_data" }
 
 [features]
 default = []
-profiling = [
-    "alloc_data/profiling",
-    "base/profiling",
+time_stats = [
+    "alloc_data/time_stats",
+    "base/time_stats",
 ]

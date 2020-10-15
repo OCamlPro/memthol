@@ -13,7 +13,7 @@ pub use regex::Regex;
 pub use base::{
     debug_do,
     error_chain::{self, bail},
-    impl_display, lazy_static, Either,
+    impl_display, lazy_static, log, Either,
 };
 
 /// Re-exports from the `alloc_data` crate.
@@ -73,39 +73,6 @@ pub mod num_fmt {
 
 /// A set of allocation UIDs.
 pub type AllocUidSet = Set<AllocUid>;
-
-/// Trait for types that can be (de)serialized in JSON format.
-pub trait Json: Sized {
-    /// Json serialization.
-    fn as_json(&self) -> Res<String>;
-    /// Json serialization, pretty version.
-    fn as_pretty_json(&self) -> Res<String>;
-    /// Json deserialization.
-    fn from_json(text: &str) -> Res<Self>;
-    /// Json deserialization (bytes).
-    fn from_json_bytes(bytes: &[u8]) -> Res<Self>;
-}
-impl<T> Json for T
-where
-    T: Sized + serde::Serialize + for<'a> serde::Deserialize<'a>,
-{
-    fn as_json(&self) -> Res<String> {
-        let tml = serde_json::to_string(self)?;
-        Ok(tml)
-    }
-    fn as_pretty_json(&self) -> Res<String> {
-        let tml = serde_json::to_string_pretty(self)?;
-        Ok(tml)
-    }
-    fn from_json(text: &str) -> Res<Self> {
-        let slf = serde_json::from_str(text.as_ref())?;
-        Ok(slf)
-    }
-    fn from_json_bytes(bytes: &[u8]) -> Res<Self> {
-        let slf = serde_json::from_slice(bytes)?;
-        Ok(slf)
-    }
-}
 
 /// Dump-loading information.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

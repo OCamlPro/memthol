@@ -1,6 +1,7 @@
 //! Re-exports, types and helpers for all crates in this project.
 
 pub extern crate chrono;
+pub extern crate log;
 pub extern crate peg;
 pub extern crate rand;
 pub extern crate smallvec;
@@ -11,6 +12,10 @@ pub use lazy_static::lazy_static;
 
 #[macro_use]
 pub mod macros;
+
+mod stopwatch;
+
+pub use stopwatch::*;
 
 /// Re-exports from `error_chain`.
 pub mod error_chain {

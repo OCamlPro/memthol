@@ -10,7 +10,7 @@ pub use std::{
     time::Duration,
 };
 
-pub use log::{debug, error, info, warn};
+pub use base::log::{debug, error, info, warn};
 pub use yew::{
     html,
     html::ChangeData,
@@ -34,7 +34,7 @@ pub mod plotters {
 
 pub use charts::prelude::{
     alloc, filter::stats::AllFilterStats, num_fmt, time, Alloc, AllocDiff, AllocStats, AllocUid,
-    Json, LoadInfo, Regex,
+    LoadInfo, Regex,
 };
 
 /// Wasm-bindgen re-exports.

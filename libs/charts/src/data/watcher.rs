@@ -63,8 +63,21 @@ impl Watcher {
 
     /// Runs on a memtrace CTF file.
     pub fn ctf_run(target: impl AsRef<Path>) -> Res<()> {
+        base::new_time_stats! {
+            struct Prof {
+                total => "total",
+                load => "loading",
+                parse => "parsing",
+            }
+        }
+        let mut prof = Prof::new();
+        prof.total.start();
+
         let target = target.as_ref();
 
+        log::trace!("loading ctf file {}", target.display());
+
+        prof.load.start();
         let bytes = {
             use std::io::Read;
             let mut file = std::fs::OpenOptions::new()
@@ -82,8 +95,10 @@ impl Watcher {
             super::progress::set_total(data_len)?;
             buff
         };
+        prof.load.stop();
 
         let mut factory = data::FullFactory::new(false);
+        prof.parse.start();
         ctf::parse(
             &bytes,
             &mut factory,
@@ -99,10 +114,16 @@ impl Watcher {
             |factory, timestamp, uid| factory.add_dead(timestamp, uid).unwrap(),
         )
         .chain_err(|| format!("while parsing ctf file `{}`", target.display()))?;
+        prof.parse.stop();
 
         factory.fill_stats()?;
 
         super::progress::set_done()?;
+
+        prof.all_do(
+            || log::info!("done parsing ctf file {}", target.display()),
+            |desc, sw| log::info!("| {:>9}: {}", desc, sw),
+        );
 
         Ok(())
     }

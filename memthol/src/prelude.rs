@@ -1,5 +1,7 @@
 //! Basic types and helpers used by the whole crate.
 
+pub use base::log;
+
 pub use std::{
     collections::BTreeMap as Map,
     collections::BTreeSet as Set,
@@ -9,9 +11,11 @@ pub use std::{
 
 pub use error_chain::bail;
 
+pub use base::{Either, Stopwatch};
+
 pub use charts::{
     alloc_data::{time, Alloc, Diff, Init as AllocInit, SinceStart, Uid as AllocUid},
-    Charts, Json,
+    Charts,
 };
 
 pub use crate::{

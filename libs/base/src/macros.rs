@@ -1,7 +1,7 @@
 //! Macros used throughout the whole project.
 
 #[macro_export]
-#[cfg(feature = "profiling")]
+#[cfg(any(test, feature = "time_stats"))]
 macro_rules! time {
     ($e:expr, |$time:ident| $time_action:expr) => {{
         let start = std::time::Instant::now();
@@ -14,7 +14,7 @@ macro_rules! time {
 }
 
 #[macro_export]
-#[cfg(not(feature = "profiling"))]
+#[cfg(not(any(test, feature = "time_stats")))]
 macro_rules! time {
     ($e:expr, |$time:ident| $time_action:expr) => {
         $e

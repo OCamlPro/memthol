@@ -3,6 +3,8 @@
 #[macro_use]
 extern crate clap;
 
+use base::log;
+
 /// Default clap values.
 mod default {
     /// Default aadress.
@@ -23,6 +25,23 @@ fn usize_validator(s: String) -> Result<(), String> {
     }
 }
 
+/// Initializes the logger.
+fn init_logger(verb: u64) {
+    let mut builder = pretty_env_logger::formatted_timed_builder();
+
+    let level = match verb {
+        0 => log::LevelFilter::Warn,
+        1 => log::LevelFilter::Info,
+        2 => log::LevelFilter::Debug,
+        _ => log::LevelFilter::Trace,
+    };
+
+    builder.filter_module("memthol", level);
+    builder.filter_module("ctf", level);
+    builder.filter_module("charts", level);
+    builder.init();
+}
+
 pub fn main() {
     let matches = clap_app!(memthol =>
         (author: crate_authors!())
@@ -30,6 +49,7 @@ pub fn main() {
         (about: "Memthol's UI.")
         (@arg VERB:
             -v --verbose
+            ...
             "activates verbose output"
         )
         (@arg ADDR:
@@ -63,8 +83,8 @@ pub fn main() {
     };
     let log = matches.occurrences_of("LOG") > 0;
 
-    let verb = matches.occurrences_of("VERB") > 0;
-    memthol::conf::set_verb(verb);
+    let verb = matches.occurrences_of("VERB");
+    init_logger(verb);
 
     let target = matches.value_of("INPUT").expect("argument with default");
 
@@ -77,15 +97,16 @@ pub fn main() {
 
     let router = memthol::router::new();
 
-    println!("starting data monitoring...");
+    log::info!("starting data monitoring");
     memthol::err::unwrap_or! {
         charts::data::start(target), exit
     }
 
-    println!("starting socket listeners...");
+    log::info!("starting socket listeners");
     memthol::err::unwrap_or! {
         memthol::socket::spawn_server(addr, port + 1, log), exit
     }
 
+    log::info!("starting gotham server");
     gotham::start(path, router)
 }

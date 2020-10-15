@@ -3,6 +3,9 @@ name = "client"
 version = "0.2.0"
 authors = ["AdrienChampion <adrien.champion@email.com>"]
 edition = "2018"
+description = "client part of the memthol profiling visualizer"
+repository = "N/A"
+license = "N/A"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -10,13 +13,12 @@ crate-type = ["cdylib", "rlib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-base = { path = "../base", features = ["client"] }
-charts = { path = "../charts", features = ["client"] }
+base = { path = "../base", default_features = false, features = ["client"] }
+charts = { path = "../charts", default_features = false, features = ["client"] }
 
 chrono = "*"
 error-chain = "*"
 lazy_static = "*"
-log = "^0.4"
 plotters-canvas = "*"
 safe_index = "*"
 serde = "*"
@@ -36,6 +38,6 @@ yew-components = "*"
 
 [features]
 default = []
-profiling = [
-    "base/profiling",
+time_stats = [
+    "base/time_stats",
 ]

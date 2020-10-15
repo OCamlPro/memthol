@@ -30,8 +30,6 @@
 pub mod prelude;
 
 #[macro_use]
-pub mod conf;
-#[macro_use]
 pub mod err;
 
 pub mod assets;

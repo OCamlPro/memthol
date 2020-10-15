@@ -12,6 +12,7 @@ either = "*"
 error-chain = "*"
 derive_more = "*"
 lazy_static = "*"
+log = "^0.4"
 peg = "*"
 rand = { version = "^0.7.3", features = ["small_rng"] }
 smallvec = "*"
@@ -19,5 +20,5 @@ smallvec = "*"
 [features]
 client = [ "chrono/wasmbind" ]
 server = []
-default = []
-profiling = []
+default = [ "server" ]
+time_stats = []

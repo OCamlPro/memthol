@@ -1092,6 +1092,15 @@ where
     }
 }
 
+base::new_time_stats! {
+    struct Prof {
+        basic_parsing => "basic parsing",
+        alloc => "alloc",
+        collection => "collection",
+        locs => "locations",
+    }
+}
+
 /// Packet parser.
 ///
 /// Thin wrapper around a [`RawParser`] over the bytes of the events of the packet. Also stores the
@@ -1110,6 +1119,7 @@ pub struct PacketParser<'cxt, 'data, Endian> {
     event_cnt: usize,
     /// Parsing context.
     cxt: &'cxt mut Cxt<'data>,
+    prof: Prof,
 }
 
 impl<'cxt, 'data, Endian> std::ops::Deref for PacketParser<'cxt, 'data, Endian> {
@@ -1153,6 +1163,7 @@ where
             header,
             event_cnt: 0,
             cxt,
+            prof: Prof::new(),
         }
     }
 
@@ -1164,26 +1175,38 @@ where
     /// Returns the next event of the packet, if any.
     pub fn next_event(&mut self) -> Res<Option<(Clock, Event<'data>)>> {
         if self.is_eof() {
+            self.prof.all_do(
+                || log::info!("done parsing packet {}", self.header.id),
+                |desc, sw| log::info!("| {:>13}: {}", desc, sw),
+            );
             return Ok(None);
         }
 
+        self.prof.basic_parsing.start();
         let (event_kind, event_timestamp) = self.parser.event_kind(&self.header)?;
+        self.prof.basic_parsing.stop();
+
         pinfo!(self, "event: {:?} ({})", event_kind, event_timestamp);
 
         let parser = &mut self.parser;
         let cxt = &mut self.cxt;
+        let prof = &mut self.prof;
 
         let event = match event_kind {
             event::Kind::Alloc => {
-                let alloc = parser.alloc(event_timestamp, cxt, None)?;
+                let alloc = prof
+                    .alloc
+                    .time(|| parser.alloc(event_timestamp, cxt, None))?;
                 Event::Alloc(alloc)
             }
             event::Kind::SmallAlloc(n) => {
-                let alloc = parser.alloc(
-                    event_timestamp,
-                    cxt,
-                    Some(convert(n, "event: SmallAlloc(n)")),
-                )?;
+                let alloc = prof.alloc.time(|| {
+                    parser.alloc(
+                        event_timestamp,
+                        cxt,
+                        Some(convert(n, "event: SmallAlloc(n)")),
+                    )
+                })?;
                 Event::Alloc(alloc)
             }
             event::Kind::Promotion => {
@@ -1191,11 +1214,11 @@ where
                 Event::Promotion(alloc_id)
             }
             event::Kind::Collection => {
-                let alloc_id = parser.alloc_uid_from_delta(cxt)?;
+                let alloc_id = prof.collection.time(|| parser.alloc_uid_from_delta(cxt))?;
                 Event::Collection(alloc_id)
             }
             event::Kind::Locs => {
-                let locs = parser.locs(cxt)?;
+                let locs = prof.locs.time(|| parser.locs(cxt))?;
                 Event::Locs(locs)
             }
 
