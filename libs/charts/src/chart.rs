@@ -27,10 +27,10 @@ impl RawChart {
         &mut self,
         filters: &mut Filters,
         init: bool,
-        _resolution: settings::Resolution,
+        resolution: settings::Resolution,
     ) -> Res<Points> {
         match self {
-            Self::Time(time_chart) => time_chart.new_points(filters, init),
+            Self::Time(time_chart) => time_chart.new_points(filters, init, resolution),
         }
     }
 

@@ -17,6 +17,7 @@ pub struct TimeSize {
     size: PointVal<u32>,
     /// Map used to construct the points.
     map: Map<Date, PointVal<(u32, u32)>>,
+    last_time_stamp: Option<time::SinceStart>,
 }
 
 impl TimeSize {
@@ -26,19 +27,26 @@ impl TimeSize {
             timestamp: time::SinceStart::zero(),
             size: Self::init_size_point(filters),
             map: Map::new(),
+            last_time_stamp: None,
         }
     }
 }
 
 #[cfg(any(test, feature = "server"))]
-impl ChartExt for TimeSize {
-    fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points> {
-        self.get_allocs(filters, init)?;
+impl TimeSize {
+    pub fn new_points(
+        &mut self,
+        filters: &mut Filters,
+        init: bool,
+        resolution: chart::settings::Resolution,
+    ) -> Res<Points> {
+        self.get_allocs(filters, init, resolution)?;
         Ok(self.generate_points()?.into())
     }
 
-    fn reset(&mut self, filters: &filter::Filters) {
+    pub fn reset(&mut self, filters: &filter::Filters) {
         self.timestamp = time::SinceStart::zero();
+        self.last_time_stamp = None;
         self.size = Self::init_size_point(filters);
         self.map.clear()
     }
@@ -54,6 +62,7 @@ impl TimeSize {
             timestamp,
             size,
             map,
+            last_time_stamp: None,
         }
     }
 
@@ -123,13 +132,19 @@ impl TimeSize {
     /// - assumes `self.map.is_empty()`;
     /// - new allocations will be in `self.map`;
     /// - updates the internal timestamp.
-    fn get_allocs(&mut self, filters: &mut Filters, init: bool) -> Res<()> {
+    fn get_allocs(
+        &mut self,
+        filters: &mut Filters,
+        init: bool,
+        resolution: chart::settings::Resolution,
+    ) -> Res<()> {
         debug_assert!(self.map.is_empty());
 
         let data = data::get()
             .chain_err(|| "while retrieving allocations")
             .chain_err(|| "while building new points")?;
-        let (my_map, timestamp) = (&mut self.map, &self.timestamp);
+        let (my_map, timestamp, last_time_stamp) =
+            (&mut self.map, &self.timestamp, &mut self.last_time_stamp);
         let start_time = data
             .start_time()
             .chain_err(|| "while building new points")?;
@@ -140,7 +155,11 @@ impl TimeSize {
             ()
         }
 
+        let mut min_time_spacing = data.current_time().clone();
+        min_time_spacing.div(resolution.width / 200);
+
         let mut new_stuff = false;
+        *last_time_stamp = Some(data.current_time().clone());
 
         data.iter_new_since(
             timestamp,
@@ -154,8 +173,19 @@ impl TimeSize {
                     uid::LineUid::CatchAll
                 };
 
-                let toc_point_val =
-                    map!(entry my_map, with filters => at as_date(alloc.toc.clone()));
+                let adjusted_toc = if let Some(last_time_stamp) = last_time_stamp.as_mut() {
+                    if &*last_time_stamp - &alloc.toc < min_time_spacing {
+                        last_time_stamp.clone()
+                    } else {
+                        *last_time_stamp = alloc.toc.clone();
+                        alloc.toc.clone()
+                    }
+                } else {
+                    *last_time_stamp = Some(alloc.toc.clone());
+                    alloc.toc.clone()
+                };
+
+                let toc_point_val = map!(entry my_map, with filters => at as_date(adjusted_toc));
 
                 // Update the filter that matches the allocation.
                 toc_point_val
@@ -169,15 +199,28 @@ impl TimeSize {
             },
         )?;
 
+        *last_time_stamp = Some(data.current_time().clone());
+
         data.iter_dead_since(
             timestamp,
             // New dead allocation.
             |uids, tod| {
-                if !uids.is_empty() {
-                    new_stuff = true
-                } else {
+                if uids.is_empty() {
                     return Ok(());
                 }
+                new_stuff = true;
+
+                let adjusted_tod = if let Some(last_time_stamp) = last_time_stamp.as_mut() {
+                    if &*last_time_stamp - tod < min_time_spacing {
+                        last_time_stamp.clone()
+                    } else {
+                        *last_time_stamp = tod.clone();
+                        tod.clone()
+                    }
+                } else {
+                    *last_time_stamp = Some(tod.clone());
+                    tod.clone()
+                };
 
                 for uid in uids {
                     // Potentially update the map, some filters are time-sensitive so matches can
@@ -197,7 +240,8 @@ impl TimeSize {
                         uid::LineUid::CatchAll
                     };
 
-                    let toc_point_val = map!(entry my_map, with filters => at as_date(tod.clone()));
+                    let toc_point_val =
+                        map!(entry my_map, with filters => at as_date(adjusted_tod));
 
                     toc_point_val.get_mut(uid)?.1 += alloc.size;
                     toc_point_val.get_mut(uid::LineUid::Everything)?.1 += alloc.size

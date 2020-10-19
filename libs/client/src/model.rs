@@ -68,6 +68,7 @@ impl Model {
     pub fn handle_server_msg(&mut self, msg: Res<msg::from_server::Msg>) -> Res<ShouldRender> {
         use msg::from_server::*;
         let msg = msg?;
+        info!("received message from server: {}", msg);
         match msg {
             Msg::Info => Ok(false),
             Msg::Alert { msg } => {

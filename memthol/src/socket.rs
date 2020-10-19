@@ -371,6 +371,7 @@ impl Handler {
             }
 
             // Render.
+            log::info!("generating points...");
             self.instance_prof.point_extraction.start();
             self.total_prof.point_extraction.start();
             let (points, overwrite) = self
@@ -388,17 +389,18 @@ impl Handler {
                     .chain_err(|| "while sending points to the client")?;
                 self.instance_prof.point_sending.stop();
                 self.total_prof.point_sending.stop();
-                self.send_stats()?
-            }
 
-            self.instance_prof.all_do(
-                || log::info!("done extracting/sending points"),
-                |desc, sw| log::info!("| {:>20}: {}", desc, sw),
-            );
-            self.total_prof.all_do(
-                || log::info!("overall time stats"),
-                |desc, sw| log::info!("| {:>20}: {}", desc, sw),
-            );
+                self.send_stats()?;
+
+                self.instance_prof.all_do(
+                    || log::info!("done extracting/sending points"),
+                    |desc, sw| log::info!("| {:>20}: {}", desc, sw),
+                );
+                self.total_prof.all_do(
+                    || log::info!("overall time stats"),
+                    |desc, sw| log::info!("| {:>20}: {}", desc, sw),
+                );
+            }
         }
 
         Ok(())
@@ -437,24 +439,28 @@ impl Handler {
         self.instance_prof.point_extraction.stop();
         self.total_prof.point_extraction.stop();
 
-        self.instance_prof.point_sending.start();
-        self.total_prof.point_sending.start();
-        let msg = msg::to_client::ChartsMsg::points(points, overwrite);
-        self.send(msg)?;
-        self.instance_prof.point_sending.stop();
-        self.total_prof.point_sending.stop();
+        if !points.is_empty() {
+            self.instance_prof.point_sending.start();
+            self.total_prof.point_sending.start();
+            let msg = msg::to_client::ChartsMsg::points(points, overwrite);
+            self.send(msg)?;
+            self.instance_prof.point_sending.stop();
+            self.total_prof.point_sending.stop();
 
-        self.instance_prof.all_do(
-            || log::info!("done extracting/sending points"),
-            |desc, sw| log::info!("| {:>20}: {}", desc, sw),
-        );
-        self.total_prof.all_do(
-            || log::info!("overall time stats"),
-            |desc, sw| log::info!("| {:>20}: {}", desc, sw),
-        );
+            self.instance_prof.all_do(
+                || log::info!("done extracting/sending points"),
+                |desc, sw| log::info!("| {:>20}: {}", desc, sw),
+            );
+            self.total_prof.all_do(
+                || log::info!("overall time stats"),
+                |desc, sw| log::info!("| {:>20}: {}", desc, sw),
+            );
+
+            self.send_stats()?
+        }
         self.instance_prof.reset();
 
-        self.send_stats()
+        Ok(())
     }
 
     /// Initializes a client.

@@ -136,7 +136,28 @@ impl Into<std::time::Duration> for SinceStart {
 }
 impl std::ops::Sub for SinceStart {
     type Output = Self;
-    fn sub(self, other: Self) -> Self {
+    fn sub(mut self, other: Self) -> Self {
+        self.duration = self.duration - other.duration;
+        self
+    }
+}
+impl<'a> std::ops::Sub<SinceStart> for &'a SinceStart {
+    type Output = SinceStart;
+    fn sub(self, mut other: SinceStart) -> SinceStart {
+        other.duration = self.duration - other.duration;
+        other
+    }
+}
+impl<'a> std::ops::Sub<&'a SinceStart> for SinceStart {
+    type Output = SinceStart;
+    fn sub(mut self, other: &'a SinceStart) -> SinceStart {
+        self.duration = self.duration - other.duration;
+        self
+    }
+}
+impl<'a, 'b> std::ops::Sub<&'a SinceStart> for &'b SinceStart {
+    type Output = SinceStart;
+    fn sub(self, other: &'a SinceStart) -> SinceStart {
         SinceStart {
             duration: self.duration - other.duration,
         }
@@ -162,6 +183,10 @@ impl SinceStart {
 
     pub fn add(&mut self, other: Self) {
         self.duration = self.duration + other.duration
+    }
+
+    pub fn div(&mut self, ratio: u32) {
+        self.duration = self.duration / ratio
     }
 
     /// Duration parser.
