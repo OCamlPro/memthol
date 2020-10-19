@@ -21,4 +21,3 @@ smallvec = "*"
 client = [ "chrono/wasmbind" ]
 server = []
 default = [ "server" ]
-time_stats = []

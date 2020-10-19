@@ -11,7 +11,7 @@ pub use std::{
 
 pub use error_chain::bail;
 
-pub use base::{Either, Stopwatch};
+pub use base::Either;
 
 pub use charts::{
     alloc_data::{time, Alloc, Diff, Init as AllocInit, SinceStart, Uid as AllocUid},

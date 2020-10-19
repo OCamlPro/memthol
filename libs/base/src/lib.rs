@@ -13,9 +13,7 @@ pub use lazy_static::lazy_static;
 #[macro_use]
 pub mod macros;
 
-mod stopwatch;
-
-pub use stopwatch::*;
+pub mod stopwatch;
 
 /// Re-exports from `error_chain`.
 pub mod error_chain {

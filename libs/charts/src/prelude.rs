@@ -102,12 +102,6 @@ impl LoadInfo {
     }
 }
 
-/// Retrieve data errors.
-#[cfg(any(test, feature = "server"))]
-pub fn get_errors() -> Res<Option<Vec<String>>> {
-    data::Data::get_errors()
-}
-
 /// Allocation statistics.
 ///
 /// Sent to the client so that it can display basic informations (run date, allocation count...).

@@ -152,7 +152,6 @@ impl Cxt {
     }
 
     pub fn check_cache_verifier<'data>(&self, parser: &mut impl CanParse<'data>) -> Res<()> {
-        println!("checking cache");
         let ix: usize = convert(parser.u16()?, "check_cache_verifier: ix");
         let pred = parser.u16()? as usize;
         let value = parser.u64()?;

@@ -1,6 +1,17 @@
 //! Macros used throughout the whole project.
 
 #[macro_export]
+macro_rules! pub_use_stopwatch {
+    () => {
+        #[cfg(any(test, feature = "time_stats"))]
+        pub use $crate::stopwatch::RealStopwatch as Stopwatch;
+
+        #[cfg(not(any(test, feature = "time_stats")))]
+        pub use $crate::stopwatch::FakeStopwatch as Stopwatch;
+    };
+}
+
+#[macro_export]
 #[cfg(any(test, feature = "time_stats"))]
 macro_rules! time {
     ($e:expr, |$time:ident| $time_action:expr) => {{

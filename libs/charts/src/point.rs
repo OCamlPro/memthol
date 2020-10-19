@@ -347,7 +347,6 @@ where
     where
         DB: plotters::prelude::DrawingBackend,
     {
-        println!("rendering, normal");
         let opt_ranges = self.ranges(is_active);
         let raw_ranges = Self::ranges_processor(opt_ranges)?;
         let ranges = Self::coord_ranges_processor(&raw_ranges)?;
@@ -418,7 +417,6 @@ where
             + PartialEq,
         Self: ChartRender<X, Y>,
     {
-        println!("rendering, stacked area");
         let opt_ranges = self.ranges(&is_active);
         let raw_ranges = Self::ranges_processor(opt_ranges)?;
         let ranges = Self::coord_ranges_processor(&raw_ranges)?;
@@ -484,7 +482,6 @@ where
                     point.vals.map.get(&f_uid).map(|val| {
                         let y_val = Self::y_coord_processor(&raw_ranges.y, val);
                         assert!(*max >= y_val);
-                        // println!("y_val: {}, sum: {}", y_val, sum);
                         *sum = sum.clone() + y_val;
                         (
                             Self::x_coord_processor(&raw_ranges.x, &point.key),
@@ -522,7 +519,6 @@ where
             + PartialEq,
         Self: ChartRender<X, Y>,
     {
-        println!("rendering, stacked area %");
         let opt_ranges = self.ranges(&is_active);
         let raw_ranges = Self::ranges_processor(opt_ranges)?;
         let ranges = Self::coord_ranges_processor(&raw_ranges)?;
@@ -595,7 +591,6 @@ where
                                 ",
                             )
                         };
-                        // println!("y_val: {}, sum: {}", y_val, sum);
                         *sum = *sum + y_val;
                         (Self::x_coord_processor(&raw_ranges.x, &point.key), *sum)
                     })

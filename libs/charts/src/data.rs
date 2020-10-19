@@ -56,6 +56,8 @@ lazy_static! {
     static ref PROG: RwLock<Option<LoadInfo>> = RwLock::new(Some(LoadInfo::unknown()));
     /// Global state.
     static ref DATA: RwLock<Data> = RwLock::new(Data::new());
+    /// Errors.
+    static ref ERRORS: RwLock<Vec<String>> = RwLock::new(vec![]);
 }
 
 /// Handles progress information.
@@ -163,8 +165,6 @@ pub struct Data {
     uid_map: Map<AllocUid, Alloc>,
     /// Map from time-of-death to allocation UIDs.
     tod_map: Map<time::SinceStart, AllocUidSet>,
-    /// Errors encountered so far.
-    errors: Vec<String>,
     /// Time of the latest diff.
     current_time: time::SinceStart,
     /// Statistics.
@@ -178,7 +178,6 @@ impl Data {
             init: None,
             uid_map: Map::new(),
             tod_map: Map::new(),
-            errors: vec![],
             current_time: time::SinceStart::zero(),
             stats: None,
         }
@@ -430,20 +429,19 @@ impl Data {
         invariants::uid_order_is_toc_order(self)?;
         Ok(())
     }
+}
 
-    /// Retrieves the global errors.
-    pub fn get_errors() -> Res<Option<Vec<String>>> {
-        get_mut().map(|mut data| data.errors())
-    }
-
-    /// Retrieves the errors.
-    pub fn errors(&mut self) -> Option<Vec<String>> {
-        if self.errors.is_empty() {
-            None
-        } else {
-            Some(std::mem::replace(&mut self.errors, vec![]))
-        }
-    }
+/// Retrieves the errors.
+pub fn get_errors() -> Res<Option<Vec<String>>> {
+    let errors = ERRORS
+        .read()
+        .map_err(|e| err::Err::from(e.to_string()))
+        .chain_err(|| "while retrieving the data errors")?;
+    Ok(if errors.is_empty() {
+        None
+    } else {
+        Some(errors.clone())
+    })
 }
 
 /// Adds an error.
@@ -453,10 +451,11 @@ pub fn add_err(err: impl Into<String>) {
     for line in err.lines() {
         println!("[data] | {}", line)
     }
-    get_mut()
+    ERRORS
+        .write()
+        .map_err(|e| err::Err::from(e.to_string()))
         .chain_err(|| format!("while adding error:\n{}", err))
         .expect("failed to retrieve global state")
-        .errors
         .push(err.into())
 }
 

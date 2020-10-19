@@ -38,6 +38,5 @@ yew-components = "*"
 
 [features]
 default = []
-time_stats = [
-    "base/time_stats",
-]
+time_stats = []
+all_time_stats = []

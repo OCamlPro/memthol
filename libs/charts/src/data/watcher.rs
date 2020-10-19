@@ -102,7 +102,7 @@ impl Watcher {
         ctf::parse(
             &bytes,
             &mut factory,
-            |bytes_progress| super::progress::add_loaded(bytes_progress).unwrap(),
+            |bytes_progress| super::progress::set_loaded(bytes_progress).unwrap(),
             |factory, init| {
                 if factory.data.has_init() {
                     panic!("live profiling restart is not supported yet")

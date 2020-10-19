@@ -171,7 +171,7 @@ impl Com {
 
     /// Send charts-related errors to the client.
     fn send_errors(&mut self) -> Res<()> {
-        if let Some(errs) = charts::prelude::get_errors()? {
+        if let Some(errs) = charts::data::get_errors()? {
             for err in errs {
                 self.send(msg::to_client::Msg::alert(err))?
             }
@@ -211,6 +211,13 @@ impl Com {
     }
 }
 
+base::new_time_stats! {
+    struct HandlerProf {
+        point_extraction => "point extraction",
+        point_sending => "sending point messages",
+    }
+}
+
 /// Handles communications with a client, maintains the client's state.
 pub struct Handler {
     /// Sends/receives messages to/from the client.
@@ -225,6 +232,9 @@ pub struct Handler {
     frame_span: Duration,
     /// Label for ping messages.
     ping_label: Vec<u8>,
+
+    instance_prof: HandlerProf,
+    total_prof: HandlerProf,
 }
 
 impl Handler {
@@ -277,6 +287,9 @@ impl Handler {
             last_frame: Instant::now(),
             frame_span: Duration::from_millis(500),
             ping_label,
+
+            instance_prof: HandlerProf::new(),
+            total_prof: HandlerProf::new(),
         };
 
         log::trace!("successfully connected to {}", slf.ip());
@@ -358,16 +371,34 @@ impl Handler {
             }
 
             // Render.
+            self.instance_prof.point_extraction.start();
+            self.total_prof.point_extraction.start();
             let (points, overwrite) = self
                 .charts
                 .new_points(false)
                 .chain_err(|| "while constructing points for the client")?;
+            self.instance_prof.point_extraction.stop();
+            self.total_prof.point_extraction.stop();
+
             if overwrite || !points.is_empty() {
+                self.instance_prof.point_sending.start();
+                self.total_prof.point_sending.start();
                 let msg = msg::to_client::ChartsMsg::points(points, overwrite);
                 self.send(msg)
                     .chain_err(|| "while sending points to the client")?;
+                self.instance_prof.point_sending.stop();
+                self.total_prof.point_sending.stop();
                 self.send_stats()?
             }
+
+            self.instance_prof.all_do(
+                || log::info!("done extracting/sending points"),
+                |desc, sw| log::info!("| {:>20}: {}", desc, sw),
+            );
+            self.total_prof.all_do(
+                || log::info!("overall time stats"),
+                |desc, sw| log::info!("| {:>20}: {}", desc, sw),
+            );
         }
 
         Ok(())
@@ -400,9 +431,29 @@ impl Handler {
     }
     /// Sends all the points in all the charts to the client.
     fn send_all_points(&mut self) -> Res<()> {
+        self.instance_prof.point_extraction.start();
+        self.total_prof.point_extraction.start();
         let (points, overwrite) = self.charts.new_points(true)?;
+        self.instance_prof.point_extraction.stop();
+        self.total_prof.point_extraction.stop();
+
+        self.instance_prof.point_sending.start();
+        self.total_prof.point_sending.start();
         let msg = msg::to_client::ChartsMsg::points(points, overwrite);
         self.send(msg)?;
+        self.instance_prof.point_sending.stop();
+        self.total_prof.point_sending.stop();
+
+        self.instance_prof.all_do(
+            || log::info!("done extracting/sending points"),
+            |desc, sw| log::info!("| {:>20}: {}", desc, sw),
+        );
+        self.total_prof.all_do(
+            || log::info!("overall time stats"),
+            |desc, sw| log::info!("| {:>20}: {}", desc, sw),
+        );
+        self.instance_prof.reset();
+
         self.send_stats()
     }
 
