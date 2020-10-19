@@ -4,7 +4,7 @@ prelude! {}
 
 use axis::{XAxis, YAxis};
 
-mod spec;
+pub mod spec;
 
 pub mod axis;
 pub mod settings;
@@ -15,14 +15,20 @@ pub use spec::ChartSpec;
 pub use uid::ChartUid;
 
 /// A chart with no UID.
+#[cfg(any(test, feature = "server"))]
 pub enum RawChart {
     /// A time chart.
     Time(time::TimeChart),
 }
 
 #[cfg(any(test, feature = "server"))]
-impl ChartExt for RawChart {
-    fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points> {
+impl RawChart {
+    fn new_points(
+        &mut self,
+        filters: &mut Filters,
+        init: bool,
+        _resolution: settings::Resolution,
+    ) -> Res<Points> {
         match self {
             Self::Time(time_chart) => time_chart.new_points(filters, init),
         }
@@ -35,6 +41,7 @@ impl ChartExt for RawChart {
     }
 }
 
+#[cfg(any(test, feature = "server"))]
 impl RawChart {
     /// Creates a raw chart.
     pub fn new(filters: &filter::Filters, x_axis: XAxis, y_axis: YAxis) -> Res<Self> {
@@ -47,12 +54,15 @@ impl RawChart {
     }
 }
 
+#[cfg(any(test, feature = "server"))]
 pub struct Chart {
     spec: ChartSpec,
     settings: ChartSettings,
     #[allow(dead_code)]
     chart: RawChart,
+    still_init: bool,
 }
+#[cfg(any(test, feature = "server"))]
 impl Chart {
     /// Creates a time chart.
     pub fn new(filters: &filter::Filters, x_axis: XAxis, y_axis: YAxis) -> Res<Self> {
@@ -63,12 +73,13 @@ impl Chart {
             spec,
             settings,
             chart,
+            still_init: true,
         };
         Ok(slf)
     }
 
     /// Applies an update to its settings.
-    pub fn update(&mut self, msg: msg::to_server::ChartMsg) {
+    pub fn update(&mut self, msg: msg::to_server::ChartMsg) -> bool {
         use msg::to_server::ChartMsg::*;
         match msg {
             SettingsUpdate(msg) => self.settings.update(msg),
@@ -100,12 +111,22 @@ impl Chart {
 }
 
 #[cfg(any(test, feature = "server"))]
-impl ChartExt for Chart {
-    fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points> {
-        self.chart.new_points(filters, init)
+impl Chart {
+    pub fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Option<Points>> {
+        self.still_init = self.still_init || init;
+        if let Some(resolution) = self.settings.resolution() {
+            let res = self
+                .chart
+                .new_points(filters, self.still_init, resolution)
+                .map(Some);
+            self.still_init = false;
+            res
+        } else {
+            Ok(None)
+        }
     }
 
-    fn reset(&mut self, filters: &filter::Filters) {
+    pub fn reset(&mut self, filters: &filter::Filters) {
         self.chart.reset(filters)
     }
 }

@@ -175,7 +175,10 @@ impl TimeSize {
             |uids, tod| {
                 if !uids.is_empty() {
                     new_stuff = true
+                } else {
+                    return Ok(());
                 }
+
                 for uid in uids {
                     // Potentially update the map, some filters are time-sensitive so matches can
                     // change.

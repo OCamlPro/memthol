@@ -202,7 +202,8 @@ impl Charts {
 
         let should_render = match action {
             ChartsMsg::NewChart(spec, settings) => {
-                let chart = Chart::new(spec, settings, filters)?;
+                info!("creating new chart");
+                let chart = Chart::new(spec, settings, filters, self.to_model.clone())?;
                 self.charts.push(chart);
                 true
             }
@@ -253,6 +254,8 @@ pub struct Chart {
     spec: ChartSpec,
     /// Chart settings.
     settings: ChartSettings,
+    /// Sends messages to the model.
+    to_model: Callback<Msg>,
     /// DOM element containing the chart and its tabs.
     top_container: String,
     /// DOM element containing the canvas.
@@ -290,6 +293,7 @@ impl Chart {
         spec: ChartSpec,
         settings: ChartSettings,
         all_filters: &filter::ReferenceFilters,
+        to_model: Callback<Msg>,
     ) -> Res<Self> {
         let top_container = format!("chart_container_{}", spec.uid().get());
         let container = format!("chart_canvas_container_{}", spec.uid().get());
@@ -306,6 +310,7 @@ impl Chart {
         Ok(Self {
             spec,
             settings,
+            to_model,
             top_container,
             container,
             canvas,
@@ -515,6 +520,7 @@ impl Chart {
     ///
     /// Also, makes the chart visible.
     pub fn build_chart(&mut self) -> Res<()> {
+        info!("building chart");
         if self.settings.is_visible() {
             if self.chart.is_some() {
                 bail!("asked to build and bind a chart that's already built and binded")
@@ -527,9 +533,39 @@ impl Chart {
                 .dyn_into()
                 .expect("failed to retrieve chart canvas");
             let width = canvas.client_width();
-            canvas.set_width(if width >= 0 { width as u32 } else { 0 });
             let height = canvas.client_height();
-            canvas.set_height(if height >= 0 { height as u32 } else { 0 });
+            let width = if width >= 0 { width as u32 } else { 0 };
+            let height = if height >= 0 { height as u32 } else { 0 };
+            info!(
+                "original width/height: {}/{}",
+                canvas.width(),
+                canvas.height()
+            );
+            canvas.set_width(width);
+            canvas.set_height(height);
+
+            {
+                let res_width = if width <= Self::CHART_X_DIFF {
+                    width
+                } else {
+                    width - Self::CHART_X_DIFF
+                };
+                let res_height = if height <= Self::CHART_Y_DIFF {
+                    height
+                } else {
+                    height - Self::CHART_Y_DIFF
+                };
+                info!(
+                    "sending new resolution: {}x{} ({}x{})",
+                    res_width, res_height, width, height
+                );
+                self.to_model.emit(Msg::ToServer(
+                    charts::msg::ChartSettingsMsg::set_resolution(
+                        self.spec.uid(),
+                        (res_width, res_height),
+                    ),
+                ))
+            }
 
             let backend: plotters::CanvasBackend =
                 plotters::CanvasBackend::new(&self.canvas).expect("could not find canvas");
@@ -573,6 +609,20 @@ impl charts::point::StyleExt for Styler {
 }
 
 impl Chart {
+    /// Size of the x-axis label area.
+    const X_LABEL_AREA: u32 = 30;
+    /// Size of the y-axis label area.
+    const Y_LABEL_AREA: u32 = 99;
+    /// Size of the top margin.
+    const TOP_MARGIN: u32 = Self::X_LABEL_AREA / 3;
+    /// Size of the right margin.
+    const RIGHT_MARGIN: u32 = Self::Y_LABEL_AREA / 3;
+
+    /// Difference between the chart's canvas x-size and the chart's x-size.
+    const CHART_X_DIFF: u32 = Self::Y_LABEL_AREA + Self::RIGHT_MARGIN;
+    /// Difference between the chart's canvas y-size and the chart's y-size.
+    const CHART_Y_DIFF: u32 = Self::X_LABEL_AREA + Self::TOP_MARGIN;
+
     /// Draws the chart, **takes care of updating `self.redraw`**.
     ///
     /// If the chart is not visible, drawing is postponed until the chart becomes visible. Meaning
@@ -607,15 +657,12 @@ impl Chart {
             if let Some(points) = &self.points {
                 chart.fill(&plotters::style::colors::WHITE).unwrap();
 
-                let (x_label_area, y_label_area) = (30, 100);
-                let (margin_top, margin_right) = (x_label_area / 3, y_label_area / 3);
-
                 let mut builder = plotters::prelude::ChartBuilder::on(&chart);
                 builder
-                    .margin_top(margin_top)
-                    .margin_right(margin_right)
-                    .x_label_area_size(x_label_area)
-                    .y_label_area_size(y_label_area);
+                    .margin_top(Self::TOP_MARGIN)
+                    .margin_right(Self::RIGHT_MARGIN)
+                    .x_label_area_size(Self::X_LABEL_AREA)
+                    .y_label_area_size(Self::Y_LABEL_AREA);
 
                 let is_active =
                     |f_uid: filter::LineUid| visible_filters.get(&f_uid).cloned().unwrap_or(false);

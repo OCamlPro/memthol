@@ -56,6 +56,25 @@ impl fmt::Display for DisplayMode {
     }
 }
 
+/// Resolution.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct Resolution {
+    /// Width.
+    pub width: u32,
+    /// Height.
+    pub height: u32,
+}
+impl From<(u32, u32)> for Resolution {
+    fn from((width, height): (u32, u32)) -> Self {
+        Self { width, height }
+    }
+}
+impl fmt::Display for Resolution {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}x{}", self.width, self.height)
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ChartSettings {
     title: String,
@@ -64,6 +83,7 @@ pub struct ChartSettings {
     visible: bool,
     x_log: bool,
     y_log: bool,
+    resolution: Option<Resolution>,
 }
 impl ChartSettings {
     /// Constructor.
@@ -75,6 +95,7 @@ impl ChartSettings {
             visible: true,
             x_log: false,
             y_log: false,
+            resolution: None,
         }
     }
 
@@ -88,13 +109,38 @@ impl ChartSettings {
     }
 
     /// Applies an update.
-    pub fn update(&mut self, msg: msg::ChartSettingsMsg) {
+    fn inner_update(&mut self, msg: msg::ChartSettingsMsg) -> bool {
         use msg::ChartSettingsMsg::*;
         match msg {
-            ToggleVisible => self.toggle_visible(),
-            ChangeTitle(title) => self.set_title(title),
-            SetDisplayMode(mode) => self.set_display_mode(mode),
+            ToggleVisible => {
+                self.toggle_visible();
+                false
+            }
+            ChangeTitle(title) => {
+                self.set_title(title);
+                false
+            }
+            SetDisplayMode(mode) => {
+                self.set_display_mode(mode);
+                false
+            }
+            SetResolution(resolution) => {
+                self.set_resolution(resolution);
+                true
+            }
         }
+    }
+
+    /// Applies an update.
+    #[cfg(any(test, feature = "server"))]
+    pub fn update(&mut self, msg: msg::ChartSettingsMsg) -> bool {
+        self.inner_update(msg)
+    }
+
+    /// Applies an update.
+    #[cfg(not(any(test, feature = "server")))]
+    pub fn update(&mut self, msg: msg::ChartSettingsMsg) {
+        self.inner_update(msg);
     }
 
     /// Title accessor.
@@ -151,6 +197,15 @@ impl ChartSettings {
         } else {
             Some(DisplayMode::all())
         }
+    }
+
+    /// Sets the resolution of the chart.
+    pub fn set_resolution(&mut self, resolution: Resolution) {
+        self.resolution = Some(resolution);
+    }
+    /// Retrieves the resolution of the chart, if one was set.
+    pub fn resolution(&self) -> Option<Resolution> {
+        self.resolution
     }
 
     /// Sets the x-axis-log setting.

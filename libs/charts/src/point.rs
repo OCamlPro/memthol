@@ -612,7 +612,7 @@ pub type PolyPoints<X, Y> = Vec<Point<X, Y>>;
 
 impl<X, Y> RangesExt<X, Y> for PolyPoints<X, Y>
 where
-    X: PartialOrd + Clone,
+    X: PartialOrd + Clone + std::fmt::Display,
     Y: PartialOrd + Clone,
 {
     fn ranges(&self, is_active: impl Fn(uid::LineUid) -> bool) -> Ranges<Option<X>, Option<Y>> {

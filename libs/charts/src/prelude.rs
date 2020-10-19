@@ -46,6 +46,9 @@ macro_rules! prelude {
 #[cfg(any(test, feature = "server"))]
 pub use crate::data;
 
+#[cfg(any(test, feature = "server"))]
+pub use crate::ChartExt;
+
 pub use crate::{
     chart::{self, settings::ChartSettings},
     color::Color,
@@ -54,7 +57,7 @@ pub use crate::{
     filter::{self, Filter, Filters},
     msg, point,
     point::{Point, PointVal, Points},
-    uid, ChartExt,
+    uid::{self, ChartUid},
 };
 
 pub mod num_fmt {

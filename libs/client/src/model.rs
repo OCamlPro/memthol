@@ -150,6 +150,7 @@ impl Component for Model {
                 unwrap_or_send_err!(self.handle_server_msg(msg) => self default false)
             }
             Msg::ToServer(msg) => {
+                info!("propagating message to server {}", msg);
                 self.server_send(msg);
                 false
             }

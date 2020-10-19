@@ -8,6 +8,7 @@ pub enum ChartSettingsMsg {
     ToggleVisible,
     ChangeTitle(String),
     SetDisplayMode(chart::settings::DisplayMode),
+    SetResolution(chart::settings::Resolution),
 }
 
 impl ChartSettingsMsg {
@@ -29,6 +30,15 @@ impl ChartSettingsMsg {
     {
         (uid, Self::ChangeTitle(title.into())).into()
     }
+    pub fn set_resolution<Res>(
+        uid: uid::ChartUid,
+        resolution: impl Into<chart::settings::Resolution>,
+    ) -> Res
+    where
+        (uid::ChartUid, Self): Into<Res>,
+    {
+        (uid, Self::SetResolution(resolution.into())).into()
+    }
 }
 
 impl fmt::Display for ChartSettingsMsg {
@@ -36,7 +46,8 @@ impl fmt::Display for ChartSettingsMsg {
         match self {
             Self::ToggleVisible => write!(fmt, "toggle visible"),
             Self::SetDisplayMode(mode) => write!(fmt, "set display mode: {}", mode.desc()),
-            Self::ChangeTitle(title) => write!(fmt, "title: {}", title),
+            Self::ChangeTitle(title) => write!(fmt, "change title: {}", title),
+            Self::SetResolution(resolution) => write!(fmt, "set resolution: {}", resolution),
         }
     }
 }
@@ -73,6 +84,17 @@ pub mod to_server {
 
         pub fn from_bytes(bytes: &[u8]) -> Res<Self> {
             Ok(bincode::deserialize(bytes)?)
+        }
+    }
+
+    impl From<(uid::ChartUid, ChartMsg)> for Msg {
+        fn from(pair: (uid::ChartUid, ChartMsg)) -> Self {
+            Self::Charts(ChartsMsg::from(pair))
+        }
+    }
+    impl From<(uid::ChartUid, ChartSettingsMsg)> for Msg {
+        fn from(pair: (uid::ChartUid, ChartSettingsMsg)) -> Self {
+            Self::Charts(ChartsMsg::from(pair))
         }
     }
 
