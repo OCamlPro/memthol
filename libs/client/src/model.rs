@@ -57,7 +57,11 @@ impl Model {
 impl Model {
     /// Sends a message to the server.
     pub fn server_send(&mut self, msg: msg::to_server::Msg) {
-        self.socket_task.as_mut().map(|socket| socket.send(msg));
+        if let Some(socket_task) = self.socket_task.as_mut() {
+            socket_task.send_binary(msg)
+        } else {
+            warn!("no socket task available, failed to send message {}", msg)
+        }
     }
 
     /// Handles a message from the server.
