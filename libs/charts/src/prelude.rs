@@ -18,7 +18,7 @@ pub mod coord {
     };
 }
 
-pub use alloc::{Alloc, Diff as AllocDiff, Init as AllocInit};
+pub use alloc::Alloc;
 
 /// Imports this crate's prelude.
 macro_rules! prelude {

@@ -29,7 +29,7 @@ pub struct Watcher {
     /// Diff paths, used when gathering new diffs.
     new_diff_paths: Vec<PathBuf>,
     /// New diffs.
-    new_diffs: Vec<AllocDiff>,
+    new_diffs: Vec<alloc::Diff>,
 
     /// Buffer for file-reading.
     buf: String,
@@ -253,7 +253,7 @@ impl Watcher {
     /// Restarts the watcher and resets the data.
     ///
     /// Called when the init file of the run has changed.
-    pub fn reset_run(&mut self, init: AllocInit) -> Res<()> {
+    pub fn reset_run(&mut self, init: alloc::Init) -> Res<()> {
         self.reset();
         let mut data = super::get_mut().chain_err(|| "while resetting the data")?;
         data.reset(&self.dir, init);
@@ -294,7 +294,7 @@ impl Watcher {
     ///
     /// If the result isn't `None`, `self.init_last_modified` is updated to the date of last
     /// modification of the init file.
-    pub fn try_read_init(&mut self) -> Res<Option<AllocInit>> {
+    pub fn try_read_init(&mut self) -> Res<Option<alloc::Init>> {
         let mut init_path = PathBuf::new();
         init_path.push(&self.dir);
         init_path.push(&self.init_file);
@@ -341,7 +341,7 @@ impl Watcher {
                 return Ok(None);
             } else {
                 use alloc_data::parser::Parseable;
-                let init = AllocInit::parse(content)?;
+                let init = alloc::Init::parse(content)?;
                 Ok(Some(init))
             }
         })
@@ -505,10 +505,10 @@ impl Watcher {
         Ok(highest_last_modified)
     }
 
-    fn load(&mut self, init: &AllocInit, path: PathBuf) -> Res<AllocDiff> {
+    fn load(&mut self, init: &alloc::Init, path: PathBuf) -> Res<alloc::Diff> {
         self.read_content(&path, |content| {
             use alloc_data::parser::Parseable;
-            let diff = AllocDiff::parse_with(content, init)?;
+            let diff = alloc::Diff::parse_with(content, init)?;
             Ok(diff)
         })
         .chain_err(|| format!("while reading content of file `{}`", path.to_string_lossy()))

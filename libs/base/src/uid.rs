@@ -37,7 +37,10 @@ macro_rules! new_uids {
         }
         $($tail:tt)*
     ) => {
-        pub use $mod_name::$uid_type_name;
+        pub use $mod_name::{
+            $uid_type_name,
+            $($map_name, $iter_name,)?
+        };
         mod $mod_name {
             safe_index::new! {
                 $(#[$uid_meta])*
@@ -113,7 +116,7 @@ new_uids! {
     mod alloc_uid {
         /// Allocation UID.
         Alloc,
-        map: Allocs with iter: AllocIter,
+        map: AllocMap with iter: AllocIter,
     }
 
     mod chart_uid {

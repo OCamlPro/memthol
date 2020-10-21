@@ -101,28 +101,6 @@ impl Date {
         (self.date.timestamp(), self.date.timestamp_subsec_nanos())
     }
 
-    /// Adds a duration.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use base::prelude::time::*;
-    /// let (secs, subsec_nanos) = (1_566_489_242, 7_000_572);
-    /// let mut date = Date::from_timestamp(secs, subsec_nanos);
-    /// let duration = SinceStart::parse_secs("7.003000001").unwrap();
-    /// date.add(duration);
-    /// assert_eq! { date.timestamp(), (secs + 7, subsec_nanos + 3_000_001) }
-    /// ```
-    pub fn add(&mut self, duration: SinceStart) {
-        self.date = self.date + chrono::Duration::from_std(duration.into()).unwrap()
-    }
-
-    pub fn copy_add(&self, duration: SinceStart) -> Date {
-        let mut date = self.clone();
-        date.add(duration);
-        date
-    }
-
     /// The hours/minutes/seconds/millis of a date.
     ///
     /// This is currently used only for debugging purposes.
@@ -170,11 +148,61 @@ impl ops::Sub<Self> for Date {
         duration.into()
     }
 }
+impl<'a> ops::Sub<Date> for &'a Date {
+    type Output = SinceStart;
+    fn sub(self, other: Date) -> Self::Output {
+        let duration = (self.date - other.date)
+            .to_std()
+            .expect("fatal error while subtracting two dates");
+        duration.into()
+    }
+}
+impl<'a> ops::Sub<&'a Date> for Date {
+    type Output = SinceStart;
+    fn sub(self, other: &'a Date) -> Self::Output {
+        let duration = (self.date - other.date)
+            .to_std()
+            .expect("fatal error while subtracting two dates");
+        duration.into()
+    }
+}
+impl<'a, 'b> ops::Sub<&'a Date> for &'b Date {
+    type Output = SinceStart;
+    fn sub(self, other: &'a Date) -> Self::Output {
+        let duration = (self.date - other.date)
+            .to_std()
+            .expect("fatal error while subtracting two dates");
+        duration.into()
+    }
+}
+
+/// Adds a duration.
+///
+/// # Examples
+///
+/// ```rust
+/// use base::prelude::time::*;
+/// let (secs, subsec_nanos) = (1_566_489_242, 7_000_572);
+/// let mut date = Date::from_timestamp(secs, subsec_nanos);
+/// let duration = SinceStart::parse_secs("7.003000001").unwrap();
+/// date = date + duration;
+/// assert_eq! { date.timestamp(), (secs + 7, subsec_nanos + 3_000_001) }
+/// ```
 impl ops::Add<SinceStart> for Date {
     type Output = Self;
     fn add(mut self, duration: SinceStart) -> Self::Output {
         self.date = self.date
             + chrono::Duration::from_std(duration.into())
+                .expect("fatal error while adding a duration to a date");
+        self
+    }
+}
+
+impl ops::Sub<SinceStart> for Date {
+    type Output = Self;
+    fn sub(mut self, duration: SinceStart) -> Self::Output {
+        self.date = self.date
+            - chrono::Duration::from_std(duration.into())
                 .expect("fatal error while adding a duration to a date");
         self
     }

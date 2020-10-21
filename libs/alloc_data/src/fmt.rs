@@ -50,26 +50,4 @@ base::implement! {
             write!(fmt, " }}")
         }
     }
-
-    impl Display for Diff {
-        |&self, fmt| {
-            write!(fmt, "{}; new: {{\n", self.time)?;
-            for alloc in &self.new {
-                write!(fmt, "    {},\n", alloc)?
-            }
-            write!(fmt, "}};\ndead {{\n")?;
-            for (uid, date) in &self.dead {
-                write!(fmt, "    #{}: {},\n", uid, date)?
-            }
-            write!(fmt, "}}\n")
-        }
-    }
-
-    impl Display for Init {
-        |&self, fmt| {
-            writeln!(fmt, "start: {}", self.start_time)?;
-            writeln!(fmt, "word_size: {}", self.word_size)?;
-            Ok(())
-        }
-    }
 }

@@ -12,13 +12,11 @@ alloc_data = { path = "../alloc_data" }
 ctf = { path = "../ctf", optional = true }
 
 anyhow = "*"
-bincode = "*"
 number_prefix = "*"
 palette = "*"
 plotters = "*"
 plotters-backend = "*"
 regex = "*"
-safe_index = "*"
 serde = "*"
 serde_regex = "*"
 strum = "*"

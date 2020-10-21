@@ -46,7 +46,7 @@ impl AllocSite {
     }
 
     fn scan(&mut self, data: &data::Data) {
-        for alloc in data.iter_all() {
+        for alloc in data.iter_allocs() {
             alloc.alloc_site_do(|cloc_opt| self.inc(cloc_opt.map(|cloc| cloc.loc.file)))
         }
     }

@@ -79,11 +79,11 @@ pub mod to_server {
 
     impl Msg {
         pub fn to_bytes(&self) -> Res<Vec<u8>> {
-            Ok(bincode::serialize(self)?)
+            Ok(base::bincode::serialize(self)?)
         }
 
         pub fn from_bytes(bytes: &[u8]) -> Res<Self> {
-            Ok(bincode::deserialize(bytes)?)
+            Ok(base::bincode::deserialize(bytes)?)
         }
     }
 
@@ -307,11 +307,11 @@ pub mod to_client {
         }
 
         pub fn to_bytes(&self) -> Res<Vec<u8>> {
-            Ok(bincode::serialize(self)?)
+            Ok(base::bincode::serialize(self)?)
         }
 
         pub fn from_bytes(bytes: &[u8]) -> Res<Self> {
-            Ok(bincode::deserialize(bytes)?)
+            Ok(base::bincode::deserialize(bytes)?)
         }
     }
 

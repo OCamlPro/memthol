@@ -345,14 +345,12 @@ dependencies = [
  "alloc_data",
  "anyhow",
  "base",
- "bincode",
  "ctf",
  "number_prefix",
  "palette",
  "plotters",
  "plotters-backend",
  "regex",
- "safe_index",
  "serde",
  "serde_regex",
  "strum 0.19.5",
@@ -397,11 +395,7 @@ version = "0.2.0"
 dependencies = [
  "base",
  "charts",
- "chrono",
- "error-chain",
- "lazy_static",
  "plotters-canvas",
- "safe_index",
  "serde",
  "serde_derive",
  "strum 0.19.5",
@@ -2407,9 +2401,7 @@ checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
 
 [[package]]
 name = "safe_index"
-version = "0.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d95c6a838bf25b094cc88562d4b4243aff3b66cafb264d69db8867fce50430d"
+version = "0.9.6"
 
 [[package]]
 name = "same-file"

@@ -21,6 +21,12 @@ impl SinceStart {
             duration: std::time::Duration::new(0, 0),
         }
     }
+    /// A duration of 1 second.
+    pub fn one_sec() -> Self {
+        SinceStart {
+            duration: std::time::Duration::new(1, 0),
+        }
+    }
 
     /// Constructor from a timestamp in nanos seconds.
     pub fn from_nano_timestamp(secs: u64, nanos: u32) -> Self {

@@ -16,7 +16,7 @@ lazy_static = "*"
 log = "^0.4"
 peg = "*"
 rand = { version = "^0.7.3", features = ["small_rng"] }
-safe_index = "*"
+safe_index = { path = "../../../../safe_index" }
 serde = "*"
 serde_derive = "*"
 smallvec = "*"

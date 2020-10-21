@@ -4,7 +4,7 @@ pub use crate::parser::{self, Parseable};
 pub use crate::{
     err::{self, bail, Res, ResExt},
     mem::{self, labels::Labels, str::Str, trace::Trace},
-    Alloc, AllocKind, BigUint, CLoc, Diff, Init, Loc, Span,
+    Alloc, AllocKind, BigUint, Builder, CLoc, Diff, Init, Loc, Span,
 };
 
 pub use base::prelude::{serde::*, *};

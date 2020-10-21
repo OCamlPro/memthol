@@ -16,11 +16,7 @@ crate-type = ["cdylib", "rlib"]
 base = { path = "../base", default_features = false, features = ["client"] }
 charts = { path = "../charts", default_features = false, features = ["client"] }
 
-chrono = "*"
-error-chain = "*"
-lazy_static = "*"
 plotters-canvas = "*"
-safe_index = "*"
 serde = "*"
 serde_derive = "*"
 strum = "*"

@@ -18,8 +18,7 @@ pub mod plotters {
 }
 
 pub use charts::prelude::{
-    alloc, filter::stats::AllFilterStats, num_fmt, time, Alloc, AllocDiff, AllocStats, LoadInfo,
-    Regex,
+    alloc, filter::stats::AllFilterStats, num_fmt, time, Alloc, AllocStats, LoadInfo, Regex,
 };
 
 /// Wasm-bindgen re-exports.

@@ -135,7 +135,7 @@ impl<'color> BoxProps<'color> {
     }
 }
 
-lazy_static::lazy_static! {
+lazy_static! {
     static ref DEFAULT_BUTTON_BOX_PROPS: BoxProps<'static> = {
         BoxProps::new_button("white")
             .with_radius_px(5)

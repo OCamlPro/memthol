@@ -205,7 +205,7 @@ peg::parser! {
         / expected!("allocation kind")
 
         /// Parses an allocation.
-        pub rule new_alloc(f: &mut Factory) -> Alloc
+        pub rule new_alloc(f: &mut Factory) -> Builder
         = uid: uid()
             _ ":"
             _ kind: alloc_kind()
@@ -222,12 +222,12 @@ peg::parser! {
         {
             let labels = f.register_labels(labels);
             let callstack = f.register_trace(callstack);
-            Alloc::new(uid, kind, size, callstack, labels, toc, tod)
+            Builder::new(Some(uid), kind, size, callstack, labels, toc, tod)
         }
         / expected!("allocation data")
 
         /// Parses the new allocations of a diff.
-        pub rule diff_new_allocs(f: &mut Factory) -> Vec<Alloc>
+        pub rule diff_new_allocs(f: &mut Factory) -> Vec<Builder>
         = "new" _ "{"
             new_allocs: ( _ new_alloc: new_alloc(f) { new_alloc })*
         _ "}" {
@@ -365,7 +365,7 @@ implement! {
     }
 
     Parseable<Init>(text, init) for {
-        Alloc => new_alloc(text, &mut Factory::new(init.callstack_is_rev)),
+        Builder => new_alloc(text, &mut Factory::new(init.callstack_is_rev)),
         Diff => diff(text, &mut Factory::new(init.callstack_is_rev)),
     }
 }

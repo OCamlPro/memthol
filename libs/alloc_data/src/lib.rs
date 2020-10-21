@@ -170,6 +170,78 @@ impl AllocKind {
     }
 }
 
+/// An allocation builder.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Builder {
+    /// UID hint.
+    pub uid_hint: Option<uid::Alloc>,
+    /// Allocation kind.
+    pub kind: AllocKind,
+    /// Size of the allocation.
+    pub size: u32,
+    /// Allocation-site callstack.
+    trace: Trace,
+    /// User-defined labels.
+    labels: Labels,
+    /// Time of creation.
+    pub toc: time::SinceStart,
+    /// Time of death.
+    pub tod: Option<time::SinceStart>,
+}
+impl Builder {
+    /// Constructor.
+    pub fn new(
+        uid_hint: Option<uid::Alloc>,
+        kind: AllocKind,
+        size: u32,
+        trace: Trace,
+        labels: Labels,
+        toc: time::SinceStart,
+        tod: Option<time::SinceStart>,
+    ) -> Self {
+        Self {
+            uid_hint,
+            kind,
+            size,
+            trace,
+            labels,
+            toc,
+            tod,
+        }
+    }
+
+    /// Builds an `Alloc`.
+    pub fn build(self, uid: uid::Alloc) -> Res<Alloc> {
+        let Self {
+            uid_hint,
+            kind,
+            size,
+            trace,
+            labels,
+            toc,
+            tod,
+        } = self;
+        match uid_hint {
+            None => (),
+            Some(hint) if uid == hint => (),
+            Some(hint) => bail!(
+                "failed alloc UID check: expected {}, but hint says {}",
+                uid,
+                hint,
+            ),
+        }
+        Ok(Alloc {
+            uid,
+            kind,
+            size,
+            trace,
+            labels,
+            toc,
+            tod,
+        })
+    }
+}
+
 /// Some allocation information.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Alloc {
@@ -273,12 +345,12 @@ impl Alloc {
 /// A diff.
 ///
 /// **NB:** `Display` for this type is multi-line.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Diff {
     /// Timestamp.
     pub time: time::SinceStart,
     /// New allocations in this diff.
-    pub new: Vec<Alloc>,
+    pub new: Vec<Builder>,
     /// Data freed in this diff.
     pub dead: Vec<(uid::Alloc, time::SinceStart)>,
 }
@@ -287,7 +359,7 @@ impl Diff {
     /// Constructor.
     pub fn new(
         time: time::SinceStart,
-        new: Vec<Alloc>,
+        new: Vec<Builder>,
         dead: Vec<(uid::Alloc, time::SinceStart)>,
     ) -> Self {
         Self { time, new, dead }
