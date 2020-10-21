@@ -30,13 +30,10 @@ pub mod prelude;
 pub mod mem;
 
 pub mod parser;
-pub mod time;
 
 mod fmt;
 
 prelude! {}
-
-pub use time::{Date, Duration, SinceStart};
 
 /// Errors, handled by `error_chain`.
 pub mod err {
@@ -46,55 +43,26 @@ pub mod err {
 #[cfg(test)]
 mod test;
 
-/// A big-uint UID.
-///
-/// # Construction From String Slices
-///
-/// ```rust
-/// # alloc_data::prelude! {}
-/// let s = "72430";
-/// let uid = Uid::parse(s).unwrap();
-/// # println!("uid: {}", uid);
-/// assert_eq! { format!("{}", uid), s }
-/// ```
-///
-/// ```rust
-/// # alloc_data::prelude! {}
-/// let s = "643128653641564321563425361425364523164523164";
-/// let uid = Uid::parse(s).unwrap();
-/// # println!("uid: {}", uid);
-/// assert_eq! { format!("{}", uid), s }
-/// ```
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Uid {
-    /// The actual bigint.
-    uid: BigUint,
-}
-
-impl std::ops::Deref for Uid {
-    type Target = BigUint;
-    fn deref(&self) -> &BigUint {
-        &self.uid
-    }
-}
-impl From<BigUint> for Uid {
-    fn from(uid: BigUint) -> Self {
-        Self { uid }
-    }
-}
-impl From<u64> for Uid {
-    fn from(uid: u64) -> Self {
-        Self { uid: uid.into() }
-    }
-}
-
 /// A span.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, base::From, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Span {
     /// Start of the span.
     pub start: usize,
     /// End of the span.
     pub end: usize,
+}
+
+base::implement! {
+    impl From for Span {
+        from (usize, usize) => |(start, end)| Self { start, end }
+    }
+}
+
+impl Span {
+    /// Construtor.
+    pub fn new(start: usize, end: usize) -> Self {
+        Self { start, end }
+    }
 }
 
 /// A location.
@@ -206,7 +174,7 @@ impl AllocKind {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Alloc {
     /// Uid of the allocation.
-    pub uid: Uid,
+    pub uid: uid::Alloc,
     /// Allocation kind.
     pub kind: AllocKind,
     /// Size of the allocation.
@@ -216,21 +184,21 @@ pub struct Alloc {
     /// User-defined labels.
     labels: Labels,
     /// Time of creation.
-    pub toc: SinceStart,
+    pub toc: time::SinceStart,
     /// Time of death.
-    pub tod: Option<SinceStart>,
+    pub tod: Option<time::SinceStart>,
 }
 
 impl Alloc {
     /// Constructor.
     pub fn new(
-        uid: impl Into<Uid>,
+        uid: impl Into<uid::Alloc>,
         kind: AllocKind,
         size: u32,
         trace: Trace,
         labels: Labels,
-        toc: SinceStart,
-        tod: Option<SinceStart>,
+        toc: time::SinceStart,
+        tod: Option<time::SinceStart>,
     ) -> Self {
         let uid = uid.into();
         Self {
@@ -247,7 +215,7 @@ impl Alloc {
     /// Sets the time of death.
     ///
     /// Bails if a time of death is already registered.
-    pub fn set_tod(&mut self, tod: SinceStart) -> Result<(), String> {
+    pub fn set_tod(&mut self, tod: time::SinceStart) -> Result<(), String> {
         if self.tod.is_some() {
             Err("\
                  trying to set the time of death, \
@@ -261,12 +229,12 @@ impl Alloc {
     }
 
     /// Sets the time of creation.
-    pub fn set_toc(&mut self, toc: SinceStart) {
+    pub fn set_toc(&mut self, toc: time::SinceStart) {
         self.toc = toc
     }
 
     /// UID accessor.
-    pub fn uid(&self) -> &Uid {
+    pub fn uid(&self) -> &uid::Alloc {
         &self.uid
     }
     /// Kind accessor.
@@ -293,11 +261,11 @@ impl Alloc {
         self.labels.get()
     }
     /// Time of creation accessor.
-    pub fn toc(&self) -> SinceStart {
+    pub fn toc(&self) -> time::SinceStart {
         self.toc
     }
     /// Time of death accessor.
-    pub fn tod(&self) -> Option<SinceStart> {
+    pub fn tod(&self) -> Option<time::SinceStart> {
         self.tod
     }
 }
@@ -308,16 +276,20 @@ impl Alloc {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Diff {
     /// Timestamp.
-    pub time: SinceStart,
+    pub time: time::SinceStart,
     /// New allocations in this diff.
     pub new: Vec<Alloc>,
     /// Data freed in this diff.
-    pub dead: Vec<(Uid, SinceStart)>,
+    pub dead: Vec<(uid::Alloc, time::SinceStart)>,
 }
 
 impl Diff {
     /// Constructor.
-    pub fn new(time: SinceStart, new: Vec<Alloc>, dead: Vec<(Uid, SinceStart)>) -> Self {
+    pub fn new(
+        time: time::SinceStart,
+        new: Vec<Alloc>,
+        dead: Vec<(uid::Alloc, time::SinceStart)>,
+    ) -> Self {
         Self { time, new, dead }
     }
 }
@@ -326,9 +298,9 @@ impl Diff {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Init {
     /// The start time of the run: an absolute date.
-    pub start_time: Date,
+    pub start_time: time::Date,
     /// Optional end time.
-    pub end_time: Option<SinceStart>,
+    pub end_time: Option<time::SinceStart>,
     /// Size of machine words in bytes.
     pub word_size: usize,
     /// True if the callstack go from `main` to allocation site, called *reversed order*.
@@ -338,7 +310,7 @@ pub struct Init {
 impl Default for Init {
     fn default() -> Self {
         Self {
-            start_time: Date::from_timestamp(0, 0),
+            start_time: time::Date::from_timestamp(0, 0),
             end_time: None,
             word_size: 8,
             callstack_is_rev: false,
@@ -349,8 +321,8 @@ impl Default for Init {
 impl Init {
     /// Constructor.
     pub fn new(
-        start_time: Date,
-        end_time: Option<SinceStart>,
+        start_time: time::Date,
+        end_time: Option<time::SinceStart>,
         word_size: usize,
         callstack_is_rev: bool,
     ) -> Self {

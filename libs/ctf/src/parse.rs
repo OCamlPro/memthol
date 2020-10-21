@@ -166,7 +166,7 @@ impl<'data> RawParser<'data> {
 impl<'data> RawParser<'data> {
     fn check<E>(&self, can_parse: usize, err: impl FnOnce() -> E) -> Res<()>
     where
-        E: Into<err::Err>,
+        E: Into<err::Error>,
     {
         if self.cursor + can_parse <= self.data.len() {
             Ok(())
@@ -725,7 +725,7 @@ decl_impl_trait! {
                 cxt.btrace
                     .get_backtrace(self, nencoded, common_pref_len)?;
 
-            let alloc_time = duration_from_millis(timestamp);
+            let alloc_time = time::Duration::from_micros(timestamp);
 
             Ok(ast::event::Alloc {
                 id: alloc_id,

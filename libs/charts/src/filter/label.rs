@@ -96,7 +96,7 @@ impl LabelSpec {
         let label = s.into();
         macro_rules! illegal {
             () => {{
-                let err: err::Err = format!("illegal regex `{}`", label).into();
+                let err: err::Error = format!("illegal regex `{}`", label).into();
                 err
             }};
         }

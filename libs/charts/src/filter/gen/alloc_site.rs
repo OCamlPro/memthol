@@ -18,14 +18,14 @@ impl Default for AllocSiteParams {
 pub type FileName = String;
 
 pub struct AllocSite {
-    map: Map<FileName, usize>,
+    map: BTMap<FileName, usize>,
     unk: usize,
 }
 
 impl AllocSite {
     fn new() -> Self {
         Self {
-            map: Map::new(),
+            map: BTMap::new(),
             unk: 0,
         }
     }

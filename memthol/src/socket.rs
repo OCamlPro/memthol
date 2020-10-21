@@ -12,7 +12,7 @@ fn new_server(addr: &str, port: usize) -> Res<net::TcpListener> {
 /// Spawns a `Handler` for each incoming connection request.
 fn handle_requests(log: bool, server: net::TcpListener) {
     for stream in server.incoming().filter_map(Result::ok) {
-        let mut handler = err::unwrap_or! {
+        let mut handler = base::unwrap_or! {
             Handler::new(log, stream).chain_err(|| "while creating request handler"),
             {
                 log::error!("failed to start request handler");
@@ -111,8 +111,13 @@ impl Com {
         self.prof.log.start();
         if let Some(log) = self.log.as_mut() {
             use std::io::Write;
-            writeln!(log, "[{}] sending message to client: {}", time::now(), msg)
-                .chain_err(|| "while writing to log file")?;
+            writeln!(
+                log,
+                "[{}] sending message to client: {}",
+                time::Date::now(),
+                msg
+            )
+            .chain_err(|| "while writing to log file")?;
         }
         self.prof.log.stop();
 
@@ -140,8 +145,12 @@ impl Com {
     pub fn send_ping(&mut self) -> Res<()> {
         if let Some(log) = self.log.as_mut() {
             use std::io::Write;
-            writeln!(log, "[{}] sending ping message to client\n", time::now(),)
-                .chain_err(|| "while writing to log file")?;
+            writeln!(
+                log,
+                "[{}] sending ping message to client\n",
+                time::Date::now(),
+            )
+            .chain_err(|| "while writing to log file")?;
         }
 
         self.socket
@@ -156,8 +165,12 @@ impl Com {
         if let Some(stats) = AllocStats::get()? {
             if let Some(log) = self.log.as_mut() {
                 use std::io::Write;
-                writeln!(log, "[{}] sending stats message to client\n", time::now(),)
-                    .chain_err(|| "while writing to log file")?;
+                writeln!(
+                    log,
+                    "[{}] sending stats message to client\n",
+                    time::Date::now(),
+                )
+                .chain_err(|| "while writing to log file")?;
             }
 
             self.send(msg::to_client::Msg::alloc_stats(stats))?;
@@ -188,13 +201,13 @@ impl Com {
                 Either::Left(msg) => writeln!(
                     log,
                     "[{}] received message from client {}",
-                    time::now(),
+                    time::Date::now(),
                     msg,
                 )?,
                 Either::Right(desc) => writeln!(
                     log,
                     "[{}] received message from client {}",
-                    time::now(),
+                    time::Date::now(),
                     desc,
                 )?,
             }
@@ -206,7 +219,7 @@ impl Com {
     /// Retrieves a message from the client.
     pub fn incoming_message<'a>(&'a mut self) -> Res<net::Msg> {
         self.socket.read_message().map_err(|e| {
-            err::Err::from(format!("failed to receive message from {}: {}", self.ip, e))
+            err::Error::from(format!("failed to receive message from {}: {}", self.ip, e))
         })
     }
 }
@@ -227,9 +240,9 @@ pub struct Handler {
     /// Stores the result of receiving messages from the client.
     from_client: FromClient,
     /// Time at which we last sent points to render.
-    last_frame: Instant,
+    last_frame: time::Instant,
     /// Minimum time between two rendering steps.
-    frame_span: Duration,
+    frame_span: time::Duration,
     /// Label for ping messages.
     ping_label: Vec<u8>,
 
@@ -284,8 +297,8 @@ impl Handler {
             com,
             charts,
             from_client: FromClient::new(),
-            last_frame: Instant::now(),
-            frame_span: Duration::from_millis(500),
+            last_frame: time::Instant::now(),
+            frame_span: time::Duration::from_millis(500),
             ping_label,
 
             instance_prof: HandlerProf::new(),
@@ -304,7 +317,7 @@ impl Handler {
 
     /// Runs the handler.
     pub fn run(&mut self) {
-        err::unwrap_or!(
+        base::unwrap_or!(
             self.internal_run(),
             log::info!("lost connection with {}", self.ip())
         )
@@ -312,7 +325,7 @@ impl Handler {
 
     /// Sets the time of the last frame to now.
     fn set_last_frame(&mut self) {
-        self.last_frame = Instant::now()
+        self.last_frame = time::Instant::now()
     }
 
     /// Runs the handler, can fail.
@@ -365,7 +378,7 @@ impl Handler {
             }
 
             // Wait before rendering if necessary.
-            let now = Instant::now();
+            let now = time::Instant::now();
             if now <= self.last_frame + self.frame_span {
                 std::thread::sleep((self.last_frame + self.frame_span) - now)
             }

@@ -7,6 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bincode = "*"
 chrono = { version = "*", features = ["serde"] }
 either = "*"
 error-chain = "*"
@@ -15,6 +16,9 @@ lazy_static = "*"
 log = "^0.4"
 peg = "*"
 rand = { version = "^0.7.3", features = ["small_rng"] }
+safe_index = "*"
+serde = "*"
+serde_derive = "*"
 smallvec = "*"
 
 [features]

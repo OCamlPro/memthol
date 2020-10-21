@@ -8,7 +8,7 @@ prelude! {}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointVal<Val> {
     /// Values for filter lines.
-    pub map: Map<uid::LineUid, Val>,
+    pub map: BTMap<uid::Line, Val>,
 }
 impl<Val> PointVal<Val> {
     /// Constructor.
@@ -16,28 +16,28 @@ impl<Val> PointVal<Val> {
     where
         Val: Clone,
     {
-        let mut map = Map::new();
-        map.insert(uid::LineUid::CatchAll, default.clone());
-        map.insert(uid::LineUid::Everything, default.clone());
+        let mut map = BTMap::new();
+        map.insert(uid::Line::CatchAll, default.clone());
+        map.insert(uid::Line::Everything, default.clone());
         for filter in filters.filters() {
-            map.insert(uid::LineUid::Filter(filter.uid()), default.clone());
+            map.insert(uid::Line::Filter(filter.uid()), default.clone());
         }
         Self { map }
     }
 
     /// Immutable ref over some value.
-    pub fn get_mut_or(&mut self, uid: uid::LineUid, default: Val) -> &mut Val {
+    pub fn get_mut_or(&mut self, uid: uid::Line, default: Val) -> &mut Val {
         self.map.entry(uid).or_insert(default)
     }
 
     /// Mutable ref over some value.
-    pub fn get_mut(&mut self, uid: uid::LineUid) -> Res<&mut Val> {
+    pub fn get_mut(&mut self, uid: uid::Line) -> Res<&mut Val> {
         self.map
             .get_mut(&uid)
             .ok_or_else(|| format!("unknown line uid `{}`", uid).into())
     }
 
-    pub fn get(&self, uid: uid::LineUid) -> Res<&Val> {
+    pub fn get(&self, uid: uid::Line) -> Res<&Val> {
         self.map
             .get(&uid)
             .ok_or_else(|| format!("unknown line uid `{}`", uid).into())
@@ -45,12 +45,12 @@ impl<Val> PointVal<Val> {
 
     /// Retrieves the value for the *everything* filter.
     pub fn get_everything_val(&self) -> Res<&Val> {
-        self.get(uid::LineUid::Everything)
+        self.get(uid::Line::Everything)
     }
 
-    /// Map over all values.
-    pub fn map<Out>(self, mut f: impl FnMut(uid::LineUid, Val) -> Res<Out>) -> Res<PointVal<Out>> {
-        let mut map = Map::new();
+    /// BTMap over all values.
+    pub fn map<Out>(self, mut f: impl FnMut(uid::Line, Val) -> Res<Out>) -> Res<PointVal<Out>> {
+        let mut map = BTMap::new();
         for (uid, val) in self.map {
             map.insert(uid, f(uid, val)?);
         }
@@ -148,7 +148,7 @@ where
     fn default_min() -> Self::Coord;
     fn default_max() -> Self::Coord;
 }
-impl CoordExt for Date {
+impl CoordExt for time::Date {
     type Coord = time::chrono::Duration;
     type Range = coord::RangedDuration;
     fn zero() -> time::chrono::Duration {
@@ -221,7 +221,7 @@ impl RatioExt for time::chrono::Duration {
 }
 
 pub trait RangesExt<X, Y> {
-    fn ranges(&self, is_active: impl Fn(uid::LineUid) -> bool) -> Ranges<Option<X>, Option<Y>>;
+    fn ranges(&self, is_active: impl Fn(uid::Line) -> bool) -> Ranges<Option<X>, Option<Y>>;
 }
 
 pub trait PointValExt<Val>
@@ -297,7 +297,7 @@ where
         settings: &ChartSettings,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
-        is_active: impl Fn(uid::LineUid) -> bool,
+        is_active: impl Fn(uid::Line) -> bool,
         active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
     ) -> Res<()>
     where
@@ -341,7 +341,7 @@ where
         _settings: &ChartSettings,
         mut chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
-        is_active: impl Fn(uid::LineUid) -> bool,
+        is_active: impl Fn(uid::Line) -> bool,
         active_filters: impl Iterator<Item = &'spec filter::FilterSpec>,
     ) -> Res<()>
     where
@@ -403,7 +403,7 @@ where
         _settings: &ChartSettings,
         mut chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
-        is_active: impl Fn(uid::LineUid) -> bool,
+        is_active: impl Fn(uid::Line) -> bool,
         active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
     ) -> Res<()>
     where
@@ -505,7 +505,7 @@ where
         _settings: &ChartSettings,
         mut chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
-        is_active: impl Fn(uid::LineUid) -> bool,
+        is_active: impl Fn(uid::Line) -> bool,
         active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
     ) -> Res<()>
     where
@@ -615,7 +615,7 @@ where
     X: PartialOrd + Clone + std::fmt::Display,
     Y: PartialOrd + Clone,
 {
-    fn ranges(&self, is_active: impl Fn(uid::LineUid) -> bool) -> Ranges<Option<X>, Option<Y>> {
+    fn ranges(&self, is_active: impl Fn(uid::Line) -> bool) -> Ranges<Option<X>, Option<Y>> {
         let mut ranges: Ranges<Option<&X>, Option<&Y>> =
             Ranges::new(Range::new(None, None), Range::new(None, None));
 
@@ -662,22 +662,27 @@ where
     }
 }
 
-impl<Y> PointValExt<Date> for PolyPoints<Date, Y> {
-    fn val_range_processor(range: Range<Option<Date>>) -> Res<Range<Date>> {
+impl<Y> PointValExt<time::Date> for PolyPoints<time::Date, Y> {
+    fn val_range_processor(range: Range<Option<time::Date>>) -> Res<Range<time::Date>> {
         match (range.min, range.max) {
             (Some(min), Some(max)) => Ok(Range { min, max }),
             (min, max) => bail!("failed to compute x-range: {:?}, {:?}", min, max),
         }
     }
-    fn val_coord_range_processor(range: &Range<Date>) -> Res<Range<<Date as CoordExt>::Coord>> {
+    fn val_coord_range_processor(
+        range: &Range<time::Date>,
+    ) -> Res<Range<<time::Date as CoordExt>::Coord>> {
         let min = time::chrono::Duration::seconds(0);
         let max = range.max.date().clone() - range.min.date().clone();
         Ok(Range { min, max })
     }
-    fn val_coord_processor(range: &Range<Date>, x: &Date) -> <Date as CoordExt>::Coord {
+    fn val_coord_processor(
+        range: &Range<time::Date>,
+        x: &time::Date,
+    ) -> <time::Date as CoordExt>::Coord {
         x.date().clone() - range.min.date().clone()
     }
-    fn val_label_formatter(date: &<Date as CoordExt>::Coord) -> String {
+    fn val_label_formatter(date: &<time::Date as CoordExt>::Coord) -> String {
         time::SinceStart::from(date.to_std().unwrap()).to_string()
     }
 }
@@ -709,12 +714,18 @@ impl<X> PointValExt<u32> for PolyPoints<X, u32> {
 }
 
 /// Points representing size over time.
-pub type TimeSizePoints = PolyPoints<Date, u32>;
+pub type TimeSizePoints = PolyPoints<time::Date, u32>;
 
 /// Some points for a time chart.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TimePoints {
     Size(TimeSizePoints),
+}
+
+base::implement! {
+    impl From for TimePoints {
+        from TimeSizePoints => |points| Self::Size(points)
+    }
 }
 
 impl TimePoints {
@@ -757,7 +768,7 @@ impl TimePoints {
         settings: &ChartSettings,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
-        is_active: impl Fn(uid::LineUid) -> bool,
+        is_active: impl Fn(uid::Line) -> bool,
         active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
     ) -> Res<()>
     where
@@ -772,12 +783,6 @@ impl TimePoints {
                 active_filters,
             ),
         }
-    }
-}
-
-impl From<TimeSizePoints> for TimePoints {
-    fn from(points: TimeSizePoints) -> Self {
-        Self::Size(points)
     }
 }
 
@@ -821,7 +826,7 @@ impl Points {
         settings: &ChartSettings,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
-        is_active: impl Fn(uid::LineUid) -> bool,
+        is_active: impl Fn(uid::Line) -> bool,
         active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
     ) -> Res<()>
     where
@@ -852,12 +857,14 @@ where
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChartPoints {
     /// The actual points.
-    points: Map<uid::ChartUid, Points>,
+    points: BTMap<uid::Chart, Points>,
 }
 impl ChartPoints {
     /// Constructor.
     pub fn new() -> Self {
-        Self { points: Map::new() }
+        Self {
+            points: BTMap::new(),
+        }
     }
 
     /// True if there are no points.
@@ -866,14 +873,13 @@ impl ChartPoints {
     }
 }
 
-impl Deref for ChartPoints {
-    type Target = Map<uid::ChartUid, Points>;
-    fn deref(&self) -> &Self::Target {
-        &self.points
-    }
-}
-impl DerefMut for ChartPoints {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.points
+base::implement! {
+    impl ChartPoints {
+        Deref {
+            to BTMap<uid::Chart, Points> => |&self| &self.points
+        }
+        DerefMut {
+            |&mut self| &mut self.points
+        }
     }
 }

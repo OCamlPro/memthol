@@ -24,7 +24,7 @@ pub struct Watcher {
     /// Files that have already been sent to the client and must be ignored.
     ///
     /// **Always** contains `self.tmp_file` and `self.init_file`.
-    known_files: Set<OsString>,
+    known_files: BTSet<OsString>,
 
     /// Diff paths, used when gathering new diffs.
     new_diff_paths: Vec<PathBuf>,
@@ -44,14 +44,14 @@ impl Watcher {
             let path = path.display().to_string();
             let _ = std::thread::spawn(move || match Self::ctf_run(path) {
                 Ok(()) => (),
-                Err(e) => super::add_err(e.pretty()),
+                Err(e) => super::add_err(e.to_pretty()),
             });
         } else if path.is_dir() {
             let mut watcher = Self::new(target);
 
             let _ = std::thread::spawn(move || match watcher.run(forever) {
                 Ok(()) => (),
-                Err(e) => super::add_err(e.pretty()),
+                Err(e) => super::add_err(e.to_pretty()),
             });
         } else {
             super::add_err(format!(
@@ -159,7 +159,7 @@ impl Watcher {
         // The call to `register_new_diffs` below can fail if the profiling run is restarted. If it
         // does, the error will be put here. Then, we try to read a new init file, and we drop the
         // error if that's successful. Otherwise, we return the error.
-        let mut diff_error: Option<err::Err> = None;
+        let mut diff_error: Option<err::Error> = None;
 
         // Diff-reading loop.
         loop {
@@ -219,7 +219,7 @@ impl Watcher {
         let tmp_file = "tmp.memthol".into();
         let init_file = "init.memthol".into();
         let init_last_modified = None;
-        let known_files = Set::new();
+        let known_files = BTSet::new();
         let new_diff_paths = vec![];
         let new_diffs = vec![];
         let buf = String::new();

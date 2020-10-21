@@ -26,8 +26,8 @@ impl Footer {
                 }
                 Ok(true)
             } // Removed(uid) => {
-              //     if self.active == Some(FooterTab::Filter(filter::LineUid::Filter(uid))) {
-              //         self.active = Some(FooterTab::Filter(filter::LineUid::Everything));
+              //     if self.active == Some(FooterTab::Filter(uid::Line::Filter(uid))) {
+              //         self.active = Some(FooterTab::Filter(uid::Line::Everything));
               //         Ok(true)
               //     } else {
               //         Ok(false)
@@ -76,12 +76,12 @@ pub enum FooterTab {
     /// Info tab.
     Normal(NormalFooterTab),
     /// Filters tab.
-    Filter(filter::LineUid),
+    Filter(uid::Line),
 }
 
 impl FooterTab {
     /// Filter tab constructor.
-    pub fn filter(uid: filter::LineUid) -> Self {
+    pub fn filter(uid: uid::Line) -> Self {
         Self::Filter(uid)
     }
 
@@ -93,7 +93,7 @@ impl FooterTab {
         }
     }
     /// The active filter, if any.
-    pub fn get_filter(self) -> Option<filter::LineUid> {
+    pub fn get_filter(self) -> Option<uid::Line> {
         match self {
             Self::Normal(_) => None,
             Self::Filter(uid) => Some(uid),
@@ -115,8 +115,8 @@ impl From<NormalFooterTab> for FooterTab {
         FooterTab::Normal(tab)
     }
 }
-impl From<filter::LineUid> for FooterTab {
-    fn from(uid: filter::LineUid) -> Self {
+impl From<uid::Line> for FooterTab {
+    fn from(uid: uid::Line) -> Self {
         FooterTab::Filter(uid)
     }
 }

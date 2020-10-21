@@ -1,7 +1,5 @@
 //! Allocation data parsers.
 
-pub mod memthol;
-
 prelude! {}
 
 use mem::Factory;
@@ -162,38 +160,38 @@ peg::parser! {
         / expected!("seconds (float with at most nanosecond sub-second precision)")
 
         /// Parses an amount of seconds representing a lifetime.
-        pub rule lifetime() -> Lifetime
+        pub rule lifetime() -> time::Lifetime
         = secs: secs() {
-            Duration::new(secs.0, secs.1).into()
+            time::Duration::new(secs.0, secs.1).into()
         }
         / expected!("an amount of seconds (float, lifetime)")
 
         /// Parses an amount of seconds since the start of the run.
-        pub rule since_start() -> SinceStart
+        pub rule since_start() -> time::SinceStart
         = secs: secs() {
-            Duration::new(secs.0, secs.1).into()
+            time::Duration::new(secs.0, secs.1).into()
         }
         / expected!("an amount of seconds (float) since the start of the run")
 
         /// Parses an optional amount of seconds since the start of the run.
-        pub rule since_start_opt() -> Option<SinceStart>
+        pub rule since_start_opt() -> Option<time::SinceStart>
         = "_" { None }
         / time: since_start() { Some(time) }
         / expected!("an optional amount of seconds (float) since the start of the run, `_` if none")
 
         /// Parses a date.
-        pub rule date() -> Date
+        pub rule date() -> time::Date
         = secs: secs() {?
             let (secs, sub_secs) = secs;
             i64::try_from(secs).map(
-                |secs| Date::from_timestamp(secs, sub_secs)
+                |secs| time::Date::from_timestamp(secs, sub_secs)
             ).map_err(|_| "illegal amount of seconds for a date")
         }
 
         /// Parses a uid.
-        pub rule uid() -> Uid
+        pub rule uid() -> uid::Alloc
         = quiet! {
-            uid: big_uint() { uid.into() }
+            uid: usize() { uid.into() }
         }
         / expected!("UID (big uint)")
 
@@ -238,11 +236,11 @@ peg::parser! {
         / expected!("list of new allocations")
 
         /// Parses the death of an allocation.
-        pub rule dead_alloc() -> (Uid, SinceStart)
+        pub rule dead_alloc() -> (uid::Alloc, time::SinceStart)
         = uid: uid() _ ":" _ secs: since_start() {  (uid, secs) }
 
         /// Parses the dead allocations of a diff.
-        pub rule diff_dead_allocs() -> Vec<(Uid, SinceStart)>
+        pub rule diff_dead_allocs() -> Vec<(uid::Alloc, time::SinceStart)>
         = "dead" _ "{"
             dead_allocs: (_ dead_alloc: dead_alloc() { dead_alloc })*
         _ "}" {
@@ -355,11 +353,11 @@ implement! {
         u32 => u32(text),
         u64 => u64(text),
 
-        SinceStart => since_start(text),
-        Lifetime => lifetime(text),
-        Date => date(text),
+        time::SinceStart => since_start(text),
+        time::Lifetime => lifetime(text),
+        time::Date => date(text),
 
-        Uid => uid(text),
+        uid::Alloc => uid(text),
         AllocKind => alloc_kind(text),
         Init => init(text),
         Loc => loc(text, &mut Factory::new(false)),

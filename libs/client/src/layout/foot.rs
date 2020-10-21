@@ -178,9 +178,9 @@ pub mod menu {
                 {{
                     let empty = || html! { <></> };
                     match filter.uid() {
-                        filter::LineUid::CatchAll |
-                        filter::LineUid::Everything => empty(),
-                        filter::LineUid::Filter(uid) => if let Ok(
+                        uid::Line::CatchAll |
+                        uid::Line::Everything => empty(),
+                        uid::Line::Filter(uid) => if let Ok(
                             (_index, filter)
                         ) = model.footer_filters().get_filter(uid) {
                             subfilters::render(model, filter)
@@ -223,7 +223,7 @@ pub mod menu {
     pub mod filter_right_tile {
         use super::*;
 
-        pub fn render(model: &Model, uid: filter::LineUid) -> Html {
+        pub fn render(model: &Model, uid: uid::Line) -> Html {
             html! {
                 <>
                     <br/><br/>
@@ -257,12 +257,12 @@ pub mod menu {
             }
         }
 
-        pub fn add_subfilter_button(model: &Model, uid: filter::LineUid) -> Html {
+        pub fn add_subfilter_button(model: &Model, uid: uid::Line) -> Html {
             let action = match uid {
-                filter::LineUid::Filter(uid) => {
+                uid::Line::Filter(uid) => {
                     Some(model.link.callback(move |_| msg::FilterMsg::add_new(uid)))
                 }
-                filter::LineUid::Everything | filter::LineUid::CatchAll => None,
+                uid::Line::Everything | uid::Line::CatchAll => None,
             };
             button("add_subfilter_button", "add subfilter", action)
         }
@@ -349,7 +349,7 @@ pub mod menu {
 
         pub fn render_sub(
             model: &Model,
-            uid: filter::FilterUid,
+            uid: uid::Filter,
             is_first: bool,
             sub: &filter::SubFilter,
         ) -> Html {
@@ -359,7 +359,7 @@ pub mod menu {
             match sub.raw() {
                 RawSubFilter::Size(sub) => {
                     size::render(&mut table_row, model, sub, move |size_sub_filter_res| {
-                        err::msg_of_res(size_sub_filter_res.map(|size| {
+                        msg_of_res(size_sub_filter_res.map(|size| {
                             msg::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Size(size)),
@@ -369,7 +369,7 @@ pub mod menu {
                 }
                 RawSubFilter::Lifetime(sub) => {
                     lifetime::render(&mut table_row, model, sub, move |lifetime_sub_filter_res| {
-                        err::msg_of_res(lifetime_sub_filter_res.map(|lifetime| {
+                        msg_of_res(lifetime_sub_filter_res.map(|lifetime| {
                             msg::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Lifetime(lifetime)),
@@ -379,7 +379,7 @@ pub mod menu {
                 }
                 RawSubFilter::Label(sub) => {
                     label::render(&mut table_row, model, sub, move |label_sub_filter_res| {
-                        err::msg_of_res(label_sub_filter_res.map(|label| {
+                        msg_of_res(label_sub_filter_res.map(|label| {
                             msg::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Label(label)),
@@ -389,7 +389,7 @@ pub mod menu {
                 }
                 RawSubFilter::Loc(sub) => {
                     location::render(&mut table_row, model, sub, move |loc_sub_filter_res| {
-                        err::msg_of_res(loc_sub_filter_res.map(|loc| {
+                        msg_of_res(loc_sub_filter_res.map(|loc| {
                             msg::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Loc(loc)),
@@ -428,7 +428,7 @@ pub mod menu {
             }
         }
 
-        pub fn render_key(model: &Model, uid: filter::FilterUid, sub: &SubFilter) -> Html {
+        pub fn render_key(model: &Model, uid: uid::Filter, sub: &SubFilter) -> Html {
             let sub_uid = sub.uid();
             let options = SubKey::all();
             let selected = Some(SubKey::from_kind(sub.kind()));
@@ -728,7 +728,7 @@ pub mod tabs {
 
     const img_dim_px: usize = 4 * (tabs_height_px / 5);
 
-    pub fn render(model: &Model, active: Option<filter::LineUid>) -> Html {
+    pub fn render(model: &Model, active: Option<uid::Line>) -> Html {
         html! {
             <>
                 { tabs_left::render(model) }
@@ -804,7 +804,7 @@ pub mod tabs {
             };
         }
 
-        pub fn render(model: &Model, current_filter: Option<filter::FilterUid>) -> Html {
+        pub fn render(model: &Model, current_filter: Option<uid::Filter>) -> Html {
             let mut tabs = layout::tabs::Tabs::new();
 
             tabs.push_sep();
@@ -856,13 +856,13 @@ pub mod tabs {
             };
         }
 
-        pub fn render(model: &Model, active: Option<filter::LineUid>) -> Html {
+        pub fn render(model: &Model, active: Option<uid::Line>) -> Html {
             let (everything, others) = model.footer_filters().filters_to_render();
 
             let is_active = |filter: &filter::FilterSpec| {
                 active.map(|uid| uid == filter.uid()).unwrap_or(false)
             };
-            let callback = |uid: filter::LineUid| {
+            let callback = |uid: uid::Line| {
                 model
                     .link
                     .callback(move |_| msg::FooterMsg::toggle_tab(footer::FooterTab::filter(uid)))
@@ -874,7 +874,7 @@ pub mod tabs {
             let push_spec =
                 |tabs: &mut layout::tabs::Tabs,
                  filter: &filter::FilterSpec,
-                 index_uid_opt: Option<(usize, filter::FilterUid)>| {
+                 index_uid_opt: Option<(usize, uid::Filter)>| {
                     let edited = is_edited(filter);
 
                     let name = match model.filter_stats.get(filter.uid()) {

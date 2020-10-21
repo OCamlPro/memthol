@@ -151,6 +151,7 @@ dependencies = [
 name = "base"
 version = "0.2.0"
 dependencies = [
+ "bincode",
  "chrono",
  "derive_more",
  "either",
@@ -159,6 +160,9 @@ dependencies = [
  "log",
  "peg",
  "rand 0.7.3",
+ "safe_index",
+ "serde",
+ "serde_derive",
  "smallvec",
 ]
 

@@ -16,7 +16,7 @@ pub struct TimeSize {
     /// Current total size.
     size: PointVal<u32>,
     /// Map used to construct the points.
-    map: Map<Date, PointVal<(u32, u32)>>,
+    map: BTMap<time::Date, PointVal<(u32, u32)>>,
     last_time_stamp: Option<time::SinceStart>,
 }
 
@@ -26,7 +26,7 @@ impl TimeSize {
         Self {
             timestamp: time::SinceStart::zero(),
             size: Self::init_size_point(filters),
-            map: Map::new(),
+            map: BTMap::new(),
             last_time_stamp: None,
         }
     }
@@ -57,7 +57,7 @@ impl TimeSize {
     pub fn new(filters: &filter::Filters) -> Self {
         let timestamp = time::SinceStart::zero();
         let size = PointVal::new(0, filters);
-        let map = Map::new();
+        let map = BTMap::new();
         Self {
             timestamp,
             size,
@@ -88,7 +88,7 @@ impl TimeSize {
     ///
     /// - clears `self.map`.
     fn generate_points(&mut self) -> Res<TimeSizePoints> {
-        let map = std::mem::replace(&mut self.map, Map::new());
+        let map = std::mem::replace(&mut self.map, BTMap::new());
 
         let mut points = Vec::with_capacity(self.map.len());
 
@@ -111,8 +111,8 @@ impl TimeSize {
             let (before_key, after_key) = {
                 let (secs, nanos) = before.key.timestamp();
                 (
-                    Date::from_timestamp(secs - 1, nanos),
-                    Date::from_timestamp(secs + 1, nanos),
+                    time::Date::from_timestamp(secs - 1, nanos),
+                    time::Date::from_timestamp(secs + 1, nanos),
                 )
             };
 
@@ -155,8 +155,7 @@ impl TimeSize {
             ()
         }
 
-        let mut min_time_spacing = data.current_time().clone();
-        min_time_spacing.div(resolution.width / 200);
+        let min_time_spacing = data.current_time().clone() / (resolution.width / 200);
 
         let mut new_stuff = false;
         *last_time_stamp = Some(data.current_time().clone());
@@ -168,9 +167,9 @@ impl TimeSize {
                 new_stuff = true;
                 // Filter UID that matches the allocation, or catch-all.
                 let uid = if let Some(uid) = filters.find_match(data.current_time(), alloc) {
-                    uid::LineUid::Filter(uid)
+                    uid::Line::Filter(uid)
                 } else {
-                    uid::LineUid::CatchAll
+                    uid::Line::CatchAll
                 };
 
                 let adjusted_toc = if let Some(last_time_stamp) = last_time_stamp.as_mut() {
@@ -193,7 +192,7 @@ impl TimeSize {
                     .0 += alloc.size;
                 // Update the everything line.
                 toc_point_val
-                    .get_mut_or(uid::LineUid::Everything, (INIT_SIZE_VALUE, INIT_SIZE_VALUE))
+                    .get_mut_or(uid::Line::Everything, (INIT_SIZE_VALUE, INIT_SIZE_VALUE))
                     .0 += alloc.size;
                 Ok(())
             },
@@ -226,33 +225,32 @@ impl TimeSize {
                     // Potentially update the map, some filters are time-sensitive so matches can
                     // change.
                     // let uid = if let Some(uid) = filters.find_match(data.current_time(), alloc) {
-                    //     uid::LineUid::Filter(uid)
+                    //     uid::Line::Filter(uid)
                     // } else {
-                    //     uid::LineUid::CatchAll
+                    //     uid::Line::CatchAll
                     // };
                     let alloc = data
                         .get_alloc(uid)
                         .chain_err(|| "while handling new dead allocations")?;
 
                     let uid = if let Some(uid) = filters.find_dead_match(uid) {
-                        uid::LineUid::Filter(uid)
+                        uid::Line::Filter(uid)
                     } else {
-                        uid::LineUid::CatchAll
+                        uid::Line::CatchAll
                     };
 
                     let toc_point_val =
                         map!(entry my_map, with filters => at as_date(adjusted_tod));
 
                     toc_point_val.get_mut(uid)?.1 += alloc.size;
-                    toc_point_val.get_mut(uid::LineUid::Everything)?.1 += alloc.size
+                    toc_point_val.get_mut(uid::Line::Everything)?.1 += alloc.size
                 }
                 Ok(())
             },
         )?;
 
         if new_stuff {
-            self.timestamp = data.current_time().clone();
-            self.timestamp.add(time::SinceStart::from_timestamp(0, 1));
+            self.timestamp = data.current_time() + time::SinceStart::from_nano_timestamp(0, 1)
         }
 
         Ok(())

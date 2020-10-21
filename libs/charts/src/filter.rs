@@ -22,7 +22,6 @@ pub use loc::LocFilter;
 use ord::OrdFilter;
 pub use spec::FilterSpec;
 pub use sub::SubFilter;
-pub use uid::{FilterUid, LineUid, SubFilterUid};
 
 /// A filter over allocation sizes.
 pub type SizeFilter = OrdFilter<u32>;
@@ -35,7 +34,8 @@ impl LifetimeFilter {
     /// It should always be the case that `alloc_toc <= timestamp`.
     pub fn apply_at(&self, timestamp: &time::SinceStart, alloc_toc: &time::SinceStart) -> bool {
         debug_assert!(alloc_toc <= timestamp);
-        self.apply(&timestamp.sub_to_lt(alloc_toc))
+        let lt = (timestamp - alloc_toc).to_lifetime();
+        self.apply(&lt)
     }
 }
 
@@ -107,7 +107,7 @@ impl fmt::Display for FilterKind {
 
 impl FilterKind {
     pub fn all() -> Vec<FilterKind> {
-        debug_do! {
+        base::debug_do! {
             // If this fails, it means you added/removed a variant to/from `FilterKind`. The vector
             // below, which yields all variants, must be updated.
             match Self::Size {
@@ -156,7 +156,7 @@ pub struct Filters {
     /// The actual list of filters.
     filters: Vec<Filter>,
     /// Remembers which filter is responsible for an allocation.
-    memory: Map<AllocUid, FilterUid>,
+    memory: BTMap<uid::Alloc, uid::Filter>,
 }
 
 impl Filters {
@@ -166,7 +166,7 @@ impl Filters {
             filters: vec![],
             catch_all: FilterSpec::new_catch_all(),
             everything: FilterSpec::new_everything(),
-            memory: Map::new(),
+            memory: BTMap::new(),
         }
     }
 
@@ -202,7 +202,7 @@ impl Filters {
     }
 
     /// Filter specification mutable accessor.
-    pub fn get_spec_mut(&mut self, uid: Option<FilterUid>) -> Res<&mut FilterSpec> {
+    pub fn get_spec_mut(&mut self, uid: Option<uid::Filter>) -> Res<&mut FilterSpec> {
         if let Some(uid) = uid {
             self.get_mut(uid).map(|(_, filter)| filter.spec_mut())
         } else {
@@ -214,7 +214,7 @@ impl Filters {
     ///
     /// - returns the index of the filter and the filter itself;
     /// - fails if the filter UID is unknown.
-    pub fn get_mut(&mut self, uid: FilterUid) -> Res<(usize, &mut Filter)> {
+    pub fn get_mut(&mut self, uid: uid::Filter) -> Res<(usize, &mut Filter)> {
         for (index, filter) in self.filters.iter_mut().enumerate() {
             if filter.uid() == uid {
                 return Ok((index, filter));
@@ -234,7 +234,11 @@ impl Filters {
     }
 
     /// Remembers that an allocation is handled by some filter.
-    fn remember(memory: &mut Map<AllocUid, FilterUid>, alloc: AllocUid, filter: FilterUid) {
+    fn remember(
+        memory: &mut BTMap<uid::Alloc, uid::Filter>,
+        alloc: uid::Alloc,
+        filter: uid::Filter,
+    ) {
         let prev = memory.insert(alloc, filter);
         let collision = prev.map(|uid| uid != filter).unwrap_or(false);
         if collision {
@@ -247,7 +251,7 @@ impl Filters {
         &mut self,
         timestamp: &time::SinceStart,
         alloc: &Alloc,
-    ) -> Option<uid::FilterUid> {
+    ) -> Option<uid::Filter> {
         for filter in &self.filters {
             if filter.apply(timestamp, alloc) {
                 Self::remember(&mut self.memory, alloc.uid().clone(), filter.uid());
@@ -258,7 +262,7 @@ impl Filters {
     }
 
     /// Searches for a filter that matches on the input allocation, for its death.
-    pub fn find_dead_match(&mut self, alloc: &AllocUid) -> Option<uid::FilterUid> {
+    pub fn find_dead_match(&mut self, alloc: &uid::Alloc) -> Option<uid::Filter> {
         self.memory.get(alloc).map(|uid| *uid)
     }
 
@@ -337,7 +341,7 @@ impl Filters {
             )
         }
 
-        stats.stats_do(uid::LineUid::CatchAll, |stats| {
+        stats.stats_do(uid::Line::CatchAll, |stats| {
             stats.alloc_count = total - registered
         });
 
@@ -351,7 +355,7 @@ impl Filters {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Filter {
     /// Actual list of filters.
-    subs: Map<SubFilterUid, SubFilter>,
+    subs: BTMap<uid::SubFilter, SubFilter>,
     /// Filter specification.
     spec: FilterSpec,
 }
@@ -363,7 +367,7 @@ impl Filter {
             bail!("trying to construct a filter with no UID")
         }
         let slf = Self {
-            subs: Map::new(),
+            subs: BTMap::new(),
             spec,
         };
         Ok(slf)
@@ -384,7 +388,7 @@ impl Filter {
     }
 
     /// UID accessor.
-    pub fn uid(&self) -> FilterUid {
+    pub fn uid(&self) -> uid::Filter {
         self.spec()
             .uid()
             .filter_uid()
@@ -402,7 +406,7 @@ impl Filter {
     }
 
     /// Removes a subfilter.
-    pub fn remove(&mut self, sub_uid: uid::SubFilterUid) -> Res<()> {
+    pub fn remove(&mut self, sub_uid: uid::SubFilter) -> Res<()> {
         let prev = self.subs.remove(&sub_uid);
         if prev.is_none() {
             bail!("failed to remove unknown subfilter UID #{}", sub_uid)

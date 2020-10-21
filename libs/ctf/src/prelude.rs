@@ -1,10 +1,4 @@
-pub use std::{convert::TryInto, fmt, time::Duration};
-
-pub use base::{
-    convert, destroy, duration_from_millis,
-    err::{bail, Res, ResExt},
-    log, pretty_time, Either,
-};
+pub use base::prelude::*;
 
 pub use crate::{ast::Span, parse::CanParse, *};
 

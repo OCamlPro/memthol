@@ -113,12 +113,12 @@ pub mod chart {
     pub static SELECT_AXIS: &str = "select_axis";
 
     /// Id of an actual chart.
-    pub fn class(uid: crate::chart::ChartUid) -> String {
+    pub fn class(uid: base::uid::Chart) -> String {
         format!("{}{}", PREFIX, uid)
     }
 
     /// Id of a chart canvas.
-    pub fn canvas(uid: crate::chart::ChartUid) -> String {
+    pub fn canvas(uid: base::uid::Chart) -> String {
         format!("{}{}", CANVAS_PREFIX, uid)
     }
 

@@ -162,8 +162,8 @@ mod diff_parse {
         }
     }
 
-    fn date_from_microsecs(date: crate::prelude::Clock) -> Date {
-        Date::from_microsecs(convert(date, "date_from_microsecs"))
+    fn date_from_microsecs(date: crate::prelude::Clock) -> time::Date {
+        time::Date::from_micros(convert(date, "date_from_microsecs"))
     }
 
     pub fn parse<'a, F>(
@@ -172,7 +172,7 @@ mod diff_parse {
         mut bytes_progress: impl FnMut(usize),
         init_action: impl FnOnce(&mut F, Init),
         mut new_action: impl FnMut(&mut F, Alloc),
-        mut dead_action: impl FnMut(&mut F, SinceStart, Uid),
+        mut dead_action: impl FnMut(&mut F, time::SinceStart, uid::Alloc),
     ) -> Res<()>
     where
         F: std::ops::DerefMut<Target = mem::Factory<'a>>,
@@ -255,7 +255,7 @@ mod diff_parse {
                                 // Build the allocation.
                                 let alloc = {
                                     let time_since_start =
-                                        date_from_microsecs(clock).sub(start_time)?;
+                                        date_from_microsecs(clock) - start_time;
                                     let labels = factory.empty_labels();
                                     let alloc = Alloc::new(
                                         uid,
@@ -277,8 +277,8 @@ mod diff_parse {
                             Event::Collection(alloc_uid) => {
                                 prof.dead.start();
 
-                                let uid = Uid::from(alloc_uid);
-                                let timestamp = date_from_microsecs(clock).sub(start_time)?;
+                                let uid = uid::Alloc::from(alloc_uid);
+                                let timestamp = date_from_microsecs(clock) - start_time;
 
                                 dead_action(&mut factory, timestamp, uid);
 

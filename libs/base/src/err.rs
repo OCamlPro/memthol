@@ -1,39 +1,36 @@
-//! Memthol's server errors.
-
-prelude! {}
+//! Errors, handled by `error_chain`.
 
 error_chain::error_chain! {
     types {
-        Err, ErrorKind, ResExt, Res;
+        Error, ErrorKind, ResExt, Res;
     }
 
     foreign_links {
+        Peg(peg::error::ParseError<peg::str::LineCol>)
+        /// Parse error from `peg`.
+        ;
+        ParseInt(std::num::ParseIntError)
+        /// Integer parse error from `std`.
+        ;
         Io(std::io::Error)
         /// I/O error.
         ;
         Serde(bincode::Error)
         /// (De)serialization error.
         ;
-
     }
 
-    links {
-        Data(alloc_data::err::Err, alloc_data::err::ErrKind)
-        /// Error from the `alloc_data` crate.
-        ;
-    }
-
-    errors {
-    }
+    links {}
+    errors {}
 }
 
-impl Err {
+impl Error {
     /// Multi-line representation of a trace of errors.
     ///
     /// See the [module-level documentation] for more.
     ///
     /// [module-level documentation]: index.html (module-level documentation)
-    pub fn pretty(&self) -> String {
+    pub fn to_pretty(&self) -> String {
         let mut s = "error: ".to_string();
 
         // Reverse errors.
@@ -56,24 +53,4 @@ impl Err {
     }
 }
 
-#[macro_export]
-macro_rules! unwrap_or {
-    ($e:expr, exit) => {
-        $crate::unwrap_or!($e, std::process::exit(2))
-    };
-    ($e:expr, $action:expr) => {
-        match $e {
-            Ok(res) => res,
-            Err(e) => {
-                println!("|===| Error ({}:{})", file!(), line!());
-                for e in e.iter() {
-                    for line in format!("{}", e).lines() {
-                        println!("| {}", line)
-                    }
-                }
-                println!("|===|");
-                $action
-            }
-        }
-    };
-}
+pub use error_chain::bail;

@@ -1,31 +1,18 @@
 //! Basic types and helpers used by the whole crate.
 
-pub use base::log;
+pub use std::net::{TcpListener, TcpStream};
 
-pub use std::{
-    collections::BTreeMap as Map,
-    collections::BTreeSet as Set,
-    net::{TcpListener, TcpStream},
-    time::{Duration, Instant},
-};
-
-pub use error_chain::bail;
-
-pub use base::Either;
+pub use base::prelude::*;
 
 pub use charts::{
-    alloc_data::{time, Alloc, Diff, Init as AllocInit, SinceStart, Uid as AllocUid},
+    alloc_data::{Alloc, Diff as AllocDiff, Init as AllocInit},
     Charts,
 };
 
-pub use crate::{
-    err,
-    err::{Res, ResExt},
-    msg,
-};
+pub use crate::msg;
 
 /// A set of allocation UIDs.
-pub type AllocUidSet = Set<AllocUid>;
+pub type AllocUidSet = BTSet<uid::Alloc>;
 
 pub mod net {
     pub use std::net::{SocketAddr as IpAddr, TcpListener, TcpStream};

@@ -6,7 +6,7 @@ use super::*;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChartSpec {
     /// UID,
-    uid: ChartUid,
+    uid: uid::Chart,
     /// X-axis.
     x_axis: XAxis,
     /// Y-axis.
@@ -16,7 +16,7 @@ impl ChartSpec {
     /// Creates a new chart spec.
     pub fn new(x_axis: XAxis, y_axis: YAxis) -> Self {
         Self {
-            uid: ChartUid::fresh(),
+            uid: uid::Chart::fresh(),
             x_axis,
             y_axis,
         }
@@ -28,7 +28,7 @@ impl ChartSpec {
     }
 
     /// UID accessor.
-    pub fn uid(&self) -> ChartUid {
+    pub fn uid(&self) -> uid::Chart {
         self.uid
     }
 

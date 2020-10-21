@@ -1,20 +1,8 @@
 //! Common imports for this crate.
 
-pub use std::{
-    collections::{BTreeMap as Map, BTreeSet as Set},
-    convert::{TryFrom, TryInto},
-    fmt,
-    ops::{Deref, DerefMut},
-    sync::Arc,
-};
-
 pub use regex::Regex;
 
-pub use base::{
-    debug_do,
-    error_chain::{self, bail},
-    impl_display, lazy_static, log, Either,
-};
+pub use base::prelude::{serde::*, *};
 
 /// Re-exports from the `alloc_data` crate.
 pub mod alloc {
@@ -30,11 +18,7 @@ pub mod coord {
     };
 }
 
-pub use alloc::serderive::*;
-
-pub use alloc::{
-    time, Alloc, Date, Diff as AllocDiff, Duration, Init as AllocInit, Uid as AllocUid,
-};
+pub use alloc::{Alloc, Diff as AllocDiff, Init as AllocInit};
 
 /// Imports this crate's prelude.
 macro_rules! prelude {
@@ -43,21 +27,18 @@ macro_rules! prelude {
     };
 }
 
-#[cfg(any(test, feature = "server"))]
-pub use crate::data;
-
-#[cfg(any(test, feature = "server"))]
-pub use crate::ChartExt;
+base::cfg_item! {
+    cfg(server) {
+        pub use crate::{data, ChartExt};
+    }
+}
 
 pub use crate::{
     chart::{self, settings::ChartSettings},
     color::Color,
-    err,
-    err::{Res, ResExt},
     filter::{self, Filter, Filters},
-    msg, point,
-    point::{Point, PointVal, Points},
-    uid::{self, ChartUid},
+    msg,
+    point::{self, Point, PointVal, Points},
 };
 
 pub mod num_fmt {
@@ -75,7 +56,7 @@ pub mod num_fmt {
 }
 
 /// A set of allocation UIDs.
-pub type AllocUidSet = Set<AllocUid>;
+pub type AllocUidSet = BTSet<uid::Alloc>;
 
 /// Dump-loading information.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

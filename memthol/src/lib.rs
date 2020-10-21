@@ -29,9 +29,6 @@
 #[macro_use]
 pub mod prelude;
 
-#[macro_use]
-pub mod err;
-
 pub mod assets;
 pub mod msg;
 pub mod router;

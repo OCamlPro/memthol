@@ -147,6 +147,7 @@ fn_defs! {
     } { f() }
 }
 
+/// Creates a stopwatch aggregation.
 #[macro_export]
 macro_rules! new_time_stats {
     (
@@ -160,11 +161,11 @@ macro_rules! new_time_stats {
         $ty_vis struct $ty_name {$(
             $(#[$field_meta])*
             #[cfg(any(test, feature = "time_stats"))]
-            $field_vis $field_name: $crate::stopwatch::RealStopwatch,
+            $field_vis $field_name: $crate::time_stats::RealStopwatch,
 
             $(#[$field_meta])*
             #[cfg(not(any(test, feature = "time_stats")))]
-            $field_vis $field_name: $crate::stopwatch::FakeStopwatch,
+            $field_vis $field_name: $crate::time_stats::FakeStopwatch,
         )*}
 
         impl $ty_name {
@@ -172,14 +173,14 @@ macro_rules! new_time_stats {
             #[cfg(any(test, feature = "time_stats"))]
             pub fn new() -> Self {
                 Self {$(
-                    $field_name: $crate::stopwatch::RealStopwatch::new(),
+                    $field_name: $crate::time_stats::RealStopwatch::new(),
                 )*}
             }
             /// Constructor.
             #[cfg(not(any(test, feature = "time_stats")))]
             pub fn new() -> Self {
                 Self {$(
-                    $field_name: $crate::stopwatch::FakeStopwatch::new(),
+                    $field_name: $crate::time_stats::FakeStopwatch::new(),
                 )*}
             }
 
@@ -198,7 +199,7 @@ macro_rules! new_time_stats {
             pub fn all_do(
                 &self,
                 first_do: impl FnOnce(),
-                mut action: impl FnMut(&'static str, &$crate::stopwatch::RealStopwatch)
+                mut action: impl FnMut(&'static str, &$crate::time_stats::RealStopwatch)
             ) {
                 first_do();
                 $(
@@ -211,7 +212,7 @@ macro_rules! new_time_stats {
             pub fn all_do(
                 &self,
                 _: impl FnOnce(),
-                _: impl FnMut(&'static str, &$crate::stopwatch::FakeStopwatch)
+                _: impl FnMut(&'static str, &$crate::time_stats::FakeStopwatch)
             ) {
             }
         }

@@ -12,7 +12,6 @@ pub mod time;
 
 pub use settings::ChartSettings;
 pub use spec::ChartSpec;
-pub use uid::ChartUid;
 
 /// A chart with no UID.
 #[cfg(any(test, feature = "server"))]
@@ -105,7 +104,7 @@ impl Chart {
 
     /// UID accessor.
     #[inline]
-    pub fn uid(&self) -> ChartUid {
+    pub fn uid(&self) -> uid::Chart {
         self.spec().uid()
     }
 }

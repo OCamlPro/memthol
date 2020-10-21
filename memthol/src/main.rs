@@ -98,12 +98,12 @@ pub fn main() {
     let router = memthol::router::new();
 
     log::info!("starting data monitoring");
-    memthol::err::unwrap_or! {
+    base::unwrap_or! {
         charts::data::start(target), exit
     }
 
     log::info!("starting socket listeners");
-    memthol::err::unwrap_or! {
+    base::unwrap_or! {
         memthol::socket::spawn_server(addr, port + 1, log), exit
     }
 

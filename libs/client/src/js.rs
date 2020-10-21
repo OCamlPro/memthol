@@ -55,7 +55,7 @@ pub mod server {
     fn location() -> Res<web_sys::Location> {
         web_sys::window()
             .map(|w| w.location())
-            .ok_or_else(|| err::Err::from("could not retrieve (window) JS location"))
+            .ok_or_else(|| err::Error::from("could not retrieve (window) JS location"))
     }
 
     pub fn address() -> Res<(String, usize)> {
@@ -63,10 +63,10 @@ pub mod server {
             .and_then(|loc| {
                 Ok((
                     loc.hostname()
-                        .map_err(|js_val| err::Err::from(format!("{:?}", js_val)))?,
+                        .map_err(|js_val| err::Error::from(format!("{:?}", js_val)))?,
                     usize::from_str_radix(
                         &loc.port()
-                            .map_err(|js_val| err::Err::from(format!("{:?}", js_val)))?,
+                            .map_err(|js_val| err::Error::from(format!("{:?}", js_val)))?,
                         10,
                     )
                     .map_err(|e| e.to_string())?,

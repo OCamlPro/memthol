@@ -24,11 +24,9 @@ pub mod chart;
 pub mod color;
 #[cfg(any(test, feature = "server"))]
 pub mod data;
-pub mod err;
 pub mod filter;
 pub mod msg;
 pub mod point;
-pub mod uid;
 
 #[cfg(any(test, feature = "server"))]
 pub use chart::Chart;
@@ -57,7 +55,7 @@ pub struct Charts {
     ///
     /// This is used to check whether we need to detect that the init file of the run has changed
     /// and that we need to reset the charts.
-    start_time: Option<Date>,
+    start_time: Option<time::Date>,
     to_client_msgs: msg::to_client::Msgs,
 }
 
@@ -82,7 +80,7 @@ impl Charts {
         &self.filters
     }
     /// Start time.
-    pub fn start_time(&self) -> Option<&Date> {
+    pub fn start_time(&self) -> Option<&time::Date> {
         self.start_time.as_ref()
     }
 
@@ -91,7 +89,7 @@ impl Charts {
     /// Returns the number of filter generated.
     #[cfg(any(test, feature = "server"))]
     pub fn auto_gen(&mut self, generator: impl Into<filter::gen::FilterGen>) -> Res<usize> {
-        self.filters.auto_gen(data::get()?.deref(), generator)
+        self.filters.auto_gen(&*data::get()?, generator)
     }
 
     /// Pushes a new chart.
@@ -100,7 +98,7 @@ impl Charts {
     }
 
     /// Chart mutable accessor.
-    pub fn get_mut(&mut self, uid: ChartUid) -> Res<&mut Chart> {
+    pub fn get_mut(&mut self, uid: uid::Chart) -> Res<&mut Chart> {
         for chart in self.charts.iter_mut() {
             if chart.uid() == uid {
                 return Ok(chart);
@@ -192,7 +190,7 @@ impl Charts {
     /// Recomputes all the points, and returns them as a message for the client.
     pub fn reload_points(
         &mut self,
-        uid: Option<ChartUid>,
+        uid: Option<uid::Chart>,
         refresh_filters: bool,
     ) -> Res<msg::to_client::Msg> {
         let mut new_points = point::ChartPoints::new();

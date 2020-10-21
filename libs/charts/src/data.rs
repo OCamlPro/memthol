@@ -34,7 +34,7 @@ impl<'a> FullFactory<'a> {
     pub fn add_new(&mut self, alloc: Alloc) -> Res<()> {
         self.data.add_new(alloc)
     }
-    pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: alloc_data::Uid) -> Res<()> {
+    pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: uid::Alloc) -> Res<()> {
         self.data.add_dead(timestamp, uid)
     }
 
@@ -67,7 +67,7 @@ pub mod progress {
     fn read<'a>() -> Res<RwLockReadGuard<'a, Option<LoadInfo>>> {
         PROG.read()
             .map_err(|e| {
-                let e: err::Err = e.to_string().into();
+                let e: err::Error = e.to_string().into();
                 e
             })
             .chain_err(|| "while reading the progress status")
@@ -75,7 +75,7 @@ pub mod progress {
     fn write<'a>() -> Res<RwLockWriteGuard<'a, Option<LoadInfo>>> {
         PROG.write()
             .map_err(|e| {
-                let e: err::Err = e.to_string().into();
+                let e: err::Error = e.to_string().into();
                 e
             })
             .chain_err(|| "while writing the progress status")
@@ -136,7 +136,7 @@ pub mod progress {
 pub fn get<'a>() -> Res<RwLockReadGuard<'a, Data>> {
     DATA.read()
         .map_err(|e| {
-            let e: err::Err = e.to_string().into();
+            let e: err::Error = e.to_string().into();
             e
         })
         .chain_err(|| "while reading the global state")
@@ -151,7 +151,7 @@ pub fn alloc_count() -> Res<usize> {
 fn get_mut<'a>() -> Res<RwLockWriteGuard<'a, Data>> {
     DATA.write()
         .map_err(|e| {
-            let e: err::Err = e.to_string().into();
+            let e: err::Error = e.to_string().into();
             e
         })
         .chain_err(|| "while reading the global state")
@@ -162,9 +162,9 @@ pub struct Data {
     /// Init state.
     init: Option<AllocInit>,
     /// Map from allocation UIDs to allocation data.
-    uid_map: Map<AllocUid, Alloc>,
+    uid_map: BTMap<uid::Alloc, Alloc>,
     /// Map from time-of-death to allocation UIDs.
-    tod_map: Map<time::SinceStart, AllocUidSet>,
+    tod_map: BTMap<time::SinceStart, BTSet<uid::Alloc>>,
     /// Time of the latest diff.
     current_time: time::SinceStart,
     /// Statistics.
@@ -176,8 +176,8 @@ impl Data {
     pub fn new() -> Self {
         Self {
             init: None,
-            uid_map: Map::new(),
-            tod_map: Map::new(),
+            uid_map: BTMap::new(),
+            tod_map: BTMap::new(),
             current_time: time::SinceStart::zero(),
             stats: None,
         }
@@ -213,7 +213,7 @@ impl Data {
     }
 
     /// Time at which the profiling run started.
-    pub fn start_time(&self) -> Res<Date> {
+    pub fn start_time(&self) -> Res<time::Date> {
         if let Some(init) = self.init.as_ref() {
             Ok(init.start_time.clone())
         } else {
@@ -224,7 +224,7 @@ impl Data {
     /// Alloc accessor.
     ///
     /// Fails if the UID is unknown.
-    pub fn get_alloc(&self, uid: &AllocUid) -> Res<&Alloc> {
+    pub fn get_alloc(&self, uid: &uid::Alloc) -> Res<&Alloc> {
         self.uid_map
             .get(uid)
             .ok_or_else(|| format!("unknown allocation UID #{}", uid).into())
@@ -337,7 +337,7 @@ impl Data {
         Ok(())
     }
 
-    pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: alloc_data::Uid) -> Res<()> {
+    pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: uid::Alloc) -> Res<()> {
         if self.current_time != timestamp {
             self.current_time = timestamp.clone()
         }
@@ -435,7 +435,7 @@ impl Data {
 pub fn get_errors() -> Res<Option<Vec<String>>> {
     let errors = ERRORS
         .read()
-        .map_err(|e| err::Err::from(e.to_string()))
+        .map_err(|e| err::Error::from(e.to_string()))
         .chain_err(|| "while retrieving the data errors")?;
     Ok(if errors.is_empty() {
         None
@@ -453,7 +453,7 @@ pub fn add_err(err: impl Into<String>) {
     }
     ERRORS
         .write()
-        .map_err(|e| err::Err::from(e.to_string()))
+        .map_err(|e| err::Error::from(e.to_string()))
         .chain_err(|| format!("while adding error:\n{}", err))
         .expect("failed to retrieve global state")
         .push(err.into())

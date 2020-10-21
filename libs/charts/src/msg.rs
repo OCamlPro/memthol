@@ -12,30 +12,30 @@ pub enum ChartSettingsMsg {
 }
 
 impl ChartSettingsMsg {
-    pub fn toggle_visible<Res>(uid: uid::ChartUid) -> Res
+    pub fn toggle_visible<Res>(uid: uid::Chart) -> Res
     where
-        (uid::ChartUid, Self): Into<Res>,
+        (uid::Chart, Self): Into<Res>,
     {
         (uid, Self::ToggleVisible).into()
     }
-    pub fn set_display_mode<Res>(uid: uid::ChartUid, mode: chart::settings::DisplayMode) -> Res
+    pub fn set_display_mode<Res>(uid: uid::Chart, mode: chart::settings::DisplayMode) -> Res
     where
-        (uid::ChartUid, Self): Into<Res>,
+        (uid::Chart, Self): Into<Res>,
     {
         (uid, Self::SetDisplayMode(mode)).into()
     }
-    pub fn change_title<Res>(uid: uid::ChartUid, title: impl Into<String>) -> Res
+    pub fn change_title<Res>(uid: uid::Chart, title: impl Into<String>) -> Res
     where
-        (uid::ChartUid, Self): Into<Res>,
+        (uid::Chart, Self): Into<Res>,
     {
         (uid, Self::ChangeTitle(title.into())).into()
     }
     pub fn set_resolution<Res>(
-        uid: uid::ChartUid,
+        uid: uid::Chart,
         resolution: impl Into<chart::settings::Resolution>,
     ) -> Res
     where
-        (uid::ChartUid, Self): Into<Res>,
+        (uid::Chart, Self): Into<Res>,
     {
         (uid, Self::SetResolution(resolution.into())).into()
     }
@@ -87,13 +87,13 @@ pub mod to_server {
         }
     }
 
-    impl From<(uid::ChartUid, ChartMsg)> for Msg {
-        fn from(pair: (uid::ChartUid, ChartMsg)) -> Self {
+    impl From<(uid::Chart, ChartMsg)> for Msg {
+        fn from(pair: (uid::Chart, ChartMsg)) -> Self {
             Self::Charts(ChartsMsg::from(pair))
         }
     }
-    impl From<(uid::ChartUid, ChartSettingsMsg)> for Msg {
-        fn from(pair: (uid::ChartUid, ChartSettingsMsg)) -> Self {
+    impl From<(uid::Chart, ChartSettingsMsg)> for Msg {
+        fn from(pair: (uid::Chart, ChartSettingsMsg)) -> Self {
             Self::Charts(ChartsMsg::from(pair))
         }
     }
@@ -106,7 +106,7 @@ pub mod to_server {
         /// Reloads all charts.
         Reload,
         /// An update for a specific chart.
-        ChartUpdate { uid: uid::ChartUid, msg: ChartMsg },
+        ChartUpdate { uid: uid::Chart, msg: ChartMsg },
     }
     impl fmt::Display for ChartsMsg {
         fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -128,13 +128,13 @@ pub mod to_server {
         }
     }
 
-    impl From<(uid::ChartUid, ChartMsg)> for ChartsMsg {
-        fn from((uid, msg): (uid::ChartUid, ChartMsg)) -> Self {
+    impl From<(uid::Chart, ChartMsg)> for ChartsMsg {
+        fn from((uid, msg): (uid::Chart, ChartMsg)) -> Self {
             Self::ChartUpdate { uid, msg }
         }
     }
-    impl From<(uid::ChartUid, ChartSettingsMsg)> for ChartsMsg {
-        fn from((uid, msg): (uid::ChartUid, ChartSettingsMsg)) -> Self {
+    impl From<(uid::Chart, ChartSettingsMsg)> for ChartsMsg {
+        fn from((uid, msg): (uid::Chart, ChartSettingsMsg)) -> Self {
             Self::ChartUpdate {
                 uid,
                 msg: msg.into(),
@@ -347,7 +347,7 @@ pub mod to_client {
         /// Creates a new chart.
         NewChart(chart::ChartSpec, chart::ChartSettings),
         /// Message for a specific chart.
-        Chart { uid: uid::ChartUid, msg: ChartMsg },
+        Chart { uid: uid::Chart, msg: ChartMsg },
         /// A new collection of points, overwrites existing points.
         NewPoints {
             points: point::ChartPoints,
@@ -427,14 +427,14 @@ pub mod to_client {
 
     impl ChartMsg {
         /// List of points overwriting the existing points.
-        pub fn new_points(uid: uid::ChartUid, points: point::Points) -> Msg {
+        pub fn new_points(uid: uid::Chart, points: point::Points) -> Msg {
             Msg::charts(ChartsMsg::Chart {
                 uid,
                 msg: Self::NewPoints(points),
             })
         }
         /// List of points to append.
-        pub fn points(uid: uid::ChartUid, points: point::Points) -> Msg {
+        pub fn points(uid: uid::Chart, points: point::Points) -> Msg {
             Msg::charts(ChartsMsg::Chart {
                 uid,
                 msg: Self::Points(points),
@@ -471,7 +471,7 @@ pub mod to_client {
         },
 
         /// Updates all the specs.
-        UpdateSpecs(Map<uid::LineUid, FilterSpec>),
+        UpdateSpecs(BTMap<uid::Line, FilterSpec>),
     }
     impl FiltersMsg {
         /// Adds a filter.
@@ -490,7 +490,7 @@ pub mod to_client {
         }
 
         /// Updates all the specs.
-        pub fn update_specs(specs: Map<uid::LineUid, FilterSpec>) -> Msg {
+        pub fn update_specs(specs: BTMap<uid::Line, FilterSpec>) -> Msg {
             Self::UpdateSpecs(specs).into()
         }
     }
@@ -500,13 +500,13 @@ pub mod to_client {
             let res = match self {
                 RawMsg::Binary(res_bytes) => {
                     let bytes = res_bytes
-                        .map_err(err::Err::from)
+                        .map_err(err::Error::from)
                         .chain_err(|| "while retrieving message from the server")?;
                     Msg::from_bytes(&bytes)
                 }
                 RawMsg::Text(res_string) => {
                     let _ = res_string
-                        .map_err(err::Err::from)
+                        .map_err(err::Error::from)
                         .chain_err(|| "while retrieving message from the server")?;
                     bail!(
                         "trying to build message from text representation, \
