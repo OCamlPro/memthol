@@ -52,6 +52,10 @@ pub fn main() {
             ...
             "activates verbose output"
         )
+        (@arg OPEN:
+            --open
+            "opens the memthol browser right away"
+        )
         (@arg ADDR:
             -a --addr +takes_value !required
             default_value(default::ADDR)
@@ -82,6 +86,7 @@ pub fn main() {
         usize::from_str(port).expect("argument with validator")
     };
     let log = matches.occurrences_of("LOG") > 0;
+    let open = matches.occurrences_of("OPEN") > 0;
 
     let verb = matches.occurrences_of("VERB");
     init_logger(verb);
@@ -107,6 +112,32 @@ pub fn main() {
         memthol::socket::spawn_server(addr, port + 1, log), exit
     }
 
+    if open {
+        open_in_background(&path)
+    }
+
     log::info!("starting gotham server");
     gotham::start(path, router)
+}
+
+fn open_in_background(path: &str) {
+    let path = format!("http://{}", path);
+    std::thread::spawn(move || match open::that(&path) {
+        Ok(status) => {
+            if !status.success() {
+                log::error!("while opening page {}", path);
+                log::error!(
+                    "got a non-success exit code: {}",
+                    status
+                        .code()
+                        .map(|n| n.to_string())
+                        .unwrap_or_else(|| "??".into())
+                )
+            }
+        }
+        Err(e) => {
+            log::error!("while opening page {}", path);
+            log::error!("{}", e)
+        }
+    });
 }

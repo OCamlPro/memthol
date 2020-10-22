@@ -32,7 +32,7 @@ dependencies = [
 
 [[package]]
 name = "alloc_data"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "base",
  "num-bigint",
@@ -149,7 +149,7 @@ dependencies = [
 
 [[package]]
 name = "base"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bincode",
  "chrono",
@@ -340,7 +340,7 @@ checksum = "8100e46ff92eb85bf6dc2930c73f2a4f7176393c84a9446b3d501e1b354e7b34"
 
 [[package]]
 name = "charts"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "alloc_data",
  "anyhow",
@@ -353,8 +353,8 @@ dependencies = [
  "regex",
  "serde",
  "serde_regex",
- "strum 0.19.5",
- "strum_macros 0.19.4",
+ "strum",
+ "strum_macros",
  "yew",
 ]
 
@@ -391,15 +391,15 @@ dependencies = [
 
 [[package]]
 name = "client"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "base",
  "charts",
  "plotters-canvas",
  "serde",
  "serde_derive",
- "strum 0.19.5",
- "strum_macros 0.19.4",
+ "strum",
+ "strum_macros",
  "typed-html",
  "wasm-bindgen",
  "wasm-logger",
@@ -569,7 +569,7 @@ dependencies = [
 
 [[package]]
 name = "ctf"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "alloc_data",
  "base",
@@ -1428,7 +1428,7 @@ checksum = "8452105ba047068f40ff7093dd1d9da90898e63dd61736462e9cdda6a90ad3c3"
 
 [[package]]
 name = "memthol"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "base",
  "charts",
@@ -1437,6 +1437,7 @@ dependencies = [
  "fs_extra",
  "gotham",
  "lazy_static",
+ "open",
  "pretty_env_logger",
  "tungstenite",
  "walkdir",
@@ -1701,6 +1702,15 @@ name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
+
+[[package]]
+name = "open"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c283bf0114efea9e42f1a60edea9859e8c47528eae09d01df4b29c1e489cc48"
+dependencies = [
+ "winapi 0.3.9",
+]
 
 [[package]]
 name = "openssl"
@@ -2768,28 +2778,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57bd81eb48f4c437cadc685403cad539345bf703d78e63707418431cecd4522b"
 
 [[package]]
-name = "strum"
-version = "0.19.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b89a286a7e3b5720b9a477b23253bc50debac207c8d21505f8e70b36792f11b5"
-
-[[package]]
 name = "strum_macros"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87c85aa3f8ea653bfd3ddf25f7ee357ee4d204731f6aa9ad04002306f6e2774c"
-dependencies = [
- "heck",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.19.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e61bb0be289045cb80bfce000512e32d09f8337e54c186725da381377ad1f8d5"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -3078,8 +3070,8 @@ dependencies = [
  "mime",
  "proc-macro-hack",
  "proc-macro-nested",
- "strum 0.18.0",
- "strum_macros 0.18.0",
+ "strum",
+ "strum_macros",
  "typed-html-macros",
 ]
 
