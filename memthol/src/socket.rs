@@ -303,7 +303,7 @@ impl Handler {
 
         time! {
             charts
-                .auto_gen(charts::filter::FilterGen::default())
+                .auto_gen()
                 .chain_err(|| "during default filter generation")?,
             |time| log::info!("done with filter generation in {}", time)
         };

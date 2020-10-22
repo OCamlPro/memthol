@@ -15,22 +15,28 @@ impl Default for AllocSiteParams {
     }
 }
 
+impl AllocSiteParams {
+    pub fn new(min_count: Option<usize>) -> Self {
+        Self { min_count }
+    }
+}
+
 pub type FileName = String;
 
-pub struct AllocSite {
+pub struct AllocSiteWork {
     map: BTMap<FileName, usize>,
     unk: usize,
 }
 
-impl AllocSite {
-    fn new() -> Self {
+impl AllocSiteWork {
+    pub fn new() -> Self {
         Self {
             map: BTMap::new(),
             unk: 0,
         }
     }
 
-    fn inc(&mut self, file: Option<alloc::Str>) {
+    pub fn inc(&mut self, file: Option<alloc::Str>) {
         if let Some(file) = file {
             file.str_do(|file| {
                 if let Some(count) = self.map.get_mut(file) {
@@ -45,13 +51,13 @@ impl AllocSite {
         }
     }
 
-    fn scan(&mut self, data: &data::Data) {
+    pub fn scan(&mut self, data: &data::Data) {
         for alloc in data.iter_allocs() {
             alloc.alloc_site_do(|cloc_opt| self.inc(cloc_opt.map(|cloc| cloc.loc.file)))
         }
     }
 
-    fn generate_subfilter(file: &str) -> filter::sub::RawSubFilter {
+    pub fn generate_subfilter(file: &str) -> filter::sub::RawSubFilter {
         let pred = filter::string_like::Pred::Contain;
         let line = filter::loc::LineSpec::any();
         let final_loc_spec = filter::loc::LocSpec::Value {
@@ -63,7 +69,7 @@ impl AllocSite {
         filter.into()
     }
 
-    fn extract(self, params: AllocSiteParams) -> Res<Vec<Filter>> {
+    pub fn extract(self, params: AllocSiteParams) -> Res<Vec<Filter>> {
         let mut res = Vec::with_capacity(self.map.len());
 
         if self.map.is_empty() || (self.map.len() == 1 && self.unk == 0) {
@@ -71,6 +77,7 @@ impl AllocSite {
         }
 
         let min_count = if let Some(min) = params.min_count {
+            log::info!("min_count is {}", min);
             min
         } else {
             // let avg = self.map.values().fold(0, |acc, cnt| acc + *cnt) / self.map.len();
@@ -119,12 +126,64 @@ impl AllocSite {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct AllocSite;
+
+const MIN_KEY: &str = "min";
+
 impl FilterGenExt for AllocSite {
     type Params = AllocSiteParams;
 
+    const KEY: &'static str = "alloc_site";
+    const FMT: &'static str = "min: <int>";
+
     fn work(data: &data::Data, params: Self::Params) -> Res<Vec<Filter>> {
-        let mut slf = Self::new();
-        slf.scan(data);
-        slf.extract(params)
+        let mut work = AllocSiteWork::new();
+        work.scan(data);
+        work.extract(params)
+    }
+
+    fn parse_args(parser: Option<Parser>) -> Option<Self::Params> {
+        let mut parser = if let Some(parser) = parser {
+            parser
+        } else {
+            return Some(Self::Params::default());
+        };
+
+        if !parser.tag(MIN_KEY) {
+            return None;
+        }
+        parser.ws();
+        if !parser.char(':') {
+            return None;
+        }
+        parser.ws();
+
+        let min_count = parser.usize()?;
+
+        parser.ws();
+        let _optional = parser.char(',');
+        parser.ws();
+
+        if !parser.is_at_eoi() {
+            return None;
+        }
+
+        Some(AllocSiteParams::new(Some(min_count)))
+    }
+
+    fn add_help(s: &mut String) {
+        s.push_str(&format!(
+            "\
+- allocation site generator: `{0} {{ {1} }}`
+    Generates one filter per allocation site, iff it is responsible for at least `{2}` allocations.
+    Defaults: `{2}: 1`.
+
+\
+            ",
+            Self::KEY,
+            Self::FMT,
+            MIN_KEY,
+        ));
     }
 }

@@ -348,6 +348,7 @@ dependencies = [
  "ctf",
  "number_prefix",
  "palette",
+ "peg",
  "plotters",
  "plotters-backend",
  "regex",

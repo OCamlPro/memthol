@@ -88,8 +88,8 @@ impl Charts {
     ///
     /// Returns the number of filter generated.
     #[cfg(any(test, feature = "server"))]
-    pub fn auto_gen(&mut self, generator: impl Into<filter::gen::FilterGen>) -> Res<usize> {
-        self.filters.auto_gen(&*data::get()?, generator)
+    pub fn auto_gen(&mut self) -> Res<usize> {
+        self.filters.auto_gen(&*data::get()?, filter::gen::get())
     }
 
     /// Pushes a new chart.

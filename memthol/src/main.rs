@@ -7,10 +7,14 @@ use base::log;
 
 /// Default clap values.
 mod default {
-    /// Default aadress.
+    /// Default filter gen parameter.
+    pub const FILTER_GEN: &str = "alloc_site";
+
+    /// Default address.
     pub const ADDR: &str = "localhost";
     /// Default port.
     pub const PORT: &str = "7878";
+
     /// Default directory.
     pub const INPUT: &str = ".";
 }
@@ -19,7 +23,7 @@ mod default {
 fn usize_validator(s: String) -> Result<(), String> {
     use std::str::FromStr;
     if usize::from_str(&s).is_err() {
-        Err(format!("expected integer, found `{}`", s))
+        Err(format!("expected integer (usize), found `{}`", s))
     } else {
         Ok(())
     }
@@ -47,15 +51,32 @@ pub fn main() {
         (author: crate_authors!())
         (version: crate_version!())
         (about: "Memthol's UI.")
+
+        // Basic stuff.
+
         (@arg VERB:
-            -v --verbose
+            -v --verbose !required
             ...
             "activates verbose output"
         )
         (@arg OPEN:
-            --open
+            --open !required
             "opens the memthol browser right away"
         )
+        (@arg LOG:
+            -l --log !required
+            "activates (separate) socket logging"
+        )
+
+        // Filter-gen stuff.
+        (@arg FILTER_GEN:
+            --filter_gen +takes_value !required
+            default_value(default::FILTER_GEN)
+            "filter generation heuristic, get help with `--filter_gen help`"
+        )
+
+        // Server-related stuff.
+
         (@arg ADDR:
             -a --addr +takes_value !required
             default_value(default::ADDR)
@@ -67,10 +88,9 @@ pub fn main() {
             { usize_validator }
             "the port to serve the UI at"
         )
-        (@arg LOG:
-            -l --log !required
-            "activates (separate) socket logging"
-        )
+
+        // Directory or CTF file.
+
         (@arg INPUT:
             !required
             default_value(default::INPUT)
@@ -92,6 +112,11 @@ pub fn main() {
     init_logger(verb);
 
     let target = matches.value_of("INPUT").expect("argument with default");
+
+    let filter_gen = matches
+        .value_of("FILTER_GEN")
+        .expect("argument with default");
+    handle_filter_gen(filter_gen);
 
     let path = format!("{}:{}", addr, port);
     println!("|===| Starting");
@@ -140,4 +165,24 @@ fn open_in_background(path: &str) {
             log::error!("{}", e)
         }
     });
+}
+
+fn handle_filter_gen(args: &str) {
+    let mut exit_code = None;
+    let args = args.trim();
+
+    if args == "help" {
+        exit_code = Some(0)
+    } else if let Err(e) = charts::filter::gen::FilterGen::set_active_gen_from_args(args) {
+        for line in e.to_pretty().lines() {
+            log::error!("{}", line)
+        }
+        println!();
+        exit_code = Some(2)
+    }
+
+    if let Some(code) = exit_code {
+        println!("{}", charts::filter::gen::FilterGen::help().trim());
+        std::process::exit(code)
+    }
 }
