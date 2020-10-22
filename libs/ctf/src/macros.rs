@@ -72,7 +72,7 @@ macro_rules! pinfo {
 macro_rules! pinfo {
     ($parser:expr, $($blah:tt)*) => {if $crate::VERB {
         let (pos, max) = $parser.real_position();
-        println!("[{}/{}] {}", pos, max, format_args!($($blah)*))
+        $crate::prelude::log::info!("[{}/{}] {}", pos, max, format_args!($($blah)*))
     }};
 }
 #[cfg(not(debug_assertions))]
@@ -85,6 +85,6 @@ macro_rules! pdebug {
 macro_rules! pdebug {
     ($parser:expr, $($blah:tt)*) => {if $crate::DEBUG_VERB {
         let (pos, max) = $parser.real_position();
-        println!("[{}/{}] {}", pos, max, format_args!($($blah)*))
+        $crate::prelude::log::debug!("[{}/{}] {}", pos, max, format_args!($($blah)*))
     }};
 }

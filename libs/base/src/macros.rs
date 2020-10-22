@@ -150,12 +150,12 @@ cfg_item! {
         /// Expects `<stopwatches> => <expr>` where `<stopwatches>` is a comma-separated list of
         /// `Stopwatch`.
         #[macro_export]
-        macro_rules! time_test
+        macro_rules! time
     }
 
     cfg(time_stats) {
         {
-            ( $($stopwatches:expr),+ => $e:expr) => {{
+            ( $(> $stopwatches:expr, )+ $e:expr) => {{
                 $(
                     $stopwatches.start();
                 )*
@@ -165,10 +165,24 @@ cfg_item! {
                 )*
                 res
             }};
+            ($e:expr, |$time:pat| $time_action:expr) => {{
+                let mut ____sw = $crate::time_stats::RealStopwatch::new();
+                ____sw.start();
+                let res = $e;
+                ____sw.stop();
+                {
+                    let $time = ____sw;
+                    $time_action
+                }
+                res
+            }};
         }
     } else {
         {
-            ( $($stopwatches:expr),+ => $e:expr) => {
+            ( $(> $stopwatches:expr, )+ $e:expr) => {
+                $e
+            };
+            ($e:expr, |$time:pat| $time_action:expr) => {
                 $e
             };
         }

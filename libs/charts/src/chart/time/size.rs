@@ -93,7 +93,9 @@ impl TimeSize {
 
         for (time, point_val) in map {
             let point_val = point_val.map(|uid, (to_add, to_sub)| {
-                let new_val = (*self.size.get_mut_or(uid, INIT_SIZE_VALUE) + to_add) - to_sub;
+                let val = *self.size.get_mut_or(uid, INIT_SIZE_VALUE);
+                let sum = val + to_add;
+                let new_val = sum - to_sub;
                 Ok(new_val)
             })?;
             self.size = point_val.clone();
@@ -150,6 +152,7 @@ impl TimeSize {
         *last_time_stamp = None;
 
         let mut nu_last_new = None;
+        let mut nu_last_dead = None;
 
         data.iter_new_events(self.last.clone(), |new_or_dead| {
             match new_or_dead {
@@ -187,6 +190,7 @@ impl TimeSize {
                         .0 += alloc.size;
                 }
                 Either::Right((tod, alloc)) => {
+                    nu_last_dead = Some(tod);
                     let adjusted_tod = if let Some(last_time_stamp) = last_time_stamp.as_mut() {
                         if tod - *last_time_stamp < min_time_spacing {
                             last_time_stamp.clone()
@@ -216,25 +220,11 @@ impl TimeSize {
             Ok(())
         })?;
 
-        self.last = match (
-            nu_last_new,
-            self.map
-                .iter()
-                .rev()
-                .filter_map(|(time, vals)| {
-                    if vals.map.iter().any(|(_, (_add, sub))| *sub > 0) {
-                        Some(time - start_time)
-                    } else {
-                        None
-                    }
-                })
-                .next(),
-            self.last,
-        ) {
+        self.last = match (nu_last_new, nu_last_dead, self.last) {
             (Some(new), Some(dead_time), _) => Some((new.uid, dead_time)),
             (Some(new), None, Some((_, dead_time))) => Some((new.uid, dead_time)),
             (None, Some(dead_time), Some((new, _))) => Some((new, dead_time)),
-            (Some(new), None, None) => Some((new.uid, new.toc.clone())),
+            (Some(new), None, None) => Some((new.uid, time::SinceStart::zero())),
             // Nothing new this time.
             (None, None, last) => {
                 self.map.clear();

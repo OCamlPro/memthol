@@ -49,6 +49,16 @@ impl Watcher {
         } else if path.is_dir() {
             let mut watcher = Self::new(target);
 
+            log::warn!("running on legacy memthol dump format");
+            log::warn!("this will probably not work with this version of memthol");
+            log::warn!("unless the diffs must verify the following invariant:");
+            log::warn!("- allocations appear ordered by allocation UID");
+            log::warn!("- no allocation UID is skipped");
+            log::warn!(
+                "meaning successive UIDs `uid_i` and `uid_j` \
+                must be such that `uid_j == uid_i + 1`"
+            );
+
             let _ = std::thread::spawn(move || match watcher.run(forever) {
                 Ok(()) => (),
                 Err(e) => super::add_err(e.to_pretty()),
@@ -75,7 +85,7 @@ impl Watcher {
 
         let target = target.as_ref();
 
-        log::trace!("loading ctf file {}", target.display());
+        log::info!("loading ctf file `{}`", target.display());
 
         prof.load.start();
         let bytes = {
@@ -121,9 +131,12 @@ impl Watcher {
         super::progress::set_done()?;
 
         prof.all_do(
-            || log::info!("done parsing ctf file {}", target.display()),
+            || log::info!("done loading ctf file `{}`", target.display()),
             |desc, sw| log::info!("| {:>9}: {}", desc, sw),
         );
+        if !Prof::TIME_STATS_ACTIVE {
+            log::info!("done loading ctf file `{}`", target.display());
+        }
 
         Ok(())
     }

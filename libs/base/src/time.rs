@@ -197,6 +197,24 @@ impl ops::Add<SinceStart> for Date {
         self
     }
 }
+impl<'a> ops::Add<&'a SinceStart> for Date {
+    type Output = Self;
+    fn add(self, duration: &'a SinceStart) -> Self::Output {
+        self + *duration
+    }
+}
+impl<'a> ops::Add<SinceStart> for &'a Date {
+    type Output = Date;
+    fn add(self, duration: SinceStart) -> Self::Output {
+        *self + duration
+    }
+}
+impl<'a, 'b> ops::Add<&'a SinceStart> for &'b Date {
+    type Output = Date;
+    fn add(self, duration: &'a SinceStart) -> Self::Output {
+        *self + *duration
+    }
+}
 
 impl ops::Sub<SinceStart> for Date {
     type Output = Self;
@@ -205,5 +223,23 @@ impl ops::Sub<SinceStart> for Date {
             - chrono::Duration::from_std(duration.into())
                 .expect("fatal error while adding a duration to a date");
         self
+    }
+}
+impl<'a> ops::Sub<&'a SinceStart> for Date {
+    type Output = Self;
+    fn sub(self, duration: &'a SinceStart) -> Self::Output {
+        self - *duration
+    }
+}
+impl<'a> ops::Sub<SinceStart> for &'a Date {
+    type Output = Date;
+    fn sub(self, duration: SinceStart) -> Self::Output {
+        *self - duration
+    }
+}
+impl<'a, 'b> ops::Sub<&'b SinceStart> for &'a Date {
+    type Output = Date;
+    fn sub(self, duration: &'b SinceStart) -> Self::Output {
+        *self - *duration
     }
 }

@@ -2,7 +2,7 @@
 
 pub use std::net::{TcpListener, TcpStream};
 
-pub use base::prelude::*;
+pub use base::{prelude::*, time};
 
 pub use charts::{
     alloc_data::{Alloc, Diff as AllocDiff, Init as AllocInit},

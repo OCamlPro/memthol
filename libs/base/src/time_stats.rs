@@ -95,6 +95,13 @@ fn_defs! {
         Self
     }
 
+    /// True if the stopwatch has never been started.
+    pub fn is_zero(&self) -> bool {
+        self.elapsed.as_secs() == 0 && self.elapsed.subsec_nanos() == 0
+    } {
+        true
+    }
+
     /// Build a running stopwatch.
     pub fn start_new() -> Self {
         let mut slf = Self::new();
@@ -203,7 +210,9 @@ macro_rules! new_time_stats {
             ) {
                 first_do();
                 $(
-                    action($field_desc, &self.$field_name);
+                    if !self.$field_name.is_zero() {
+                        action($field_desc, &self.$field_name)
+                    }
                 )*
             }
             /// Iterates over all stopwatches.

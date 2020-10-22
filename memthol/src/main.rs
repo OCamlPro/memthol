@@ -89,7 +89,7 @@ pub fn main() {
     let target = matches.value_of("INPUT").expect("argument with default");
 
     let path = format!("{}:{}", addr, port);
-    println!("|===| Config");
+    println!("|===| Starting");
     println!("| url: http://{}", path);
     println!("| target: `{}`", target);
     println!("|===|");

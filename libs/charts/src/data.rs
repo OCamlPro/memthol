@@ -277,11 +277,11 @@ impl Data {
         let (mut next_new, mut next_dead) = (new_iter.next(), dead_iter.next());
 
         macro_rules! work {
-            (new $alloc:expr) => {{
+            (new: $alloc:expr) => {{
                 action(Either::Left($alloc))?;
                 next_new = new_iter.next();
             }};
-            (dead $tod:expr, $uids:expr) => {{
+            (dead: $tod:expr, $uids:expr) => {{
                 for uid in $uids {
                     let alloc = &self.uid_map[*uid];
                     action(Either::Right(($tod, alloc)))?
@@ -293,19 +293,19 @@ impl Data {
         loop {
             match (next_new, next_dead) {
                 (Some(alloc), None) => {
-                    work!(new alloc);
+                    work!(new: alloc);
                     next_dead = None;
                 }
                 (None, Some((tod, uids))) => {
-                    work!(dead * tod, uids);
+                    work!(dead: *tod, uids);
                     next_new = None;
                 }
                 (Some(alloc), Some((tod, uids))) => {
                     if &alloc.toc <= tod {
-                        work!(new alloc);
+                        work!(new: alloc);
                         next_dead = Some((tod, uids));
                     } else {
-                        work!(dead * tod, uids);
+                        work!(dead: *tod, uids);
                         next_new = Some(alloc);
                     }
                 }
@@ -462,9 +462,9 @@ pub fn get_errors() -> Res<Option<Vec<String>>> {
 /// Adds an error.
 pub fn add_err(err: impl Into<String>) {
     let err = err.into();
-    println!("[data] Error:");
+    log::error!("[data] Error:");
     for line in err.lines() {
-        println!("[data] | {}", line)
+        log::error!("[data] | {}", line)
     }
     ERRORS
         .write()

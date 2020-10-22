@@ -313,6 +313,21 @@ pub mod to_client {
         pub fn from_bytes(bytes: &[u8]) -> Res<Self> {
             Ok(base::bincode::deserialize(bytes)?)
         }
+
+        /// True if the message is a minor message.
+        ///
+        /// *Minor messages* are all messages that do not act on charts or filters directly.
+        pub fn is_minor(&self) -> bool {
+            match self {
+                Self::Charts(_) | Self::Filters(_) => false,
+                Self::Info
+                | Self::Alert { .. }
+                | Self::LoadProgress(_)
+                | Self::AllocStats(_)
+                | Self::DoneLoading
+                | Self::FilterStats(_) => true,
+            }
+        }
     }
 
     impl fmt::Display for Msg {

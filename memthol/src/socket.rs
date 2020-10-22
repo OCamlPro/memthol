@@ -101,42 +101,51 @@ impl Com {
         self.prof.total.start();
 
         let msg = msg.into();
+        let is_interesting = !msg.is_minor();
 
-        if Prof::TIME_STATS_ACTIVE {
+        if Prof::TIME_STATS_ACTIVE && is_interesting {
             log::info!("sending message to client: {}", msg);
         } else {
             log::trace!("sending message to client: {}", msg);
         }
 
-        self.prof.log.start();
-        if let Some(log) = self.log.as_mut() {
-            use std::io::Write;
-            writeln!(
-                log,
-                "[{}] sending message to client: {}",
-                time::Date::now(),
-                msg
-            )
-            .chain_err(|| "while writing to log file")?;
-        }
-        self.prof.log.stop();
+        time! {
+            > self.prof.log,
 
-        let bytes = self.prof.bytes.time(|| msg.to_bytes())?;
+            if let Some(log) = self.log.as_mut() {
+                use std::io::Write;
+                writeln!(
+                    log,
+                    "[{}] sending message to client: {}",
+                    time::Date::now(),
+                    msg
+                )
+                .chain_err(|| "while writing to log file")?;
+            }
+        }
+
+        let bytes = time! {
+            > self.prof.bytes,
+            msg.to_bytes()
+        }?;
         log::trace!("sending binary message ({} bytes)", bytes.len());
         let msg = Message::Binary(bytes);
 
-        self.prof.send.start();
-        self.socket
-            .write_message(msg)
-            .chain_err(|| format!("while sending message to client {}", self.ip))?;
-        self.prof.send.stop();
+        time! {
+            > self.prof.send,
+            self.socket
+                .write_message(msg)
+                .chain_err(|| format!("while sending message to client {}", self.ip))?
+        };
 
         self.prof.total.stop();
 
-        self.prof.all_do(
-            || log::info!("message sent"),
-            |desc, sw| log::info!("| {:>16}: {}", desc, sw),
-        );
+        if is_interesting {
+            self.prof.all_do(
+                || log::info!("message sent"),
+                |desc, sw| log::info!("| {:>16}: {}", desc, sw),
+            );
+        }
 
         Ok(())
     }
@@ -255,6 +264,9 @@ impl Handler {
     pub fn new(log: bool, stream: std::net::TcpStream) -> Res<Self> {
         let socket = tungstenite::server::accept(stream).map_err(|e| e.to_string())?;
 
+        let instance_prof = HandlerProf::new();
+        let total_prof = HandlerProf::new();
+
         // let (receiver, sender) = client
         //     .split()
         //     .chain_err(|| "while splitting the client into receive/send pair")?;
@@ -289,9 +301,12 @@ impl Handler {
 
         let mut charts = Charts::new();
 
-        charts
-            .auto_gen(charts::filter::FilterGen::default())
-            .chain_err(|| "during default filter generation")?;
+        time! {
+            charts
+                .auto_gen(charts::filter::FilterGen::default())
+                .chain_err(|| "during default filter generation")?,
+            |time| log::info!("done with filter generation in {}", time)
+        };
 
         let slf = Handler {
             com,
@@ -301,11 +316,11 @@ impl Handler {
             frame_span: time::Duration::from_millis(500),
             ping_label,
 
-            instance_prof: HandlerProf::new(),
-            total_prof: HandlerProf::new(),
+            instance_prof,
+            total_prof,
         };
 
-        log::trace!("successfully connected to {}", slf.ip());
+        log::info!("successfully connected to {}", slf.ip());
 
         Ok(slf)
     }
@@ -313,6 +328,29 @@ impl Handler {
     /// The client's IP address.
     pub fn ip(&self) -> &net::IpAddr {
         self.com.ip()
+    }
+
+    /// Display time statistics.
+    #[inline]
+    pub fn show_time_stats(&self, msg: &'static str) {
+        self.show_instance_time_stats(msg);
+        self.show_total_time_stats("total:");
+    }
+    /// Displays total time statistics.
+    #[inline]
+    pub fn show_total_time_stats(&self, msg: &'static str) {
+        self.total_prof.all_do(
+            || log::info!("{}", msg),
+            |desc, sw| log::info!("| {:>20}: {}", desc, sw),
+        );
+    }
+    /// Displays instance time statistics.
+    #[inline]
+    pub fn show_instance_time_stats(&self, msg: &'static str) {
+        self.instance_prof.all_do(
+            || log::info!("{}", msg),
+            |desc, sw| log::info!("| {:>20}: {}", desc, sw),
+        );
     }
 
     /// Runs the handler.
@@ -384,35 +422,27 @@ impl Handler {
             }
 
             // Render.
-            log::info!("generating points...");
-            self.instance_prof.point_extraction.start();
-            self.total_prof.point_extraction.start();
-            let (points, overwrite) = self
-                .charts
-                .new_points(false)
-                .chain_err(|| "while constructing points for the client")?;
-            self.instance_prof.point_extraction.stop();
-            self.total_prof.point_extraction.stop();
+            let (points, overwrite) = time! {
+                > self.instance_prof.point_extraction,
+                > self.total_prof.point_extraction,
+                self
+                    .charts
+                    .new_points(false)
+                    .chain_err(|| "while constructing points for the client")?
+            };
 
             if overwrite || !points.is_empty() {
-                self.instance_prof.point_sending.start();
-                self.total_prof.point_sending.start();
-                let msg = msg::to_client::ChartsMsg::points(points, overwrite);
-                self.send(msg)
-                    .chain_err(|| "while sending points to the client")?;
-                self.instance_prof.point_sending.stop();
-                self.total_prof.point_sending.stop();
+                time! {
+                    > self.instance_prof.point_sending,
+                    > self.total_prof.point_sending,
+
+                    self.send(msg::to_client::ChartsMsg::points(points, overwrite))
+                        .chain_err(|| "while sending points to the client")?
+                }
 
                 self.send_stats()?;
 
-                self.instance_prof.all_do(
-                    || log::info!("done extracting/sending points"),
-                    |desc, sw| log::info!("| {:>20}: {}", desc, sw),
-                );
-                self.total_prof.all_do(
-                    || log::info!("overall time stats"),
-                    |desc, sw| log::info!("| {:>20}: {}", desc, sw),
-                );
+                self.show_time_stats("done extracting/sending points");
             }
         }
 
@@ -446,31 +476,26 @@ impl Handler {
     }
     /// Sends all the points in all the charts to the client.
     fn send_all_points(&mut self) -> Res<()> {
-        self.instance_prof.point_extraction.start();
-        self.total_prof.point_extraction.start();
-        let (points, overwrite) = self.charts.new_points(true)?;
-        self.instance_prof.point_extraction.stop();
-        self.total_prof.point_extraction.stop();
+        let (points, overwrite) = time! {
+            > self.instance_prof.point_extraction.start(),
+            > self.total_prof.point_extraction.start(),
+
+            self.charts.new_points(true)?
+        };
 
         if !points.is_empty() {
-            self.instance_prof.point_sending.start();
-            self.total_prof.point_sending.start();
-            let msg = msg::to_client::ChartsMsg::points(points, overwrite);
-            self.send(msg)?;
-            self.instance_prof.point_sending.stop();
-            self.total_prof.point_sending.stop();
+            time! {
+                > self.instance_prof.point_sending,
+                > self.total_prof.point_sending,
 
-            self.instance_prof.all_do(
-                || log::info!("done extracting/sending points"),
-                |desc, sw| log::info!("| {:>20}: {}", desc, sw),
-            );
-            self.total_prof.all_do(
-                || log::info!("overall time stats"),
-                |desc, sw| log::info!("| {:>20}: {}", desc, sw),
-            );
+                self.send(msg::to_client::ChartsMsg::points(points, overwrite))?
+            }
+
+            self.show_time_stats("done extracting/sending points");
 
             self.send_stats()?
         }
+
         self.instance_prof.reset();
 
         Ok(())
