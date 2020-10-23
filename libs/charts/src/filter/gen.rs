@@ -6,9 +6,9 @@
 //!
 //! # Filter Generation Strategies
 //!
-//! Strategies are defined in sub-modules such as [`none`] and [`alloc_site`]. They typically define
-//! a unit-struct (*e.g.* [`AllocSite`]) implementing the [`FilterGenExt` trait][ext] which defines
-//! a parameter type [`Params`] among other things.
+//! Strategies are defined in sub-modules such as [`inactive`] and [`alloc_site`]. They typically
+//! define a unit-struct (*e.g.* [`AllocSite`]) implementing the [`FilterGenExt` trait][ext] which
+//! defines a parameter type [`Params`] among other things.
 //!
 //! [`FilterGen`] features a variant for each strategy that stores the parameters for the strategy,
 //! so that it can run it when asked to. Note that strategies also define how they can be activated
@@ -22,7 +22,7 @@
 //! [`get`]: fn.get.html (get function)
 //! [`set`]: fn.set.html (set function)
 //! [`set_from_cla`]: fn.set_from_cla.html (set_from_cla function)
-//! [`none`]: ./none (none module)
+//! [`inactive`]: ./inactive (inactive module)
 //! [`alloc_site`]: ./alloc_site (alloc_site module)
 //! [`AllocSite`]: ./alloc_site/struct.AllocSite.html (AllocSite struct)
 //! [ext]: trait.FilterGenExt.html (FilterGenExt trait)
@@ -33,11 +33,11 @@ prelude! {}
 pub mod parser;
 
 pub mod alloc_site;
-pub mod none;
+pub mod inactive;
 
 use self::{
     alloc_site::{AllocSite, AllocSiteParams},
-    none::Inactive,
+    inactive::Inactive,
     parser::Parser,
 };
 
