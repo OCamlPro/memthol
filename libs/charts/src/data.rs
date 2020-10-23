@@ -2,15 +2,13 @@
 
 prelude! {}
 
-use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-
 mod watcher;
 
 pub use watcher::Watcher;
 
 pub struct FullFactory<'a> {
     factory: alloc_data::mem::Factory<'a>,
-    data: std::sync::RwLockWriteGuard<'a, Data>,
+    data: sync::RwLockWriteGuard<'a, Data>,
 }
 impl<'a> std::ops::Deref for FullFactory<'a> {
     type Target = alloc_data::mem::Factory<'a>;
@@ -56,18 +54,18 @@ pub fn start(target: impl AsRef<std::path::Path>) -> Res<()> {
 
 lazy_static! {
     /// Progress indicator, used during loading.
-    static ref PROG: RwLock<Option<LoadInfo>> = RwLock::new(Some(LoadInfo::unknown()));
+    static ref PROG: sync::RwLock<Option<LoadInfo>> = sync::RwLock::new(Some(LoadInfo::unknown()));
     /// Global state.
-    static ref DATA: RwLock<Data> = RwLock::new(Data::new());
+    static ref DATA: sync::RwLock<Data> = sync::RwLock::new(Data::new());
     /// Errors.
-    static ref ERRORS: RwLock<Vec<String>> = RwLock::new(vec![]);
+    static ref ERRORS: sync::RwLock<Vec<String>> = sync::RwLock::new(vec![]);
 }
 
 /// Handles progress information.
 pub mod progress {
     use super::*;
 
-    fn read<'a>() -> Res<RwLockReadGuard<'a, Option<LoadInfo>>> {
+    fn read<'a>() -> Res<sync::RwLockReadGuard<'a, Option<LoadInfo>>> {
         PROG.read()
             .map_err(|e| {
                 let e: err::Error = e.to_string().into();
@@ -75,7 +73,7 @@ pub mod progress {
             })
             .chain_err(|| "while reading the progress status")
     }
-    fn write<'a>() -> Res<RwLockWriteGuard<'a, Option<LoadInfo>>> {
+    fn write<'a>() -> Res<sync::RwLockWriteGuard<'a, Option<LoadInfo>>> {
         PROG.write()
             .map_err(|e| {
                 let e: err::Error = e.to_string().into();
@@ -136,7 +134,7 @@ pub mod progress {
 }
 
 /// Global state accessor.
-pub fn get<'a>() -> Res<RwLockReadGuard<'a, Data>> {
+pub fn get<'a>() -> Res<sync::RwLockReadGuard<'a, Data>> {
     DATA.read()
         .map_err(|e| {
             let e: err::Error = e.to_string().into();
@@ -151,7 +149,7 @@ pub fn alloc_count() -> Res<usize> {
 }
 
 /// Global state mutable accessor.
-fn get_mut<'a>() -> Res<RwLockWriteGuard<'a, Data>> {
+fn get_mut<'a>() -> Res<sync::RwLockWriteGuard<'a, Data>> {
     DATA.write()
         .map_err(|e| {
             let e: err::Error = e.to_string().into();
@@ -444,34 +442,6 @@ impl Data {
         invariants::uid_order_is_toc_order(self)?;
         Ok(())
     }
-}
-
-/// Retrieves the errors.
-pub fn get_errors() -> Res<Option<Vec<String>>> {
-    let errors = ERRORS
-        .read()
-        .map_err(|e| err::Error::from(e.to_string()))
-        .chain_err(|| "while retrieving the data errors")?;
-    Ok(if errors.is_empty() {
-        None
-    } else {
-        Some(errors.clone())
-    })
-}
-
-/// Adds an error.
-pub fn add_err(err: impl Into<String>) {
-    let err = err.into();
-    log::error!("[data] Error:");
-    for line in err.lines() {
-        log::error!("[data] | {}", line)
-    }
-    ERRORS
-        .write()
-        .map_err(|e| err::Error::from(e.to_string()))
-        .chain_err(|| format!("while adding error:\n{}", err))
-        .expect("failed to retrieve global state")
-        .push(err.into())
 }
 
 /// Registers a diff.

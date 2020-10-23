@@ -319,7 +319,7 @@ impl Alloc {
     }
 
     /// Trace accessor.
-    pub fn trace(&self) -> std::sync::Arc<Vec<CLoc>> {
+    pub fn trace(&self) -> Arc<Vec<CLoc>> {
         self.trace.get()
     }
     /// Allocation-site of the allocation.
@@ -329,7 +329,7 @@ impl Alloc {
     }
 
     /// Labels accessor.
-    pub fn labels(&self) -> std::sync::Arc<Vec<Str>> {
+    pub fn labels(&self) -> Arc<Vec<Str>> {
         self.labels.get()
     }
     /// Time of creation accessor.

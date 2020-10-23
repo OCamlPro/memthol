@@ -50,7 +50,10 @@ pub struct Com {
     log: Option<std::fs::File>,
     /// Ping message use for acknowledgments.
     ping_msg: tungstenite::Message,
+    /// Time statistics.
     prof: Prof,
+    /// Error context.
+    err_cxt: err::ErrorCxt,
 }
 impl Com {
     /// Constructor.
@@ -85,6 +88,7 @@ impl Com {
             socket,
             ping_msg,
             prof: Prof::new(),
+            err_cxt: err::ErrorCxt::new(),
         })
     }
 
@@ -193,11 +197,10 @@ impl Com {
 
     /// Send charts-related errors to the client.
     fn send_errors(&mut self) -> Res<()> {
-        if let Some(errs) = charts::data::get_errors()? {
-            for err in errs {
-                self.send(msg::to_client::Msg::alert(err))?
-            }
-        }
+        let mut err_cxt = self.err_cxt.clone();
+        err_cxt
+            .new_errors_try(|err, is_fatal| self.send(msg::to_client::Msg::alert(err, is_fatal)))?;
+        self.err_cxt = err_cxt;
         Ok(())
     }
 

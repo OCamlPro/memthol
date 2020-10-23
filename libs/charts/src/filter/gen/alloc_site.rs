@@ -1,9 +1,16 @@
-//! Allocation-site-based automatic filter generation.
+//! Allocation-site-file-based automatic filter generation.
+//!
+//! Parameterized with an optional `min_count: usize`. This generator generates one filter per
+//! allocation-site-file with at least `min_count` allocations in it. Note that the behavior is the
+//! same when `min_count` is `0` or when it is `1`.
+//!
+//! When no `min_count` parameter is present, the current behavior is the same as `min_count == 1`.
 
 prelude! {}
 
 use filter::gen::*;
 
+/// Parameters for the alloc-site generator.
 #[derive(Debug, Clone)]
 pub struct AllocSiteParams {
     /// Minimum number of allocations needed for a filter to be created for a given file.
@@ -16,19 +23,24 @@ impl Default for AllocSiteParams {
 }
 
 impl AllocSiteParams {
+    /// Constructor.
     pub fn new(min_count: Option<usize>) -> Self {
         Self { min_count }
     }
 }
 
-pub type FileName = String;
+type FileName = String;
 
+/// Actual alloc-site generator worker.
 pub struct AllocSiteWork {
+    /// Maps file names to the number of allocations in them.
     map: BTMap<FileName, usize>,
+    /// Number of allocations in unknown files.
     unk: usize,
 }
 
 impl AllocSiteWork {
+    /// Constructor.
     pub fn new() -> Self {
         Self {
             map: BTMap::new(),
@@ -36,6 +48,9 @@ impl AllocSiteWork {
         }
     }
 
+    /// Increments by one the number of allocations in `file`.
+    ///
+    /// If `None`, `file` is treated as the unknown file.
     pub fn inc(&mut self, file: Option<alloc::Str>) {
         if let Some(file) = file {
             file.str_do(|file| {
@@ -51,12 +66,14 @@ impl AllocSiteWork {
         }
     }
 
+    /// Scans the input data to populate the map from file names to allocation count.
     pub fn scan(&mut self, data: &data::Data) {
         for alloc in data.iter_allocs() {
             alloc.alloc_site_do(|cloc_opt| self.inc(cloc_opt.map(|cloc| cloc.loc.file)))
         }
     }
 
+    /// Generates a subfilter for a specific file name.
     pub fn generate_subfilter(file: &str) -> filter::sub::RawSubFilter {
         let pred = filter::string_like::Pred::Contain;
         let line = filter::loc::LineSpec::any();
@@ -69,6 +86,7 @@ impl AllocSiteWork {
         filter.into()
     }
 
+    /// Extracts allocation-site-file filters.
     pub fn extract(self, params: AllocSiteParams) -> Res<Vec<Filter>> {
         let mut res = Vec::with_capacity(self.map.len());
 
@@ -126,16 +144,18 @@ impl AllocSiteWork {
     }
 }
 
+/// Unit-struct handling CLAP and creating/running the actual generator.
 #[derive(Debug, Clone, Copy)]
 pub struct AllocSite;
 
+/// Name of the `min` key.
 const MIN_KEY: &str = "min";
 
 impl FilterGenExt for AllocSite {
     type Params = AllocSiteParams;
 
     const KEY: &'static str = "alloc_site";
-    const FMT: &'static str = "min: <int>";
+    const FMT: Option<&'static str> = Some("min: <int>");
 
     fn work(data: &data::Data, params: Self::Params) -> Res<Vec<Filter>> {
         let mut work = AllocSiteWork::new();
@@ -143,11 +163,11 @@ impl FilterGenExt for AllocSite {
         work.extract(params)
     }
 
-    fn parse_args(parser: Option<Parser>) -> Option<Self::Params> {
+    fn parse_args(parser: Option<Parser>) -> Option<FilterGen> {
         let mut parser = if let Some(parser) = parser {
             parser
         } else {
-            return Some(Self::Params::default());
+            return Some(Self::Params::default().into());
         };
 
         if !parser.tag(MIN_KEY) {
@@ -169,7 +189,7 @@ impl FilterGenExt for AllocSite {
             return None;
         }
 
-        Some(AllocSiteParams::new(Some(min_count)))
+        Some(AllocSiteParams::new(Some(min_count)).into())
     }
 
     fn add_help(s: &mut String) {
@@ -182,7 +202,7 @@ impl FilterGenExt for AllocSite {
 \
             ",
             Self::KEY,
-            Self::FMT,
+            Self::FMT.unwrap(),
             MIN_KEY,
         ));
     }

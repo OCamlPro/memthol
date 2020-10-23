@@ -4,8 +4,6 @@
 //!
 //! - with some work, macro `crate::mem::new` could handle this case too
 
-pub use std::sync::{Arc, RwLock};
-
 prelude! {}
 
 type Memory = crate::mem::Memory<[u8]>;
@@ -98,7 +96,7 @@ impl<'a> PartialEq<&'a Str> for Str {
 }
 
 pub struct AsRead<'a> {
-    mem: std::sync::RwLockReadGuard<'a, Memory>,
+    mem: sync::RwLockReadGuard<'a, Memory>,
 }
 impl<'a> AsRead<'a> {
     pub fn get_elm(&self, uid: Str) -> Arc<[u8]> {
@@ -106,7 +104,7 @@ impl<'a> AsRead<'a> {
     }
 }
 pub struct AsWrite<'a> {
-    mem: std::sync::RwLockWriteGuard<'a, Memory>,
+    mem: sync::RwLockWriteGuard<'a, Memory>,
 }
 impl<'a> AsWrite<'a> {
     pub fn get_uid(&mut self, s: &str) -> Str {
@@ -118,7 +116,7 @@ impl<'a> AsWrite<'a> {
 
 crate::prelude::lazy_static! {
     /// Memory.
-    static ref MEM: RwLock<Memory> = RwLock::new(Memory::new());
+    static ref MEM: sync::RwLock<Memory> = sync::RwLock::new(Memory::new());
 }
 
 /// Provides read-access to the memory.

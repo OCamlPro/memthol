@@ -5,7 +5,7 @@ pub use std::{
     convert::{TryFrom, TryInto},
     fmt, ops,
     str::FromStr,
-    sync::Arc,
+    sync::{self, Arc},
 };
 
 pub use either::Either;
@@ -29,3 +29,6 @@ pub use crate::{
 pub mod serde {
     pub use serde_derive::{Deserialize, Serialize};
 }
+
+/// Inhabited type.
+pub enum Inhabited {}

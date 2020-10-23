@@ -263,6 +263,8 @@ pub mod to_client {
         Alert {
             /// Alert message.
             msg: String,
+            /// True if the error is fatal.
+            fatal: bool,
         },
         /// Loading progress.
         ///
@@ -286,8 +288,11 @@ pub mod to_client {
             Self::Info
         }
         /// Constructor for `Alert`.
-        pub fn alert(msg: impl Into<String>) -> Self {
-            Self::Alert { msg: msg.into() }
+        pub fn alert(msg: impl Into<String>, fatal: bool) -> Self {
+            Self::Alert {
+                msg: msg.into(),
+                fatal,
+            }
         }
         /// Constructor for chart messages.
         pub fn charts(msg: ChartsMsg) -> Self {
