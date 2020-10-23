@@ -1,5 +1,8 @@
+//! Filter generation strategy that generates nothing.
+
 use super::*;
 
+/// Unit-struct handling the inactive generator.
 pub struct Inactive;
 
 impl FilterGenExt for Inactive {
