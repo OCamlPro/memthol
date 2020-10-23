@@ -26,6 +26,15 @@ impl std::fmt::Display for Pos {
     }
 }
 
+base::new_time_stats! {
+    struct Prof {
+        basic_parsing => "basic parsing",
+        alloc => "alloc",
+        collection => "collection",
+        locs => "locations",
+    }
+}
+
 /// Parsing context.
 ///
 /// Stores
@@ -37,6 +46,7 @@ pub struct Cxt<'data> {
     loc: loc::Cxt<'data>,
     btrace: btrace::Cxt,
     alloc_count: u64,
+    prof: Prof,
 }
 impl<'data> Cxt<'data> {
     /// Constructor.
@@ -45,6 +55,7 @@ impl<'data> Cxt<'data> {
             loc: loc::Cxt::new(),
             btrace: btrace::Cxt::new(),
             alloc_count: 0u64,
+            prof: Prof::new(),
         }
     }
 
@@ -155,7 +166,7 @@ impl<'data> RawParser<'data> {
 impl<'data> RawParser<'data> {
     fn check<E>(&self, can_parse: usize, err: impl FnOnce() -> E) -> Res<()>
     where
-        E: Into<err::Err>,
+        E: Into<err::Error>,
     {
         if self.cursor + can_parse <= self.data.len() {
             Ok(())
@@ -677,7 +688,9 @@ decl_impl_trait! {
         /// Parses an allocation.
         ///
         /// Context-sensitive.
-        fn alloc(&mut self, timestamp: u64, cxt: &mut Cxt<'data>, short: Option<usize>) -> Res<ast::event::Alloc> {
+        fn alloc(
+            &mut self, timestamp: u64, cxt: &mut Cxt<'data>, short: Option<usize>
+        ) -> Res<ast::event::Alloc> {
             pinfo!(self, "parsing alloc");
             let alloc_id = cxt.next_alloc_id();
             let (is_short, len, nsamples, is_major) = if let Some(len) = short {
@@ -708,11 +721,11 @@ decl_impl_trait! {
                 common_pref_len
             );
 
-            let (backtrace, backtrace_len) =
+            let backtrace =
                 cxt.btrace
                     .get_backtrace(self, nencoded, common_pref_len)?;
 
-            let alloc_time = duration_from_millis(timestamp);
+            let alloc_time = time::Duration::from_micros(timestamp);
 
             Ok(ast::event::Alloc {
                 id: alloc_id,
@@ -722,7 +735,6 @@ decl_impl_trait! {
                 is_major,
                 common_pref_len,
                 backtrace,
-                backtrace_len,
             })
         }
 
@@ -756,7 +768,7 @@ decl_impl_trait! {
             let id = convert(self.u64()?, "locs: id");
             let len = convert(self.u8()?, "locs: len");
             pinfo!(self, "    -> parsing {} location(s)", len);
-            let mut locs = SVec32::with_capacity(len);
+            let mut locs = Vec::with_capacity(len);
             for _ in 0..len {
                 let loc = loc::Location::parse(self, &mut cxt.loc)?;
                 locs.push(loc)
@@ -1064,6 +1076,10 @@ where
         let packet_count = &mut self.packet_count;
 
         if parser.is_eof() {
+            cxt.prof.all_do(
+                || log::info!("done parsing packets"),
+                |desc, sw| log::info!("| {:>13}: {}", desc, sw),
+            );
             return Ok(None);
         }
         pinfo!(parser, "parsing packet header");
@@ -1167,7 +1183,10 @@ where
             return Ok(None);
         }
 
+        self.cxt.prof.basic_parsing.start();
         let (event_kind, event_timestamp) = self.parser.event_kind(&self.header)?;
+        self.cxt.prof.basic_parsing.stop();
+
         pinfo!(self, "event: {:?} ({})", event_kind, event_timestamp);
 
         let parser = &mut self.parser;
@@ -1175,15 +1194,19 @@ where
 
         let event = match event_kind {
             event::Kind::Alloc => {
+                cxt.prof.alloc.start();
                 let alloc = parser.alloc(event_timestamp, cxt, None)?;
+                cxt.prof.alloc.stop();
                 Event::Alloc(alloc)
             }
             event::Kind::SmallAlloc(n) => {
+                cxt.prof.alloc.start();
                 let alloc = parser.alloc(
                     event_timestamp,
                     cxt,
                     Some(convert(n, "event: SmallAlloc(n)")),
                 )?;
+                cxt.prof.alloc.stop();
                 Event::Alloc(alloc)
             }
             event::Kind::Promotion => {
@@ -1191,11 +1214,15 @@ where
                 Event::Promotion(alloc_id)
             }
             event::Kind::Collection => {
+                cxt.prof.collection.start();
                 let alloc_id = parser.alloc_uid_from_delta(cxt)?;
+                cxt.prof.collection.stop();
                 Event::Collection(alloc_id)
             }
             event::Kind::Locs => {
+                cxt.prof.locs.start();
                 let locs = parser.locs(cxt)?;
+                cxt.prof.locs.stop();
                 Event::Locs(locs)
             }
 

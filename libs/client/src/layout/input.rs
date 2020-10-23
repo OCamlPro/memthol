@@ -54,7 +54,7 @@ pub fn string_input(
         value,
         model.link.callback(move |data| {
             msg(parse_text_data(data)
-                .map_err(err::Err::from)
+                .map_err(err::Error::from)
                 .chain_err(|| "while parsing string value"))
         }),
     )
@@ -69,7 +69,7 @@ pub fn usize_input(model: &Model, value: usize, msg: impl Fn(Res<usize>) -> Msg 
         &value.to_string(),
         model.link.callback(move |data| {
             msg(parse_usize_data(data)
-                .map_err(|e| err::Err::from(e))
+                .map_err(|e| err::Error::from(e))
                 .chain_err(|| "while parsing integer value"))
         }),
     )
@@ -84,7 +84,7 @@ pub fn lifetime_input(
         &value.to_string(),
         model.link.callback(move |data| {
             let lifetime = parse_text_data(data).and_then(|txt| {
-                time::Lifetime::from_str(&txt).chain_err(|| "while parsing lifetime value")
+                time::Lifetime::parse_secs(&txt).chain_err(|| "while parsing lifetime value")
             });
             msg(lifetime)
         }),
@@ -100,7 +100,7 @@ pub fn u32_input(model: &Model, value: u32, msg: impl Fn(Res<u32>) -> Msg + 'sta
         &value.to_string(),
         model.link.callback(move |data| {
             msg(parse_u32_data(data)
-                .map_err(|e| err::Err::from(e))
+                .map_err(|e| err::Error::from(e))
                 .chain_err(|| "while parsing integer value"))
         }),
     )

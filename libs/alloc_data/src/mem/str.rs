@@ -23,6 +23,10 @@ impl Str {
         read()
     }
 
+    pub fn uid(&self) -> usize {
+        self.uid
+    }
+
     pub fn get(self) -> Arc<[u8]> {
         Self::factory().get_elm(self)
     }

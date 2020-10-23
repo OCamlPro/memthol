@@ -24,12 +24,12 @@ pub struct Watcher {
     /// Files that have already been sent to the client and must be ignored.
     ///
     /// **Always** contains `self.tmp_file` and `self.init_file`.
-    known_files: Set<OsString>,
+    known_files: BTSet<OsString>,
 
     /// Diff paths, used when gathering new diffs.
     new_diff_paths: Vec<PathBuf>,
     /// New diffs.
-    new_diffs: Vec<AllocDiff>,
+    new_diffs: Vec<alloc::Diff>,
 
     /// Buffer for file-reading.
     buf: String,
@@ -44,14 +44,24 @@ impl Watcher {
             let path = path.display().to_string();
             let _ = std::thread::spawn(move || match Self::ctf_run(path) {
                 Ok(()) => (),
-                Err(e) => super::add_err(e.pretty()),
+                Err(e) => super::add_err(e.to_pretty()),
             });
         } else if path.is_dir() {
             let mut watcher = Self::new(target);
 
+            log::warn!("running on legacy memthol dump format");
+            log::warn!("this will probably not work with this version of memthol");
+            log::warn!("unless the diffs must verify the following invariant:");
+            log::warn!("- allocations appear ordered by allocation UID");
+            log::warn!("- no allocation UID is skipped");
+            log::warn!(
+                "meaning successive UIDs `uid_i` and `uid_j` \
+                must be such that `uid_j == uid_i + 1`"
+            );
+
             let _ = std::thread::spawn(move || match watcher.run(forever) {
                 Ok(()) => (),
-                Err(e) => super::add_err(e.pretty()),
+                Err(e) => super::add_err(e.to_pretty()),
             });
         } else {
             super::add_err(format!(
@@ -63,8 +73,21 @@ impl Watcher {
 
     /// Runs on a memtrace CTF file.
     pub fn ctf_run(target: impl AsRef<Path>) -> Res<()> {
+        base::new_time_stats! {
+            struct Prof {
+                total => "total",
+                load => "loading",
+                parse => "parsing",
+            }
+        }
+        let mut prof = Prof::new();
+        prof.total.start();
+
         let target = target.as_ref();
 
+        log::info!("loading ctf file `{}`", target.display());
+
+        prof.load.start();
         let bytes = {
             use std::io::Read;
             let mut file = std::fs::OpenOptions::new()
@@ -82,12 +105,14 @@ impl Watcher {
             super::progress::set_total(data_len)?;
             buff
         };
+        prof.load.stop();
 
         let mut factory = data::FullFactory::new(false);
+        prof.parse.start();
         ctf::parse(
             &bytes,
             &mut factory,
-            |bytes_progress| super::progress::add_loaded(bytes_progress).unwrap(),
+            |bytes_progress| super::progress::set_loaded(bytes_progress).unwrap(),
             |factory, init| {
                 if factory.data.has_init() {
                     panic!("live profiling restart is not supported yet")
@@ -99,10 +124,19 @@ impl Watcher {
             |factory, timestamp, uid| factory.add_dead(timestamp, uid).unwrap(),
         )
         .chain_err(|| format!("while parsing ctf file `{}`", target.display()))?;
+        prof.parse.stop();
 
         factory.fill_stats()?;
 
         super::progress::set_done()?;
+
+        prof.all_do(
+            || log::info!("done loading ctf file `{}`", target.display()),
+            |desc, sw| log::info!("| {:>9}: {}", desc, sw),
+        );
+        if !Prof::TIME_STATS_ACTIVE {
+            log::info!("done loading ctf file `{}`", target.display());
+        }
 
         Ok(())
     }
@@ -138,7 +172,7 @@ impl Watcher {
         // The call to `register_new_diffs` below can fail if the profiling run is restarted. If it
         // does, the error will be put here. Then, we try to read a new init file, and we drop the
         // error if that's successful. Otherwise, we return the error.
-        let mut diff_error: Option<err::Err> = None;
+        let mut diff_error: Option<err::Error> = None;
 
         // Diff-reading loop.
         loop {
@@ -198,7 +232,7 @@ impl Watcher {
         let tmp_file = "tmp.memthol".into();
         let init_file = "init.memthol".into();
         let init_last_modified = None;
-        let known_files = Set::new();
+        let known_files = BTSet::new();
         let new_diff_paths = vec![];
         let new_diffs = vec![];
         let buf = String::new();
@@ -232,7 +266,7 @@ impl Watcher {
     /// Restarts the watcher and resets the data.
     ///
     /// Called when the init file of the run has changed.
-    pub fn reset_run(&mut self, init: AllocInit) -> Res<()> {
+    pub fn reset_run(&mut self, init: alloc::Init) -> Res<()> {
         self.reset();
         let mut data = super::get_mut().chain_err(|| "while resetting the data")?;
         data.reset(&self.dir, init);
@@ -273,7 +307,7 @@ impl Watcher {
     ///
     /// If the result isn't `None`, `self.init_last_modified` is updated to the date of last
     /// modification of the init file.
-    pub fn try_read_init(&mut self) -> Res<Option<AllocInit>> {
+    pub fn try_read_init(&mut self) -> Res<Option<alloc::Init>> {
         let mut init_path = PathBuf::new();
         init_path.push(&self.dir);
         init_path.push(&self.init_file);
@@ -320,7 +354,7 @@ impl Watcher {
                 return Ok(None);
             } else {
                 use alloc_data::parser::Parseable;
-                let init = AllocInit::parse(content)?;
+                let init = alloc::Init::parse(content)?;
                 Ok(Some(init))
             }
         })
@@ -484,10 +518,10 @@ impl Watcher {
         Ok(highest_last_modified)
     }
 
-    fn load(&mut self, init: &AllocInit, path: PathBuf) -> Res<AllocDiff> {
+    fn load(&mut self, init: &alloc::Init, path: PathBuf) -> Res<alloc::Diff> {
         self.read_content(&path, |content| {
             use alloc_data::parser::Parseable;
-            let diff = AllocDiff::parse_with(content, init)?;
+            let diff = alloc::Diff::parse_with(content, init)?;
             Ok(diff)
         })
         .chain_err(|| format!("while reading content of file `{}`", path.to_string_lossy()))

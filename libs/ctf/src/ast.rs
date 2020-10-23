@@ -45,10 +45,10 @@ impl<T> Span<T> {
 }
 
 impl Span<Clock> {
-    pub fn pretty_time(&self) -> Span<Duration> {
+    pub fn pretty_time(&self) -> Span<time::Duration> {
         Span {
-            begin: duration_from_millis(self.begin),
-            end: duration_from_millis(self.end),
+            begin: time::Duration::from_millis(self.begin),
+            end: time::Duration::from_millis(self.end),
         }
     }
 }
@@ -323,7 +323,7 @@ pub mod event {
                     "{}({} @ {})",
                     name,
                     alloc.id,
-                    base::pretty_time(alloc.alloc_time)
+                    alloc.alloc_time.display_micros(),
                 ),
                 Self::Collection(id) => format!("{}({})", name, id),
                 Self::Promotion(id) => format!("{}({})", name, id),
@@ -355,11 +355,10 @@ pub mod event {
     pub struct Alloc {
         pub id: u64,
         pub len: usize,
-        pub alloc_time: Duration,
+        pub alloc_time: time::Duration,
         pub nsamples: usize,
         pub is_major: bool,
-        pub backtrace: SVec32<usize>,
-        pub backtrace_len: usize,
+        pub backtrace: Vec<usize>,
         pub common_pref_len: usize,
     }
     impl Alloc {
@@ -417,7 +416,7 @@ pub struct Loc {
 #[derive(Debug, Clone)]
 pub struct Locs<'data> {
     pub id: u64,
-    pub locs: SVec32<loc::Location<'data>>,
+    pub locs: Vec<loc::Location<'data>>,
 }
 
 #[derive(Debug, Clone)]

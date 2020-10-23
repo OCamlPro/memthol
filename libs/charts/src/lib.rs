@@ -13,6 +13,7 @@
 //! [`Watcher`]: ./data/struct.Watcher.html (The Watcher struct in module data)
 //! [`start`]: ./data/fn.start.html (The start function in module data)
 
+pub extern crate alloc_data;
 pub extern crate palette;
 pub extern crate plotters;
 
@@ -23,20 +24,18 @@ pub mod chart;
 pub mod color;
 #[cfg(any(test, feature = "server"))]
 pub mod data;
-pub mod err;
 pub mod filter;
 pub mod msg;
 pub mod point;
-pub mod uid;
 
+#[cfg(any(test, feature = "server"))]
 pub use chart::Chart;
-pub use prelude::Json;
 
+#[cfg(any(test, feature = "server"))]
 prelude! {}
 
-use uid::ChartUid;
-
 /// Trait implemented by all charts.
+#[cfg(any(test, feature = "server"))]
 pub trait ChartExt {
     /// Generates the new points of the chart.
     fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Points>;
@@ -46,6 +45,7 @@ pub trait ChartExt {
 }
 
 /// Aggregates some charts.
+#[cfg(any(test, feature = "server"))]
 pub struct Charts {
     /// List of active charts.
     charts: Vec<Chart>,
@@ -55,9 +55,11 @@ pub struct Charts {
     ///
     /// This is used to check whether we need to detect that the init file of the run has changed
     /// and that we need to reset the charts.
-    start_time: Option<Date>,
+    start_time: Option<time::Date>,
+    to_client_msgs: msg::to_client::Msgs,
 }
 
+#[cfg(any(test, feature = "server"))]
 impl Charts {
     /// Constructor.
     pub fn new() -> Self {
@@ -65,6 +67,7 @@ impl Charts {
             charts: vec![],
             filters: Filters::new(),
             start_time: None,
+            to_client_msgs: msg::to_client::Msgs::with_capacity(7),
         }
     }
 
@@ -77,7 +80,7 @@ impl Charts {
         &self.filters
     }
     /// Start time.
-    pub fn start_time(&self) -> Option<&Date> {
+    pub fn start_time(&self) -> Option<&time::Date> {
         self.start_time.as_ref()
     }
 
@@ -85,8 +88,8 @@ impl Charts {
     ///
     /// Returns the number of filter generated.
     #[cfg(any(test, feature = "server"))]
-    pub fn auto_gen(&mut self, generator: impl Into<filter::gen::FilterGen>) -> Res<usize> {
-        self.filters.auto_gen(data::get()?.deref(), generator)
+    pub fn auto_gen(&mut self) -> Res<usize> {
+        self.filters.auto_gen(&*data::get()?, filter::gen::get())
     }
 
     /// Pushes a new chart.
@@ -95,7 +98,7 @@ impl Charts {
     }
 
     /// Chart mutable accessor.
-    pub fn get_mut(&mut self, uid: ChartUid) -> Res<&mut Chart> {
+    pub fn get_mut(&mut self, uid: uid::Chart) -> Res<&mut Chart> {
         for chart in self.charts.iter_mut() {
             if chart.uid() == uid {
                 return Ok(chart);
@@ -133,64 +136,80 @@ impl Charts {
         let restarted = self.restart_if_needed()?;
         let mut points = point::ChartPoints::new();
         for chart in &mut self.charts {
-            let chart_points = chart.new_points(&mut self.filters, restarted || init)?;
-            let prev = points.insert(chart.uid(), chart_points);
-            debug_assert!(prev.is_none())
+            if let Some(chart_points) = chart.new_points(&mut self.filters, restarted || init)? {
+                let prev = points.insert(chart.uid(), chart_points);
+                debug_assert!(prev.is_none())
+            }
         }
         Ok((points, restarted || init))
     }
 
-    pub fn handle_chart_msg(
-        &mut self,
-        msg: msg::to_server::ChartsMsg,
-    ) -> Res<msg::to_client::Msgs> {
-        let mut to_client_msgs = vec![];
+    pub fn handle_chart_msg(&mut self, msg: msg::to_server::ChartsMsg) -> Res<()> {
+        debug_assert!(self.to_client_msgs.is_empty());
 
         match msg {
             msg::to_server::ChartsMsg::New(x_axis, y_axis) => {
-                let mut nu_chart = chart::Chart::new(&mut self.filters, x_axis, y_axis)
+                let nu_chart = chart::Chart::new(&mut self.filters, x_axis, y_axis)
                     .chain_err(|| "while creating new chart")?;
 
                 // Chart creation message.
-                to_client_msgs.push(msg::to_client::ChartsMsg::new_chart(
-                    nu_chart.spec().clone(),
-                    nu_chart.settings().clone(),
-                ));
-                // Initial points message.
-                let points = nu_chart.new_points(&mut self.filters, true).chain_err(|| {
-                    format!(
-                        "while generating the initial points for new chart #{}",
-                        nu_chart.uid()
-                    )
-                })?;
-                to_client_msgs.push(msg::to_client::ChartMsg::new_points(nu_chart.uid(), points));
+                self.to_client_msgs
+                    .push(msg::to_client::ChartsMsg::new_chart(
+                        nu_chart.spec().clone(),
+                        nu_chart.settings().clone(),
+                    ));
+                // // Initial points message.
+                // let points = nu_chart.new_points(&mut self.filters, true).chain_err(|| {
+                //     format!(
+                //         "while generating the initial points for new chart #{}",
+                //         nu_chart.uid()
+                //     )
+                // })?;
+                // to_client_msgs.push(msg::to_client::ChartMsg::new_points(nu_chart.uid(), points));
 
                 self.charts.push(nu_chart)
             }
 
             msg::to_server::ChartsMsg::Reload => {
-                let msg = self.reload_points(false)?;
-                to_client_msgs.push(msg)
+                let msg = self.reload_points(None, false)?;
+                self.to_client_msgs.push(msg)
             }
 
-            msg::to_server::ChartsMsg::ChartUpdate { uid, msg } => self.get_mut(uid)?.update(msg),
+            msg::to_server::ChartsMsg::ChartUpdate { uid, msg } => {
+                let reload = self.get_mut(uid)?.update(msg);
+                if reload {
+                    let msg = self.reload_points(Some(uid), false)?;
+                    self.to_client_msgs.push(msg)
+                }
+            }
         }
 
-        Ok(to_client_msgs)
+        Ok(())
     }
 
     /// Recomputes all the points, and returns them as a message for the client.
-    pub fn reload_points(&mut self, refresh_filters: bool) -> Res<msg::to_client::Msg> {
+    pub fn reload_points(
+        &mut self,
+        uid: Option<uid::Chart>,
+        refresh_filters: bool,
+    ) -> Res<msg::to_client::Msg> {
         let mut new_points = point::ChartPoints::new();
         for chart in &mut self.charts {
+            if let Some(uid) = uid {
+                if chart.uid() != uid {
+                    continue;
+                }
+            }
             chart.reset(&self.filters);
             self.filters.reset();
-            let points = chart
+            let points_opt = chart
                 .new_points(&mut self.filters, true)
                 .chain_err(|| format!("while generating points for chart #{}", chart.uid()))?;
-            let prev = new_points.insert(chart.uid(), points);
-            if prev.is_some() {
-                bail!("chart UID collision on #{}", chart.uid())
+            if let Some(points) = points_opt {
+                let prev = new_points.insert(chart.uid(), points);
+                if prev.is_some() {
+                    bail!("chart UID collision on #{}", chart.uid())
+                }
             }
         }
         Ok(msg::to_client::ChartsMsg::new_points(
@@ -200,20 +219,23 @@ impl Charts {
     }
 
     /// Handles a message from the client.
-    pub fn handle_msg(&mut self, msg: msg::to_server::Msg) -> Res<Vec<msg::to_client::Msg>> {
+    pub fn handle_msg<'me>(
+        &'me mut self,
+        msg: msg::to_server::Msg,
+    ) -> Res<impl Iterator<Item = msg::to_client::Msg> + 'me> {
         use msg::to_server::Msg::*;
 
-        let msgs = match msg {
+        match msg {
             Charts(msg) => self.handle_chart_msg(msg)?,
             Filters(msg) => {
                 let (mut msgs, should_reload) = self.filters.update(msg)?;
                 if should_reload {
-                    msgs.push(self.reload_points(true)?)
+                    msgs.push(self.reload_points(None, true)?)
                 }
-                msgs
+                self.to_client_msgs.extend(msgs)
             }
         };
 
-        Ok(msgs)
+        Ok(self.to_client_msgs.drain(0..))
     }
 }

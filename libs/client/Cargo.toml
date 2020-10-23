@@ -1,8 +1,11 @@
 [package]
 name = "client"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["AdrienChampion <adrien.champion@email.com>"]
 edition = "2018"
+description = "client part of the memthol profiling visualizer"
+repository = "N/A"
+license = "N/A"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -10,16 +13,10 @@ crate-type = ["cdylib", "rlib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-alloc_data = { path = "../alloc_data", features = ["client"] }
-base = { path = "../base", features = ["client"] }
-charts = { path = "../charts", features = ["client"] }
+base = { path = "../base", default_features = false, features = ["client"] }
+charts = { path = "../charts", default_features = false, features = ["client"] }
 
-chrono = "*"
-error-chain = "*"
-lazy_static = "*"
-log = "^0.4"
 plotters-canvas = "*"
-safe_index = "*"
 serde = "*"
 serde_derive = "*"
 strum = "*"
@@ -34,3 +31,8 @@ web-sys = { version = "*", features = [
 wee_alloc = "*"
 yew = "*"
 yew-components = "*"
+
+[features]
+default = []
+time_stats = []
+all_time_stats = []

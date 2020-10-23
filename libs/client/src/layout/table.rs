@@ -132,7 +132,7 @@ define_style! {
 
 pub struct TableRow {
     lft: Html,
-    rgt: SVec<Html>,
+    rgt: SVec16<Html>,
     height_px: usize,
     is_first: bool,
     white_sep: bool,
@@ -150,7 +150,7 @@ impl TableRow {
 
         Self {
             lft,
-            rgt: SVec::new(),
+            rgt: SVec16::new(),
             height_px: 40,
             is_first,
             white_sep: true,

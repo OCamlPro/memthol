@@ -1,6 +1,6 @@
 [package]
 name = "charts"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Adrien Champion <adrien.champion@email.com>"]
 edition = "2018"
 
@@ -14,12 +14,11 @@ ctf = { path = "../ctf", optional = true }
 anyhow = "*"
 number_prefix = "*"
 palette = "*"
+peg = "*"
 plotters = "*"
 plotters-backend = "*"
 regex = "*"
-safe_index = "*"
 serde = "*"
-serde_json = "*"
 serde_regex = "*"
 strum = "*"
 strum_macros = "*"
@@ -28,4 +27,10 @@ yew = "*"
 [features]
 server = [ "ctf", "alloc_data/server", "base/server" ]
 client = [ "alloc_data/client", "base/client" ]
-default = []
+default = [ "server" ]
+time_stats = []
+all_time_stats = [
+    "time_stats",
+    "ctf/time_stats",
+    "alloc_data/time_stats",
+]

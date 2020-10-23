@@ -1,24 +1,32 @@
 [package]
 name = "memthol"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Adrien Champion <adrien.champion@ocamlpro.com"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-alloc_data = { path = "../libs/alloc_data" }
 base = { path = "../libs/base" }
-charts = { path = "../libs/charts", features = ["server"] }
+charts = { path = "../libs/charts" }
 
-gotham = "*"
-error-chain = "*"
-lazy_static = "*"
-tungstenite = "*"
 clap = "*"
+error-chain = "*"
+gotham = "*"
+lazy_static = "*"
+open = "*"
+pretty_env_logger = "^0.4"
+tungstenite = "*"
 
 [build-dependencies]
 base = { path = "../libs/base" }
 fs_extra = "*"
 lazy_static = "*"
 walkdir = "*"
+
+[features]
+default = []
+time_stats = []
+all_time_stats = [
+    "charts/all_time_stats",
+]

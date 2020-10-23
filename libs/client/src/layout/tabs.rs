@@ -75,10 +75,7 @@ impl TabProps {
         self
     }
 
-    pub fn with_first_last_uid(
-        mut self,
-        get: impl FnOnce() -> (bool, bool, filter::FilterUid),
-    ) -> Self {
+    pub fn with_first_last_uid(mut self, get: impl FnOnce() -> (bool, bool, uid::Filter)) -> Self {
         self.active = self.active.with_first_last_uid(get);
         self
     }
@@ -112,7 +109,7 @@ pub enum IsActive {
     YesWith {
         can_move_left: bool,
         can_move_right: bool,
-        uid: filter::FilterUid,
+        uid: uid::Filter,
     },
 }
 impl IsActive {
@@ -129,10 +126,7 @@ impl IsActive {
             Self::No
         }
     }
-    pub fn with_first_last_uid(
-        self,
-        get: impl FnOnce() -> (bool, bool, filter::FilterUid),
-    ) -> Self {
+    pub fn with_first_last_uid(self, get: impl FnOnce() -> (bool, bool, uid::Filter)) -> Self {
         match self {
             Self::No => Self::No,
             Self::YesWith { .. } | Self::Yes => {
@@ -179,12 +173,14 @@ pub fn style(props: &TabProps) -> String {
 }
 
 pub struct Tabs {
-    tabs: SVec<Html>,
+    tabs: SVec64<Html>,
 }
 
 impl Tabs {
     pub fn new() -> Self {
-        Self { tabs: SVec::new() }
+        Self {
+            tabs: SVec64::new(),
+        }
     }
 
     pub fn push_tab(&mut self, model: &Model, text: &str, props: TabProps, onclick: OnClickAction) {

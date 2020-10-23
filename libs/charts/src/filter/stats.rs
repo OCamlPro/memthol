@@ -26,12 +26,14 @@ impl FilterStats {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AllFilterStats {
     /// Map from filters to their statistics.
-    pub stats: Map<uid::LineUid, FilterStats>,
+    pub stats: BTMap<uid::Line, FilterStats>,
 }
 impl AllFilterStats {
     /// Constructor.
     pub fn new() -> Self {
-        Self { stats: Map::new() }
+        Self {
+            stats: BTMap::new(),
+        }
     }
 
     /// Number of filters mentioned in the stats.
@@ -40,26 +42,26 @@ impl AllFilterStats {
     }
 
     /// Mutable accessor for a specific filter, inserts new stats if not there.
-    pub fn stats_mut(&mut self, filter: uid::LineUid) -> &mut FilterStats {
+    pub fn stats_mut(&mut self, filter: uid::Line) -> &mut FilterStats {
         self.stats.entry(filter).or_insert_with(FilterStats::new)
     }
 
     /// Applies an action to a specific filter, inserts new stats if not there.
     pub fn stats_do<T>(
         &mut self,
-        filter: uid::LineUid,
+        filter: uid::Line,
         action: impl FnOnce(&mut FilterStats) -> T,
     ) -> T {
         action(self.stats_mut(filter))
     }
 
     /// Removes the stats for a filter.
-    pub fn remove(&mut self, filter: uid::LineUid) -> Option<FilterStats> {
+    pub fn remove(&mut self, filter: uid::Line) -> Option<FilterStats> {
         self.stats.remove(&filter)
     }
 
     /// Retrieves the stats for a filter.
-    pub fn get(&self, filter: uid::LineUid) -> Option<&FilterStats> {
+    pub fn get(&self, filter: uid::Line) -> Option<&FilterStats> {
         self.stats.get(&filter)
     }
 }

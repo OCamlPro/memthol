@@ -1,20 +1,8 @@
 //! Common imports for this crate.
 
-pub use std::{
-    collections::{BTreeMap as Map, BTreeSet as Set},
-    convert::{TryFrom, TryInto},
-    fmt,
-    ops::{Deref, DerefMut},
-    sync::Arc,
-};
-
 pub use regex::Regex;
 
-pub use base::{
-    debug_do,
-    error_chain::{self, bail},
-    impl_display, lazy_static, Either,
-};
+pub use base::prelude::{serde::*, *};
 
 /// Re-exports from the `alloc_data` crate.
 pub mod alloc {
@@ -30,11 +18,7 @@ pub mod coord {
     };
 }
 
-pub use alloc::serderive::*;
-
-pub use alloc::{
-    time, Alloc, Date, Diff as AllocDiff, Duration, Init as AllocInit, Uid as AllocUid,
-};
+pub use alloc::Alloc;
 
 /// Imports this crate's prelude.
 macro_rules! prelude {
@@ -43,18 +27,18 @@ macro_rules! prelude {
     };
 }
 
-#[cfg(any(test, feature = "server"))]
-pub use crate::data;
+base::cfg_item! {
+    cfg(server) {
+        pub use crate::{data, ChartExt};
+    }
+}
 
 pub use crate::{
     chart::{self, settings::ChartSettings},
     color::Color,
-    err,
-    err::{Res, ResExt},
     filter::{self, Filter, Filters},
-    msg, point,
-    point::{Point, PointVal, Points},
-    uid, ChartExt,
+    msg,
+    point::{self, Point, PointVal, Points},
 };
 
 pub mod num_fmt {
@@ -72,40 +56,7 @@ pub mod num_fmt {
 }
 
 /// A set of allocation UIDs.
-pub type AllocUidSet = Set<AllocUid>;
-
-/// Trait for types that can be (de)serialized in JSON format.
-pub trait Json: Sized {
-    /// Json serialization.
-    fn as_json(&self) -> Res<String>;
-    /// Json serialization, pretty version.
-    fn as_pretty_json(&self) -> Res<String>;
-    /// Json deserialization.
-    fn from_json(text: &str) -> Res<Self>;
-    /// Json deserialization (bytes).
-    fn from_json_bytes(bytes: &[u8]) -> Res<Self>;
-}
-impl<T> Json for T
-where
-    T: Sized + serde::Serialize + for<'a> serde::Deserialize<'a>,
-{
-    fn as_json(&self) -> Res<String> {
-        let tml = serde_json::to_string(self)?;
-        Ok(tml)
-    }
-    fn as_pretty_json(&self) -> Res<String> {
-        let tml = serde_json::to_string_pretty(self)?;
-        Ok(tml)
-    }
-    fn from_json(text: &str) -> Res<Self> {
-        let slf = serde_json::from_str(text.as_ref())?;
-        Ok(slf)
-    }
-    fn from_json_bytes(bytes: &[u8]) -> Res<Self> {
-        let slf = serde_json::from_slice(bytes)?;
-        Ok(slf)
-    }
-}
+pub type AllocUidSet = BTSet<uid::Alloc>;
 
 /// Dump-loading information.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -133,12 +84,6 @@ impl LoadInfo {
             (self.loaded as f64) * 100. / (self.total as f64)
         }
     }
-}
-
-/// Retrieve data errors.
-#[cfg(any(test, feature = "server"))]
-pub fn get_errors() -> Res<Option<Vec<String>>> {
-    data::Data::get_errors()
 }
 
 /// Allocation statistics.

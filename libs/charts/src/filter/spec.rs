@@ -17,7 +17,7 @@ pub struct FilterSpec {
     /// Uid of the filter.
     ///
     /// None if the specification if for the catch-all filter.
-    uid: LineUid,
+    uid: uid::Line,
     /// Name of the filter.
     name: String,
     /// Color of the filter.
@@ -26,10 +26,10 @@ pub struct FilterSpec {
 impl FilterSpec {
     /// Constructor for user-defined filters.
     pub fn new(color: Color) -> Self {
-        let uid = FilterUid::fresh();
+        let uid = uid::Filter::fresh();
         let name = "new filter".to_string();
         Self {
-            uid: LineUid::Filter(uid),
+            uid: uid::Line::Filter(uid),
             name,
             color,
         }
@@ -38,7 +38,7 @@ impl FilterSpec {
     /// Constructs a specification for the catch-all filter.
     pub fn new_catch_all() -> Self {
         Self {
-            uid: LineUid::CatchAll,
+            uid: uid::Line::CatchAll,
             name: "catch all".into(),
             color: Color::new(0x01, 0x93, 0xff),
         }
@@ -47,7 +47,7 @@ impl FilterSpec {
     /// Constructs a specification for the everything filter.
     pub fn new_everything() -> Self {
         Self {
-            uid: LineUid::Everything,
+            uid: uid::Line::Everything,
             name: "everything".into(),
             color: Color::new(0xff, 0x66, 0x00),
         }
@@ -55,11 +55,11 @@ impl FilterSpec {
 
     /// True if the specification describes the *everything* filter.
     pub fn is_everything(&self) -> bool {
-        self.uid == LineUid::Everything
+        self.uid == uid::Line::Everything
     }
     /// True if the specification describes the *catch-all* filter.
     pub fn is_catch_all(&self) -> bool {
-        self.uid == LineUid::CatchAll
+        self.uid == uid::Line::CatchAll
     }
     /// True if the filter is user-provided.
     pub fn is_user_provided(&self) -> bool {
@@ -67,7 +67,7 @@ impl FilterSpec {
     }
 
     /// UID accessor.
-    pub fn uid(&self) -> LineUid {
+    pub fn uid(&self) -> uid::Line {
         self.uid
     }
 

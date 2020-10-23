@@ -3,12 +3,18 @@
 #[macro_use]
 extern crate clap;
 
+use base::log;
+
 /// Default clap values.
 mod default {
-    /// Default aadress.
+    /// Default filter gen parameter.
+    pub const FILTER_GEN: &str = "alloc_site";
+
+    /// Default address.
     pub const ADDR: &str = "localhost";
     /// Default port.
     pub const PORT: &str = "7878";
+
     /// Default directory.
     pub const INPUT: &str = ".";
 }
@@ -17,10 +23,27 @@ mod default {
 fn usize_validator(s: String) -> Result<(), String> {
     use std::str::FromStr;
     if usize::from_str(&s).is_err() {
-        Err(format!("expected integer, found `{}`", s))
+        Err(format!("expected integer (usize), found `{}`", s))
     } else {
         Ok(())
     }
+}
+
+/// Initializes the logger.
+fn init_logger(verb: u64) {
+    let mut builder = pretty_env_logger::formatted_timed_builder();
+
+    let level = match verb {
+        0 => log::LevelFilter::Warn,
+        1 => log::LevelFilter::Info,
+        2 => log::LevelFilter::Debug,
+        _ => log::LevelFilter::Trace,
+    };
+
+    builder.filter_module("memthol", level);
+    builder.filter_module("ctf", level);
+    builder.filter_module("charts", level);
+    builder.init();
 }
 
 pub fn main() {
@@ -28,10 +51,32 @@ pub fn main() {
         (author: crate_authors!())
         (version: crate_version!())
         (about: "Memthol's UI.")
+
+        // Basic stuff.
+
         (@arg VERB:
-            -v --verbose
+            -v --verbose !required
+            ...
             "activates verbose output"
         )
+        (@arg OPEN:
+            --open !required
+            "opens the memthol browser right away"
+        )
+        (@arg LOG:
+            -l --log !required
+            "activates (separate) socket logging"
+        )
+
+        // Filter-gen stuff.
+        (@arg FILTER_GEN:
+            --filter_gen +takes_value !required
+            default_value(default::FILTER_GEN)
+            "filter generation heuristic, get help with `--filter_gen help`"
+        )
+
+        // Server-related stuff.
+
         (@arg ADDR:
             -a --addr +takes_value !required
             default_value(default::ADDR)
@@ -43,10 +88,9 @@ pub fn main() {
             { usize_validator }
             "the port to serve the UI at"
         )
-        (@arg LOG:
-            -l --log !required
-            "activates (separate) socket logging"
-        )
+
+        // Directory or CTF file.
+
         (@arg INPUT:
             !required
             default_value(default::INPUT)
@@ -62,14 +106,20 @@ pub fn main() {
         usize::from_str(port).expect("argument with validator")
     };
     let log = matches.occurrences_of("LOG") > 0;
+    let open = matches.occurrences_of("OPEN") > 0;
 
-    let verb = matches.occurrences_of("VERB") > 0;
-    memthol::conf::set_verb(verb);
+    let verb = matches.occurrences_of("VERB");
+    init_logger(verb);
 
     let target = matches.value_of("INPUT").expect("argument with default");
 
+    let filter_gen = matches
+        .value_of("FILTER_GEN")
+        .expect("argument with default");
+    handle_filter_gen(filter_gen);
+
     let path = format!("{}:{}", addr, port);
-    println!("|===| Config");
+    println!("|===| Starting");
     println!("| url: http://{}", path);
     println!("| target: `{}`", target);
     println!("|===|");
@@ -77,15 +127,62 @@ pub fn main() {
 
     let router = memthol::router::new();
 
-    println!("starting data monitoring...");
-    memthol::err::unwrap_or! {
+    log::info!("starting data monitoring");
+    base::unwrap_or! {
         charts::data::start(target), exit
     }
 
-    println!("starting socket listeners...");
-    memthol::err::unwrap_or! {
+    log::info!("starting socket listeners");
+    base::unwrap_or! {
         memthol::socket::spawn_server(addr, port + 1, log), exit
     }
 
+    if open {
+        open_in_background(&path)
+    }
+
+    log::info!("starting gotham server");
     gotham::start(path, router)
+}
+
+fn open_in_background(path: &str) {
+    let path = format!("http://{}", path);
+    std::thread::spawn(move || match open::that(&path) {
+        Ok(status) => {
+            if !status.success() {
+                log::error!("while opening page {}", path);
+                log::error!(
+                    "got a non-success exit code: {}",
+                    status
+                        .code()
+                        .map(|n| n.to_string())
+                        .unwrap_or_else(|| "??".into())
+                )
+            }
+        }
+        Err(e) => {
+            log::error!("while opening page {}", path);
+            log::error!("{}", e)
+        }
+    });
+}
+
+fn handle_filter_gen(args: &str) {
+    let mut exit_code = None;
+    let args = args.trim();
+
+    if args == "help" {
+        exit_code = Some(0)
+    } else if let Err(e) = charts::filter::gen::FilterGen::set_active_gen_from_args(args) {
+        for line in e.to_pretty().lines() {
+            log::error!("{}", line)
+        }
+        println!();
+        exit_code = Some(2)
+    }
+
+    if let Some(code) = exit_code {
+        println!("{}", charts::filter::gen::FilterGen::help().trim());
+        std::process::exit(code)
+    }
 }

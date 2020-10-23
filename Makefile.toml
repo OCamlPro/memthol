@@ -26,7 +26,6 @@ exit 1
 [tasks.need_wasm_pack]
 condition_script = [
 '''#!@shell
-echo "testing wasm-pack"
 ! wasm-pack --version >/dev/null 2>/dev/null
 '''
 ]
@@ -49,6 +48,8 @@ args = [
     "--out-name", "client",
     "--out-dir", "${target_path}/client.wasm/debug",
     "${client_crate_path}",
+    "--",
+    "${@}",
 ]
 
 [tasks.release_wasm]
@@ -63,6 +64,8 @@ args = [
     "--out-name", "client",
     "--out-dir", "${target_path}/client.wasm/release",
     "${client_crate_path}",
+    "--",
+    "${@}",
 ]
 
 [tasks.test]
@@ -71,7 +74,7 @@ dependencies = [
 ]
 command = "cargo"
 args = [
-    "test", "--all"
+    "test", "--all", "${@}",
 ]
 
 [tasks.build]
@@ -81,6 +84,8 @@ dependencies = [
 command = "cargo"
 args = [
     "build",
+    "--manifest-path", "memthol/Cargo.toml",
+    "${@}",
 ]
 
 [tasks.build_release]
@@ -90,6 +95,8 @@ dependencies = [
 command = "cargo"
 args = [
     "build", "--release",
+    "--manifest-path", "memthol/Cargo.toml",
+    "${@}",
 ]
 
 [tasks.release]
@@ -105,4 +112,6 @@ cp target/release/memthol ./memthol_ui
 
 [tasks.clean]
 command = "cargo"
-args = ["clean"]
+args = [
+    "clean", "${@}",
+]

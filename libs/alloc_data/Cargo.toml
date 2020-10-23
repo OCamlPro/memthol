@@ -1,6 +1,6 @@
 [package]
 name = "alloc_data"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Adrien Champion <adrien.champion@email.com>"]
 edition = "2018"
 
@@ -18,4 +18,5 @@ toml = "*"
 [features]
 server = [ "base/server" ]
 client = [ "base/client" ]
-default = []
+default = [ "server" ]
+time_stats = []

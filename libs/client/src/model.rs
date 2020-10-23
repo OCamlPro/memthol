@@ -9,7 +9,7 @@ pub struct Model {
     /// Socket task for receiving/sending messages from/to the server.
     pub socket_task: Option<WebSocketTask>,
     /// Errors.
-    pub errors: Vec<err::Err>,
+    pub errors: Vec<err::Error>,
     /// Collection of charts.
     pub charts: Charts,
     /// Allocation filters.
@@ -41,14 +41,14 @@ impl Model {
 impl Model {
     /// Activates the websocket to receive data from the server.
     fn activate_ws(link: &mut ComponentLink<Self>) -> Res<WebSocketTask> {
-        info!("fetching server's websocket info");
+        log::info!("fetching server's websocket info");
         let (addr, port) = js::server::address()?;
         let addr = format!("ws://{}:{}", addr, port + 1);
-        info!("websocket: {:?}", addr);
+        log::info!("websocket: {:?}", addr);
         let callback = link.callback(|msg| Msg::FromServer(msg));
         let notification = link.callback(|status| Msg::ConnectionStatus(status));
         let task = WebSocketService::connect(&addr, callback, notification)?;
-        info!("connection established successfully");
+        log::info!("connection established successfully");
         Ok(task)
     }
 }
@@ -57,13 +57,18 @@ impl Model {
 impl Model {
     /// Sends a message to the server.
     pub fn server_send(&mut self, msg: msg::to_server::Msg) {
-        self.socket_task.as_mut().map(|socket| socket.send(msg));
+        if let Some(socket_task) = self.socket_task.as_mut() {
+            socket_task.send_binary(msg)
+        } else {
+            log::warn!("no socket task available, failed to send message {}", msg)
+        }
     }
 
     /// Handles a message from the server.
     pub fn handle_server_msg(&mut self, msg: Res<msg::from_server::Msg>) -> Res<ShouldRender> {
         use msg::from_server::*;
         let msg = msg?;
+        log::info!("received message from server: {}", msg);
         match msg {
             Msg::Info => Ok(false),
             Msg::Alert { msg } => {
@@ -83,7 +88,7 @@ impl Model {
                 Ok(redraw)
             }
             Msg::FilterStats(stats) => {
-                info!("updating filter stats");
+                log::info!("updating filter stats");
                 self.filter_stats = stats;
                 Ok(true)
             }
@@ -146,6 +151,7 @@ impl Component for Model {
                 unwrap_or_send_err!(self.handle_server_msg(msg) => self default false)
             }
             Msg::ToServer(msg) => {
+                log::info!("propagating message to server {}", msg);
                 self.server_send(msg);
                 false
             }
@@ -154,8 +160,8 @@ impl Component for Model {
             Msg::ConnectionStatus(status) => {
                 use WebSocketStatus::*;
                 match status {
-                    Opened => debug!("successfully established connection with the server"),
-                    Closed => warn!("connection with the server was closed"),
+                    Opened => log::debug!("successfully established connection with the server"),
+                    Closed => log::warn!("connection with the server was closed"),
                     Error => alert!("failed to connect with the server"),
                 }
                 false
@@ -174,15 +180,15 @@ impl Component for Model {
 
             // Basic communication messages.
             Msg::Msg(s) => {
-                debug!("{}", s);
+                log::debug!("{}", s);
                 false
             }
             Msg::Warn(s) => {
-                warn!("{}", s);
+                log::warn!("{}", s);
                 false
             }
             Msg::Err(e) => {
-                alert!("{}", e.pretty());
+                alert!("{}", e.to_pretty());
                 true
             }
 

@@ -1,16 +1,4 @@
 //! Common imports for this crate
-
-pub use std::{
-    collections::BTreeMap as Map,
-    collections::BTreeSet as Set,
-    convert::{TryFrom, TryInto},
-    fmt,
-    ops::Deref,
-    str::FromStr,
-    time::Duration,
-};
-
-pub use log::{debug, error, info, warn};
 pub use yew::{
     html,
     html::ChangeData,
@@ -19,10 +7,7 @@ pub use yew::{
 };
 pub use yew_components::Select;
 
-pub use base::{
-    error_chain::{self, bail},
-    impl_display, lazy_static, svec, SVec,
-};
+pub use base::prelude::*;
 
 pub use charts::palette;
 
@@ -33,8 +18,7 @@ pub mod plotters {
 }
 
 pub use charts::prelude::{
-    alloc, filter::stats::AllFilterStats, num_fmt, time, Alloc, AllocDiff, AllocStats, AllocUid,
-    Json, LoadInfo, Regex,
+    alloc, filter::stats::AllFilterStats, num_fmt, time, Alloc, AllocStats, LoadInfo, Regex,
 };
 
 /// Wasm-bindgen re-exports.
@@ -49,6 +33,24 @@ macro_rules! prelude {
     };
 }
 
+/// Turns a `JsValue` into an error.
+pub fn error_from_js_val(js_val: wasm_bindgen::JsValue) -> err::Error {
+    let msg = js_val
+        .as_string()
+        .unwrap_or_else(|| format!("{:?}", js_val));
+    err::Error::from(msg)
+}
+
+/// Turns a result into a message.
+///
+/// If it's an error, it becomes an error message.
+pub fn msg_of_res(res: Res<Msg>) -> Msg {
+    match res {
+        Ok(msg) => msg,
+        Result::Err(e) => e.into(),
+    }
+}
+
 /// Re-exports from `charts::point`.
 pub mod point {
     pub use charts::point::{Point, Points, TimePoints};
@@ -57,9 +59,7 @@ pub use point::Point;
 
 pub use crate::{
     chart::{self, Chart, Charts},
-    cst,
-    err::{self, Res, ResExt},
-    filter, footer, js, layout,
+    cst, filter, footer, js, layout,
     model::Model,
     msg::{self, Msg},
     style,

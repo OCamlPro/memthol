@@ -67,7 +67,6 @@ impl LineSpec {
     /// assert_eq!(line_spec, LineSpec::range(Some(105), None));
     /// ```
     pub fn new(str: impl AsRef<str>) -> Res<Self> {
-        use std::str::FromStr;
         let mut s = str.as_ref();
         macro_rules! s_do {
             (trim) => {
@@ -232,7 +231,7 @@ impl string_like::SpecExt for LocSpec {
         }
     }
 
-    fn data_of_alloc(alloc: &Alloc) -> Arc<base::SVec32<Self::Data>> {
+    fn data_of_alloc(alloc: &Alloc) -> Arc<Vec<Self::Data>> {
         alloc.trace()
     }
 
@@ -285,7 +284,7 @@ impl LocSpec {
         let loc = s.into();
         macro_rules! illegal {
             () => {{
-                let err: err::Err = format!("illegal regex `{}`", loc).into();
+                let err: err::Error = format!("illegal regex `{}`", loc).into();
                 err
             }};
         }

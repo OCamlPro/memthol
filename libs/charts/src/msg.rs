@@ -8,26 +8,36 @@ pub enum ChartSettingsMsg {
     ToggleVisible,
     ChangeTitle(String),
     SetDisplayMode(chart::settings::DisplayMode),
+    SetResolution(chart::settings::Resolution),
 }
 
 impl ChartSettingsMsg {
-    pub fn toggle_visible<Res>(uid: uid::ChartUid) -> Res
+    pub fn toggle_visible<Res>(uid: uid::Chart) -> Res
     where
-        (uid::ChartUid, Self): Into<Res>,
+        (uid::Chart, Self): Into<Res>,
     {
         (uid, Self::ToggleVisible).into()
     }
-    pub fn set_display_mode<Res>(uid: uid::ChartUid, mode: chart::settings::DisplayMode) -> Res
+    pub fn set_display_mode<Res>(uid: uid::Chart, mode: chart::settings::DisplayMode) -> Res
     where
-        (uid::ChartUid, Self): Into<Res>,
+        (uid::Chart, Self): Into<Res>,
     {
         (uid, Self::SetDisplayMode(mode)).into()
     }
-    pub fn change_title<Res>(uid: uid::ChartUid, title: impl Into<String>) -> Res
+    pub fn change_title<Res>(uid: uid::Chart, title: impl Into<String>) -> Res
     where
-        (uid::ChartUid, Self): Into<Res>,
+        (uid::Chart, Self): Into<Res>,
     {
         (uid, Self::ChangeTitle(title.into())).into()
+    }
+    pub fn set_resolution<Res>(
+        uid: uid::Chart,
+        resolution: impl Into<chart::settings::Resolution>,
+    ) -> Res
+    where
+        (uid::Chart, Self): Into<Res>,
+    {
+        (uid, Self::SetResolution(resolution.into())).into()
     }
 }
 
@@ -36,7 +46,8 @@ impl fmt::Display for ChartSettingsMsg {
         match self {
             Self::ToggleVisible => write!(fmt, "toggle visible"),
             Self::SetDisplayMode(mode) => write!(fmt, "set display mode: {}", mode.desc()),
-            Self::ChangeTitle(title) => write!(fmt, "title: {}", title),
+            Self::ChangeTitle(title) => write!(fmt, "change title: {}", title),
+            Self::SetResolution(resolution) => write!(fmt, "set resolution: {}", resolution),
         }
     }
 }
@@ -57,6 +68,35 @@ pub mod to_server {
         /// Operation over filters.
         Filters(FiltersMsg),
     }
+    impl fmt::Display for Msg {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Self::Charts(msg) => write!(fmt, "charts({})", msg),
+                Self::Filters(msg) => write!(fmt, "filters({})", msg),
+            }
+        }
+    }
+
+    impl Msg {
+        pub fn to_bytes(&self) -> Res<Vec<u8>> {
+            Ok(base::bincode::serialize(self)?)
+        }
+
+        pub fn from_bytes(bytes: &[u8]) -> Res<Self> {
+            Ok(base::bincode::deserialize(bytes)?)
+        }
+    }
+
+    impl From<(uid::Chart, ChartMsg)> for Msg {
+        fn from(pair: (uid::Chart, ChartMsg)) -> Self {
+            Self::Charts(ChartsMsg::from(pair))
+        }
+    }
+    impl From<(uid::Chart, ChartSettingsMsg)> for Msg {
+        fn from(pair: (uid::Chart, ChartSettingsMsg)) -> Self {
+            Self::Charts(ChartsMsg::from(pair))
+        }
+    }
 
     /// Operations over charts.
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,7 +106,16 @@ pub mod to_server {
         /// Reloads all charts.
         Reload,
         /// An update for a specific chart.
-        ChartUpdate { uid: uid::ChartUid, msg: ChartMsg },
+        ChartUpdate { uid: uid::Chart, msg: ChartMsg },
+    }
+    impl fmt::Display for ChartsMsg {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Self::New(_, _) => write!(fmt, "new chart"),
+                Self::Reload => write!(fmt, "reload"),
+                Self::ChartUpdate { uid, msg } => write!(fmt, "update({}, {})", uid, msg),
+            }
+        }
     }
     impl ChartsMsg {
         /// Constructs a chart creation message.
@@ -79,13 +128,13 @@ pub mod to_server {
         }
     }
 
-    impl From<(uid::ChartUid, ChartMsg)> for ChartsMsg {
-        fn from((uid, msg): (uid::ChartUid, ChartMsg)) -> Self {
+    impl From<(uid::Chart, ChartMsg)> for ChartsMsg {
+        fn from((uid, msg): (uid::Chart, ChartMsg)) -> Self {
             Self::ChartUpdate { uid, msg }
         }
     }
-    impl From<(uid::ChartUid, ChartSettingsMsg)> for ChartsMsg {
-        fn from((uid, msg): (uid::ChartUid, ChartSettingsMsg)) -> Self {
+    impl From<(uid::Chart, ChartSettingsMsg)> for ChartsMsg {
+        fn from((uid, msg): (uid::Chart, ChartSettingsMsg)) -> Self {
             Self::ChartUpdate {
                 uid,
                 msg: msg.into(),
@@ -96,6 +145,13 @@ pub mod to_server {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum ChartMsg {
         SettingsUpdate(ChartSettingsMsg),
+    }
+    impl fmt::Display for ChartMsg {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Self::SettingsUpdate(_) => write!(fmt, "settings update"),
+            }
+        }
     }
 
     impl From<ChartSettingsMsg> for ChartMsg {
@@ -130,6 +186,15 @@ pub mod to_server {
             catch_all: filter::FilterSpec,
         },
     }
+    impl fmt::Display for FiltersMsg {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Self::RequestNew => write!(fmt, "request new"),
+                Self::Revert => write!(fmt, "revert"),
+                Self::UpdateAll { .. } => write!(fmt, "update all"),
+            }
+        }
+    }
 
     impl FiltersMsg {
         /// Requests a new filter.
@@ -158,17 +223,14 @@ pub mod to_server {
 
     impl Into<yew::format::Text> for Msg {
         fn into(self) -> yew::format::Text {
-            match self.as_json() {
-                Ok(res) => Ok(res),
-                Err(e) => anyhow::bail!("{}", e.pretty()),
-            }
+            anyhow::bail!("trying to encode a message as text, only binary is supported")
         }
     }
     impl Into<yew::format::Binary> for Msg {
         fn into(self) -> yew::format::Binary {
-            match self.as_json() {
-                Ok(res) => Ok(res.into_bytes()),
-                Err(e) => anyhow::bail!("{}", e.pretty()),
+            match self.to_bytes() {
+                Ok(bytes) => Ok(bytes),
+                Err(e) => anyhow::bail!("{}", e),
             }
         }
     }
@@ -243,6 +305,44 @@ pub mod to_client {
         pub fn filter_stats(stats: filter::stats::AllFilterStats) -> Self {
             Self::FilterStats(stats)
         }
+
+        pub fn to_bytes(&self) -> Res<Vec<u8>> {
+            Ok(base::bincode::serialize(self)?)
+        }
+
+        pub fn from_bytes(bytes: &[u8]) -> Res<Self> {
+            Ok(base::bincode::deserialize(bytes)?)
+        }
+
+        /// True if the message is a minor message.
+        ///
+        /// *Minor messages* are all messages that do not act on charts or filters directly.
+        pub fn is_minor(&self) -> bool {
+            match self {
+                Self::Charts(_) | Self::Filters(_) => false,
+                Self::Info
+                | Self::Alert { .. }
+                | Self::LoadProgress(_)
+                | Self::AllocStats(_)
+                | Self::DoneLoading
+                | Self::FilterStats(_) => true,
+            }
+        }
+    }
+
+    impl fmt::Display for Msg {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Self::Info => "info".fmt(fmt),
+                Self::Alert { .. } => "alert".fmt(fmt),
+                Self::Charts(msg) => write!(fmt, "charts({})", msg),
+                Self::LoadProgress(_) => "load progress".fmt(fmt),
+                Self::AllocStats(_) => "alloc stats".fmt(fmt),
+                Self::FilterStats(_) => "filter stats".fmt(fmt),
+                Self::DoneLoading => "done loading".fmt(fmt),
+                Self::Filters(_) => "filter".fmt(fmt),
+            }
+        }
     }
 
     impl From<ChartsMsg> for Msg {
@@ -262,7 +362,7 @@ pub mod to_client {
         /// Creates a new chart.
         NewChart(chart::ChartSpec, chart::ChartSettings),
         /// Message for a specific chart.
-        Chart { uid: uid::ChartUid, msg: ChartMsg },
+        Chart { uid: uid::Chart, msg: ChartMsg },
         /// A new collection of points, overwrites existing points.
         NewPoints {
             points: point::ChartPoints,
@@ -298,6 +398,37 @@ pub mod to_client {
         }
     }
 
+    impl fmt::Display for ChartsMsg {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Self::NewChart(_, _) => "new chart".fmt(fmt),
+                Self::Chart { uid, msg } => write!(fmt, "chart({}, {})", uid, msg),
+                Self::NewPoints { points, .. } => {
+                    "new points:".fmt(fmt)?;
+                    for (idx, (uid, points)) in points.iter().enumerate() {
+                        write!(fmt, " ")?;
+                        if idx > 0 {
+                            write!(fmt, "| ")?
+                        }
+                        write!(fmt, "{}: {}, {}", uid, points.len(), points.point_count())?
+                    }
+                    Ok(())
+                }
+                Self::AddPoints(points) => {
+                    "add points:".fmt(fmt)?;
+                    for (idx, (uid, points)) in points.iter().enumerate() {
+                        write!(fmt, " ")?;
+                        if idx > 0 {
+                            write!(fmt, "| ")?
+                        }
+                        write!(fmt, "{}: {}, {}", uid, points.len(), points.point_count())?
+                    }
+                    Ok(())
+                }
+            }
+        }
+    }
+
     /// Messages for a specific chart in the client.
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum ChartMsg {
@@ -311,18 +442,27 @@ pub mod to_client {
 
     impl ChartMsg {
         /// List of points overwriting the existing points.
-        pub fn new_points(uid: uid::ChartUid, points: point::Points) -> Msg {
+        pub fn new_points(uid: uid::Chart, points: point::Points) -> Msg {
             Msg::charts(ChartsMsg::Chart {
                 uid,
                 msg: Self::NewPoints(points),
             })
         }
         /// List of points to append.
-        pub fn points(uid: uid::ChartUid, points: point::Points) -> Msg {
+        pub fn points(uid: uid::Chart, points: point::Points) -> Msg {
             Msg::charts(ChartsMsg::Chart {
                 uid,
                 msg: Self::Points(points),
             })
+        }
+    }
+
+    impl fmt::Display for ChartMsg {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Self::NewPoints(points) => write!(fmt, "{} new points", points.len()),
+                Self::Points(points) => write!(fmt, "add {} points", points.len()),
+            }
         }
     }
 
@@ -346,7 +486,7 @@ pub mod to_client {
         },
 
         /// Updates all the specs.
-        UpdateSpecs(Map<uid::LineUid, FilterSpec>),
+        UpdateSpecs(BTMap<uid::Line, FilterSpec>),
     }
     impl FiltersMsg {
         /// Adds a filter.
@@ -365,7 +505,7 @@ pub mod to_client {
         }
 
         /// Updates all the specs.
-        pub fn update_specs(specs: Map<uid::LineUid, FilterSpec>) -> Msg {
+        pub fn update_specs(specs: BTMap<uid::Line, FilterSpec>) -> Msg {
             Self::UpdateSpecs(specs).into()
         }
     }
@@ -374,14 +514,19 @@ pub mod to_client {
         fn into(self) -> Res<Msg> {
             let res = match self {
                 RawMsg::Binary(res_bytes) => {
-                    let bytes: Res<Vec<u8>> = res_bytes.map_err(|e| e.into());
-                    let bytes = bytes.chain_err(|| "while retrieving message from the server")?;
-                    Msg::from_json_bytes(&bytes)
+                    let bytes = res_bytes
+                        .map_err(err::Error::from)
+                        .chain_err(|| "while retrieving message from the server")?;
+                    Msg::from_bytes(&bytes)
                 }
                 RawMsg::Text(res_string) => {
-                    let string: Res<String> = res_string.map_err(|e| e.into());
-                    let string = string.chain_err(|| "while retrieving message from the server")?;
-                    Msg::from_json(&string)
+                    let _ = res_string
+                        .map_err(err::Error::from)
+                        .chain_err(|| "while retrieving message from the server")?;
+                    bail!(
+                        "trying to build message from text representation, \
+                        only binary format is supported"
+                    )
                 }
             };
             res.chain_err(|| "while parsing a message from the server")

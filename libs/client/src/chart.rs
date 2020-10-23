@@ -9,8 +9,6 @@ prelude! {}
 pub mod axis;
 pub mod new;
 
-pub use charts::chart::ChartUid;
-
 /// The collection of charts.
 pub struct Charts {
     /// The actual collection of charts.
@@ -49,7 +47,7 @@ impl Charts {
     }
 
     /// Retrieves the chart corresponding to some UID.
-    fn get_mut(&mut self, uid: ChartUid) -> Res<(usize, &mut Chart)> {
+    fn get_mut(&mut self, uid: uid::Chart) -> Res<(usize, &mut Chart)> {
         debug_assert_eq!(
             self.charts
                 .iter()
@@ -66,7 +64,7 @@ impl Charts {
     }
 
     /// Destroys a chart.
-    fn destroy(&mut self, uid: ChartUid) -> Res<ShouldRender> {
+    fn destroy(&mut self, uid: uid::Chart) -> Res<ShouldRender> {
         let (index, _) = self
             .get_mut(uid)
             .chain_err(|| format!("while destroying chart"))?;
@@ -123,7 +121,7 @@ impl Charts {
     }
 
     /// Move a chart, up if `up`, down otherwise.
-    fn move_chart(&mut self, uid: ChartUid, up: bool) -> Res<ShouldRender> {
+    fn move_chart(&mut self, uid: uid::Chart, up: bool) -> Res<ShouldRender> {
         let mut index = None;
         for (idx, chart) in self.charts.iter().enumerate() {
             if chart.uid() == uid {
@@ -202,7 +200,8 @@ impl Charts {
 
         let should_render = match action {
             ChartsMsg::NewChart(spec, settings) => {
-                let chart = Chart::new(spec, settings, filters)?;
+                log::info!("creating new chart");
+                let chart = Chart::new(spec, settings, filters, self.to_model.clone())?;
                 self.charts.push(chart);
                 true
             }
@@ -253,6 +252,8 @@ pub struct Chart {
     spec: ChartSpec,
     /// Chart settings.
     settings: ChartSettings,
+    /// Sends messages to the model.
+    to_model: Callback<Msg>,
     /// DOM element containing the chart and its tabs.
     top_container: String,
     /// DOM element containing the canvas.
@@ -270,9 +271,9 @@ pub struct Chart {
     /// The points.
     points: Option<point::Points>,
     /// The filters, used to color the series and hide what the user asks to hide.
-    filters: Map<charts::uid::LineUid, bool>,
+    filters: BTMap<uid::Line, bool>,
     /// Previous filter map, used when updating filters to keep track of those that are hidden.
-    prev_filters: Map<charts::uid::LineUid, bool>,
+    prev_filters: BTMap<uid::Line, bool>,
 
     /// This flag indicates whether the chart should be redrawn after HTML rendering.
     ///
@@ -290,13 +291,14 @@ impl Chart {
         spec: ChartSpec,
         settings: ChartSettings,
         all_filters: &filter::ReferenceFilters,
+        to_model: Callback<Msg>,
     ) -> Res<Self> {
         let top_container = format!("chart_container_{}", spec.uid().get());
         let container = format!("chart_canvas_container_{}", spec.uid().get());
         let canvas = format!("chart_canvas_{}", spec.uid().get());
         let collapsed_canvas = format!("{}_collapsed", canvas);
 
-        let mut filters = Map::new();
+        let mut filters = BTMap::new();
         all_filters.specs_apply(|spec| {
             let prev = filters.insert(spec.uid(), true);
             debug_assert!(prev.is_none());
@@ -306,6 +308,7 @@ impl Chart {
         Ok(Self {
             spec,
             settings,
+            to_model,
             top_container,
             container,
             canvas,
@@ -313,7 +316,7 @@ impl Chart {
             chart: None,
             points: None,
             filters,
-            prev_filters: Map::new(),
+            prev_filters: BTMap::new(),
             settings_visible: false,
             redraw: true,
         })
@@ -330,7 +333,7 @@ impl Chart {
     }
 
     /// UID accessor.
-    pub fn uid(&self) -> ChartUid {
+    pub fn uid(&self) -> uid::Chart {
         self.spec.uid()
     }
 
@@ -389,7 +392,7 @@ impl Chart {
         self.settings_visible = !self.settings_visible
     }
 
-    pub fn filter_visibility(&self) -> &Map<charts::uid::LineUid, bool> {
+    pub fn filter_visibility(&self) -> &BTMap<uid::Line, bool> {
         &self.filters
     }
 
@@ -400,7 +403,7 @@ impl Chart {
 /// # Features that (can) trigger a re-draw.
 impl Chart {
     /// Toggles the visibility of a filter for the chart.
-    pub fn filter_toggle_visible(&mut self, uid: charts::uid::LineUid) -> Res<()> {
+    pub fn filter_toggle_visible(&mut self, uid: uid::Line) -> Res<()> {
         if let Some(is_visible) = self.filters.get_mut(&uid) {
             *is_visible = !*is_visible;
             self.redraw = true;
@@ -477,7 +480,7 @@ impl Chart {
     fn try_unbind_canvas(&self) -> Res<bool> {
         if let Some((_chart, canvas)) = self.chart.as_ref() {
             if let Some(parent) = canvas.parent_element() {
-                parent.remove_child(&canvas).map_err(err::from_js_val)?;
+                parent.remove_child(&canvas).map_err(error_from_js_val)?;
             } else {
                 return Ok(false);
             }
@@ -500,7 +503,7 @@ impl Chart {
             }
             canvas_container
                 .append_child(canvas)
-                .map_err(err::from_js_val)?;
+                .map_err(error_from_js_val)?;
         }
 
         Ok(())
@@ -515,6 +518,7 @@ impl Chart {
     ///
     /// Also, makes the chart visible.
     pub fn build_chart(&mut self) -> Res<()> {
+        log::info!("building chart");
         if self.settings.is_visible() {
             if self.chart.is_some() {
                 bail!("asked to build and bind a chart that's already built and binded")
@@ -527,9 +531,42 @@ impl Chart {
                 .dyn_into()
                 .expect("failed to retrieve chart canvas");
             let width = canvas.client_width();
-            canvas.set_width(if width >= 0 { width as u32 } else { 0 });
             let height = canvas.client_height();
-            canvas.set_height(if height >= 0 { height as u32 } else { 0 });
+            let width = if width >= 0 { width as u32 } else { 0 };
+            let height = if height >= 0 { height as u32 } else { 0 };
+            log::info!(
+                "original width/height: {}/{}",
+                canvas.width(),
+                canvas.height()
+            );
+            canvas.set_width(width);
+            canvas.set_height(height);
+
+            {
+                let res_width = if width <= Self::CHART_X_DIFF {
+                    width
+                } else {
+                    width - Self::CHART_X_DIFF
+                };
+                let res_height = if height <= Self::CHART_Y_DIFF {
+                    height
+                } else {
+                    height - Self::CHART_Y_DIFF
+                };
+                log::info!(
+                    "sending new resolution: {}x{} ({}x{})",
+                    res_width,
+                    res_height,
+                    width,
+                    height
+                );
+                self.to_model.emit(Msg::ToServer(
+                    charts::msg::ChartSettingsMsg::set_resolution(
+                        self.spec.uid(),
+                        (res_width, res_height),
+                    ),
+                ))
+            }
 
             let backend: plotters::CanvasBackend =
                 plotters::CanvasBackend::new(&self.canvas).expect("could not find canvas");
@@ -573,6 +610,20 @@ impl charts::point::StyleExt for Styler {
 }
 
 impl Chart {
+    /// Size of the x-axis label area.
+    const X_LABEL_AREA: u32 = 30;
+    /// Size of the y-axis label area.
+    const Y_LABEL_AREA: u32 = 99;
+    /// Size of the top margin.
+    const TOP_MARGIN: u32 = Self::X_LABEL_AREA / 3;
+    /// Size of the right margin.
+    const RIGHT_MARGIN: u32 = Self::Y_LABEL_AREA / 3;
+
+    /// Difference between the chart's canvas x-size and the chart's x-size.
+    const CHART_X_DIFF: u32 = Self::Y_LABEL_AREA + Self::RIGHT_MARGIN;
+    /// Difference between the chart's canvas y-size and the chart's y-size.
+    const CHART_Y_DIFF: u32 = Self::X_LABEL_AREA + Self::TOP_MARGIN;
+
     /// Draws the chart, **takes care of updating `self.redraw`**.
     ///
     /// If the chart is not visible, drawing is postponed until the chart becomes visible. Meaning
@@ -607,18 +658,15 @@ impl Chart {
             if let Some(points) = &self.points {
                 chart.fill(&plotters::style::colors::WHITE).unwrap();
 
-                let (x_label_area, y_label_area) = (30, 100);
-                let (margin_top, margin_right) = (x_label_area / 3, y_label_area / 3);
-
                 let mut builder = plotters::prelude::ChartBuilder::on(&chart);
                 builder
-                    .margin_top(margin_top)
-                    .margin_right(margin_right)
-                    .x_label_area_size(x_label_area)
-                    .y_label_area_size(y_label_area);
+                    .margin_top(Self::TOP_MARGIN)
+                    .margin_right(Self::RIGHT_MARGIN)
+                    .x_label_area_size(Self::X_LABEL_AREA)
+                    .y_label_area_size(Self::Y_LABEL_AREA);
 
                 let is_active =
-                    |f_uid: filter::LineUid| visible_filters.get(&f_uid).cloned().unwrap_or(false);
+                    |f_uid: uid::Line| visible_filters.get(&f_uid).cloned().unwrap_or(false);
 
                 points.render(
                     &self.settings,

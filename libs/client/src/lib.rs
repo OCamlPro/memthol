@@ -8,7 +8,6 @@ pub mod prelude;
 #[macro_use]
 pub mod macros;
 
-pub mod err;
 pub mod js;
 pub mod layout;
 pub mod style;

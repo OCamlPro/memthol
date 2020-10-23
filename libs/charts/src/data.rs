@@ -31,10 +31,13 @@ impl<'a> FullFactory<'a> {
         }
     }
 
+    pub fn build_new(&mut self, alloc: alloc::Builder) -> Res<()> {
+        self.data.build_new(alloc)
+    }
     pub fn add_new(&mut self, alloc: Alloc) -> Res<()> {
         self.data.add_new(alloc)
     }
-    pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: alloc_data::Uid) -> Res<()> {
+    pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: uid::Alloc) -> Res<()> {
         self.data.add_dead(timestamp, uid)
     }
 
@@ -56,6 +59,8 @@ lazy_static! {
     static ref PROG: RwLock<Option<LoadInfo>> = RwLock::new(Some(LoadInfo::unknown()));
     /// Global state.
     static ref DATA: RwLock<Data> = RwLock::new(Data::new());
+    /// Errors.
+    static ref ERRORS: RwLock<Vec<String>> = RwLock::new(vec![]);
 }
 
 /// Handles progress information.
@@ -65,7 +70,7 @@ pub mod progress {
     fn read<'a>() -> Res<RwLockReadGuard<'a, Option<LoadInfo>>> {
         PROG.read()
             .map_err(|e| {
-                let e: err::Err = e.to_string().into();
+                let e: err::Error = e.to_string().into();
                 e
             })
             .chain_err(|| "while reading the progress status")
@@ -73,7 +78,7 @@ pub mod progress {
     fn write<'a>() -> Res<RwLockWriteGuard<'a, Option<LoadInfo>>> {
         PROG.write()
             .map_err(|e| {
-                let e: err::Err = e.to_string().into();
+                let e: err::Error = e.to_string().into();
                 e
             })
             .chain_err(|| "while writing the progress status")
@@ -134,7 +139,7 @@ pub mod progress {
 pub fn get<'a>() -> Res<RwLockReadGuard<'a, Data>> {
     DATA.read()
         .map_err(|e| {
-            let e: err::Err = e.to_string().into();
+            let e: err::Error = e.to_string().into();
             e
         })
         .chain_err(|| "while reading the global state")
@@ -149,7 +154,7 @@ pub fn alloc_count() -> Res<usize> {
 fn get_mut<'a>() -> Res<RwLockWriteGuard<'a, Data>> {
     DATA.write()
         .map_err(|e| {
-            let e: err::Err = e.to_string().into();
+            let e: err::Error = e.to_string().into();
             e
         })
         .chain_err(|| "while reading the global state")
@@ -158,17 +163,22 @@ fn get_mut<'a>() -> Res<RwLockWriteGuard<'a, Data>> {
 /// Structures that aggregates all the information about the allocations so far.
 pub struct Data {
     /// Init state.
-    init: Option<AllocInit>,
+    init: Option<alloc::Init>,
     /// Map from allocation UIDs to allocation data.
-    uid_map: Map<AllocUid, Alloc>,
+    uid_map: uid::AllocMap<Alloc>,
     /// Map from time-of-death to allocation UIDs.
-    tod_map: Map<time::SinceStart, AllocUidSet>,
-    /// Errors encountered so far.
-    errors: Vec<String>,
+    tod_map: BTMap<time::SinceStart, BTSet<uid::Alloc>>,
     /// Time of the latest diff.
     current_time: time::SinceStart,
     /// Statistics.
     stats: Option<AllocStats>,
+}
+
+impl ops::Index<uid::Alloc> for Data {
+    type Output = Alloc;
+    fn index(&self, uid: uid::Alloc) -> &Alloc {
+        &self.uid_map[uid]
+    }
 }
 
 impl Data {
@@ -176,16 +186,20 @@ impl Data {
     pub fn new() -> Self {
         Self {
             init: None,
-            uid_map: Map::new(),
-            tod_map: Map::new(),
-            errors: vec![],
+            uid_map: uid::AllocMap::new(),
+            tod_map: BTMap::new(),
             current_time: time::SinceStart::zero(),
             stats: None,
         }
     }
 
+    /// Reserves space for the `Alloc` vector.
+    pub fn reserve(&mut self, capa: usize) {
+        self.uid_map.reserve(capa)
+    }
+
     /// Init accessor.
-    pub fn init(&self) -> Option<&AllocInit> {
+    pub fn init(&self) -> Option<&alloc::Init> {
         self.init.as_ref()
     }
     /// True if the data is initialized.
@@ -214,7 +228,7 @@ impl Data {
     }
 
     /// Time at which the profiling run started.
-    pub fn start_time(&self) -> Res<Date> {
+    pub fn start_time(&self) -> Res<time::Date> {
         if let Some(init) = self.init.as_ref() {
             Ok(init.start_time.clone())
         } else {
@@ -225,57 +239,77 @@ impl Data {
     /// Alloc accessor.
     ///
     /// Fails if the UID is unknown.
-    pub fn get_alloc(&self, uid: &AllocUid) -> Res<&Alloc> {
-        self.uid_map
-            .get(uid)
-            .ok_or_else(|| format!("unknown allocation UID #{}", uid).into())
+    pub fn get_alloc(&self, uid: uid::Alloc) -> Option<&Alloc> {
+        self.uid_map.get(uid)
     }
 
-    /// Runs some functions on new allocations and allocation deaths since some time in history.
+    /// Iterates over all the allocations.
+    pub fn iter_allocs(&self) -> impl Iterator<Item = &Alloc> {
+        self.uid_map.iter()
+    }
+
+    /// Iterates over the new (de)allocation events in chronological order.
     ///
-    /// - new allocations that have a time-of-death **will also be** in `iter_dead_since`;
-    /// - allocations will appear in reverse time-of-creation chronological order.
-    pub fn iter_new_since(
-        &self,
-        time: &time::SinceStart,
-        mut new_alloc: impl FnMut(&Alloc) -> Res<()>,
+    /// Argument `since` is an optional pair containing an allocation UID, and a time-of-death
+    /// (TOD). Input `action` will run on all new allocations since the UID (exclusive), and all the
+    /// deallocations since the TOD (exclusive).
+    pub fn iter_new_events<'me>(
+        &'me self,
+        since: Option<(uid::Alloc, time::SinceStart)>,
+        mut action: impl FnMut(Either<&'me Alloc, (time::SinceStart, &'me Alloc)>) -> Res<()>,
     ) -> Res<()> {
-        let time_is_zero = time.is_zero();
-        // Reverse iter allocations.
-        for (_, alloc) in self.uid_map.iter().rev() {
-            if !time_is_zero && &alloc.toc <= time {
-                break;
-            } else {
-                new_alloc(alloc)?
-            }
+        let (mut new_iter, mut dead_iter) = if let Some((last_alloc, last_time)) = since {
+            let mut alloc_iter = self.uid_map[last_alloc..].iter();
+            // First element is `last_alloc`, skipping it.
+            let _alloc = alloc_iter.next();
+            debug_assert!(_alloc.unwrap().uid == last_alloc);
+
+            let last_time = last_time + time::SinceStart::from_nano_timestamp(0, 1);
+
+            (alloc_iter, self.tod_map.range(last_time..))
+        } else {
+            (
+                self.uid_map.iter(),
+                self.tod_map.range(time::SinceStart::zero()..),
+            )
+        };
+
+        let (mut next_new, mut next_dead) = (new_iter.next(), dead_iter.next());
+
+        macro_rules! work {
+            (new: $alloc:expr) => {{
+                action(Either::Left($alloc))?;
+                next_new = new_iter.next();
+            }};
+            (dead: $tod:expr, $uids:expr) => {{
+                for uid in $uids {
+                    let alloc = &self.uid_map[*uid];
+                    action(Either::Right(($tod, alloc)))?
+                }
+                next_dead = dead_iter.next();
+            }};
         }
 
-        Ok(())
-    }
-
-    /// Iterator over all the allocations.
-    ///
-    /// - allocations will appear in time-of-creation chronological order.
-    pub fn iter_all(&self) -> impl Iterator<Item = &Alloc> {
-        self.uid_map.values()
-    }
-
-    /// Runs some functions on new allocations and allocation deaths since some time in history.
-    ///
-    /// - new allocations that have a time-of-death **will also appear** in `iter_new_since`;
-    /// - allocation deaths will appear in reverse time-of-death chronological order.
-    pub fn iter_dead_since(
-        &self,
-        time: &time::SinceStart,
-        mut new_death: impl FnMut(&AllocUidSet, &time::SinceStart) -> Res<()>,
-    ) -> Res<()> {
-        let time_is_zero = time.is_zero();
-        // Reverse iter death.
-        for (tod, uid) in self.tod_map.iter().rev() {
-            if !time_is_zero && tod <= time {
-                break;
-            } else {
-                new_death(uid, tod)?
+        loop {
+            match (next_new, next_dead) {
+                (Some(alloc), None) => {
+                    work!(new: alloc);
+                    next_dead = None;
+                }
+                (None, Some((tod, uids))) => {
+                    work!(dead: *tod, uids);
+                    next_new = None;
+                }
+                (Some(alloc), Some((tod, uids))) => {
+                    if &alloc.toc <= tod {
+                        work!(new: alloc);
+                        next_dead = Some((tod, uids));
+                    } else {
+                        work!(dead: *tod, uids);
+                        next_new = Some(alloc);
+                    }
+                }
+                (None, None) => break,
             }
         }
 
@@ -309,7 +343,7 @@ impl Data {
     /// Resets the data.
     ///
     /// Called when the init file of a run has changed.
-    pub fn reset(&mut self, dump_dir: impl Into<std::path::PathBuf>, init: AllocInit) {
+    pub fn reset(&mut self, dump_dir: impl Into<std::path::PathBuf>, init: alloc::Init) {
         self.stats = Some(AllocStats::new(dump_dir, init.start_time));
         self.init = Some(init);
         self.uid_map.clear();
@@ -317,31 +351,47 @@ impl Data {
         self.current_time = time::SinceStart::zero();
     }
 
-    pub fn add_new(&mut self, alloc: Alloc) -> Res<()> {
+    pub fn build_new(&mut self, alloc: alloc::Builder) -> Res<()> {
         if self.current_time != alloc.toc {
             self.current_time = alloc.toc.clone()
         }
-        let uid = alloc.uid.clone();
+        let uid = self.uid_map.next_index();
+        let alloc = alloc.build(uid)?;
 
         if let Some(tod) = alloc.tod.clone() {
             self.add_dead(tod, uid.clone())?
         }
 
-        let prev = self.uid_map.insert(uid.clone(), alloc);
-        if prev.is_some() {
-            bail!(
-                "allocation UID collision (2): two allocations have UID #{}",
-                uid
-            )
-        }
+        let uid_check = self.uid_map.push(alloc);
+        debug_assert!(uid == uid_check);
 
         Ok(())
     }
 
-    pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: alloc_data::Uid) -> Res<()> {
-        if self.current_time != timestamp {
-            self.current_time = timestamp.clone()
+    pub fn add_new(&mut self, alloc: Alloc) -> Res<()> {
+        self.current_time = alloc.toc;
+        let uid = self.uid_map.next_index();
+        if uid != alloc.uid {
+            bail!(
+                "unexpected allocation index {}, expected {}",
+                alloc.uid,
+                uid
+            )
         }
+
+        if let Some(tod) = alloc.tod.clone() {
+            self.add_dead(tod, uid.clone())?
+        }
+
+        let uid_check = self.uid_map.push(alloc);
+        debug_assert!(uid == uid_check);
+
+        Ok(())
+    }
+
+    pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: uid::Alloc) -> Res<()> {
+        self.uid_map[uid].set_tod(timestamp)?;
+        self.current_time = timestamp;
         let is_new = self.tod_map_get_mut(timestamp).insert(uid.clone());
         if !is_new {
             bail!(
@@ -353,7 +403,7 @@ impl Data {
     }
 
     /// Registers a diff.
-    pub fn add_diff(&mut self, diff: AllocDiff) -> Res<()> {
+    pub fn add_diff(&mut self, diff: alloc::Diff) -> Res<()> {
         self.current_time = diff.time;
 
         if let Some(stats) = self.stats.as_mut() {
@@ -367,47 +417,11 @@ impl Data {
             }
         }
 
-        for mut alloc in diff.new {
-            // Force the allocation to have toc/tod map the diff's time.
-            alloc.toc = diff.time;
-            if let Some(tod) = alloc.tod.as_mut() {
-                *tod = diff.time
-            }
-            let uid = alloc.uid.clone();
-
-            if let Some(tod) = alloc.tod.clone() {
-                let is_new = self.tod_map_get_mut(tod).insert(uid.clone());
-                if !is_new {
-                    bail!(
-                        "allocation UID collision (1): two allocations have UID #{}",
-                        uid
-                    )
-                }
-            }
-
-            let prev = self.uid_map.insert(uid.clone(), alloc);
-            if prev.is_some() {
-                bail!(
-                    "allocation UID collision (2): two allocations have UID #{}",
-                    uid
-                )
-            }
+        for alloc in diff.new {
+            self.build_new(alloc)?
         }
-        for (uid, _tod) in diff.dead {
-            // Force TOD to be diff's time.
-            let tod = diff.time;
-            let is_new = self.tod_map_get_mut(tod).insert(uid.clone());
-            if !is_new {
-                bail!(
-                    "allocation UID collision (3): two allocations have UID #{}",
-                    uid
-                )
-            }
-
-            match self.uid_map.get_mut(&uid) {
-                Some(alloc) => alloc.set_tod(tod)?,
-                None => bail!("cannot register death for unknown allocation UID #{}", uid),
-            }
+        for (uid, tod) in diff.dead {
+            self.add_dead(tod, uid)?
         }
         self.check_invariants().chain_err(|| "after adding diff")?;
         Ok(())
@@ -430,38 +444,38 @@ impl Data {
         invariants::uid_order_is_toc_order(self)?;
         Ok(())
     }
+}
 
-    /// Retrieves the global errors.
-    pub fn get_errors() -> Res<Option<Vec<String>>> {
-        get_mut().map(|mut data| data.errors())
-    }
-
-    /// Retrieves the errors.
-    pub fn errors(&mut self) -> Option<Vec<String>> {
-        if self.errors.is_empty() {
-            None
-        } else {
-            Some(std::mem::replace(&mut self.errors, vec![]))
-        }
-    }
+/// Retrieves the errors.
+pub fn get_errors() -> Res<Option<Vec<String>>> {
+    let errors = ERRORS
+        .read()
+        .map_err(|e| err::Error::from(e.to_string()))
+        .chain_err(|| "while retrieving the data errors")?;
+    Ok(if errors.is_empty() {
+        None
+    } else {
+        Some(errors.clone())
+    })
 }
 
 /// Adds an error.
 pub fn add_err(err: impl Into<String>) {
     let err = err.into();
-    println!("[data] Error:");
+    log::error!("[data] Error:");
     for line in err.lines() {
-        println!("[data] | {}", line)
+        log::error!("[data] | {}", line)
     }
-    get_mut()
+    ERRORS
+        .write()
+        .map_err(|e| err::Error::from(e.to_string()))
         .chain_err(|| format!("while adding error:\n{}", err))
         .expect("failed to retrieve global state")
-        .errors
         .push(err.into())
 }
 
 /// Registers a diff.
-pub fn add_diff(diff: AllocDiff) -> Res<()> {
+pub fn add_diff(diff: alloc::Diff) -> Res<()> {
     let mut data = get_mut().chain_err(|| "while registering a diff")?;
     data.add_diff(diff)?;
     Ok(())
@@ -475,7 +489,7 @@ pub mod invariants {
     pub fn uid_order_is_toc_order(data: &Data) -> Res<()> {
         let uid_map = &data.uid_map;
         let mut prev_toc = None;
-        for (_, alloc) in uid_map.iter() {
+        for alloc in uid_map.iter() {
             if let Some(prev_toc) = prev_toc {
                 if prev_toc > &alloc.toc {
                     bail!("[data::invariants::uid_order_is_toc_order] invariant does not hold")

@@ -4,9 +4,6 @@ prelude! {}
 
 pub use charts::msg::{to_client as from_server, to_server, ChartSettingsMsg};
 
-use chart::ChartUid;
-use filter::{FilterUid, LineUid};
-
 /// Internal model messages.
 ///
 /// These messages are sent by the model's components to the model. The only exception is
@@ -31,7 +28,7 @@ pub enum Msg {
     /// A warning to print in the JS console.
     Warn(String),
     /// An error.
-    Err(err::Err),
+    Err(err::Error),
 
     /// A message that does nothing.
     Noop,
@@ -47,71 +44,8 @@ impl Msg {
         Self::Warn(txt.into())
     }
     /// Error message constructor.
-    pub fn err(e: err::Err) -> Self {
+    pub fn err(e: err::Error) -> Self {
         Self::Err(e)
-    }
-}
-
-impl fmt::Display for Msg {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::FromServer(_) => write!(fmt, "from the server"),
-            Self::ToServer(_) => write!(fmt, "for the server"),
-            Self::ConnectionStatus(_) => write!(fmt, "connection status"),
-            Self::Charts(charts_msg) => write!(fmt, "charts, {}", charts_msg),
-            Self::Footer(footer_msg) => write!(fmt, "footer, {}", footer_msg),
-            Self::Filter(filter_msg) => write!(fmt, "filter, {}", filter_msg),
-            Self::Msg(_) => write!(fmt, "info"),
-            Self::Warn(_) => write!(fmt, "warning"),
-            Self::Err(_) => write!(fmt, "error"),
-            Self::Noop => write!(fmt, "noop"),
-        }
-    }
-}
-
-impl From<String> for Msg {
-    fn from(s: String) -> Self {
-        Self::Msg(s)
-    }
-}
-impl From<err::Err> for Msg {
-    fn from(e: err::Err) -> Self {
-        Self::err(e)
-    }
-}
-impl From<from_server::RawMsg> for Msg {
-    fn from(msg: from_server::RawMsg) -> Self {
-        Self::FromServer(msg)
-    }
-}
-impl From<to_server::Msg> for Msg {
-    fn from(msg: to_server::Msg) -> Self {
-        Self::ToServer(msg)
-    }
-}
-
-impl From<ChartsMsg> for Msg {
-    fn from(msg: ChartsMsg) -> Self {
-        Self::Charts(msg)
-    }
-}
-impl From<Res<ChartsMsg>> for Msg {
-    fn from(res: Res<ChartsMsg>) -> Self {
-        match res {
-            Ok(msg) => msg.into(),
-            Err(e) => Self::err(e),
-        }
-    }
-}
-
-impl From<FooterMsg> for Msg {
-    fn from(msg: FooterMsg) -> Self {
-        Self::Footer(msg)
-    }
-}
-impl From<FiltersMsg> for Msg {
-    fn from(msg: FiltersMsg) -> Self {
-        Self::Filter(msg)
     }
 }
 
@@ -121,16 +55,16 @@ pub enum ChartsMsg {
     /// Moves a chart up or down.
     Move {
         /// UID of the chart.
-        uid: ChartUid,
+        uid: uid::Chart,
         /// Move up if true, down otherwise.
         up: bool,
     },
 
     /// Settings message.
-    ChartMsg { uid: ChartUid, msg: ChartMsg },
+    ChartMsg { uid: uid::Chart, msg: ChartMsg },
 
     /// Destroys a chart.
-    Destroy(ChartUid),
+    Destroy(uid::Chart),
 
     /// Forces to refresh the filters.
     RefreshFilters,
@@ -142,15 +76,15 @@ pub enum ChartsMsg {
 }
 impl ChartsMsg {
     /// Constructs a message to move a chart up.
-    pub fn move_up(uid: ChartUid) -> Msg {
+    pub fn move_up(uid: uid::Chart) -> Msg {
         Self::Move { uid, up: true }.into()
     }
     /// Constructs a message to move a chart down.
-    pub fn move_down(uid: ChartUid) -> Msg {
+    pub fn move_down(uid: uid::Chart) -> Msg {
         Self::Move { uid, up: false }.into()
     }
     /// Constructs a message to destroy a chart.
-    pub fn destroy(uid: ChartUid) -> Msg {
+    pub fn destroy(uid: uid::Chart) -> Msg {
         Self::Destroy(uid).into()
     }
 
@@ -172,15 +106,15 @@ impl ChartsMsg {
 #[derive(Debug)]
 pub enum ChartMsg {
     SettingsToggleVisible,
-    FilterToggleVisible(LineUid),
+    FilterToggleVisible(uid::Line),
     SettingsUpdate(ChartSettingsMsg),
 }
 
 impl ChartMsg {
-    pub fn settings_toggle_visible(uid: ChartUid) -> ChartsMsg {
+    pub fn settings_toggle_visible(uid: uid::Chart) -> ChartsMsg {
         (uid, Self::SettingsToggleVisible).into()
     }
-    pub fn filter_toggle_visible(uid: ChartUid, line: LineUid) -> ChartsMsg {
+    pub fn filter_toggle_visible(uid: uid::Chart, line: uid::Line) -> ChartsMsg {
         (uid, Self::FilterToggleVisible(line)).into()
     }
 }
@@ -191,7 +125,7 @@ pub enum FooterMsg {
     /// Toggles a tab.
     ToggleTab(footer::FooterTab),
     // /// Lets the footer know a filter was removed.
-    // Removed(FilterUid),
+    // Removed(uid::Filter),
 }
 impl FooterMsg {
     /// Toggles a tab.
@@ -199,7 +133,7 @@ impl FooterMsg {
         Self::ToggleTab(tab.into()).into()
     }
     // /// Lets the footer know a filter was removed.
-    // pub fn removed(uid: FilterUid) -> Msg {
+    // pub fn removed(uid: uid::Filter) -> Msg {
     //     Self::Removed(uid).into()
     // }
 }
@@ -210,23 +144,23 @@ pub enum FiltersMsg {
     /// Updates a filter on the server.
     Save,
     /// Removes a filter.
-    Rm(FilterUid),
+    Rm(uid::Filter),
     /// A message for a specific filter specification.
     FilterSpec {
         /// Uid of the filter.
-        uid: LineUid,
+        uid: uid::Line,
         /// Message.
         msg: FilterSpecMsg,
     },
     /// A message for a specific filter.
     Filter {
         /// UID of the iflter.
-        uid: FilterUid,
+        uid: uid::Filter,
         /// Message.
         msg: FilterMsg,
     },
     /// Moves a filter left or right.
-    Move { uid: FilterUid, left: bool },
+    Move { uid: uid::Filter, left: bool },
 }
 
 impl FiltersMsg {
@@ -235,19 +169,19 @@ impl FiltersMsg {
         Self::Save.into()
     }
     /// Removes a filter.
-    pub fn rm(uid: FilterUid) -> Msg {
+    pub fn rm(uid: uid::Filter) -> Msg {
         Self::Rm(uid).into()
     }
     /// A message for a specific filter specification.
-    pub fn filter_spec(uid: LineUid, msg: FilterSpecMsg) -> Msg {
+    pub fn filter_spec(uid: uid::Line, msg: FilterSpecMsg) -> Msg {
         Self::FilterSpec { uid, msg }.into()
     }
     /// A message for a specific filter.
-    pub fn filter(uid: FilterUid, msg: FilterMsg) -> Msg {
+    pub fn filter(uid: uid::Filter, msg: FilterMsg) -> Msg {
         Self::Filter { uid, msg }.into()
     }
     /// Moves a filter left or right.
-    pub fn move_filter(uid: FilterUid, left: bool) -> Msg {
+    pub fn move_filter(uid: uid::Filter, left: bool) -> Msg {
         Self::Move { uid, left }.into()
     }
 }
@@ -261,11 +195,11 @@ pub enum FilterSpecMsg {
 }
 impl FilterSpecMsg {
     /// Changes the name of a filter.
-    pub fn change_name(uid: LineUid, new_name: ChangeData) -> Msg {
+    pub fn change_name(uid: uid::Line, new_name: ChangeData) -> Msg {
         FiltersMsg::filter_spec(uid, Self::ChangeName(new_name)).into()
     }
     /// Changes the color of a filter.
-    pub fn change_color(uid: LineUid, new_color: ChangeData) -> Msg {
+    pub fn change_color(uid: uid::Line, new_color: ChangeData) -> Msg {
         FiltersMsg::filter_spec(uid, Self::ChangeColor(new_color)).into()
     }
 }
@@ -277,72 +211,126 @@ pub enum FilterMsg {
     /// Updates a subfilter.
     Sub(filter::SubFilter),
     /// Removes a subfilter.
-    RmSub(filter::SubFilterUid),
+    RmSub(uid::SubFilter),
 }
 impl FilterMsg {
     /// Adds a new subfilter.
-    pub fn add_new(uid: FilterUid) -> Msg {
+    pub fn add_new(uid: uid::Filter) -> Msg {
         FiltersMsg::filter(uid, Self::AddNew)
     }
     /// Updates a subfilter.
-    pub fn update_sub(uid: FilterUid, sub: filter::SubFilter) -> Msg {
+    pub fn update_sub(uid: uid::Filter, sub: filter::SubFilter) -> Msg {
         FiltersMsg::filter(uid, Self::Sub(sub.into()))
     }
     /// Removes a subfilter.
-    pub fn rm_sub(uid: FilterUid, sub_uid: filter::SubFilterUid) -> Msg {
+    pub fn rm_sub(uid: uid::Filter, sub_uid: uid::SubFilter) -> Msg {
         FiltersMsg::filter(uid, Self::RmSub(sub_uid))
     }
 }
 
 base::implement! {
-    Display {
-        ChartsMsg => |&self, fmt| match self {
-            Self::Move { uid, up } => write!(fmt, "move {}/{}", uid, up),
-            Self::Destroy(c_uid) => write!(fmt, "destroy {}", c_uid),
-            Self::RefreshFilters => write!(fmt, "refresh filters"),
-            Self::NewChartSetX(_) => write!(fmt, "new-chart-set-x"),
-            Self::NewChartSetY(_) => write!(fmt, "new-chart-set-y"),
-            Self::ChartMsg { uid, msg } => write!(fmt, "chart[{}]: {}", uid, msg),
-        },
-
-
-        ChartMsg => |&self, fmt| match self {
-            Self::SettingsToggleVisible => write!(fmt, "settings toggle visible"),
-            Self::FilterToggleVisible(l_uid) => write!(fmt, "filter toggle visible {}", l_uid),
-            Self::SettingsUpdate(msg) => write!(fmt, "{}", msg),
-        },
-
-        FooterMsg => |&self, fmt| match self {
-            Self::ToggleTab(_) => write!(fmt, "toggle tab"),
-            // Self::Removed(f_uid) => write!(fmt, "remove {}", f_uid),
-        },
-
-        FiltersMsg => |&self, fmt| match self {
-            Self::Save => write!(fmt, "save"),
-            Self::Rm(f_uid) => write!(fmt, "rm {}", f_uid),
-            Self::FilterSpec { uid, msg } => write!(fmt, "filter spec {}, {}", uid, msg),
-            Self::Filter { uid, msg } => write!(fmt, "filter {}, {}", uid, msg),
-            Self::Move { uid, left } => write!(fmt, "move {} ({})", uid, left),
-        },
-
-        FilterSpecMsg => |&self, fmt| match self {
-            Self::ChangeName(_) => write!(fmt, "change name"),
-            Self::ChangeColor(_) => write!(fmt, "change color"),
-        },
-
-        FilterMsg => |&self, fmt| match self {
-            Self::AddNew => write!(fmt, "add new"),
-            Self::Sub(_) => write!(fmt, "subfilter update"),
-            Self::RmSub(_) => write!(fmt, "remove subfilter"),
-        },
+    impl Msg {
+        Display {
+            |&self, fmt| match self {
+                Self::FromServer(_) => write!(fmt, "from the server"),
+                Self::ToServer(_) => write!(fmt, "for the server"),
+                Self::ConnectionStatus(_) => write!(fmt, "connection status"),
+                Self::Charts(charts_msg) => write!(fmt, "charts, {}", charts_msg),
+                Self::Footer(footer_msg) => write!(fmt, "footer, {}", footer_msg),
+                Self::Filter(filter_msg) => write!(fmt, "filter, {}", filter_msg),
+                Self::Msg(_) => write!(fmt, "info"),
+                Self::Warn(_) => write!(fmt, "warning"),
+                Self::Err(_) => write!(fmt, "error"),
+                Self::Noop => write!(fmt, "noop"),
+            }
+        }
+        From {
+            from String => |s| Self::Msg(s),
+            from err::Error => |e| Self::err(e),
+            from from_server::RawMsg => |msg| Self::FromServer(msg),
+            from to_server::Msg => |msg| Self::ToServer(msg),
+            from ChartsMsg => |msg| Self::Charts(msg),
+            from Res<ChartsMsg> => |res| match res {
+                Ok(msg) => msg.into(),
+                Err(e) => Self::err(e),
+            },
+            from FooterMsg => |msg| Self::Footer(msg),
+            from FiltersMsg => |msg| Self::Filter(msg),
+        }
     }
 
-    From {
-        ChartsMsg, from (ChartUid, ChartMsg) => |(uid, msg)| Self::ChartMsg { uid, msg },
-        ChartsMsg, from (ChartUid, ChartSettingsMsg) => |(uid, msg)| Self::ChartMsg {
-            uid, msg: msg.into()
-        },
+    impl ChartsMsg {
+        Display {
+            |&self, fmt| match self {
+                Self::Move { uid, up } => write!(fmt, "move {}/{}", uid, up),
+                Self::Destroy(c_uid) => write!(fmt, "destroy {}", c_uid),
+                Self::RefreshFilters => write!(fmt, "refresh filters"),
+                Self::NewChartSetX(_) => write!(fmt, "new-chart-set-x"),
+                Self::NewChartSetY(_) => write!(fmt, "new-chart-set-y"),
+                Self::ChartMsg { uid, msg } => write!(fmt, "chart[{}]: {}", uid, msg),
+            }
+        }
 
-        ChartMsg, from ChartSettingsMsg => |msg| Self::SettingsUpdate(msg),
+        From {
+            from (uid::Chart, ChartMsg) => |(uid, msg)| Self::ChartMsg { uid, msg },
+            from (uid::Chart, ChartSettingsMsg) => |(uid, msg)| Self::ChartMsg {
+                uid, msg: msg.into()
+            },
+        }
+    }
+
+
+    impl ChartMsg {
+        Display {
+            |&self, fmt| match self {
+                Self::SettingsToggleVisible => write!(fmt, "settings toggle visible"),
+                Self::FilterToggleVisible(l_uid) => write!(fmt, "filter toggle visible {}", l_uid),
+                Self::SettingsUpdate(msg) => write!(fmt, "{}", msg),
+            }
+        }
+
+        From {
+            from ChartSettingsMsg => |msg| Self::SettingsUpdate(msg),
+        }
+    }
+
+    impl FooterMsg {
+        Display {
+            |&self, fmt| match self {
+                Self::ToggleTab(_) => write!(fmt, "toggle tab"),
+                // Self::Removed(f_uid) => write!(fmt, "remove {}", f_uid),
+            }
+        }
+    }
+
+    impl FiltersMsg {
+        Display {
+            |&self, fmt| match self {
+                Self::Save => write!(fmt, "save"),
+                Self::Rm(f_uid) => write!(fmt, "rm {}", f_uid),
+                Self::FilterSpec { uid, msg } => write!(fmt, "filter spec {}, {}", uid, msg),
+                Self::Filter { uid, msg } => write!(fmt, "filter {}, {}", uid, msg),
+                Self::Move { uid, left } => write!(fmt, "move {} ({})", uid, left),
+            }
+        }
+    }
+
+    impl FilterSpecMsg {
+        Display {
+            |&self, fmt| match self {
+                Self::ChangeName(_) => write!(fmt, "change name"),
+                Self::ChangeColor(_) => write!(fmt, "change color"),
+            }
+        }
+    }
+
+    impl FilterMsg {
+        Display {
+            |&self, fmt| match self {
+                Self::AddNew => write!(fmt, "add new"),
+                Self::Sub(_) => write!(fmt, "subfilter update"),
+                Self::RmSub(_) => write!(fmt, "remove subfilter"),
+            }
+        }
     }
 }

@@ -2,9 +2,7 @@
 
 prelude! {}
 
-pub use charts::filter::{Filter, FilterSpec};
-
-pub use charts::filter::{FilterUid, LineUid, SubFilter, SubFilterUid};
+pub use charts::filter::{Filter, FilterSpec, SubFilter};
 
 /// Filter rendering info.
 pub struct FilterRenderInfo {
@@ -86,12 +84,12 @@ impl Filters {
     /// True if the filter has been edited in some way.
     ///
     /// Returns true if the filter is unknown.
-    pub fn is_filter_edited(&self, uid: LineUid) -> bool {
+    pub fn is_filter_edited(&self, uid: uid::Line) -> bool {
         let reference = self.reference_filters();
         match uid {
-            LineUid::Everything => self.everything != reference.everything,
-            LineUid::CatchAll => self.catch_all != reference.catch_all,
-            LineUid::Filter(uid) => {
+            uid::Line::Everything => self.everything != reference.everything,
+            uid::Line::CatchAll => self.catch_all != reference.catch_all,
+            uid::Line::Filter(uid) => {
                 let mut pair_opt: Option<(usize, &Filter)> = None;
                 for (index, filter) in self.reference.filters.iter().enumerate() {
                     if filter.uid() == uid {
@@ -121,7 +119,7 @@ impl Filters {
 
 impl<T> FiltersExt<T> {
     /// Retrieves a filter from its UID.
-    pub fn get_filter(&self, uid: FilterUid) -> Res<(usize, &Filter)> {
+    pub fn get_filter(&self, uid: uid::Filter) -> Res<(usize, &Filter)> {
         for (index, filter) in self.filters.iter().enumerate() {
             if filter.uid() == uid {
                 return Ok((index, filter));
@@ -131,7 +129,7 @@ impl<T> FiltersExt<T> {
     }
 
     /// Retrieves a filter from its UID, mutable version.
-    fn get_filter_mut(&mut self, uid: FilterUid) -> Res<(usize, &mut Filter)> {
+    fn get_filter_mut(&mut self, uid: uid::Filter) -> Res<(usize, &mut Filter)> {
         for (index, filter) in self.filters.iter_mut().enumerate() {
             if filter.uid() == uid {
                 return Ok((index, filter));
@@ -141,22 +139,22 @@ impl<T> FiltersExt<T> {
     }
 
     /// Gives mutable access to a filter specification.
-    pub fn get_spec_mut(&mut self, uid: LineUid) -> Res<&mut FilterSpec> {
+    pub fn get_spec_mut(&mut self, uid: uid::Line) -> Res<&mut FilterSpec> {
         match uid {
-            LineUid::CatchAll => Ok(&mut self.catch_all),
-            LineUid::Everything => Ok(&mut self.everything),
-            LineUid::Filter(uid) => self
+            uid::Line::CatchAll => Ok(&mut self.catch_all),
+            uid::Line::Everything => Ok(&mut self.everything),
+            uid::Line::Filter(uid) => self
                 .get_filter_mut(uid)
                 .map(|(_index, filter)| filter.spec_mut()),
         }
     }
 
     /// Gives mutable access to a filter specification.
-    pub fn get_spec(&self, uid: LineUid) -> Res<&FilterSpec> {
+    pub fn get_spec(&self, uid: uid::Line) -> Res<&FilterSpec> {
         match uid {
-            LineUid::CatchAll => Ok(&self.catch_all),
-            LineUid::Everything => Ok(&self.everything),
-            LineUid::Filter(uid) => self.get_filter(uid).map(|(_index, filter)| filter.spec()),
+            uid::Line::CatchAll => Ok(&self.catch_all),
+            uid::Line::Everything => Ok(&self.everything),
+            uid::Line::Filter(uid) => self.get_filter(uid).map(|(_index, filter)| filter.spec()),
         }
     }
 
@@ -170,7 +168,7 @@ impl<T> FiltersExt<T> {
     /// Returns the uid of
     /// - the filter after `uid`, if any
     /// - otherwise the filter before `uid`, if any.
-    pub fn remove(&mut self, uid: FilterUid) -> Res<Option<FilterUid>> {
+    pub fn remove(&mut self, uid: uid::Filter) -> Res<Option<uid::Filter>> {
         let (index, _) = self.get_filter(uid)?;
         self.filters.remove(index);
         if index < self.filters.len() {
@@ -330,7 +328,7 @@ impl<T> FiltersExt<T> {
     }
 
     /// Changes the name of a filter.
-    pub fn change_name(&mut self, uid: LineUid, new_name: ChangeData) -> Res<()> {
+    pub fn change_name(&mut self, uid: uid::Line, new_name: ChangeData) -> Res<()> {
         let new_name = match new_name {
             yew::html::ChangeData::Value(txt) => txt,
             err @ yew::html::ChangeData::Select(_) | err @ yew::html::ChangeData::Files(_) => {
@@ -349,7 +347,7 @@ impl<T> FiltersExt<T> {
     }
 
     /// Changes the color of a filter.
-    pub fn change_color(&mut self, uid: LineUid, new_color: ChangeData) -> Res<()> {
+    pub fn change_color(&mut self, uid: uid::Line, new_color: ChangeData) -> Res<()> {
         let new_color = match new_color {
             yew::html::ChangeData::Value(new_color) => charts::color::Color::from_str(new_color)
                 .chain_err(|| "while changing the color of a filter")?,
@@ -388,7 +386,7 @@ impl Filters {
                     let uid = filter.uid();
                     if filters.iter().all(|filter| filter.uid() != uid) {
                         self.to_model
-                            .emit(msg::FooterMsg::toggle_tab(LineUid::Everything));
+                            .emit(msg::FooterMsg::toggle_tab(uid::Line::Everything));
                     }
                 }
                 self.filters.clear();
@@ -412,16 +410,18 @@ impl<T> FiltersExt<T> {
         self.filters.push(filter);
         self.to_model
             .emit(msg::FooterMsg::toggle_tab(footer::FooterTab::filter(
-                LineUid::Filter(uid),
+                uid::Line::Filter(uid),
             )));
         Ok(true)
     }
 
     /// Removes a filter from the map.
-    pub fn rm_filter(&mut self, uid: FilterUid) -> Res<ShouldRender> {
+    pub fn rm_filter(&mut self, uid: uid::Filter) -> Res<ShouldRender> {
         let now_active = self.remove(uid)?;
         self.to_model.emit(msg::FooterMsg::toggle_tab(
-            now_active.map(LineUid::from).unwrap_or(LineUid::Everything),
+            now_active
+                .map(uid::Line::from)
+                .unwrap_or(uid::Line::Everything),
         ));
         Ok(true)
     }
@@ -429,18 +429,18 @@ impl<T> FiltersExt<T> {
     /// Updates the specifications of the filters in the map.
     ///
     /// - triggers a refresh of the filters of all the charts.
-    pub fn update_specs(&mut self, mut specs: Map<LineUid, FilterSpec>) -> Res<ShouldRender> {
+    pub fn update_specs(&mut self, mut specs: BTMap<uid::Line, FilterSpec>) -> Res<ShouldRender> {
         // Update "everything" filter.
-        if let Some(spec) = specs.remove(&LineUid::Everything) {
+        if let Some(spec) = specs.remove(&uid::Line::Everything) {
             self.everything = spec
         }
         // Update "catch-all" filter.
-        if let Some(spec) = specs.remove(&LineUid::CatchAll) {
+        if let Some(spec) = specs.remove(&uid::Line::CatchAll) {
             self.catch_all = spec
         }
         // Check all filters for changes.
         for filter in &mut self.filters {
-            if let Some(spec) = specs.remove(&LineUid::Filter(filter.uid())) {
+            if let Some(spec) = specs.remove(&uid::Line::Filter(filter.uid())) {
                 *filter.spec_mut() = spec
             }
         }

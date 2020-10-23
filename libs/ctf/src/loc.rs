@@ -222,7 +222,7 @@ impl<'data> Cxt<'data> {
     }
 }
 
-pub type Locs<'data> = SVec32<Location<'data>>;
+pub type Locs<'data> = Vec<Location<'data>>;
 
 #[derive(Debug, Clone)]
 pub struct Location<'data> {

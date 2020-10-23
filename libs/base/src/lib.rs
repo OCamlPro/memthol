@@ -1,44 +1,29 @@
 //! Re-exports, types and helpers for all crates in this project.
 
+pub extern crate bincode;
 pub extern crate chrono;
+pub extern crate log;
 pub extern crate peg;
 pub extern crate rand;
-pub extern crate smallvec;
-
-pub use derive_more::*;
 pub use either::Either;
-pub use lazy_static::lazy_static;
 
 #[macro_use]
-pub mod macros;
+mod macros;
+
+pub mod time;
+pub mod time_stats;
+pub mod uid;
+
+pub mod prelude;
 
 /// Re-exports from `error_chain`.
 pub mod error_chain {
     pub use error_chain::*;
 }
 
-/// Errors, handled by `error_chain`.
-pub mod err {
-    error_chain::error_chain! {
-        types {
-            Err, ErrKind, ResExt, Res;
-        }
-
-        foreign_links {
-            Peg(peg::error::ParseError<peg::str::LineCol>)
-            /// Parse error from `peg`.
-            ;
-        }
-
-        links {}
-        errors {}
-    }
-
-    pub use error_chain::bail;
-}
+pub mod err;
 
 /// Used to convert between integer representations.
-#[cfg(any(test, not(release)))]
 #[inline]
 pub fn convert<In, Out>(n: In, from: &'static str) -> Out
 where
@@ -51,17 +36,6 @@ where
     }
 }
 
-/// Used to convert between integer representations.
-#[cfg(not(any(test, not(release))))]
-#[inline]
-pub fn convert<In, Out>(n: In, from: &'static str) -> Out
-where
-    In: std::convert::TryInto<Out> + std::fmt::Display + Copy,
-    In::Error: std::fmt::Display,
-{
-    unsafe { std::mem::transmute(n) }
-}
-
 /// Returns what it's given.
 pub fn identity<T>(t: T) -> T {
     t
@@ -69,36 +43,14 @@ pub fn identity<T>(t: T) -> T {
 /// Destroys what it's given.
 pub fn destroy<T>(_: T) {}
 
-/// Turns a number of milliseconds into a timpstamp.
-pub fn duration_from_millis(ts: u64) -> std::time::Duration {
-    let secs = ts / 1_000_000;
-    let micros = ts - secs * 1_000_000;
-    std::time::Duration::new(secs, (micros as u32) * 1_000)
-}
-
-/// Pretty string for a duration.
-pub fn pretty_time(duration: std::time::Duration) -> String {
-    format!("{}.{:0>9}", duration.as_secs(), duration.subsec_nanos())
-}
-/// Current instant.
-pub fn now() -> std::time::Instant {
-    std::time::Instant::now()
-}
-
 /// Alias type for `SmallVec` of max stack-size 8.
-pub type SVec<T> = smallvec::SmallVec<[T; 8]>;
+pub type SVec8<T> = smallvec::SmallVec<[T; 8]>;
 /// Alias type for `SmallVec` of max stack-size 16.
 pub type SVec16<T> = smallvec::SmallVec<[T; 16]>;
-/// Alias type for `SmallVec` of max stack-size 16.
+/// Alias type for `SmallVec` of max stack-size 32.
 pub type SVec32<T> = smallvec::SmallVec<[T; 32]>;
-
-/// Alias macro for smallvec construction.
-#[macro_export]
-macro_rules! svec {
-    ($($stuff:tt)*) => {
-        $crate::smallvec::smallvec!($($stuff)*)
-    };
-}
+/// Alias type for `SmallVec` of max stack-size 64.
+pub type SVec64<T> = smallvec::SmallVec<[T; 64]>;
 
 /// Contains compilation directives for the WASM client.
 #[macro_use]

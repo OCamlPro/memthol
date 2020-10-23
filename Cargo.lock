@@ -32,7 +32,7 @@ dependencies = [
 
 [[package]]
 name = "alloc_data"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "base",
  "num-bigint",
@@ -149,15 +149,20 @@ dependencies = [
 
 [[package]]
 name = "base"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
+ "bincode",
  "chrono",
  "derive_more",
  "either",
  "error-chain",
  "lazy_static",
+ "log",
  "peg",
  "rand 0.7.3",
+ "safe_index",
+ "serde",
+ "serde_derive",
  "smallvec",
 ]
 
@@ -335,7 +340,7 @@ checksum = "8100e46ff92eb85bf6dc2930c73f2a4f7176393c84a9446b3d501e1b354e7b34"
 
 [[package]]
 name = "charts"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "alloc_data",
  "anyhow",
@@ -343,15 +348,14 @@ dependencies = [
  "ctf",
  "number_prefix",
  "palette",
+ "peg",
  "plotters",
  "plotters-backend",
  "regex",
- "safe_index",
  "serde",
- "serde_json",
  "serde_regex",
- "strum 0.19.5",
- "strum_macros 0.19.4",
+ "strum",
+ "strum_macros",
  "yew",
 ]
 
@@ -388,21 +392,15 @@ dependencies = [
 
 [[package]]
 name = "client"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
- "alloc_data",
  "base",
  "charts",
- "chrono",
- "error-chain",
- "lazy_static",
- "log",
  "plotters-canvas",
- "safe_index",
  "serde",
  "serde_derive",
- "strum 0.19.5",
- "strum_macros 0.19.4",
+ "strum",
+ "strum_macros",
  "typed-html",
  "wasm-bindgen",
  "wasm-logger",
@@ -572,7 +570,7 @@ dependencies = [
 
 [[package]]
 name = "ctf"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "alloc_data",
  "base",
@@ -708,6 +706,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8944dc8fa28ce4a38f778bd46bf7d923fe73eed5a439398507246c8e017e6f36"
 dependencies = [
  "log",
+]
+
+[[package]]
+name = "env_logger"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44533bbbb3bb3c1fa17d9f2e4e38bbbaf8396ba82193c4cb1b6445d711445d36"
+dependencies = [
+ "atty",
+ "humantime",
+ "log",
+ "regex",
+ "termcolor",
 ]
 
 [[package]]
@@ -1152,6 +1163,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 
 [[package]]
+name = "humantime"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df004cfca50ef23c36850aaaa59ad52cc70d0e90243c3c7737a4dd32dc7a3c4f"
+dependencies = [
+ "quick-error",
+]
+
+[[package]]
 name = "hyper"
 version = "0.13.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1409,9 +1429,8 @@ checksum = "8452105ba047068f40ff7093dd1d9da90898e63dd61736462e9cdda6a90ad3c3"
 
 [[package]]
 name = "memthol"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
- "alloc_data",
  "base",
  "charts",
  "clap",
@@ -1419,6 +1438,8 @@ dependencies = [
  "fs_extra",
  "gotham",
  "lazy_static",
+ "open",
+ "pretty_env_logger",
  "tungstenite",
  "walkdir",
 ]
@@ -1682,6 +1703,15 @@ name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
+
+[[package]]
+name = "open"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c283bf0114efea9e42f1a60edea9859e8c47528eae09d01df4b29c1e489cc48"
+dependencies = [
+ "winapi 0.3.9",
+]
 
 [[package]]
 name = "openssl"
@@ -2006,6 +2036,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 
 [[package]]
+name = "pretty_env_logger"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "926d36b9553851b8b0005f1275891b392ee4d2d833852c417ed025477350fb9d"
+dependencies = [
+ "env_logger",
+ "log",
+]
+
+[[package]]
 name = "proc-macro-hack"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2034,6 +2074,12 @@ checksum = "eef52fac62d0ea7b9b4dc7da092aa64ea7ec3d90af6679422d3d7e0e14b6ee15"
 dependencies = [
  "bitflags",
 ]
+
+[[package]]
+name = "quick-error"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quote"
@@ -2366,9 +2412,7 @@ checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
 
 [[package]]
 name = "safe_index"
-version = "0.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d95c6a838bf25b094cc88562d4b4243aff3b66cafb264d69db8867fce50430d"
+version = "0.9.6"
 
 [[package]]
 name = "same-file"
@@ -2735,28 +2779,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57bd81eb48f4c437cadc685403cad539345bf703d78e63707418431cecd4522b"
 
 [[package]]
-name = "strum"
-version = "0.19.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b89a286a7e3b5720b9a477b23253bc50debac207c8d21505f8e70b36792f11b5"
-
-[[package]]
 name = "strum_macros"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87c85aa3f8ea653bfd3ddf25f7ee357ee4d204731f6aa9ad04002306f6e2774c"
-dependencies = [
- "heck",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.19.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e61bb0be289045cb80bfce000512e32d09f8337e54c186725da381377ad1f8d5"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -2808,6 +2834,15 @@ dependencies = [
  "byteorder",
  "dirs 1.0.5",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "termcolor"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb6bfa289a4d7c5766392812c0a1f4c1ba45afa1ad47803c11e1f407d846d75f"
+dependencies = [
+ "winapi-util",
 ]
 
 [[package]]
@@ -3036,8 +3071,8 @@ dependencies = [
  "mime",
  "proc-macro-hack",
  "proc-macro-nested",
- "strum 0.18.0",
- "strum_macros 0.18.0",
+ "strum",
+ "strum_macros",
  "typed-html-macros",
 ]
 

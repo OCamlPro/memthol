@@ -786,7 +786,7 @@ macro_rules! define_style {
 
         $($tail:tt)*
     ) => {
-        lazy_static::lazy_static! {
+        lazy_static! {
             $(#[$meta])*
             static ref $name: String = $crate::inline_css!($($stuff)*);
         }
