@@ -1,33 +1,30 @@
 //! Automatic filter generation.
+//!
+//!
 
 prelude! {}
 
 pub mod parser;
 
 pub mod alloc_site;
+pub mod none;
 
 use self::{
     alloc_site::{AllocSite, AllocSiteParams},
+    none::Inactive,
     parser::Parser,
 };
 
 macro_rules! all_gens {
     (pref($($pref:tt)*) suff($($suff:tt)*)) => {
         [
+            $($pref)* Inactive $($suff)*,
             $($pref)* AllocSite $($suff)*,
         ]
     };
     ($($suff:tt)*) => {
         all_gens!(pref() suff($($suff)*))
     };
-}
-
-lazy_static! {
-    /// Stores the active filter generator.
-    ///
-    /// Written once during CLAP.
-    static ref ACTIVE_GEN: std::sync::RwLock<FilterGen> =
-        std::sync::RwLock::new(FilterGen::default());
 }
 
 /// Retrieve the active filter generator.
@@ -38,13 +35,39 @@ pub fn get() -> FilterGen {
         .clone()
 }
 
+/// Sets the active filter generator from a command-line argument.
+pub fn set_from_cla(args: &str) -> Res<()> {
+    let gen = FilterGen::from_args(args)
+        .chain_err(|| format!("while parsing filter-gen argument `{}`", args))?;
+
+    let mut active = ACTIVE_GEN
+        .write()
+        .map_err(|_| "global active filter generator was poisoned")?;
+    *active = gen;
+
+    Ok(())
+}
+
+lazy_static! {
+    /// Stores the active filter generator.
+    ///
+    /// Written once during CLAP.
+    static ref ACTIVE_GEN: sync::RwLock<FilterGen> =
+        sync::RwLock::new(FilterGen::default());
+}
+
 /// Enumeration of the filter generation techniques.
 #[derive(Debug, Clone)]
 pub enum FilterGen {
     /// Generate one allocation filter per allocation site.
     AllocSite(AllocSiteParams),
     /// No filter generation.
-    None,
+    Inactive,
+}
+impl From<AllocSiteParams> for FilterGen {
+    fn from(params: AllocSiteParams) -> Self {
+        Self::AllocSite(params)
+    }
 }
 
 impl Default for FilterGen {
@@ -57,7 +80,7 @@ impl FilterGen {
     pub fn run(self, data: &data::Data) -> Res<Vec<Filter>> {
         match self {
             Self::AllocSite(params) => AllocSite::work(data, params),
-            Self::None => Ok(vec![]),
+            Self::Inactive => Inactive::work(data, ()),
         }
     }
 
@@ -100,18 +123,6 @@ The different generators are
         s
     }
 
-    pub fn set_active_gen_from_args(args: &str) -> Res<()> {
-        let slf = Self::from_args(args)
-            .chain_err(|| format!("while parsing filter-gen argument `{}`", args))?;
-
-        let mut active = ACTIVE_GEN
-            .write()
-            .map_err(|_| "global active filter generator was poisoned")?;
-        *active = slf;
-
-        Ok(())
-    }
-
     pub fn from_args(args: &str) -> Res<Self> {
         let mut parser = Parser::new(args.trim());
 
@@ -119,10 +130,14 @@ The different generators are
 
         macro_rules! err {
             (key: $key:expr, fmt: $fmt:expr) => {
-                format!(
-                    "`{}` filter expects its arguments to have form `{}`",
-                    $key, $fmt
-                )
+                if let Some(fmt) = $fmt {
+                    format!(
+                        "`{}` filter expects its arguments to have form `{}`",
+                        $key, fmt
+                    )
+                } else {
+                    format!("`{}` filter expects no arguments", $key)
+                }
             };
         }
 
@@ -146,13 +161,7 @@ The different generators are
 
         for ((gen_key, parse), gen_fmt) in all_gens!(::KEY)
             .iter()
-            .zip(
-                all_gens!(
-                    pref(|parser|)
-                    suff(::parse_args(parser).map(Self::from))
-                )
-                .iter(),
-            )
+            .zip(all_gens!(::parse_args).iter())
             .zip(all_gens!(::FMT).iter())
         {
             if key == *gen_key {
@@ -164,22 +173,16 @@ The different generators are
     }
 }
 
-impl From<AllocSiteParams> for FilterGen {
-    fn from(params: AllocSiteParams) -> Self {
-        Self::AllocSite(params)
-    }
-}
-
 /// Trait implemented by filter generation techniques.
 pub trait FilterGenExt: Sized {
     type Params: Default;
 
     const KEY: &'static str;
-    const FMT: &'static str;
+    const FMT: Option<&'static str>;
 
     fn work(data: &data::Data, params: Self::Params) -> Res<Vec<Filter>>;
 
-    fn parse_args(parser: Option<Parser>) -> Option<Self::Params>;
+    fn parse_args(parser: Option<Parser>) -> Option<FilterGen>;
 
     fn add_help(s: &mut String);
 }

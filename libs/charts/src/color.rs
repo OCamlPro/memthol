@@ -2,8 +2,6 @@
 
 prelude! {}
 
-use std::sync::RwLock;
-
 pub use base::rand::{
     rngs::SmallRng,
     {Rng, SeedableRng},
@@ -11,7 +9,7 @@ pub use base::rand::{
 
 lazy_static! {
     /// Color RNG.
-    static ref RNG: RwLock<SmallRng> = RwLock::new(
+    static ref RNG: sync::RwLock<SmallRng> = sync::RwLock::new(
         SmallRng::seed_from_u64(42u64)
     );
 }

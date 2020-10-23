@@ -33,3 +33,83 @@ pub mod assets;
 pub mod msg;
 pub mod router;
 pub mod socket;
+
+use prelude::*;
+
+/// Top-level error handler.
+pub struct ErrorHandler {
+    /// Error context.
+    cxt: err::ErrorCxt,
+}
+impl ErrorHandler {
+    /// Constructor.
+    pub fn new() -> Self {
+        Self {
+            cxt: err::ErrorCxt::new(),
+        }
+    }
+
+    /// Handles new errors.
+    ///
+    /// This function `std::process::exit(2)`s on fatal errors.
+    pub fn handle_new_errors(&mut self) {
+        let mut line_count = 0;
+        let (err_count, fatal) = self.cxt.new_errors_do(|err, fatal| {
+            for (idx, line) in err.lines().enumerate() {
+                line_count += 1;
+                if idx == 0 {
+                    log::error!("|==={} {}", if fatal { "[fatal]" } else { "|" }, line)
+                } else {
+                    log::error!("| {}", line)
+                }
+            }
+        });
+        if err_count > 0 && line_count > 1 {
+            log::error!("|===|")
+        }
+        if fatal {
+            println!();
+            log::error!("exiting due to fatal error(s)");
+            std::process::exit(2)
+        }
+    }
+
+    /// Loops, watching for errors.
+    ///
+    /// This function `std::process::exit(2)`s on fatal errors.
+    pub fn error_watch_loop(&mut self) {
+        loop {
+            self.handle_new_errors();
+            std::thread::sleep(time::Duration::from_millis(200))
+        }
+    }
+}
+
+/// CLAP-related actions.
+pub mod clap {
+    use crate::prelude::*;
+
+    /// Handles filter-generation-related CLAs.
+    ///
+    /// When `args.trim() == "help"`, this function displays an help message for filter generation
+    /// and `std::process::exit(0)`s.
+    pub fn filter_gen(args: &str) {
+        let mut exit_code = None;
+        let args = args.trim();
+
+        if args == "help" {
+            exit_code = Some(0)
+        }
+
+        if let Err(e) =
+            charts::filter::gen::set_from_cla(args).chain_err(charts::filter::gen::FilterGen::help)
+        {
+            err::register_fatal(e)
+        }
+
+        if let Some(code) = exit_code {
+            println!("{}", charts::filter::gen::FilterGen::help().trim());
+            std::process::exit(code)
+        }
+    }
+}

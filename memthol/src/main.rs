@@ -47,6 +47,8 @@ fn init_logger(verb: u64) {
 }
 
 pub fn main() {
+    let mut error_handler = memthol::ErrorHandler::new();
+
     let matches = clap_app!(memthol =>
         (author: crate_authors!())
         (version: crate_version!())
@@ -113,10 +115,10 @@ pub fn main() {
 
     let target = matches.value_of("INPUT").expect("argument with default");
 
-    let filter_gen = matches
+    let filter_gen_args = matches
         .value_of("FILTER_GEN")
         .expect("argument with default");
-    handle_filter_gen(filter_gen);
+    memthol::clap::filter_gen(filter_gen_args);
 
     let path = format!("{}:{}", addr, port);
     println!("|===| Starting");
@@ -125,6 +127,8 @@ pub fn main() {
     println!("|===|");
     println!();
 
+    error_handler.handle_new_errors();
+
     let router = memthol::router::new();
 
     log::info!("starting data monitoring");
@@ -132,17 +136,23 @@ pub fn main() {
         charts::data::start(target), exit
     }
 
+    error_handler.handle_new_errors();
+
     log::info!("starting socket listeners");
     base::unwrap_or! {
         memthol::socket::spawn_server(addr, port + 1, log), exit
     }
+
+    error_handler.handle_new_errors();
 
     if open {
         open_in_background(&path)
     }
 
     log::info!("starting gotham server");
-    gotham::start(path, router)
+    std::thread::spawn(move || gotham::start(path, router));
+
+    error_handler.error_watch_loop()
 }
 
 fn open_in_background(path: &str) {
@@ -165,24 +175,4 @@ fn open_in_background(path: &str) {
             log::error!("{}", e)
         }
     });
-}
-
-fn handle_filter_gen(args: &str) {
-    let mut exit_code = None;
-    let args = args.trim();
-
-    if args == "help" {
-        exit_code = Some(0)
-    } else if let Err(e) = charts::filter::gen::FilterGen::set_active_gen_from_args(args) {
-        for line in e.to_pretty().lines() {
-            log::error!("{}", line)
-        }
-        println!();
-        exit_code = Some(2)
-    }
-
-    if let Some(code) = exit_code {
-        println!("{}", charts::filter::gen::FilterGen::help().trim());
-        std::process::exit(code)
-    }
 }

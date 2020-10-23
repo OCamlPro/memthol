@@ -9,7 +9,6 @@ macro_rules! new {
     (mod $mod:ident for $ty:ty, uid: $uid:ident) => {
         mod $mod {
             prelude! {}
-            pub use std::sync::{Arc, RwLock};
 
             /// Stores a UID, cannot be constructed outside of the module it's declared in.
             #[derive(
@@ -39,7 +38,7 @@ macro_rules! new {
             type Memory = $crate::mem::Memory<$ty>;
 
             pub struct AsRead<'a> {
-                mem: std::sync::RwLockReadGuard<'a, Memory>,
+                mem: sync::RwLockReadGuard<'a, Memory>,
             }
             impl<'a> AsRead<'a> {
                 pub fn get_elm(&self, uid: $uid) -> Arc<$ty> {
@@ -47,7 +46,7 @@ macro_rules! new {
                 }
             }
             pub struct AsWrite<'a> {
-                mem: std::sync::RwLockWriteGuard<'a, Memory>,
+                mem: sync::RwLockWriteGuard<'a, Memory>,
             }
             impl<'a> AsWrite<'a> {
                 pub fn get_uid(&mut self, elm: $ty) -> $uid {
@@ -62,7 +61,7 @@ macro_rules! new {
 
             $crate::prelude::lazy_static! {
                 /// Memory.
-                static ref MEM: RwLock<Memory> = RwLock::new(Memory::new());
+                static ref MEM: sync::RwLock<Memory> = sync::RwLock::new(Memory::new());
             }
 
             /// Provides read-access to the memory.

@@ -71,8 +71,8 @@ impl Model {
         log::info!("received message from server: {}", msg);
         match msg {
             Msg::Info => Ok(false),
-            Msg::Alert { msg } => {
-                alert!("{}", msg);
+            Msg::Alert { msg, fatal } => {
+                alert!("{}{}", if fatal { "[fatal] " } else { "" }, msg);
                 Ok(false)
             }
             Msg::Charts(msg) => self.charts.server_update(&self.filters, msg),

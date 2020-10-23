@@ -135,7 +135,7 @@ impl FilterGenExt for AllocSite {
     type Params = AllocSiteParams;
 
     const KEY: &'static str = "alloc_site";
-    const FMT: &'static str = "min: <int>";
+    const FMT: Option<&'static str> = Some("min: <int>");
 
     fn work(data: &data::Data, params: Self::Params) -> Res<Vec<Filter>> {
         let mut work = AllocSiteWork::new();
@@ -143,11 +143,11 @@ impl FilterGenExt for AllocSite {
         work.extract(params)
     }
 
-    fn parse_args(parser: Option<Parser>) -> Option<Self::Params> {
+    fn parse_args(parser: Option<Parser>) -> Option<FilterGen> {
         let mut parser = if let Some(parser) = parser {
             parser
         } else {
-            return Some(Self::Params::default());
+            return Some(Self::Params::default().into());
         };
 
         if !parser.tag(MIN_KEY) {
@@ -169,7 +169,7 @@ impl FilterGenExt for AllocSite {
             return None;
         }
 
-        Some(AllocSiteParams::new(Some(min_count)))
+        Some(AllocSiteParams::new(Some(min_count)).into())
     }
 
     fn add_help(s: &mut String) {
@@ -182,7 +182,7 @@ impl FilterGenExt for AllocSite {
 \
             ",
             Self::KEY,
-            Self::FMT,
+            Self::FMT.unwrap(),
             MIN_KEY,
         ));
     }

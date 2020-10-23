@@ -44,7 +44,7 @@ impl Watcher {
             let path = path.display().to_string();
             let _ = std::thread::spawn(move || match Self::ctf_run(path) {
                 Ok(()) => (),
-                Err(e) => super::add_err(e.to_pretty()),
+                Err(e) => err::register_fatal(e),
             });
         } else if path.is_dir() {
             let mut watcher = Self::new(target);
@@ -61,11 +61,12 @@ impl Watcher {
 
             let _ = std::thread::spawn(move || match watcher.run(forever) {
                 Ok(()) => (),
-                Err(e) => super::add_err(e.to_pretty()),
+                Err(e) => err::register_non_fatal(e.to_pretty()),
             });
         } else {
-            super::add_err(format!(
-                "expected dump directory or memtrace CTF file, got `{}`",
+            err::register_fatal(format!(
+                "expected dump directory or memtrace CTF file\n\
+                got `{}` which is neither or a file nor a directory",
                 path.display()
             ))
         }
