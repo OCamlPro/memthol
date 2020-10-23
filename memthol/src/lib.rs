@@ -58,14 +58,26 @@ impl ErrorHandler {
             for (idx, line) in err.lines().enumerate() {
                 line_count += 1;
                 if idx == 0 {
-                    log::error!("|==={} {}", if fatal { "[fatal]" } else { "|" }, line)
+                    if fatal {
+                        log::error!("|===[fatal] {}", line)
+                    } else {
+                        log::warn!("|===| {}", line)
+                    }
                 } else {
-                    log::error!("| {}", line)
+                    if fatal {
+                        log::error!("| {}", line)
+                    } else {
+                        log::warn!("| {}", line)
+                    }
                 }
             }
         });
         if err_count > 0 && line_count > 1 {
-            log::error!("|===|")
+            if fatal {
+                log::error!("|===|")
+            } else {
+                log::warn!("|===|")
+            }
         }
         if fatal {
             println!();
