@@ -767,6 +767,7 @@ macro_rules! css {
     (@($str:expr)) => ();
 }
 
+/// Inlines some CSS code.
 #[macro_export]
 macro_rules! inline_css {
     ($($stuff:tt)*) => {{
@@ -778,6 +779,7 @@ macro_rules! inline_css {
     }};
 }
 
+/// Defines a CSS style.
 #[macro_export]
 macro_rules! define_style {
     (

@@ -22,6 +22,7 @@ impl TimeChart {
 
 #[cfg(any(test, feature = "server"))]
 impl TimeChart {
+    /// Extracts the new points since the last time it was called.
     pub fn new_points(
         &mut self,
         filters: &mut Filters,
@@ -33,6 +34,7 @@ impl TimeChart {
         }
     }
 
+    /// Resets a chart.
     pub fn reset(&mut self, filters: &Filters) {
         match self {
             Self::Size(chart) => chart.reset(filters),

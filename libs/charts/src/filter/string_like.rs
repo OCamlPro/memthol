@@ -9,7 +9,9 @@ use filter::FilterExt;
 /// A comparison predicate over lists.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Pred {
+    /// Contain predicate.
     Contain,
+    /// Exclude predicate.
     Exclude,
 }
 impl fmt::Display for Pred {
@@ -21,7 +23,17 @@ impl fmt::Display for Pred {
     }
 }
 impl Pred {
+    ///
     pub fn all() -> Vec<Pred> {
+        base::debug_do! {
+            // If you get an error here, it means the definition of `Pred` changed. You need to
+            // update the following `match` statement, as well as the list returned by this function
+            // (below).
+            match Self::Contain {
+                Self::Contain
+                | Self::Exclude => (),
+            }
+        }
         vec![Self::Contain, Self::Exclude]
     }
 }

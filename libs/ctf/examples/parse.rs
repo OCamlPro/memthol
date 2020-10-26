@@ -29,7 +29,7 @@ fn run() -> Res<()> {
         &data => |mut parser| {
             let (header, trace_info) = (parser.header(), parser.trace_info());
             println!("ctf header {{");
-            println!("    time span {}", header.header.timestamp);
+            println!("    time span {}", header.timestamp);
             println!("}}\n\ntrace info {{");
             println!("    sample rate: {}", trace_info.sample_rate);
             println!("    word size: {}", trace_info.word_size);
@@ -41,9 +41,9 @@ fn run() -> Res<()> {
 
             while let Some(mut packet_parser) = parser.next_packet()? {
                 let header = packet_parser.header();
-                println!("packet {}", header.id);
-                println!("    time span: {}", header.header.timestamp);
-                println!("    alloc span: {}", header.header.alloc_id);
+                println!("packet {}", header.id());
+                println!("    time span: {}", header.timestamp);
+                println!("    alloc span: {}", header.alloc_id);
                 println!("{{");
 
                 while let Some((clock, event)) = packet_parser.next_event()? {
@@ -60,7 +60,7 @@ fn run() -> Res<()> {
 
 fn get_path() -> Res<String> {
     let mut args = std::env::args();
-    ignore(args.next());
+    args.next();
     args.next()
         .ok_or_else(|| "expected file path as argument, found nothing".into())
 }

@@ -2,11 +2,16 @@
 
 prelude! {}
 
+/// Filter generation argument parser.
 pub struct Parser<'input> {
+    /// Input text.
     txt: &'input str,
+    /// Current position.
     pos: usize,
 }
+
 impl<'input> Parser<'input> {
+    /// Constructor.
     pub fn new(txt: &'input str) -> Self {
         Self {
             txt: txt.trim(),
@@ -14,6 +19,7 @@ impl<'input> Parser<'input> {
         }
     }
 
+    /// Creates a sub-parser for the remaining text, if any.
     pub fn sub(&self) -> Option<Self> {
         let txt_left = self.txt[self.pos..].trim();
         if txt_left.is_empty() {
@@ -23,15 +29,18 @@ impl<'input> Parser<'input> {
         }
     }
 
+    /// True if the parser is at end-of-input.
     pub fn is_at_eoi(&self) -> bool {
         self.pos >= self.txt.len()
     }
 
+    /// Remaining text to parse.
     pub fn rest(&self) -> &'input str {
         &self.txt[self.pos..]
     }
 }
 
+/// Convenience macro producing a `char` iterator over the remaining text in a parser.
 macro_rules! chars {
     ($slf:ident) => {
         $slf.txt[$slf.pos..].chars()
@@ -39,11 +48,13 @@ macro_rules! chars {
 }
 
 impl<'input> Parser<'input> {
+    /// Advances the parser by `c.len_utf8()`.
     #[inline]
     pub fn inc(&mut self, c: char) {
         self.pos += c.len_utf8()
     }
 
+    /// Consumes leading whitespaces.
     pub fn ws(&mut self) {
         for c in chars!(self) {
             if c.is_whitespace() {
@@ -54,6 +65,7 @@ impl<'input> Parser<'input> {
         }
     }
 
+    /// Parses an integer as a slice over the input text.
     pub fn int(&mut self) -> Option<&'input str> {
         let mut chars = chars!(self);
         let first_char = chars.next()?;
@@ -80,6 +92,7 @@ impl<'input> Parser<'input> {
         Some(&self.txt[start..self.pos])
     }
 
+    /// Parses a `usize`.
     pub fn usize(&mut self) -> Option<usize> {
         if let Some(int) = self.int() {
             let res = usize::from_str(int).ok()?;
@@ -89,6 +102,7 @@ impl<'input> Parser<'input> {
         }
     }
 
+    /// Parses an identifier.
     pub fn ident(&mut self) -> Option<&'input str> {
         let mut chars = chars!(self);
         let first_char = chars.next()?;
@@ -111,6 +125,7 @@ impl<'input> Parser<'input> {
         Some(&self.txt[start..self.pos])
     }
 
+    /// Parses a tag, *i.e.* a specific string.
     pub fn tag(&mut self, tag: impl AsRef<str>) -> bool {
         let tag = tag.as_ref();
         if self.pos + tag.len() > self.txt.len() {
@@ -125,6 +140,7 @@ impl<'input> Parser<'input> {
         }
     }
 
+    /// Parses a specific character.
     pub fn char(&mut self, c: char) -> bool {
         if chars!(self).next() == Some(c) {
             self.pos += c.len_utf8();
@@ -134,6 +150,7 @@ impl<'input> Parser<'input> {
         }
     }
 
+    /// Extracts the content of a block `{ ... }` and generate a sub-parser.
     pub fn block(&mut self) -> Res<Option<Self>> {
         if !self.char('{') {
             return Ok(None);

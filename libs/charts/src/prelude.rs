@@ -41,10 +41,25 @@ pub use crate::{
     point::{self, Point, PointVal, Points},
 };
 
+/// Number pretty formatting.
 pub mod num_fmt {
+    /// Applies an action to a pretty string representation of a number.
+    ///
+    /// ```rust
+    /// # use charts::prelude::num_fmt::*;
+    /// let mut s = String::new();
+    /// str_do(16_504_670, |pretty| s = pretty);
+    /// assert_eq!(&s, "16.50M");
+    ///
+    /// str_do(670, |pretty| s = pretty);
+    /// assert_eq!(&s, "670");
+    ///
+    /// str_do(1_052_504_670u32, |pretty| s = pretty);
+    /// assert_eq!(&s, "1.05G");
+    /// ```
     pub fn str_do<Res>(
         stuff: impl std::convert::TryInto<f64> + std::fmt::Display + Clone,
-        action: impl Fn(String) -> Res,
+        action: impl FnOnce(String) -> Res,
     ) -> Res {
         use number_prefix::NumberPrefix::{self, *};
         let s = match stuff.clone().try_into().map(NumberPrefix::decimal) {

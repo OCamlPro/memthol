@@ -1,3 +1,29 @@
+//! Contains the parser for memtrace's CTF dump format.
+//!
+//! The parser is designed in such a way that there are no runtime checks related to big-/low-endian
+//! encoding. The main building block is [`RawParser`], which features parsing primitives for a wide
+//! range of types. In particular, integers and floats have a big-endian version and a low-endian
+//! one.
+//!
+//! The actual parser type is [`Parser`], which takes a type parameter `Endian` corresponding to the
+//! endian specification. It can be either [`LowEndian`] or [`BigEndian`]. Both these types are not
+//! meant to be constructed in practice, they are just type-level information encoding the endian
+//! specification to use. So, in practice, `Parser<LowEndian>` directly parses all integers/floats
+//! as assuming a low-endian convention, and similarily for `Parser<BigEndian>`.
+//!
+//! Deciding which endian convention to use happens when parsing the memtrace CTF magic number. This
+//! is done by creating a [`RawParser`], and calling the [`try_magic`] method. Note that when
+//! parsing a CTF file, the magic number is the first thing parsed.
+//!
+//! This gives either a `Parser<LowEndian>` or a `Parser<BigEndian` (or an error). Once parsing
+//! starts with either of these types, a change in endian convention is considered an error.
+//!
+//! [`RawParser`]: struct.RawParser.html (RawParser struct)
+//! [`Parser`]: struct.Parser.html (Parser struct)
+//! [`LowEndian`]: struct.LowEndian.html (LowEndian struct)
+//! [`BigEndian`]: struct.BigEndian.html (BigEndian struct)
+//! [`try_magic`]: struct.RawParser.html#method.try_magic (try_magic method on RawParser)
+
 prelude! {}
 
 /// Memtrace CTF magic number.
@@ -406,7 +432,7 @@ impl<'data> RawParser<'data> {
         Ok(res)
     }
 
-    /// Parses a `u64`.
+    /// Parses a `u64`, low-endian version.
     ///
     /// # Examples
     ///
@@ -437,6 +463,18 @@ impl<'data> RawParser<'data> {
         Ok(res)
     }
 
+    /// Parses a `u64`, big-endian version.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use ctf::parse::RawParser;
+    /// let data = 7_501_701.745f64.to_be_bytes();
+    /// let mut parser = RawParser::new(&data, 0);
+    /// # println!("state: {}", parser.state());
+    /// assert_eq!(parser.f64_be().unwrap(), 7_501_701.745);
+    /// assert!(parser.is_eof());
+    /// ```
     pub fn f64_be(&mut self) -> Res<f64> {
         pdebug!(self, "        parsing f64 (be)");
         self.check(8, parse_error!(|| expected "f64"))?;
@@ -455,6 +493,19 @@ impl<'data> RawParser<'data> {
         self.cursor += 8;
         Ok(res)
     }
+
+    /// Parses a `u64`, big-endian version.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use ctf::parse::RawParser;
+    /// let data = 7_501_701.745f64.to_le_bytes();
+    /// let mut parser = RawParser::new(&data, 0);
+    /// # println!("state: {}", parser.state());
+    /// assert_eq!(parser.f64_le().unwrap(), 7_501_701.745);
+    /// assert!(parser.is_eof());
+    /// ```
     pub fn f64_le(&mut self) -> Res<f64> {
         pdebug!(self, "        parsing f64 (le)");
         self.check(8, parse_error!(|| expected "f64"))?;
@@ -504,6 +555,10 @@ impl<'data> RawParser<'data> {
         Ok(())
     }
 
+    /// Attemps to parse the memtrace CTF magic number.
+    ///
+    /// Parsing the magic number reveals whether the dump uses a big- or low-endian convention.
+    /// Thus, it returns either a big-endian parser or a low-endian one.
     pub fn try_magic(mut self) -> Res<Either<BeParser<'data>, LeParser<'data>>> {
         pinfo!(self, "parsing magic number");
         let start = self.pos();
@@ -534,6 +589,7 @@ pub type BeParser<'data> = Parser<'data, BigEndian>;
 /// Low-endian parser.
 pub type LeParser<'data> = Parser<'data, LowEndian>;
 
+/// A parser, parameterized by an endian specification (big or low).
 pub struct Parser<'data, Endian> {
     parser: RawParser<'data>,
     _phantom: std::marker::PhantomData<Endian>,
@@ -591,6 +647,7 @@ macro_rules! decl_impl_trait {
             + std::ops::Deref<Target = RawParser<'data>>
             + std::ops::DerefMut
         {
+            /// Type describing the endian convention: big or low.
             type Endian;
 
             $(

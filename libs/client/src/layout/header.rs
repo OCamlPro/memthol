@@ -2,9 +2,12 @@
 
 prelude! {}
 
+/// Height of the header in pixels.
 pub const HEADER_HEIGHT_PX: usize = 60;
+/// Font size in the header.
 pub const FONT_SIZE: usize = 130;
 
+/// Renders the top header.
 pub fn render(model: &Model) -> Html {
     const center_width_pc: usize = 70;
     const lft_width_pc: usize = (100 - center_width_pc) / 2;

@@ -25,12 +25,7 @@ error_chain::error_chain! {
     }
 
     links {}
-    errors {
-        Clap(err: String, help: Option<String>) {
-            description("invalid command-line arguments")
-            display("invalid command-line arguments: `{}`", err)
-        }
-    }
+    errors {}
 }
 
 impl Error {

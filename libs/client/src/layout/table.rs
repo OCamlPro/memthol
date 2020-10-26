@@ -2,8 +2,10 @@
 
 prelude! {}
 
-pub const LEFT_COL_WIDTH: usize = 15;
-pub const RIGHT_COL_WIDTH: usize = 100 - LEFT_COL_WIDTH - 1;
+/// Size of the left column of the table, in percent.
+const LEFT_COL_WIDTH: usize = 15;
+/// Size of the right column of the table, in percent.
+const RIGHT_COL_WIDTH: usize = 100 - LEFT_COL_WIDTH - 1;
 
 define_style! {
     row_style! = {
@@ -130,15 +132,22 @@ define_style! {
     };
 }
 
+/// A row in a table.
 pub struct TableRow {
+    /// Content of the left cell.
     lft: Html,
+    /// Content of the right cell.
     rgt: SVec16<Html>,
+    /// Height of the row in pixels.
     height_px: usize,
+    /// True if this row is the first one in the table.
     is_first: bool,
+    /// True if the table uses white-colored separation lines. Black otherwise.
     white_sep: bool,
 }
 
 impl TableRow {
+    /// Constructor.
     fn new(is_first: bool, lft: Html) -> Self {
         let lft = html! {
             <div
@@ -157,23 +166,28 @@ impl TableRow {
         }
     }
 
+    /// Creates a new menu item.
     pub fn new_menu(is_first: bool, lft: Html) -> Self {
         Self::new(is_first, lft)
     }
 
+    /// Sets the separation line to be black.
     pub fn black_sep(mut self) -> Self {
         self.white_sep = false;
         self
     }
+    /// Sets the separation line to be white.
     pub fn white_sep(mut self) -> Self {
         self.white_sep = true;
         self
     }
+    /// Sets the height in pixels.
     pub fn height_px(mut self, height: usize) -> Self {
         self.height_px = height;
         self
     }
 
+    /// Renders the row.
     pub fn render(self) -> Html {
         let style = if self.is_first {
             &*FIRST_ROW_STYLE
@@ -214,6 +228,7 @@ impl TableRow {
         }
     }
 
+    /// Displays `inner` into a `CELL_STYLE` HTML `div`.
     fn new_cell(inner: Html) -> Html {
         html! {
             <div
@@ -224,6 +239,7 @@ impl TableRow {
         }
     }
 
+    /// Pushes a selector item in the right column.
     pub fn push_selector(&mut self, selector: Html) {
         self.rgt.push(html! {
             <div
@@ -233,6 +249,8 @@ impl TableRow {
             </div>
         })
     }
+
+    /// Pushes a separator in the right column.
     pub fn push_sep(&mut self, sep: Html) {
         self.rgt.push(html! {
             <div
@@ -242,6 +260,8 @@ impl TableRow {
             </div>
         })
     }
+
+    /// Pushes a value in the right column.
     pub fn push_value(&mut self, value: Html) {
         self.rgt.push(html! {
             <div
@@ -251,6 +271,8 @@ impl TableRow {
             </div>
         })
     }
+
+    /// Pushes a value in a tiny container in the right column.
     pub fn push_tiny_value(&mut self, value: Html) {
         self.rgt.push(html! {
             <div
@@ -260,6 +282,8 @@ impl TableRow {
             </div>
         })
     }
+
+    /// Pushes a single value covering the whole right column.
     pub fn push_single_value(&mut self, value: Html) {
         self.rgt.push(html! {
             <div
@@ -270,6 +294,7 @@ impl TableRow {
         })
     }
 
+    /// Pushes a single selector and a single value in the right column.
     pub fn push_single_selector_and_value(&mut self, selector: Html, value: Html) {
         self.rgt.push(html! {
             <div
@@ -287,6 +312,7 @@ impl TableRow {
         })
     }
 
+    /// Pushes a button in the right column.
     pub fn push_button(&mut self, txt: &str, action: OnClickAction) {
         self.rgt.push(html! {
             <div

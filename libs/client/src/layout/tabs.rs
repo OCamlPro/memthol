@@ -2,12 +2,6 @@
 
 prelude! {}
 
-pub const height: usize = 100;
-
-pub const sep_width: usize = 2;
-pub const max_width: usize = 30;
-pub const min_width: usize = 5;
-
 define_style! {
     OUTTER_CELL_STYLE = {
         height(100%),
@@ -17,12 +11,18 @@ define_style! {
     };
 }
 
+/// Properties of a tab.
 #[derive(Clone)]
 pub struct TabProps {
+    /// Color.
     color: String,
+    /// True if active.
     active: IsActive,
+    /// True if what the tab represents was edited.
     edited: bool,
+    /// True if dimmed.
     dimmed: bool,
+    /// True if tabs are displayed in reverse order.
     rev: bool,
     /// Used to generate the z-index.
     ///
@@ -31,9 +31,7 @@ pub struct TabProps {
     top: bool,
 }
 impl TabProps {
-    pub fn new_footer_gray() -> Self {
-        Self::new_footer("#c1c1c1")
-    }
+    /// Creates a tab with some color.
     pub fn new(color: impl Into<String>) -> Self {
         Self {
             color: color.into(),
@@ -44,6 +42,8 @@ impl TabProps {
             top: false,
         }
     }
+
+    /// Creates a new footer tab with some color.
     pub fn new_footer(color: impl Into<String>) -> Self {
         Self {
             color: color.into(),
@@ -54,7 +54,12 @@ impl TabProps {
             top: true,
         }
     }
+    /// Creates a new gray footer tab.
+    pub fn new_footer_gray() -> Self {
+        Self::new_footer("#c1c1c1")
+    }
 
+    /// Turns itself into button box properties
     pub fn to_box_props(&self) -> layout::button::BoxProps {
         let active = self.active.to_bool();
         layout::button::BoxProps::new_tab("black")
@@ -70,26 +75,39 @@ impl TabProps {
             .for_footer(self.top)
     }
 
+    /// Activates the tab.
     pub fn set_active(mut self, is_active: bool) -> Self {
         self.active = IsActive::from_bool(is_active);
         self
     }
 
+    /// Constructor from a layout-info function.
+    ///
+    /// Function `get` returns a triplet containing
+    ///
+    /// - a flag indicating whether the tab can move left,
+    /// - a flag indicating whether the tab can move right,
+    /// - the UID of the filter the tab is for.
+    ///
+    /// > **NB**: `get` only runs if the tab is active.
     pub fn with_first_last_uid(mut self, get: impl FnOnce() -> (bool, bool, uid::Filter)) -> Self {
         self.active = self.active.with_first_last_uid(get);
         self
     }
 
+    /// Sets the value of the internal `edited` flag.
     pub fn set_edited(mut self, is_edited: bool) -> Self {
         self.edited = is_edited;
         self
     }
 
+    /// Sets whether the tab is dimmed.
     pub fn set_dimmed(mut self, is_dimmed: bool) -> Self {
         self.dimmed = is_dimmed;
         self
     }
 
+    /// Sets whether the tab is reverse-order.
     pub fn set_rev(mut self) -> Self {
         self.rev = true;
         self
@@ -102,23 +120,32 @@ impl TabProps {
     }
 }
 
+/// Indicates whether a tab is active, and whether it can be moved.
 #[derive(Clone, Copy)]
 pub enum IsActive {
+    /// Tab is not active.
     No,
+    /// Tab is active, cannot move.
     Yes,
+    /// Tab is active and may move.
     YesWith {
+        /// True iff the tab can move left.
         can_move_left: bool,
+        /// True iff the tab can move right.
         can_move_right: bool,
+        /// UID of the filter the tab is for.
         uid: uid::Filter,
     },
 }
 impl IsActive {
+    /// Yields `true` iff active.
     pub fn to_bool(&self) -> bool {
         match self {
             Self::No => false,
             Self::Yes | Self::YesWith { .. } => true,
         }
     }
+    /// Constructor from a boolean.
     pub fn from_bool(active: bool) -> Self {
         if active {
             Self::Yes
@@ -126,6 +153,16 @@ impl IsActive {
             Self::No
         }
     }
+
+    /// Constructor from a layout-info function.
+    ///
+    /// Function `get` returns a triplet containing
+    ///
+    /// - a flag indicating whether the tab can move left,
+    /// - a flag indicating whether the tab can move right,
+    /// - the UID of the filter the tab is for.
+    ///
+    /// > **NB**: `get` only runs if the tab is active.
     pub fn with_first_last_uid(self, get: impl FnOnce() -> (bool, bool, uid::Filter)) -> Self {
         match self {
             Self::No => Self::No,
@@ -141,6 +178,7 @@ impl IsActive {
     }
 }
 
+/// CSS for some tab properties.
 pub fn style(props: &TabProps) -> String {
     let active = props.active.to_bool();
     // let rev = props.rev;
@@ -172,21 +210,26 @@ pub fn style(props: &TabProps) -> String {
     )
 }
 
+/// A list of tabs.
 pub struct Tabs {
+    /// The list of tabs.
     tabs: SVec64<Html>,
 }
 
 impl Tabs {
+    /// Constructs an empty list of tabs.
     pub fn new() -> Self {
         Self {
             tabs: SVec64::new(),
         }
     }
 
+    /// Pushes a tab.
     pub fn push_tab(&mut self, model: &Model, text: &str, props: TabProps, onclick: OnClickAction) {
         self.inner_push_tab(model, text, props, onclick)
     }
 
+    /// Pushes a tab, handles the whole move-right/move-left business.
     fn inner_push_tab(
         &mut self,
         model: &Model,
@@ -240,6 +283,7 @@ impl Tabs {
         self.tabs.push(res)
     }
 
+    /// Displays a raw tab.
     fn raw_tab(props: &TabProps, onclick: OnClickAction, content: impl fmt::Display) -> Html {
         html! {
             <div
@@ -262,6 +306,7 @@ impl Tabs {
         }
     }
 
+    /// Pushes a tab which is really just an image.
     pub fn push_img_tab(
         &mut self,
         dimension_px: usize,
@@ -304,6 +349,7 @@ impl Tabs {
         }
     }
 
+    /// Pushes a separation, *i.e.* a tiny amount of space.
     pub fn push_sep(&mut self) {
         define_style! {
             SEP = {
@@ -322,6 +368,8 @@ impl Tabs {
             </div>
         })
     }
+
+    /// Pushes a right separator, usually at the very end of a list of tabs.
     pub fn push_sep_right(&mut self) {
         define_style! {
             SEP = {
@@ -342,6 +390,7 @@ impl Tabs {
         })
     }
 
+    /// Renders the tabs.
     pub fn render(self) -> Html {
         define_style! {
             TABS_ROW = {
@@ -360,6 +409,7 @@ impl Tabs {
         }
     }
 
+    /// Renders the tabs, float-right style.
     pub fn render_right(self) -> Html {
         define_style! {
             TABS_ROW = {

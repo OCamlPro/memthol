@@ -1,6 +1,11 @@
+//! Frontend for memtrace's CTF format.
+
+#![deny(missing_docs)]
+
 #[macro_use]
 mod macros;
 
+/// Memtrace version of the parser realized by this crate.
 pub const VERSION: u16 = 2;
 
 pub use base::err;
@@ -24,6 +29,7 @@ const DEBUG_VERB: bool = false;
 
 use ast::{event::Event, *};
 
+/// Shorthand trait for the signature of event-handling functions.
 pub trait EventAction<'data>:
     FnMut(Option<&ast::header::Packet>, Clock, Event<'data>) -> err::Res<()>
 {
@@ -38,8 +44,10 @@ pub use diff_parse::parse;
 mod diff_parse {
     use alloc_data::prelude::*;
 
-    type Encoded = u64;
-    type LocMap = std::collections::HashMap<Encoded, Vec<Loc>>;
+    /// Type of an encoded location.
+    type EncodedLoc = u64;
+    /// Maps encoded locations to vectors of locations.
+    type LocMap = HMap<EncodedLoc, Vec<Loc>>;
 
     pub struct TraceBuilder {
         last_trace: Vec<CLoc>,
@@ -166,6 +174,7 @@ mod diff_parse {
         time::Date::from_micros(convert(date, "date_from_microsecs"))
     }
 
+    /// Parses a CTF file (memtrace format).
     pub fn parse<'a, F>(
         bytes: &[u8],
         mut factory: &mut F,
@@ -206,7 +215,7 @@ mod diff_parse {
 
                 // Start time of the run, used for init and to compute the time-since-start of all
                 // events.
-                let start_time = date_from_microsecs(header.header.timestamp.begin);
+                let start_time = date_from_microsecs(header.timestamp.begin);
                 // let end_time = date_from_microsecs(header.header.timestamp.end).sub(start_time)?;
 
                 // Init info.
@@ -227,7 +236,7 @@ mod diff_parse {
                 while let Some(mut packet_parser) = prof.packet_parsing.time(
                     || parser.next_packet()
                 )? {
-                    if packet_parser.header().id % 10 == 9 {
+                    if packet_parser.header().id() % 10 == 9 {
                         bytes_progress(packet_parser.real_position().0);
                     }
 

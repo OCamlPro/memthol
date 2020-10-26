@@ -14,6 +14,7 @@ lazy_static! {
     );
 }
 
+/// Convenience macro giving write-access to the global RNG.
 macro_rules! rng {
     () => {
         RNG.write().expect("failed to retrieve color RNG")
@@ -112,6 +113,7 @@ impl Color {
         palette::rgb::Rgb::new(self.r, self.g, self.b)
     }
 
+    /// Constructor from hue quantity.
     pub fn from_hue(hue: f32, saturation: f32, lightness: f32) -> Self {
         // Dumb application of https://en.wikipedia.org/wiki/HSL_and_HSV#Color_conversion_formulae.
         let hue = hue % 360.;

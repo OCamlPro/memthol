@@ -12,12 +12,16 @@ const filter_toggles_height_px: usize = 30;
 
 const menu_bg_color: &str = "#dbe9ff";
 
+/// Abstract position information for a chart.
+///
+/// Only store whether the chart is first/last.
 #[derive(Clone, Copy)]
 pub struct ChartPos {
     is_first: bool,
     is_last: bool,
 }
 impl ChartPos {
+    /// Constructor from a position `pos` in a list of length `len`.
     pub fn from_pos_and_len(pos: usize, len: usize) -> Self {
         Self {
             is_first: pos == 0,
@@ -26,6 +30,7 @@ impl ChartPos {
     }
 }
 
+/// Renders a chart given a position.
 pub fn render(model: &Model, chart: &Chart, pos: ChartPos) -> Html {
     define_style! {
         CONTAINER_STYLE = {
@@ -106,7 +111,8 @@ define_style! {
     };
 }
 
-pub fn render_chart(_model: &Model, chart: &Chart) -> Html {
+/// Renders a chart.
+fn render_chart(_model: &Model, chart: &Chart) -> Html {
     let visible = chart.is_visible();
     let canvas_id = chart.canvas_id();
     // let collapsed_canvas_id = chart.collapsed_canvas_id();
@@ -140,9 +146,11 @@ pub fn render_chart(_model: &Model, chart: &Chart) -> Html {
     }
 }
 
+/// Tile rendering.
 pub mod tiles {
     use super::*;
 
+    /// Renders everything around a chart (top-menu and tile).
     pub fn render(model: &Model, chart: &Chart, pos: ChartPos) -> Html {
         const left_tile_width: usize = 20;
         const right_tile_width: usize = left_tile_width;
@@ -211,6 +219,7 @@ pub mod tiles {
         }
     }
 
+    /// Renders the top/center tabs of the tile.
     pub fn render_center_tabs(_model: &Model, chart: &Chart) -> Html {
         // let chart_uid = chart.uid();
 
@@ -254,6 +263,7 @@ pub mod tiles {
         };
     }
 
+    /// Renders the top/left tabs.
     pub fn render_left(model: &Model, chart: &Chart, pos: ChartPos) -> Html {
         let chart_uid = chart.uid();
 
@@ -311,6 +321,7 @@ pub mod tiles {
         }
     }
 
+    /// Renders the top/right tabs.
     pub fn render_right(model: &Model, chart: &Chart) -> Html {
         let chart_uid = chart.uid();
 
@@ -391,11 +402,13 @@ pub mod tiles {
     }
 }
 
+/// Chart settings rendering.
 pub mod settings {
     use super::*;
 
     const LINE_HEIGHT_PX: usize = 40;
 
+    /// Renders the chart settings.
     pub fn render(model: &Model, chart: &Chart) -> Html {
         define_style! {
             SETTINGS_STYLE = {
@@ -414,7 +427,7 @@ pub mod settings {
             <div
                 style = SETTINGS_STYLE
             >
-                {layout::section("Settings")}
+                {layout::section_title("Settings")}
                 <br/>
 
                 { title(model, chart) }
@@ -423,6 +436,7 @@ pub mod settings {
         }
     }
 
+    /// Renders the chart's title setting row.
     pub fn title(model: &Model, chart: &Chart) -> Html {
         let mut title = layout::table::TableRow::new_menu(true, html! { "title" })
             .black_sep()
@@ -438,6 +452,7 @@ pub mod settings {
         title.render()
     }
 
+    /// Renders the chart's option settings.
     pub fn options(model: &Model, chart: &Chart) -> Html {
         let settings = chart.settings();
 
@@ -480,12 +495,14 @@ pub mod settings {
     }
 }
 
+/// Filter tabs (bottom) rendering.
 pub mod filter_toggles {
     use super::*;
     use layout::tabs::{TabProps, Tabs};
 
     const tab_container_width: usize = 96;
 
+    /// Renders the bottom filter tabs.
     pub fn render(model: &Model, chart: &Chart) -> Html {
         define_style! {
             TOGGLE_BAR = {

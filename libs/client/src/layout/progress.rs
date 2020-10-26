@@ -1,5 +1,12 @@
+//! Progress-bar rendering.
+//!
+//! This is used when the server is still parsing the dumps.
+
 prelude! {}
 
+/// Renders the progress bar.
+///
+/// This is used when the server is still parsing the dumps.
 pub fn render(info: &LoadInfo) -> Html {
     define_style! {
         BIG = {

@@ -37,6 +37,7 @@ impl<Val> PointVal<Val> {
             .ok_or_else(|| format!("unknown line uid `{}`", uid).into())
     }
 
+    /// Retrieves the value for a filter.
     pub fn get(&self, uid: uid::Line) -> Res<&Val> {
         self.map
             .get(&uid)
@@ -76,15 +77,22 @@ impl<Key, Val> Point<Key, Val> {
     }
 }
 
+/// A range for some value-type.
+///
+/// Inclusive on both sides.
 pub struct Range<T> {
+    /// Lower-bound of the range.
     pub min: T,
+    /// Upper-bound of the range.
     pub max: T,
 }
 impl<T> Range<T> {
+    /// Constructor.
     pub fn new(min: T, max: T) -> Self {
         Self { min, max }
     }
 
+    /// Map over the bounds of the range.
     pub fn map<NewT>(self, f: impl Fn(T) -> NewT) -> Range<NewT> {
         Range {
             min: f(self.min),
@@ -93,15 +101,20 @@ impl<T> Range<T> {
     }
 }
 
+/// Some ranges for a x-axis/y-axis graph.
 pub struct Ranges<X, Y> {
+    /// X-axis range.
     pub x: Range<X>,
+    /// Y-axis range.
     pub y: Range<Y>,
 }
 impl<X, Y> Ranges<X, Y> {
+    /// Constructor.
     pub fn new(x: Range<X>, y: Range<Y>) -> Self {
         Self { x, y }
     }
 
+    /// Map over the bounds of both ranges.
     pub fn map<NewX, NewY>(
         self,
         fx: impl Fn(X) -> NewX,
@@ -132,6 +145,13 @@ where
     }
 }
 
+/// Extension trait for coordinates.
+///
+/// Note that the type of the values appearing in a point are not necessarily the same type expected
+/// by the graph. Hence, this trait has a [`Coord`] associated type specifying the type of the
+/// actual values as expected by a graph.
+///
+/// [`Coord`]: #associatedtype.Coord (Coord associated type)
 pub trait CoordExt
 where
     Self: Clone,
@@ -141,13 +161,22 @@ where
         + coord::Ranged<ValueType = Self::Coord>
         + From<std::ops::Range<Self::Coord>>,
 {
+    /// Type of the values as they will be passed to the graph.
     type Coord;
+    /// Type of coordinate ranges.
     type Range;
+
+    /// Zero value for the actual coordinates.
     fn zero() -> Self::Coord;
+    /// True if a coordinate value is zero.
     fn is_zero(val: &Self::Coord) -> bool;
+
+    /// Default minimum value for a range of coordinates.
     fn default_min() -> Self::Coord;
+    /// Default maximum value for a range of coordinates.
     fn default_max() -> Self::Coord;
 }
+
 impl CoordExt for time::Date {
     type Coord = time::chrono::Duration;
     type Range = coord::RangedDuration;
@@ -164,6 +193,7 @@ impl CoordExt for time::Date {
         time::chrono::Duration::seconds(5)
     }
 }
+
 impl CoordExt for u32 {
     type Coord = u32;
     type Range = coord::RangedCoordu32;
@@ -180,6 +210,7 @@ impl CoordExt for u32 {
         5
     }
 }
+
 impl CoordExt for f32 {
     type Coord = f32;
     type Range = coord::RangedCoordf32;
@@ -197,6 +228,7 @@ impl CoordExt for f32 {
     }
 }
 
+/// Extension trait allowing to compute ratios.
 pub trait RatioExt {
     /// Returns the percentage (between `0` and `100`) of the ratio between `self` and `max`.
     fn ratio_wrt(&self, max: &Self) -> Res<f32>;
@@ -220,17 +252,24 @@ impl RatioExt for time::chrono::Duration {
     }
 }
 
+/// Ranges extension trait.
 pub trait RangesExt<X, Y> {
+    /// Computes ranges from itself, given which filters are active.
     fn ranges(&self, is_active: impl Fn(uid::Line) -> bool) -> Ranges<Option<X>, Option<Y>>;
 }
 
+/// Extension trait for point values.
 pub trait PointValExt<Val>
 where
     Val: CoordExt,
 {
+    /// Processes a range over optional bounds to yield a range proper.
     fn val_range_processor(range: Range<Option<Val>>) -> Res<Range<Val>>;
+    /// Turns a range over point values into a range over coordinates.
     fn val_coord_range_processor(range: &Range<Val>) -> Res<Range<Val::Coord>>;
+    /// Processes a point value to yield a coordinate value.
     fn val_coord_processor(range: &Range<Val>, x: &Val) -> Val::Coord;
+    /// Formatter for the axis labels.
     fn val_label_formatter(val: &Val::Coord) -> String;
 }
 
@@ -245,7 +284,9 @@ where
     }
 }
 
+/// Mesh configuration extension trait.
 pub trait StyleExt {
+    /// Applies a mesh configuration.
     fn mesh_conf<X, Y, DB>(
         &self,
         configure_mesh: &mut plotters::chart::MeshStyle<X::Range, Y::Range, DB>,
@@ -253,15 +294,19 @@ pub trait StyleExt {
         X: CoordExt,
         Y: CoordExt,
         DB: plotters::prelude::DrawingBackend;
+
+    /// Creates a shape style.
     fn shape_conf(&self, color: &Color) -> plotters::style::ShapeStyle;
 }
 
+/// Chart-rendering trait.
 pub trait ChartRender<X, Y>
 where
     X: CoordExt,
     Y: CoordExt,
     Self: RangesExt<X, Y> + PointValExt<X> + PointValExt<Y>,
 {
+    /// Processes the ranges for both axis.
     fn ranges_processor(ranges: Ranges<Option<X>, Option<Y>>) -> Res<Ranges<X, Y>> {
         Ok(Ranges {
             x: Self::val_range_processor(ranges.x)?,
@@ -269,6 +314,7 @@ where
         })
     }
 
+    /// Turns point-value ranges into coordinate ranges.
     fn coord_ranges_processor(ranges: &Ranges<X, Y>) -> Res<Ranges<X::Coord, Y::Coord>> {
         Ok(Ranges {
             x: Self::val_coord_range_processor(&ranges.x)?,
@@ -276,22 +322,28 @@ where
         })
     }
 
+    /// Processes a x-axis point value to yield a x-axis coordinate.
     fn x_coord_processor(x_range: &Range<X>, x: &X) -> X::Coord {
         Self::val_coord_processor(x_range, x)
     }
+    /// Processes a y-axis point value to yield a y-axis coordinate.
     fn y_coord_processor(y_range: &Range<Y>, y: &Y) -> Y::Coord {
         Self::val_coord_processor(y_range, y)
     }
 
+    /// X-axis label formatter.
     fn x_label_formatter(val: &X::Coord) -> String {
         <Self as PointValExt<X>>::val_label_formatter(val)
     }
+    /// Y-axis label formatter.
     fn y_label_formatter(val: &Y::Coord) -> String {
         <Self as PointValExt<Y>>::val_label_formatter(val)
     }
 
+    /// Yields the actual points.
     fn points(&self) -> std::slice::Iter<Point<X, Y>>;
 
+    /// Renders some points on a graph.
     fn render<'spec, DB>(
         &self,
         settings: &ChartSettings,
@@ -336,6 +388,7 @@ where
         }
     }
 
+    /// Normal display mode rendering.
     fn chart_render<'spec, DB>(
         &self,
         _settings: &ChartSettings,
@@ -398,6 +451,7 @@ where
         Ok(())
     }
 
+    /// Stacked area rendering.
     fn chart_render_stacked_area<'spec, DB>(
         &self,
         _settings: &ChartSettings,
@@ -500,6 +554,7 @@ where
         Ok(())
     }
 
+    /// Percent stacked area rendering.
     fn chart_render_stacked_area_percent<'spec, DB>(
         &self,
         _settings: &ChartSettings,
@@ -719,6 +774,7 @@ pub type TimeSizePoints = PolyPoints<time::Date, u32>;
 /// Some points for a time chart.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TimePoints {
+    /// Size over time.
     Size(TimeSizePoints),
 }
 
@@ -736,11 +792,15 @@ impl TimePoints {
         }
     }
 
+    /// Number of x-axis point ticks.
+    ///
+    /// Each x-axis tick can have several y-axis filter points.
     pub fn len(&self) -> usize {
         match self {
             Self::Size(points) => points.len(),
         }
     }
+    /// Total number of points.
     pub fn point_count(&self) -> usize {
         match self {
             Self::Size(points) => points
@@ -763,6 +823,7 @@ impl TimePoints {
         Ok(new_stuff)
     }
 
+    /// Renders the points on a graph.
     pub fn render<'spec, DB>(
         &self,
         settings: &ChartSettings,
@@ -801,11 +862,15 @@ impl Points {
         }
     }
 
+    /// Number of x-axis ticks.
+    ///
+    /// Each x-axis tick can have several y-axis filter points.
     pub fn len(&self) -> usize {
         match self {
             Self::Time(points) => points.len(),
         }
     }
+    /// Total number of points.
     pub fn point_count(&self) -> usize {
         match self {
             Self::Time(points) => points.point_count(),
@@ -821,6 +886,7 @@ impl Points {
         }
     }
 
+    /// Renders the points on a graph.
     pub fn render<'spec, DB>(
         &self,
         settings: &ChartSettings,

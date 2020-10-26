@@ -258,6 +258,7 @@ peg::parser! {
             Diff::new(date, new, dead)
         }
 
+        /// Parses the field specifying the callstack order.
         pub rule callstack_is_reversed() -> bool =
             "callstacks" _ ":" _ is_rev:(
                 "main" _ "to" _ "site" { false }

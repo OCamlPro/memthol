@@ -13,6 +13,8 @@
 //! [`Watcher`]: ./data/struct.Watcher.html (The Watcher struct in module data)
 //! [`start`]: ./data/fn.start.html (The start function in module data)
 
+#![deny(missing_docs)]
+
 pub extern crate alloc_data;
 pub extern crate palette;
 pub extern crate plotters;
@@ -144,6 +146,7 @@ impl Charts {
         Ok((points, restarted || init))
     }
 
+    /// Handles a charts message from the client.
     pub fn handle_chart_msg(&mut self, msg: msg::to_server::ChartsMsg) -> Res<()> {
         debug_assert!(self.to_client_msgs.is_empty());
 

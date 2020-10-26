@@ -27,12 +27,15 @@ pub struct Model {
 }
 
 impl Model {
+    /// Reference filters accessor.
     pub fn filters(&self) -> &filter::ReferenceFilters {
         self.filters.reference_filters()
     }
+    /// Client-side filters accessor.
     pub fn footer_filters(&self) -> &filter::Filters {
         &self.filters
     }
+    /// Charts accessor.
     pub fn charts(&self) -> &Charts {
         &self.charts
     }

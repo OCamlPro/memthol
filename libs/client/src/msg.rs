@@ -60,8 +60,13 @@ pub enum ChartsMsg {
         up: bool,
     },
 
-    /// Settings message.
-    ChartMsg { uid: uid::Chart, msg: ChartMsg },
+    /// Message for a specific chart message.
+    ChartMsg {
+        /// UID of the chart the message is for.
+        uid: uid::Chart,
+        /// Actual message.
+        msg: ChartMsg,
+    },
 
     /// Destroys a chart.
     Destroy(uid::Chart),
@@ -103,17 +108,23 @@ impl ChartsMsg {
     }
 }
 
+/// A message for a specific chart.
 #[derive(Debug)]
 pub enum ChartMsg {
+    /// Toggles a chart's visibility.
     SettingsToggleVisible,
+    /// Toggles a filter's visibility.
     FilterToggleVisible(uid::Line),
+    /// Updates the chart's settings.
     SettingsUpdate(ChartSettingsMsg),
 }
 
 impl ChartMsg {
+    /// Toggles a chart's visibility.
     pub fn settings_toggle_visible(uid: uid::Chart) -> ChartsMsg {
         (uid, Self::SettingsToggleVisible).into()
     }
+    /// Toggles a filter's visibility.
     pub fn filter_toggle_visible(uid: uid::Chart, line: uid::Line) -> ChartsMsg {
         (uid, Self::FilterToggleVisible(line)).into()
     }
@@ -160,7 +171,12 @@ pub enum FiltersMsg {
         msg: FilterMsg,
     },
     /// Moves a filter left or right.
-    Move { uid: uid::Filter, left: bool },
+    Move {
+        /// Filter UID.
+        uid: uid::Filter,
+        /// Move left iff true.
+        left: bool,
+    },
 }
 
 impl FiltersMsg {
@@ -186,6 +202,7 @@ impl FiltersMsg {
     }
 }
 
+/// An action over the specification of a filter.
 #[derive(Debug)]
 pub enum FilterSpecMsg {
     /// Changes the name of a filter.
@@ -204,6 +221,7 @@ impl FilterSpecMsg {
     }
 }
 
+/// A message for a specific filter.
 #[derive(Debug)]
 pub enum FilterMsg {
     /// Adds a new subfilter.

@@ -26,7 +26,13 @@ impl FilterRenderInfo {
     }
 }
 
+/// Type of the reference filters.
+///
+/// Reference filters are the filters as they exist server-side.
 pub type ReferenceFilters = FiltersExt<()>;
+/// Type for filters.
+///
+/// Contains the reference filters.
 pub type Filters = FiltersExt<ReferenceFilters>;
 
 /// Stores all the filters.
@@ -206,6 +212,7 @@ impl<T> FiltersExt<T> {
         Ok(())
     }
 
+    /// Yields an iterator ovec the filter specifications.
     pub fn specs_iter(&self) -> impl Iterator<Item = &FilterSpec> + Clone {
         Some(&self.everything)
             .into_iter()
@@ -455,6 +462,7 @@ impl<T> FiltersExt<T> {
     }
 }
 
+/// Applies an update to a filter.
 fn filter_update(filter: &mut Filter, msg: msg::FilterMsg) -> Res<ShouldRender> {
     use msg::FilterMsg::*;
     match msg {
