@@ -13,7 +13,9 @@ pub mod progress;
 pub mod table;
 pub mod tabs;
 
+/// Dark grey background.
 pub const DARK_GREY_BG: &'static str = "#313131";
+/// Light blue foreground.
 pub const LIGHT_BLUE_FG: &'static str = "#8dedff";
 
 define_style! {
@@ -25,7 +27,8 @@ define_style! {
     };
 }
 
-pub fn section(txt: &str) -> Html {
+/// Displays a section title.
+pub fn section_title(txt: &str) -> Html {
     html! {
         <div
             style = SECTION_STYLE
@@ -35,6 +38,7 @@ pub fn section(txt: &str) -> Html {
     }
 }
 
+/// Renders the full model.
 pub fn render(model: &Model) -> Html {
     define_style! {
         body_style! = {

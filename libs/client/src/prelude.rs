@@ -9,17 +9,18 @@ pub use yew_components::Select;
 
 pub use base::prelude::*;
 
-pub use charts::palette;
+pub use charts::{
+    palette,
+    prelude::{
+        alloc, filter::stats::AllFilterStats, num_fmt, time, Alloc, AllocStats, LoadInfo, Regex,
+    },
+};
 
 /// Re-exports from `plotters`, `plotters_canvas`, and `palette`.
 pub mod plotters {
     pub use charts::plotters::*;
     pub use plotters_canvas::CanvasBackend;
 }
-
-pub use charts::prelude::{
-    alloc, filter::stats::AllFilterStats, num_fmt, time, Alloc, AllocStats, LoadInfo, Regex,
-};
 
 /// Wasm-bindgen re-exports.
 pub mod wasm {
@@ -62,7 +63,6 @@ pub use crate::{
     cst, filter, footer, js, layout,
     model::Model,
     msg::{self, Msg},
-    style,
 };
 
 /// Trait for conversion to JS.
@@ -71,13 +71,16 @@ pub trait JsExt {
     fn as_js(self) -> js::Value;
 }
 
+/// Type alias for mouse-event callbacks.
 pub type OnClickAction = Callback<yew::events::MouseEvent>;
+/// Type alias for text-input-like callbacks.
 pub type OnChangeAction = Callback<yew::events::ChangeData>;
 
 /// Type of `onclick` actions.
 pub trait OnClick: Fn(yew::events::MouseEvent) -> Msg + 'static {}
 impl<Action> OnClick for Action where Action: Fn(yew::events::MouseEvent) -> Msg + 'static {}
 
+/// Type alias for a generic model callback.
 pub type Action = Callback<Model>;
 
 /// Type of HTML elements in the client.

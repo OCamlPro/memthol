@@ -3,22 +3,24 @@
 
 prelude! {}
 
-pub const width_wrt_full: usize = 100;
+const width_wrt_full: usize = 100;
 
+/// Height of the footer when it is collapsed.
 pub const collapsed_height_px: usize = 50;
+/// Height of the footer when it is expanded.
 pub const expanded_height_px: usize = 500;
 
-pub const tabs_height_px: usize = collapsed_height_px;
+const tabs_height_px: usize = collapsed_height_px;
 
-pub const expanded_tabs_height_px: usize = tabs_height_px;
-pub const expanded_menu_height_px: usize = expanded_height_px - expanded_tabs_height_px;
+const expanded_tabs_height_px: usize = tabs_height_px;
+const expanded_menu_height_px: usize = expanded_height_px - expanded_tabs_height_px;
 
-pub const collapsed_tabs_height_px: usize = tabs_height_px;
-pub const collapsed_menu_height_px: usize = tabs_height_px - collapsed_tabs_height_px;
+const collapsed_tabs_height_px: usize = tabs_height_px;
+// const collapsed_menu_height_px: usize = tabs_height_px - collapsed_tabs_height_px;
 
-pub const center_tile_width: usize = 70;
-pub const left_tile_width: usize = (width_wrt_full - center_tile_width) / 2;
-pub const right_tile_width: usize = left_tile_width;
+const center_tile_width: usize = 70;
+const left_tile_width: usize = (width_wrt_full - center_tile_width) / 2;
+const right_tile_width: usize = left_tile_width;
 
 define_style! {
     footer_style! = {
@@ -131,6 +133,7 @@ define_style! {
     };
 }
 
+/// Menu-rendering.
 pub mod menu {
     use super::*;
 
@@ -171,6 +174,7 @@ pub mod menu {
         // };
     }
 
+    /// Renders a filter in the menu-part of the footer.
     pub fn render_filter(model: &Model, filter: &filter::FilterSpec) -> Html {
         let center = html! {
             <>
@@ -200,6 +204,7 @@ pub mod menu {
         }
     }
 
+    /// Renders the left tile of the menu.
     pub fn render_left_tile() -> Html {
         html! {
             <div
@@ -209,6 +214,7 @@ pub mod menu {
         }
     }
 
+    /// Renders the right tile of the menu.
     pub fn render_right_tile(inner: Html) -> Html {
         html! {
             <div
@@ -220,9 +226,11 @@ pub mod menu {
         }
     }
 
+    /// Right tile of the menu.
     pub mod filter_right_tile {
         use super::*;
 
+        /// Renders the right tile of the menu for some filter.
         pub fn render(model: &Model, uid: uid::Line) -> Html {
             html! {
                 <>
@@ -233,6 +241,7 @@ pub mod menu {
             }
         }
 
+        /// Renders a right-tile button.
         pub fn button(id: &str, txt: impl fmt::Display, onclick: Option<OnClickAction>) -> Html {
             define_style! {
                 BUTTON_CONTAINER = {
@@ -257,6 +266,7 @@ pub mod menu {
             }
         }
 
+        /// Button for adding sub-filters.
         pub fn add_subfilter_button(model: &Model, uid: uid::Line) -> Html {
             let action = match uid {
                 uid::Line::Filter(uid) => {
@@ -268,6 +278,7 @@ pub mod menu {
         }
     }
 
+    /// Renders the center tile of the menu.
     pub fn render_center_tile(inner: Html) -> Html {
         html! {
             <div
@@ -279,14 +290,16 @@ pub mod menu {
         }
     }
 
+    /// Renders the settings applicable to a filter.
     pub mod settings {
         use super::*;
 
+        /// Renders the settings applicable to a filter.
         pub fn render(model: &Model, filter: &filter::FilterSpec) -> Html {
             html! {
                 <>
                     <br/>
-                    {layout::section("Settings")}
+                    {layout::section_title("Settings")}
                     <br/>
 
                     {render_name_row(model, filter)}
@@ -295,6 +308,7 @@ pub mod menu {
             }
         }
 
+        /// Renders the filter's name row.
         pub fn render_name_row(model: &Model, filter: &filter::FilterSpec) -> Html {
             let mut table_row = layout::table::TableRow::new_menu(true, html! { "name" });
             table_row.push_single_value({
@@ -308,6 +322,8 @@ pub mod menu {
             });
             table_row.render()
         }
+
+        /// Renders the filter's color row.
         pub fn render_color_row(model: &Model, filter: &filter::FilterSpec) -> Html {
             let mut table_row = layout::table::TableRow::new_menu(false, html! { "color" });
             table_row.push_single_value({
@@ -323,10 +339,12 @@ pub mod menu {
         }
     }
 
+    /// Sub-filter rendering.
     pub mod subfilters {
         use super::*;
         use charts::filter::{sub::RawSubFilter, LifetimeFilter, SizeFilter, SubFilter};
 
+        /// Renders the sub-filters of a filter.
         pub fn render(model: &Model, filter: &filter::Filter) -> Html {
             // if !filter.has_sub_filters() {
             //     return html! {<></>};
@@ -335,7 +353,7 @@ pub mod menu {
             html! {
                 <>
                     <br/>
-                    {layout::section("Sub-Filters")}
+                    {layout::section_title("Sub-Filters")}
                     <br/>
 
                     {
@@ -347,6 +365,7 @@ pub mod menu {
             }
         }
 
+        /// Renders a sub-filter for a filter.
         pub fn render_sub(
             model: &Model,
             uid: uid::Filter,
@@ -403,7 +422,7 @@ pub mod menu {
         }
 
         #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-        pub enum SubKey {
+        enum SubKey {
             Remove,
             Change(charts::filter::FilterKind),
         }
@@ -428,6 +447,7 @@ pub mod menu {
             }
         }
 
+        /// Renders the action selector for a subfilter.
         pub fn render_key(model: &Model, uid: uid::Filter, sub: &SubFilter) -> Html {
             let sub_uid = sub.uid();
             let options = SubKey::all();
@@ -453,10 +473,12 @@ pub mod menu {
             }
         }
 
+        /// Size sub-filter rendering.
         pub mod size {
             use super::*;
-            use charts::filter::ord::Kind;
+            use charts::filter::ord::Pred;
 
+            /// Renders a size sub-filter.
             pub fn render<Update>(
                 table_row: &mut layout::table::TableRow,
                 model: &Model,
@@ -470,9 +492,9 @@ pub mod menu {
                     let sub_clone = sub.clone();
                     let msg = msg.clone();
                     html! {
-                        <Select<Kind>
+                        <Select<Pred>
                             selected = selected
-                            options = Kind::all()
+                            options = Pred::all()
                             on_change = model.link.callback(
                                 move |kind| {
                                     let sub = sub_clone.clone().change_cmp_kind(kind);
@@ -513,10 +535,12 @@ pub mod menu {
             }
         }
 
+        /// Lifetime sub-filter rendering.
         pub mod lifetime {
             use super::*;
-            use charts::filter::ord::Kind;
+            use charts::filter::ord::Pred;
 
+            /// Renders a lifetime sub-filter.
             pub fn render(
                 table_row: &mut layout::table::TableRow,
                 model: &Model,
@@ -528,9 +552,9 @@ pub mod menu {
                     let sub_clone = sub.clone();
                     let msg = msg.clone();
                     html! {
-                        <Select<Kind>
+                        <Select<Pred>
                             selected = selected
-                            options = Kind::all()
+                            options = Pred::all()
                             on_change = model.link.callback(
                                 move |kind| {
                                     let sub = sub_clone.clone().change_cmp_kind(kind);
@@ -573,6 +597,7 @@ pub mod menu {
             }
         }
 
+        /// Label sub-filter rendering.
         pub mod label {
             use super::*;
             use charts::filter::{
@@ -580,6 +605,7 @@ pub mod menu {
                 LabelFilter,
             };
 
+            /// Renders a label sub-filter.
             pub fn render(
                 table_row: &mut layout::table::TableRow,
                 model: &Model,
@@ -646,6 +672,7 @@ pub mod menu {
             }
         }
 
+        /// Location sub-filter rendering.
         pub mod location {
             use super::*;
             use charts::filter::{
@@ -653,6 +680,7 @@ pub mod menu {
                 LocFilter,
             };
 
+            /// Renders a location sub-filter.
             pub fn render(
                 table_row: &mut layout::table::TableRow,
                 model: &Model,
@@ -719,15 +747,14 @@ pub mod menu {
     }
 }
 
+/// Footer tabs rendering.
 pub mod tabs {
     use super::*;
     use layout::tabs::TabProps;
 
-    pub const width: usize = 100;
-    pub const height: usize = 100;
-
     const img_dim_px: usize = 4 * (tabs_height_px / 5);
 
+    /// Renders the footer tabs.
     pub fn render(model: &Model, active: Option<uid::Line>) -> Html {
         html! {
             <>
@@ -738,6 +765,7 @@ pub mod tabs {
         }
     }
 
+    /// Left tabs rendering.
     pub mod tabs_left {
         use super::*;
 
@@ -748,6 +776,7 @@ pub mod tabs {
                 table,
             };
         }
+        /// Renders the tabs on the left.
         pub fn render(model: &Model) -> Html {
             let mut tabs = layout::tabs::Tabs::new();
 
@@ -793,6 +822,7 @@ pub mod tabs {
         }
     }
 
+    /// Right tab rendering.
     pub mod tabs_right {
         use super::*;
 
@@ -804,6 +834,7 @@ pub mod tabs {
             };
         }
 
+        /// Renders the tabs on the right.
         pub fn render(model: &Model, current_filter: Option<uid::Filter>) -> Html {
             let mut tabs = layout::tabs::Tabs::new();
 
@@ -839,6 +870,7 @@ pub mod tabs {
         }
     }
 
+    /// Center tabs rendering.
     pub mod tabs_center {
         use super::*;
 
@@ -856,6 +888,7 @@ pub mod tabs {
             };
         }
 
+        /// Renders the tabs in the center of the menu.
         pub fn render(model: &Model, active: Option<uid::Line>) -> Html {
             let (everything, others) = model.footer_filters().filters_to_render();
 

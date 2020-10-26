@@ -11,24 +11,30 @@ type Memory = crate::mem::Memory<[u8]>;
 /// Stores a UID, cannot be constructed outside of the module it's declared in.
 #[derive(Debug, Clone, Copy, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
 pub struct Str {
+    /// String UID.
     uid: usize,
 }
 impl Str {
+    /// Mutable factory accessor.
     pub fn factory_mut<'a>() -> AsWrite<'a> {
         write()
     }
+    /// Immutable factory accessor.
     pub fn factory<'a>() -> AsRead<'a> {
         read()
     }
 
+    /// String UID.
     pub fn uid(&self) -> usize {
         self.uid
     }
 
+    /// Actual string accessor.
     pub fn get(self) -> Arc<[u8]> {
         Self::factory().get_elm(self)
     }
 
+    /// Applies some action to the actual string.
     pub fn str_do<Res>(self, action: impl FnOnce(&str) -> Res) -> Res {
         let elm = self.get();
         let str = std::str::from_utf8(elm.as_ref()).unwrap_or_else(|e| {
@@ -40,6 +46,7 @@ impl Str {
         action(str)
     }
 
+    /// Registers a string in the factory.
     pub fn new(str: &str) -> Str {
         Self::factory_mut().get_uid(str)
     }
@@ -95,18 +102,23 @@ impl<'a> PartialEq<&'a Str> for Str {
     }
 }
 
+/// Read-lock over the factory.
 pub struct AsRead<'a> {
     mem: sync::RwLockReadGuard<'a, Memory>,
 }
 impl<'a> AsRead<'a> {
+    /// Retrieves the bytes corresponding to a UID.
     pub fn get_elm(&self, uid: Str) -> Arc<[u8]> {
         self.mem.get_elm(uid.uid)
     }
 }
+
+/// Write-lock over the factory.
 pub struct AsWrite<'a> {
     mem: sync::RwLockWriteGuard<'a, Memory>,
 }
 impl<'a> AsWrite<'a> {
+    /// Creates/retrieves the UID of a string slice.
     pub fn get_uid(&mut self, s: &str) -> Str {
         Str {
             uid: self.mem.get_uid(s),

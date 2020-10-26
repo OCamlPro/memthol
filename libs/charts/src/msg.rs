@@ -3,33 +3,45 @@
 prelude! {}
 use filter::*;
 
+/// Chart settings message.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChartSettingsMsg {
+    /// Toggles a chart's visibility.
     ToggleVisible,
+    /// Changes the title of a chart.
     ChangeTitle(String),
+    /// Changes the display mode of a chart.
     SetDisplayMode(chart::settings::DisplayMode),
+    /// Changes the resolution of a chart.
     SetResolution(chart::settings::Resolution),
 }
 
 impl ChartSettingsMsg {
+    /// Toggles a chart's visibility.
     pub fn toggle_visible<Res>(uid: uid::Chart) -> Res
     where
         (uid::Chart, Self): Into<Res>,
     {
         (uid, Self::ToggleVisible).into()
     }
+
+    /// Changes the display mode of a chart.
     pub fn set_display_mode<Res>(uid: uid::Chart, mode: chart::settings::DisplayMode) -> Res
     where
         (uid::Chart, Self): Into<Res>,
     {
         (uid, Self::SetDisplayMode(mode)).into()
     }
+
+    /// Changes the title of a chart.
     pub fn change_title<Res>(uid: uid::Chart, title: impl Into<String>) -> Res
     where
         (uid::Chart, Self): Into<Res>,
     {
         (uid, Self::ChangeTitle(title.into())).into()
     }
+
+    /// Changes the resolution of a chart.
     pub fn set_resolution<Res>(
         uid: uid::Chart,
         resolution: impl Into<chart::settings::Resolution>,
@@ -78,23 +90,35 @@ pub mod to_server {
     }
 
     impl Msg {
+        /// Encodes the message as bytes.
         pub fn to_bytes(&self) -> Res<Vec<u8>> {
             Ok(base::bincode::serialize(self)?)
         }
 
+        /// Decodes the message from bytes.
         pub fn from_bytes(bytes: &[u8]) -> Res<Self> {
             Ok(base::bincode::deserialize(bytes)?)
         }
     }
 
-    impl From<(uid::Chart, ChartMsg)> for Msg {
-        fn from(pair: (uid::Chart, ChartMsg)) -> Self {
-            Self::Charts(ChartsMsg::from(pair))
-        }
-    }
-    impl From<(uid::Chart, ChartSettingsMsg)> for Msg {
-        fn from(pair: (uid::Chart, ChartSettingsMsg)) -> Self {
-            Self::Charts(ChartsMsg::from(pair))
+    base::implement! {
+        impl Msg {
+            From {
+                from (uid::Chart, ChartMsg) => |pair| Self::Charts(ChartsMsg::from(pair)),
+                from (uid::Chart, ChartSettingsMsg) => |pair| Self::Charts(ChartsMsg::from(pair)),
+                from FiltersMsg => |msg| Self::Filters(msg),
+                from ChartsMsg => |msg| Self::Charts(msg),
+            }
+
+            Into {
+                to yew::format::Text => |self| anyhow::bail!(
+                    "trying to encode a message as text, only binary is supported"
+                ),
+                to yew::format::Binary => |self| match self.to_bytes() {
+                    Ok(bytes) => Ok(bytes),
+                    Err(e) => anyhow::bail!("{}", e),
+                }
+            }
         }
     }
 
@@ -106,7 +130,12 @@ pub mod to_server {
         /// Reloads all charts.
         Reload,
         /// An update for a specific chart.
-        ChartUpdate { uid: uid::Chart, msg: ChartMsg },
+        ChartUpdate {
+            /// UID of the chart the message is for.
+            uid: uid::Chart,
+            /// Actual message.
+            msg: ChartMsg,
+        },
     }
     impl fmt::Display for ChartsMsg {
         fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -128,22 +157,22 @@ pub mod to_server {
         }
     }
 
-    impl From<(uid::Chart, ChartMsg)> for ChartsMsg {
-        fn from((uid, msg): (uid::Chart, ChartMsg)) -> Self {
-            Self::ChartUpdate { uid, msg }
-        }
-    }
-    impl From<(uid::Chart, ChartSettingsMsg)> for ChartsMsg {
-        fn from((uid, msg): (uid::Chart, ChartSettingsMsg)) -> Self {
-            Self::ChartUpdate {
-                uid,
-                msg: msg.into(),
+    base::implement! {
+        impl ChartsMsg {
+            From {
+                from (uid::Chart, ChartMsg) => |(uid, msg)| Self::ChartUpdate { uid, msg },
+                from (uid::Chart, ChartSettingsMsg) => |(uid, msg)| Self::ChartUpdate {
+                    uid,
+                    msg: msg.into(),
+                }
             }
         }
     }
 
+    /// A message for a specific chart.
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum ChartMsg {
+        /// Settings update.
         SettingsUpdate(ChartSettingsMsg),
     }
     impl fmt::Display for ChartMsg {
@@ -154,9 +183,11 @@ pub mod to_server {
         }
     }
 
-    impl From<ChartSettingsMsg> for ChartMsg {
-        fn from(msg: ChartSettingsMsg) -> Self {
-            Self::SettingsUpdate(msg)
+    base::implement! {
+        impl ChartMsg {
+            From {
+                from ChartSettingsMsg => |msg| Self::SettingsUpdate(msg)
+            }
         }
     }
 
@@ -218,31 +249,6 @@ pub mod to_server {
                 catch_all,
             }
             .into()
-        }
-    }
-
-    impl Into<yew::format::Text> for Msg {
-        fn into(self) -> yew::format::Text {
-            anyhow::bail!("trying to encode a message as text, only binary is supported")
-        }
-    }
-    impl Into<yew::format::Binary> for Msg {
-        fn into(self) -> yew::format::Binary {
-            match self.to_bytes() {
-                Ok(bytes) => Ok(bytes),
-                Err(e) => anyhow::bail!("{}", e),
-            }
-        }
-    }
-
-    impl From<FiltersMsg> for Msg {
-        fn from(msg: FiltersMsg) -> Self {
-            Self::Filters(msg)
-        }
-    }
-    impl From<ChartsMsg> for Msg {
-        fn from(msg: ChartsMsg) -> Self {
-            Self::Charts(msg)
         }
     }
 }
@@ -311,10 +317,12 @@ pub mod to_client {
             Self::FilterStats(stats)
         }
 
+        /// Encodes the message as bytes.
         pub fn to_bytes(&self) -> Res<Vec<u8>> {
             Ok(base::bincode::serialize(self)?)
         }
 
+        /// Decodes the message from bytes.
         pub fn from_bytes(bytes: &[u8]) -> Res<Self> {
             Ok(base::bincode::deserialize(bytes)?)
         }
@@ -350,14 +358,12 @@ pub mod to_client {
         }
     }
 
-    impl From<ChartsMsg> for Msg {
-        fn from(msg: ChartsMsg) -> Self {
-            Self::Charts(msg)
-        }
-    }
-    impl From<FiltersMsg> for Msg {
-        fn from(msg: FiltersMsg) -> Self {
-            Self::Filters(msg)
+    base::implement! {
+        impl Msg {
+            From {
+                from ChartsMsg => |msg| Self::Charts(msg),
+                from FiltersMsg => |msg| Self::Filters(msg),
+            }
         }
     }
 
@@ -367,10 +373,17 @@ pub mod to_client {
         /// Creates a new chart.
         NewChart(chart::ChartSpec, chart::ChartSettings),
         /// Message for a specific chart.
-        Chart { uid: uid::Chart, msg: ChartMsg },
+        Chart {
+            /// UID of the chart this message is for.
+            uid: uid::Chart,
+            /// Actual chart message.
+            msg: ChartMsg,
+        },
         /// A new collection of points, overwrites existing points.
         NewPoints {
+            /// New points.
             points: point::ChartPoints,
+            /// If true, refresh all filters.
             refresh_filters: bool,
         },
         /// Some points to append to existing points.
@@ -485,8 +498,11 @@ pub mod to_client {
 
         /// Orders the client to revert all its filters.
         Revert {
+            /// Specification for the `everything` filter.
             everything: FilterSpec,
+            /// Specification for custom filters.
             filters: Vec<Filter>,
+            /// Specification for the `catch_all` filter.
             catch_all: FilterSpec,
         },
 
@@ -515,45 +531,36 @@ pub mod to_client {
         }
     }
 
-    impl Into<Res<Msg>> for RawMsg {
-        fn into(self) -> Res<Msg> {
-            let res = match self {
-                RawMsg::Binary(res_bytes) => {
-                    let bytes = res_bytes
-                        .map_err(err::Error::from)
-                        .chain_err(|| "while retrieving message from the server")?;
-                    Msg::from_bytes(&bytes)
-                }
-                RawMsg::Text(res_string) => {
-                    let _ = res_string
-                        .map_err(err::Error::from)
-                        .chain_err(|| "while retrieving message from the server")?;
-                    bail!(
-                        "trying to build message from text representation, \
-                        only binary format is supported"
-                    )
-                }
-            };
-            res.chain_err(|| "while parsing a message from the server")
-        }
-    }
-
     /// A raw message from the server.
     #[derive(Debug, Clone)]
     pub enum RawMsg {
         /// Binary version.
         Binary(Result<Vec<u8>, String>),
-        /// String version.
-        Text(Result<String, String>),
     }
-    impl From<yew::format::Binary> for RawMsg {
-        fn from(data: yew::format::Binary) -> Self {
-            RawMsg::Binary(data.map_err(|e| e.to_string()))
-        }
-    }
-    impl From<yew::format::Text> for RawMsg {
-        fn from(data: yew::format::Text) -> Self {
-            RawMsg::Text(data.map_err(|e| e.to_string()))
+
+    base::implement! {
+        impl RawMsg {
+            From {
+                from yew::format::Binary => |data| RawMsg::Binary(data.map_err(|e| e.to_string())),
+                from yew::format::Text => |_| panic!(
+                    "trying to decode a message from text, \
+                    but only decoding from binary is supported"
+                ),
+            }
+
+            Into {
+                to Res<Msg> => |self| {
+                    let res = match self {
+                        RawMsg::Binary(res_bytes) => {
+                            let bytes = res_bytes
+                                .map_err(err::Error::from)
+                                .chain_err(|| "while retrieving message from the server")?;
+                            Msg::from_bytes(&bytes)
+                        }
+                    };
+                    res.chain_err(|| "while parsing a message from the server")
+                }
+            }
         }
     }
 }

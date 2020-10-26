@@ -1,13 +1,21 @@
+//! Backtrace context allowing to parse and decode backtrace information.
+
 prelude! {}
 
+/// Size of the backtrace builder's cache.
 const CACHE_SIZE: usize = 1 << 14;
 
+/// Backtrace parsing context.
 pub struct Cxt {
+    /// Location cache.
     cache_loc: Vec<usize>,
+    /// Location prediction list.
     cache_pred: Vec<usize>,
+    /// Last backtrace seen.
     last_backtrace: Vec<usize>,
 }
 impl Cxt {
+    /// Constructor.
     pub fn new() -> Self {
         Self {
             cache_loc: vec![0; CACHE_SIZE],
@@ -16,6 +24,7 @@ impl Cxt {
         }
     }
 
+    /// Multi-line string representation of a backtrace context.
     pub fn to_ml_string(&self) -> String {
         let mut s = format!("{{\n");
         s.push_str("    cache_loc: [");
@@ -43,7 +52,10 @@ impl Cxt {
         s
     }
 
-    fn realloc(buf: &mut Vec<usize>, pos: usize, val: usize) {
+    /// Extends `buf` so that it can fit more elements, and inserts `val` at `pos` in `buf`.
+    ///
+    /// Expects that `pos == buf.len()`, this is always checked at the beginning of the function.
+    fn extend(buf: &mut Vec<usize>, pos: usize, val: usize) {
         assert!(pos == buf.len());
 
         let new_len = if buf.len() < 16 { 32 } else { buf.len() * 2 };
@@ -52,15 +64,19 @@ impl Cxt {
         buf.resize(new_len, val)
     }
 
+    /// Inserts the `pos`/`val` binding in `buf`.
+    ///
+    /// Extends `buf` if necessary.
     fn put(buf: &mut Vec<usize>, pos: usize, val: usize) {
         if pos < buf.len() {
             let cell = unsafe { buf.get_unchecked_mut(pos) };
             *cell = val
         } else {
-            Self::realloc(buf, pos, val)
+            Self::extend(buf, pos, val)
         }
     }
 
+    /// Retrieves a backtrace at the current position in the input parser.
     pub fn get_backtrace<'data>(
         &mut self,
         parser: &mut impl CanParse<'data>,
@@ -134,6 +150,7 @@ impl Cxt {
         Ok(res)
     }
 
+    /// Ignores a backtrace at the current position in the input parser.
     pub fn skip_backtrace<'data>(
         &mut self,
         parser: &mut impl CanParse<'data>,
@@ -151,6 +168,7 @@ impl Cxt {
         Ok(())
     }
 
+    /// Parses cache-verification data and checks the internal cache is consistent with it.
     pub fn check_cache_verifier<'data>(&self, parser: &mut impl CanParse<'data>) -> Res<()> {
         let ix: usize = convert(parser.u16()?, "check_cache_verifier: ix");
         let pred = parser.u16()? as usize;
@@ -192,6 +210,8 @@ impl Cxt {
 
         Ok(())
     }
+
+    /// Parses cache-verification data and ignores it.
     pub fn skip_cache_verifier<'data>(&self, parser: &mut impl CanParse<'data>) -> Res<()> {
         let _ix = parser.u16()?;
         let _pred = parser.u16()?;

@@ -1,3 +1,4 @@
+/// Import the crate's whole prelude.
 #[macro_export]
 macro_rules! prelude {
     () => {

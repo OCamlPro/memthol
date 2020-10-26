@@ -116,6 +116,7 @@ new_uids! {
     mod alloc_uid {
         /// Allocation UID.
         Alloc,
+        /// Map from allocation UIDs to something.
         map: AllocMap with iter: AllocIter,
     }
 
@@ -180,9 +181,11 @@ impl Line {
         }
     }
 
+    /// True if the filter is the `everything` filter.
     pub fn is_everything(self) -> bool {
         self == Self::Everything
     }
+    /// True if the filter is the `catch_all` filter.
     pub fn is_catch_all(self) -> bool {
         self == Self::CatchAll
     }

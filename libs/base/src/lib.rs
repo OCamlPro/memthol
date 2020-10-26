@@ -1,5 +1,7 @@
 //! Re-exports, types and helpers for all crates in this project.
 
+#![deny(missing_docs)]
+
 pub extern crate bincode;
 pub extern crate chrono;
 pub extern crate log;

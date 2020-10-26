@@ -2,13 +2,18 @@
 
 prelude! {}
 
+/// A chart's display mode.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum DisplayMode {
+    /// Normal mode.
     Normal,
+    /// Stacked area mode.
     StackedArea,
+    /// Stacked area percent mode.
     StackedAreaPercent,
 }
 impl DisplayMode {
+    /// Short description of the display mode.
     pub fn desc(self) -> &'static str {
         match self {
             Self::Normal => "normal",
@@ -17,12 +22,14 @@ impl DisplayMode {
         }
     }
 
+    /// True if the display mode is the normal one.
     pub fn is_normal(self) -> bool {
         match self {
             Self::Normal => true,
             Self::StackedArea | Self::StackedAreaPercent => false,
         }
     }
+    /// True if the display mode is a stacked-area variant.
     pub fn is_stacked_area(self) -> bool {
         match self {
             Self::Normal => false,
@@ -30,10 +37,22 @@ impl DisplayMode {
         }
     }
 
+    /// List of all the display modes.
     pub fn all() -> Vec<Self> {
+        base::debug_do! {
+            // If you get an error here, it means the definition of `Pred` changed. You need to
+            // update the following `match` statement, as well as the list returned by this function
+            // (below).
+            match Self::Normal {
+                Self::Normal
+                | Self::StackedArea
+                | Self::StackedAreaPercent => ()
+            }
+        }
         vec![Self::Normal, Self::StackedArea, Self::StackedAreaPercent]
     }
 
+    /// An identifier-like name for a display mode.
     pub fn to_uname(self) -> &'static str {
         match self {
             Self::Normal => "normal",
@@ -41,6 +60,7 @@ impl DisplayMode {
             Self::StackedAreaPercent => "stacked_area_percent",
         }
     }
+    /// Parses an identifier-like name for a display mode.
     pub fn from_uname(uname: &'static str) -> Option<Self> {
         Some(match uname {
             "normal" => Self::Normal,
@@ -57,6 +77,11 @@ impl fmt::Display for DisplayMode {
 }
 
 /// Resolution.
+///
+/// Mostly used so that the client can send the resolution of each chart to the server. The reason
+/// is that resolution is taken into account when extracting the actual points to send to the
+/// client. This extraction will typically compress points that are too close together, for both
+/// readability and performance.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Resolution {
     /// Width.
@@ -64,25 +89,34 @@ pub struct Resolution {
     /// Height.
     pub height: u32,
 }
-impl From<(u32, u32)> for Resolution {
-    fn from((width, height): (u32, u32)) -> Self {
-        Self { width, height }
-    }
-}
-impl fmt::Display for Resolution {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{}x{}", self.width, self.height)
+
+base::implement! {
+    impl Resolution {
+        From {
+            from (u32, u32) => |(width, height)| Self { width, height },
+        }
+        Display {
+            |&self, fmt| write!(fmt, "{}x{}", self.width, self.height),
+        }
     }
 }
 
+/// Settings for a chart.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ChartSettings {
+    /// Title.
     title: String,
+    /// Display mode.
     display_mode: DisplayMode,
+    /// True if this kind of chart can be displayed stack-area style.
     can_stacked_area: bool,
+    /// True if this chart is visible.
     visible: bool,
+    /// True if the x-axis is logarithmic.
     x_log: bool,
+    /// True if the y-axis is logarithmic.
     y_log: bool,
+    /// Resolution of the chart, if it is known.
     resolution: Option<Resolution>,
 }
 impl ChartSettings {

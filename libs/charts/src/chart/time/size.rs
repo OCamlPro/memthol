@@ -35,6 +35,7 @@ impl TimeSize {
 
 #[cfg(any(test, feature = "server"))]
 impl TimeSize {
+    /// Retrieves the new points since the last time it was called.
     pub fn new_points(
         &mut self,
         filters: &mut Filters,
@@ -45,6 +46,7 @@ impl TimeSize {
         Ok(self.generate_points()?.into())
     }
 
+    /// Resets (drops) all its points and re-initializes itself for `filters`.
     pub fn reset(&mut self, filters: &filter::Filters) {
         self.last_time_stamp = None;
         self.size = Self::init_size_point(filters);
@@ -71,6 +73,7 @@ impl TimeSize {
     }
 }
 
+/// Retrieves an entry in a `TimeSize` map, introduces a new empty point if needed.
 #[cfg(any(test, feature = "server"))]
 macro_rules! map {
     (entry $map:expr, with $filters:expr => at $date:expr) => {

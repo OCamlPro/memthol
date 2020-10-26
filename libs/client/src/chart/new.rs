@@ -4,6 +4,9 @@ prelude! {}
 
 use chart::axis::{XAxis, YAxis};
 
+/// Representation of a chart before it is constructed.
+///
+/// Used when the user specifies a new chart before clicking "create".
 pub struct NewChart {
     /// X-axis selection.
     pub x_axis: XAxis,
@@ -67,7 +70,7 @@ impl NewChart {
         let (x_axis, y_axis) = (self.x_axis, self.y_axis);
 
         html! {
-            <center class=style::class::chart::HEADER>
+            <center class="chart_header">
                 <h2>
                     <div
                         style = CREATE_STYLE

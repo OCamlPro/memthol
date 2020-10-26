@@ -6,10 +6,17 @@ mod watcher;
 
 pub use watcher::Watcher;
 
+/// Factory used when parsing dump-data.
+///
+/// The role of this factory is to get write-locks over the different factories needed at
+/// parse-time. This avoids asking for the lock each time it is needed.
 pub struct FullFactory<'a> {
+    /// Lock over the allocation-data factories.
     factory: alloc_data::mem::Factory<'a>,
+    /// Lock over the `Data` structure storing the whole dump.
     data: sync::RwLockWriteGuard<'a, Data>,
 }
+
 impl<'a> std::ops::Deref for FullFactory<'a> {
     type Target = alloc_data::mem::Factory<'a>;
     fn deref(&self) -> &Self::Target {
@@ -21,7 +28,9 @@ impl<'a> std::ops::DerefMut for FullFactory<'a> {
         &mut self.factory
     }
 }
+
 impl<'a> FullFactory<'a> {
+    /// Constructor.
     pub fn new(callstack_is_rev: bool) -> Self {
         Self {
             factory: alloc_data::mem::Factory::new(callstack_is_rev),
@@ -29,16 +38,20 @@ impl<'a> FullFactory<'a> {
         }
     }
 
+    /// Builds a new allocation.
     pub fn build_new(&mut self, alloc: alloc::Builder) -> Res<()> {
         self.data.build_new(alloc)
     }
+    /// Registers an allocation.
     pub fn add_new(&mut self, alloc: Alloc) -> Res<()> {
         self.data.add_new(alloc)
     }
+    /// Registers the death of an allocation.
     pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: uid::Alloc) -> Res<()> {
         self.data.add_dead(timestamp, uid)
     }
 
+    /// Fills the statistics of the underlying data structure for the whole dump.
     pub fn fill_stats(&mut self) -> Res<()> {
         self.data.fill_stats()
     }
@@ -65,6 +78,7 @@ lazy_static! {
 pub mod progress {
     use super::*;
 
+    /// Read-lock over the global progress data.
     fn read<'a>() -> Res<sync::RwLockReadGuard<'a, Option<LoadInfo>>> {
         PROG.read()
             .map_err(|e| {
@@ -73,6 +87,7 @@ pub mod progress {
             })
             .chain_err(|| "while reading the progress status")
     }
+    /// Write-lock over the global progress data.
     fn write<'a>() -> Res<sync::RwLockWriteGuard<'a, Option<LoadInfo>>> {
         PROG.write()
             .map_err(|e| {
@@ -133,7 +148,7 @@ pub mod progress {
     }
 }
 
-/// Global state accessor.
+/// Global data read-accessor.
 pub fn get<'a>() -> Res<sync::RwLockReadGuard<'a, Data>> {
     DATA.read()
         .map_err(|e| {
@@ -148,7 +163,7 @@ pub fn alloc_count() -> Res<usize> {
     get().map(|data| data.uid_map.len())
 }
 
-/// Global state mutable accessor.
+/// Global data write-accessor.
 fn get_mut<'a>() -> Res<sync::RwLockWriteGuard<'a, Data>> {
     DATA.write()
         .map_err(|e| {
@@ -322,12 +337,14 @@ impl Data {
         self.tod_map.entry(time).or_insert_with(AllocUidSet::new)
     }
 
+    /// Applies some action on the allocation statistics.
     pub fn stats_do(&mut self, action: impl FnOnce(&mut AllocStats)) {
         if let Some(stats) = self.stats.as_mut() {
             action(stats)
         }
     }
 
+    /// Fills the allocation statistics.
     pub fn fill_stats(&mut self) -> Res<()> {
         let stats = self
             .stats
@@ -349,6 +366,7 @@ impl Data {
         self.current_time = time::SinceStart::zero();
     }
 
+    /// Builds a new allocation.
     pub fn build_new(&mut self, alloc: alloc::Builder) -> Res<()> {
         if self.current_time != alloc.toc {
             self.current_time = alloc.toc.clone()
@@ -366,6 +384,7 @@ impl Data {
         Ok(())
     }
 
+    /// Registers a new allocation.
     pub fn add_new(&mut self, alloc: Alloc) -> Res<()> {
         self.current_time = alloc.toc;
         let uid = self.uid_map.next_index();
@@ -387,6 +406,7 @@ impl Data {
         Ok(())
     }
 
+    /// Registers an allocation's death.
     pub fn add_dead(&mut self, timestamp: time::SinceStart, uid: uid::Alloc) -> Res<()> {
         self.uid_map[uid].set_tod(timestamp)?;
         self.current_time = timestamp;

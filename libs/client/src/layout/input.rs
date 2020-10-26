@@ -24,6 +24,7 @@ define_style! {
     };
 }
 
+/// Generates HTML for a text input field.
 pub fn text_input(value: &str, onchange: OnChangeAction) -> Html {
     html! {
         <input
@@ -36,6 +37,7 @@ pub fn text_input(value: &str, onchange: OnChangeAction) -> Html {
     }
 }
 
+/// Parses a modification from a text-input field as a string.
 fn parse_text_data(data: ChangeData) -> Res<String> {
     match data {
         yew::html::ChangeData::Value(txt) => Ok(txt),
@@ -45,6 +47,7 @@ fn parse_text_data(data: ChangeData) -> Res<String> {
     }
 }
 
+/// Generates a text-input field expecting a string result.
 pub fn string_input(
     model: &Model,
     value: &str,
@@ -60,10 +63,12 @@ pub fn string_input(
     )
 }
 
+/// Parses a modification from a text-input field as a usize.
 fn parse_usize_data(data: ChangeData) -> Res<usize> {
     use alloc::parser::Parseable;
     parse_text_data(data).and_then(|txt| usize::parse(txt).map_err(|e| e.into()))
 }
+/// Generates a text-input field expecting an integer (`usize`) result.
 pub fn usize_input(model: &Model, value: usize, msg: impl Fn(Res<usize>) -> Msg + 'static) -> Html {
     text_input(
         &value.to_string(),
@@ -75,6 +80,7 @@ pub fn usize_input(model: &Model, value: usize, msg: impl Fn(Res<usize>) -> Msg 
     )
 }
 
+/// Generates a text-input field expecting a lifetime-like value.
 pub fn lifetime_input(
     model: &Model,
     value: time::Lifetime,
@@ -95,6 +101,7 @@ fn parse_u32_data(data: ChangeData) -> Res<u32> {
     use alloc::parser::Parseable;
     parse_text_data(data).and_then(|txt| u32::parse(txt).map_err(|e| e.into()))
 }
+/// Generates a text-input field expecting an integer (`u32`) value.
 pub fn u32_input(model: &Model, value: u32, msg: impl Fn(Res<u32>) -> Msg + 'static) -> Html {
     text_input(
         &value.to_string(),
@@ -106,6 +113,7 @@ pub fn u32_input(model: &Model, value: u32, msg: impl Fn(Res<u32>) -> Msg + 'sta
     )
 }
 
+/// Generates HTML for a color selector.
 pub fn color_input(value: &impl fmt::Display, onchange: OnChangeAction) -> Html {
     html! {
         <input
@@ -118,6 +126,7 @@ pub fn color_input(value: &impl fmt::Display, onchange: OnChangeAction) -> Html 
     }
 }
 
+/// Generates HTML for a checkbox.
 pub fn checkbox(
     checked: bool,
     name: impl Into<String>,
@@ -154,6 +163,7 @@ pub fn checkbox(
     }
 }
 
+/// Generates HTML for a radio selector.
 pub fn radio(
     checked: bool,
     name: impl Into<String>,

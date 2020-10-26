@@ -19,20 +19,32 @@ prelude! {}
 ///     - [`for_footer`](#method.for_footer)
 #[derive(Clone, Copy)]
 pub struct BoxProps<'color> {
+    /// Color of the border.
     border_color: &'color str,
+    /// Color of the top color.
     gradient_top: &'color str,
+    /// Color of the bottom color.
     gradient_bot: &'color str,
+    /// Rounded corner radius size in pixels.
     radius_px: u8,
+    /// Stroke size in pixels.
     stroke_px: u8,
+    /// Top-left corner is rounded flag.
     tl_rounded: bool,
+    /// Top-right corner is rounded flag.
     tr_rounded: bool,
+    /// Bottom-left corner is rounded flag.
     bl_rounded: bool,
+    /// Bottom-right corner is rounded flag.
     br_rounded: bool,
+    /// True if the buttons are displayed at the top of something.
     top: bool,
+    /// (De)activates wrapping of the buttons' text.
     no_wrap: bool,
 }
 
 impl<'color> BoxProps<'color> {
+    /// Constructor.
     pub const fn new(border_color: &'color str) -> Self {
         Self {
             radius_px: 5,
@@ -49,6 +61,7 @@ impl<'color> BoxProps<'color> {
         }
     }
 
+    /// Button constructor.
     pub const fn new_button(border_color: &'color str) -> Self {
         Self {
             radius_px: 5,
@@ -65,6 +78,7 @@ impl<'color> BoxProps<'color> {
         }
     }
 
+    /// Tab constructor.
     pub const fn new_tab(border_color: &'color str) -> Self {
         Self {
             radius_px: 5,
@@ -258,6 +272,7 @@ pub mod text {
         }
     }
 
+    /// Renders a button using default box properties.
     pub fn render_default_button(
         id: impl fmt::Display,
         txt: impl fmt::Display,
@@ -267,6 +282,7 @@ pub mod text {
         render(Some(*DEFAULT_BUTTON_BOX_PROPS), id, txt, onclick, dimmed)
     }
 
+    /// Renders a button using custom box properties.
     pub fn render(
         props: Option<BoxProps<'_>>,
         id: impl fmt::Display,
@@ -310,6 +326,7 @@ pub mod text {
         }
     }
 
+    /// Renders an image.
     pub(super) fn img_render(
         dimension_px: usize,
         props: Option<BoxProps<'_>>,
@@ -390,20 +407,32 @@ pub mod img {
         };
     }
 
+    /// Enumerates all available images.
     #[derive(Clone, Copy, Debug)]
     pub enum Img {
+        /// Close image.
         Close,
+        /// Collapse image.
         Collapse,
+        /// Expand image.
         Expand,
+        /// ArrowUp image.
         ArrowUp,
+        /// ArrowDown image.
         ArrowDown,
+        /// Plus image.
         Plus,
+        /// Minus image.
         Minus,
+        /// Undo image.
         Undo,
+        /// Check image.
         Check,
+        /// Dots image.
         Dots,
     }
     impl Img {
+        /// Renders itself.
         pub fn render(
             self,
             dimension_px: Option<usize>,
@@ -425,6 +454,7 @@ pub mod img {
             }
         }
 
+        /// Renders itself as a button.
         pub fn button_render(
             self,
             dimension_px: usize,

@@ -26,6 +26,8 @@
 //! [`alloc_data` crate]: ../alloc_data/index.html (Memthol's alloc_data crate)
 //! [`charts` crate]: ../charts/index.html (Memthol's charts crate)
 
+#![deny(missing_docs)]
+
 #[macro_use]
 pub mod prelude;
 

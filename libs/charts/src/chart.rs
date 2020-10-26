@@ -22,6 +22,7 @@ pub enum RawChart {
 
 #[cfg(any(test, feature = "server"))]
 impl RawChart {
+    /// Constructor.
     fn new_points(
         &mut self,
         filters: &mut Filters,
@@ -33,6 +34,7 @@ impl RawChart {
         }
     }
 
+    /// Resets a raw chart.
     fn reset(&mut self, filters: &filter::Filters) {
         match self {
             Self::Time(chart) => chart.reset(filters),
@@ -42,7 +44,7 @@ impl RawChart {
 
 #[cfg(any(test, feature = "server"))]
 impl RawChart {
-    /// Creates a raw chart.
+    /// Constructor.
     pub fn new(filters: &filter::Filters, x_axis: XAxis, y_axis: YAxis) -> Res<Self> {
         let chart = match x_axis {
             XAxis::Time => Self::Time(match y_axis {
@@ -53,12 +55,20 @@ impl RawChart {
     }
 }
 
+/// A chart a specification and some settings.
 #[cfg(any(test, feature = "server"))]
 pub struct Chart {
+    /// Chart specification.
     spec: ChartSpec,
+    /// Chart settings.
     settings: ChartSettings,
+    /// Raw chart.
     #[allow(dead_code)]
     chart: RawChart,
+    /// If true, the chart has not been initialized yet.
+    ///
+    /// This typically happens server-side, as the server needs the actual resolution of the chart
+    /// (which only the client-side knows) before it can send the initial points.
     still_init: bool,
 }
 #[cfg(any(test, feature = "server"))]
@@ -111,6 +121,7 @@ impl Chart {
 
 #[cfg(any(test, feature = "server"))]
 impl Chart {
+    /// Retrieves new points since the last time it was called.
     pub fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Option<Points>> {
         self.still_init = self.still_init || init;
         if let Some(resolution) = self.settings.resolution() {
@@ -125,6 +136,7 @@ impl Chart {
         }
     }
 
+    /// Resets a chart.
     pub fn reset(&mut self, filters: &filter::Filters) {
         self.chart.reset(filters)
     }

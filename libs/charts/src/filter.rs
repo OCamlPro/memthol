@@ -52,7 +52,7 @@ where
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum CmpKind {
     /// Ordered comparison.
-    Ord(ord::Kind),
+    Ord(ord::Pred),
     /// Label comparison.
     Label(label::LabelPred),
     /// Location comparison.
@@ -60,7 +60,7 @@ pub enum CmpKind {
 }
 impl CmpKind {
     /// Ordered comparison constructor.
-    pub fn new_ord(kind: ord::Kind) -> Self {
+    pub fn new_ord(kind: ord::Pred) -> Self {
         Self::Ord(kind)
     }
     /// Label comparison constructor.
@@ -106,6 +106,7 @@ impl fmt::Display for FilterKind {
 }
 
 impl FilterKind {
+    /// List of all the different filter kinds.
     pub fn all() -> Vec<FilterKind> {
         base::debug_do! {
             // If this fails, it means you added/removed a variant to/from `FilterKind`. The vector
@@ -170,12 +171,15 @@ impl Filters {
         }
     }
 
+    /// Specification of the `catch_all` filter.
     pub fn catch_all(&self) -> &FilterSpec {
         &self.catch_all
     }
+    /// Specification of the `everything` filter.
     pub fn everything(&self) -> &FilterSpec {
         &self.everything
     }
+    /// Specifications of the custom filters.
     pub fn filters(&self) -> &Vec<Filter> {
         &self.filters
     }

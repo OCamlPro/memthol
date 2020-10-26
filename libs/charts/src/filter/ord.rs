@@ -2,14 +2,19 @@
 
 prelude! {}
 
+/// Comparison predicate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum Kind {
+pub enum Pred {
+    /// Equals.
     Eq,
+    /// Greater or equal.
     Ge,
+    /// Less or equal.
     Le,
+    /// Inside a range.
     In,
 }
-impl fmt::Display for Kind {
+impl fmt::Display for Pred {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Eq => write!(fmt, "="),
@@ -19,19 +24,36 @@ impl fmt::Display for Kind {
         }
     }
 }
-impl Kind {
-    pub fn all() -> Vec<Kind> {
+impl Pred {
+    /// A list of all the predicates variants.
+    pub fn all() -> Vec<Pred> {
+        base::debug_do! {
+            // If you get an error here, it means the definition of `Pred` changed. You need to
+            // update the following `match` statement, as well as the list returned by this function
+            // (below).
+            match Self::Eq {
+                Self::Eq
+                | Self::Ge
+                | Self::Le
+                | Self::In => ()
+            }
+        }
         vec![Self::Eq, Self::Ge, Self::Le, Self::In]
     }
 }
 
+/// Comparison predicates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Cmp {
+    /// Equal.
     Eq,
+    /// Greater or equal.
     Ge,
+    /// Less or equal.
     Le,
 }
 impl Cmp {
+    /// Applies the comparison predicate to some quantities.
     pub fn apply<Num: PartialEq + PartialOrd>(&self, lhs: Num, rhs: Num) -> bool {
         match self {
             Self::Eq => lhs == rhs,
@@ -40,6 +62,7 @@ impl Cmp {
         }
     }
 
+    /// String representation of a predicate.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Eq => "=",
@@ -54,16 +77,30 @@ impl fmt::Display for Cmp {
     }
 }
 
+/// A filter for ordered quantities.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OrdFilter<Num> {
-    Cmp { cmp: Cmp, val: Num },
-    In { lb: Num, ub: Num },
+    /// Comparison with a constant.
+    Cmp {
+        /// Operator.
+        cmp: Cmp,
+        /// Constant value.
+        val: Num,
+    },
+    /// Interval.
+    In {
+        /// Lower-bound.
+        lb: Num,
+        /// Upper-bound.
+        ub: Num,
+    },
 }
 
 impl<Num> OrdFilter<Num>
 where
     Num: PartialEq + PartialOrd + fmt::Debug,
 {
+    /// Creates an interval filter.
     pub fn between(lb: Num, ub: Num) -> Res<Self> {
         if lb <= ub {
             Ok(Self::In { lb, ub })
@@ -71,31 +108,39 @@ where
             bail!("illegal interval [{:?}, {:?}]", lb, ub)
         }
     }
+
+    /// Creates a filter for a comparison with a constant.
     pub fn cmp(cmp: Cmp, val: Num) -> Self {
         Self::Cmp { cmp, val }
     }
-    pub fn default_of_cmp(cmp_kind: Kind) -> Self
+
+    /// Generates a default filter for an ordered filter predicate.
+    pub fn default_of_cmp(cmp_kind: Pred) -> Self
     where
         Num: Default,
     {
         match cmp_kind {
-            Kind::Eq => Self::cmp(Cmp::Eq, Num::default()),
-            Kind::Ge => Self::cmp(Cmp::Ge, Num::default()),
-            Kind::Le => Self::cmp(Cmp::Le, Num::default()),
-            Kind::In => Self::between(Num::default(), Num::default()).unwrap(),
+            Pred::Eq => Self::cmp(Cmp::Eq, Num::default()),
+            Pred::Ge => Self::cmp(Cmp::Ge, Num::default()),
+            Pred::Le => Self::cmp(Cmp::Le, Num::default()),
+            Pred::In => Self::between(Num::default(), Num::default()).unwrap(),
         }
     }
 
-    pub fn change_cmp_kind(self, kind: Kind) -> Self
+    /// Changes the predicate of a an ordered filter.
+    ///
+    /// This method tries to make the change natural from a user's perspective. For instance, it
+    /// keeps the value for comparison predicates.
+    pub fn change_cmp_kind(self, kind: Pred) -> Self
     where
         Num: Default + Clone,
     {
         match self {
             Self::Cmp { val, .. } => match kind {
-                Kind::Eq => Self::cmp(Cmp::Eq, val),
-                Kind::Ge => Self::cmp(Cmp::Ge, val),
-                Kind::Le => Self::cmp(Cmp::Le, val),
-                Kind::In => Self::In {
+                Pred::Eq => Self::cmp(Cmp::Eq, val),
+                Pred::Ge => Self::cmp(Cmp::Ge, val),
+                Pred::Le => Self::cmp(Cmp::Le, val),
+                Pred::In => Self::In {
                     lb: val.clone(),
                     ub: val,
                 },
@@ -104,12 +149,13 @@ where
         }
     }
 
-    pub fn cmp_kind(&self) -> Kind {
+    /// Accessor for the ordered predicate.
+    pub fn cmp_kind(&self) -> Pred {
         match self {
-            Self::Cmp { cmp: Cmp::Eq, .. } => Kind::Eq,
-            Self::Cmp { cmp: Cmp::Ge, .. } => Kind::Ge,
-            Self::Cmp { cmp: Cmp::Le, .. } => Kind::Le,
-            Self::In { .. } => Kind::In,
+            Self::Cmp { cmp: Cmp::Eq, .. } => Pred::Eq,
+            Self::Cmp { cmp: Cmp::Ge, .. } => Pred::Ge,
+            Self::Cmp { cmp: Cmp::Le, .. } => Pred::Le,
+            Self::In { .. } => Pred::In,
         }
     }
 }

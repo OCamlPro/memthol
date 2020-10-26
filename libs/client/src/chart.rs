@@ -37,6 +37,7 @@ impl Charts {
         &self.dom_node_id
     }
 
+    /// Number of charts.
     pub fn len(&self) -> usize {
         self.charts.len()
     }
@@ -102,6 +103,7 @@ impl Charts {
         }
     }
 
+    /// Runs post-rendering actions.
     pub fn rendered(&mut self, filters: &filter::ReferenceFilters) {
         for chart in &mut self.charts {
             if let Err(e) = chart.rendered(filters) {
@@ -165,6 +167,7 @@ impl Charts {
 
 /// # Rendering
 impl Charts {
+    /// Renders the charts.
     pub fn render(&self, model: &Model) -> Html {
         let charts_len = self.charts.len();
 
@@ -322,6 +325,7 @@ impl Chart {
         })
     }
 
+    /// Handles a message for this chart.
     pub fn update(&mut self, msg: msg::ChartMsg) -> Res<ShouldRender> {
         use msg::ChartMsg::*;
         match msg {
@@ -337,6 +341,7 @@ impl Chart {
         self.spec.uid()
     }
 
+    /// True if the chart already has an associated canvas.
     pub fn has_canvas(&self) -> bool {
         self.chart.is_some()
     }
@@ -368,9 +373,11 @@ impl Chart {
         &self.spec
     }
 
+    /// DOM identifier for the chart's top container.
     pub fn top_container_id(&self) -> &str {
         &self.top_container
     }
+    /// DOM identifier for a chart's direct container.
     pub fn container_id(&self) -> &str {
         &self.container
     }
@@ -392,6 +399,7 @@ impl Chart {
         self.settings_visible = !self.settings_visible
     }
 
+    /// Accessor for filter visibility.
     pub fn filter_visibility(&self) -> &BTMap<uid::Line, bool> {
         &self.filters
     }
@@ -463,7 +471,7 @@ impl Chart {
     }
 }
 
-/// # Functions for message-handling.
+/// # Canvas Handling.
 impl Chart {
     /// Retrieves the canvas associated with a chart.
     fn get_canvas_container(&self) -> Res<web_sys::Element> {
@@ -509,6 +517,7 @@ impl Chart {
         Ok(())
     }
 
+    /// Unbinds and re-binds the chart canvas.
     pub fn rebind_canvas(&mut self) -> Res<()> {
         self.try_unbind_canvas()?;
         self.bind_canvas()
@@ -688,6 +697,7 @@ impl Chart {
 
 /// # Rendering
 impl Chart {
+    /// Runs post-rendering actions.
     pub fn rendered(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
         self.rebind_canvas()?;
 

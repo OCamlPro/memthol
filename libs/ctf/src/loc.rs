@@ -2,25 +2,35 @@
 
 prelude! {}
 
+/// A string slice and some value.
 pub type Data<'data, T> = (&'data str, T);
+/// An optional [`Data`] value.
+///
+/// [`Data`]: type.Data.html (Data type alias)
 pub type Entry<'data, T> = Option<Data<'data, T>>;
 
-// const FIRST_IDX: Idx = Idx { idx: 0 };
+/// Last legal index in the MTF table.
 const LAST_IDX: u8 = 30;
+/// First non-legal index in the MTF table.
 const MAX_IDX: u8 = LAST_IDX + 1;
 
+/// An index in the MTF table.
+///
+/// Wrapper around a `u8`.
 #[derive(Debug, Clone, Copy)]
 pub struct Idx {
+    /// Actual index.
+    ///
+    /// Considered unknown if `idx > LAST_IDX`.
     idx: u8,
 }
 impl Idx {
+    /// Constructor.
     fn new(idx: u8) -> Self {
         Self { idx }
     }
-    // fn not_found() -> Self {
-    //     Self { idx: MAX_IDX }
-    // }
 
+    /// True if the index is outside of the legal index range.
     pub fn is_not_found(self) -> bool {
         self.idx > LAST_IDX
     }
@@ -31,11 +41,17 @@ impl fmt::Display for Idx {
     }
 }
 
+/// MTF (Move-To-Front) map.
 #[derive(Debug, Clone)]
-struct MtfMap<'data, T> {
+pub struct MtfMap<'data, T> {
+    /// Actual MTF map.
+    ///
+    /// **Always has length `MAX_IDX`.**
     vec: Vec<Entry<'data, T>>,
 }
+
 impl<'data, T> MtfMap<'data, T> {
+    /// Creates an empty MTF map.
     pub fn new() -> Self
     where
         T: Clone,
@@ -45,6 +61,7 @@ impl<'data, T> MtfMap<'data, T> {
         }
     }
 
+    /// Removes the last entry in the MTF map.
     pub fn remove_last(&mut self) -> Entry<'data, T> {
         if let Some(last) = self.vec.last_mut() {
             std::mem::replace(last, None)
@@ -53,35 +70,46 @@ impl<'data, T> MtfMap<'data, T> {
         }
     }
 
-    #[cfg(not(debug_assertions))]
-    #[inline]
-    fn check(&self, _: &'static str) -> Res<()> {
-        Ok(())
-    }
-
-    #[cfg(debug_assertions)]
-    fn check(&self, from: &'static str) -> Res<()> {
-        let mut none_count = 0;
-        for (idx, entry) in self.vec.iter().enumerate() {
-            if none_count > 0 {
-                if entry.is_some() {
-                    bail!(
-                        "[fatal] during {}: mtf map has an entry at {}, \
-                        but it is preceeded by {} none-bindings",
-                        from,
-                        idx,
-                        none_count,
-                    )
-                } else {
+    base::cfg_item! {
+        pref {
+            /// Checks the MTF map's internal invariants.
+            #[inline]
+            fn check(&self, _from: &'static str) -> Res<()>
+        }
+        cfg(debug) {{
+            let from = _from;
+            if self.vec.len() != (LAST_IDX + 1) as usize {
+                bail!(
+                    "MTF table len is {}, expected {}",
+                    self.vec.len(),
+                    LAST_IDX + 1
+                )
+            }
+            let mut none_count = 0;
+            for (idx, entry) in self.vec.iter().enumerate() {
+                if none_count > 0 {
+                    if entry.is_some() {
+                        bail!(
+                            "during {}: mtf map has an entry at {}, \
+                            but it is preceeded by {} none-bindings",
+                            from,
+                            idx,
+                            none_count,
+                        )
+                    } else {
+                        none_count += 1
+                    }
+                } else if entry.is_none() {
                     none_count += 1
                 }
-            } else if entry.is_none() {
-                none_count += 1
             }
-        }
-        Ok(())
+            Ok(())
+        }} else {{
+            Ok(())
+        }}
     }
 
+    /// String representation of the MTF table.
     #[cfg(test)]
     pub fn to_string(&self) -> String
     where
@@ -120,6 +148,9 @@ impl<'data, T> MtfMap<'data, T> {
         self.check("after move_to_front")
     }
 
+    /// Pushes an element at the front of the MTF map.
+    ///
+    /// Slides all elements in the map to the right.
     fn push(&mut self, key: &'data str, val: T) -> Res<()> {
         self.check("before pushing")?;
         let mut tmp = Some((key, val));
@@ -132,6 +163,7 @@ impl<'data, T> MtfMap<'data, T> {
         self.check("after pushing")
     }
 
+    /// Decodes a location at the current position in the input parser.
     pub fn decode<Out, Parser>(
         &mut self,
         parser: &mut Parser,
@@ -160,10 +192,6 @@ impl<'data, T> MtfMap<'data, T> {
             res
         }
     }
-
-    // pub fn last(&self) -> Option<&(&'data str, T)> {
-    //     self.vec[LAST_IDX as usize].as_ref()
-    // }
 }
 
 impl<'data, T> std::ops::Index<Idx> for MtfMap<'data, T> {
@@ -178,14 +206,20 @@ impl<'data, T> std::ops::IndexMut<Idx> for MtfMap<'data, T> {
     }
 }
 
+/// Location parsing context.
+///
+/// Wrapper around an MTF map.
 pub struct Cxt<'data> {
+    /// The MTF map.
     map: MtfMap<'data, MtfMap<'data, ()>>,
 }
 impl<'data> Cxt<'data> {
+    /// Constructs an empty context.
     pub fn new() -> Self {
         Self { map: MtfMap::new() }
     }
 
+    /// Multi-line string representation of the context.
     pub fn to_ml_string(&self) -> String {
         let mut s = format!("{{");
         let mut count = 0;
@@ -222,19 +256,27 @@ impl<'data> Cxt<'data> {
     }
 }
 
+/// A list of locations.
 pub type Locs<'data> = Vec<Location<'data>>;
 
+/// A location.
 #[derive(Debug, Clone)]
 pub struct Location<'data> {
+    /// Encoded binary version of the location.
     pub encoded: usize,
+    /// Path to the allocation-site file.
     pub file_path: &'data str,
     /// Line index (from zero).
     pub line: usize,
     /// Column span (from zero).
     pub col: Span<usize>,
+    /// Definition name.
+    ///
+    /// Currently unused in memthol proper.
     pub def_name: &'data str,
 }
 impl<'data> Location<'data> {
+    /// Parses a location at the current position in the input parser.
     pub fn parse(parser: &mut impl CanParse<'data>, cxt: &mut Cxt<'data>) -> Res<Self> {
         let low: u64 = convert(parser.u32()?, "loc: low");
         let high: u64 = convert(parser.u16()?, "loc: high");

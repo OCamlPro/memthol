@@ -14,11 +14,13 @@ pub use crate::msg;
 /// A set of allocation UIDs.
 pub type AllocUidSet = BTSet<uid::Alloc>;
 
+/// Re-export for network-related stuff.
 pub mod net {
     pub use std::net::{SocketAddr as IpAddr, TcpListener, TcpStream};
 
     pub use tungstenite::{protocol::CloseFrame, Message as Msg};
 
+    /// Type alias for a tungstenite websocket for a TCP stream.
     pub type WebSocket = tungstenite::WebSocket<TcpStream>;
 }
 

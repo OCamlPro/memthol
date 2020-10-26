@@ -20,6 +20,8 @@
 //! [`Date`]: struct.date.html (The Date struct)
 //! [`SinceStart`]: struct.sincestart.html (The SinceStart struct)
 
+#![deny(missing_docs)]
+
 pub use error_chain::bail;
 pub use num_bigint::BigUint;
 
@@ -40,6 +42,7 @@ pub mod err {
     pub use base::err::*;
 }
 
+/// Some tests, only active in `test` mode.
 #[cfg(test)]
 mod test;
 
@@ -149,10 +152,15 @@ impl CLoc {
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AllocKind {
+    /// Minor allocation.
     Minor,
+    /// Major allocation.
     Major,
+    /// Major postponed.
     MajorPostponed,
+    /// Serialized.
     Serialized,
+    /// Unknown allocation.
     Unknown,
 }
 

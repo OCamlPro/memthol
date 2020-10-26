@@ -18,17 +18,21 @@ macro_rules! new {
                 uid: usize,
             }
             impl $uid {
+                /// Mutable factory accessor.
                 pub fn factory_mut<'a>() -> AsWrite<'a> {
                     write()
                 }
+                /// Immutable factory accessor.
                 pub fn factory<'a>() -> AsRead<'a> {
                     read()
                 }
 
+                /// Retrieves the actual value.
                 pub fn get(self) -> Arc<$ty> {
                     Self::factory().get_elm(self)
                 }
 
+                /// Constructor.
                 pub fn new(elm: $ty) -> Self {
                     Self::factory_mut().get_uid(elm)
                 }
@@ -37,23 +41,29 @@ macro_rules! new {
             /// Type of the memory structure.
             type Memory = $crate::mem::Memory<$ty>;
 
+            /// Read-lock over the factory.
             pub struct AsRead<'a> {
                 mem: sync::RwLockReadGuard<'a, Memory>,
             }
             impl<'a> AsRead<'a> {
+                /// Accessor for a value in the factory.
                 pub fn get_elm(&self, uid: $uid) -> Arc<$ty> {
                     self.mem.get_elm(uid.uid)
                 }
             }
+
+            /// Write-lock over the factory.
             pub struct AsWrite<'a> {
                 mem: sync::RwLockWriteGuard<'a, Memory>,
             }
             impl<'a> AsWrite<'a> {
+                /// Creates/retrieves the UID of some value.
                 pub fn get_uid(&mut self, elm: $ty) -> $uid {
                     $uid {
                         uid: self.mem.get_uid(elm),
                     }
                 }
+                /// Accessor for a value in the factory.
                 pub fn get_elm(&self, uid: $uid) -> Arc<$ty> {
                     self.mem.get_elm(uid.uid)
                 }
@@ -94,13 +104,17 @@ pub mod trace;
 
 /// Factory for string, labels and trace creation.
 pub struct Factory<'a> {
+    /// Write-access to the string factory.
     str: str::AsWrite<'a>,
+    /// Write-access to the labels factory.
     labels: labels::AsWrite<'a>,
+    /// Write-access to the trace factory.
     trace: trace::AsWrite<'a>,
     /// Indicates whether the callstacks are in reverse order.
     ///
     /// If true, callstacks must be reversed when registering them.
     callstack_is_rev: bool,
+    /// The empty list of labels.
     empty_labels: Labels,
 }
 impl<'a> Factory<'a> {
@@ -117,18 +131,22 @@ impl<'a> Factory<'a> {
         }
     }
 
+    /// Registers a string in the string factory.
     #[inline]
     pub fn register_str(&mut self, s: &str) -> Str {
         self.str.get_uid(s)
     }
+    /// Registers a label in the label factory.
     #[inline]
     pub fn register_labels(&mut self, labels: Vec<Str>) -> Labels {
         self.labels.get_uid(labels)
     }
+    /// The empty list of labels.
     #[inline]
     pub fn empty_labels(&self) -> Labels {
         self.empty_labels.clone()
     }
+    /// Registers a trace in the trace factory.
     #[inline]
     pub fn register_trace(&mut self, mut trace: Vec<CLoc>) -> Trace {
         if self.callstack_is_rev {
@@ -145,7 +163,9 @@ impl<'a> Factory<'a> {
 /// - insertion of already-known elements, and
 /// - query over already-known elements.
 pub struct Memory<Elm: ?Sized> {
+    /// Maps elements to their UID.
     map: Map<Arc<Elm>, usize>,
+    /// Maps UIDs to elements.
     vec: Vec<Arc<Elm>>,
 }
 
@@ -187,6 +207,7 @@ where
     }
 }
 impl Memory<[u8]> {
+    /// Retrieves the UID of a string slice.
     fn get_uid(&mut self, s: &str) -> usize {
         if let Some(uid) = self.map.get(s.as_bytes()) {
             *uid
