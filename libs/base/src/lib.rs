@@ -4,6 +4,7 @@
 
 pub extern crate bincode;
 pub extern crate chrono;
+pub extern crate conv;
 pub extern crate log;
 pub extern crate peg;
 pub extern crate rand;
@@ -24,6 +25,8 @@ pub mod error_chain {
 }
 
 pub mod err;
+
+use prelude::serde::*;
 
 /// Used to convert between integer representations.
 #[inline]
@@ -93,5 +96,41 @@ pub mod client {
         () => {
             $crate::client_wasm_build_dir_for!(release)
         };
+    }
+}
+
+/// Represents a sample rate.
+///
+/// Contains the original sample rate (`f64`), as well as the integer factor corresponding to
+/// dividing by the sample rate.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SampleRate {
+    /// Actual sample rate.
+    pub sample_rate: f64,
+    /// Factor version of the sample rate.
+    pub factor: usize,
+    /// True if `factor` is an approximation of `1 / sample_rate`.
+    pub factor_is_approx: bool,
+}
+impl SampleRate {
+    /// Constructor.
+    pub fn new(sample_rate: f64) -> Self {
+        use conv::*;
+        let inv = 1. / sample_rate;
+        let factor = inv.trunc();
+        let factor_is_approx = factor == inv;
+        let factor = factor.approx().expect("error while handling sample rate");
+        Self {
+            sample_rate,
+            factor,
+            factor_is_approx,
+        }
+    }
+}
+implement! {
+    impl SampleRate {
+        From {
+            from f64 => |sample_rate| Self::new(sample_rate)
+        }
     }
 }

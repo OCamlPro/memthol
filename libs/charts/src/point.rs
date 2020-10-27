@@ -49,11 +49,27 @@ impl<Val> PointVal<Val> {
         self.get(uid::Line::Everything)
     }
 
-    /// BTMap over all values.
+    /// Map over all values.
     pub fn map<Out>(self, mut f: impl FnMut(uid::Line, Val) -> Res<Out>) -> Res<PointVal<Out>> {
         let mut map = BTMap::new();
         for (uid, val) in self.map {
             map.insert(uid, f(uid, val)?);
+        }
+        let res = PointVal { map };
+        Ok(res)
+    }
+
+    /// Filter-map over all values.
+    pub fn filter_map<Out: PartialEq + fmt::Debug>(
+        self,
+        mut f: impl FnMut(uid::Line, Val) -> Res<Option<Out>>,
+    ) -> Res<PointVal<Out>> {
+        let mut map = BTMap::new();
+        for (uid, val) in self.map {
+            if let Some(res) = f(uid, val)? {
+                let prev = map.insert(uid, res);
+                debug_assert_eq!(prev, None);
+            }
         }
         let res = PointVal { map };
         Ok(res)
@@ -145,6 +161,29 @@ where
     }
 }
 
+/// Size quantity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct Size {
+    /// Actual size value.
+    pub size: u32,
+}
+impl Size {
+    /// Constructor.
+    pub fn new(size: u32) -> Self {
+        Self { size }
+    }
+}
+base::implement! {
+    impl Size {
+        Display {
+            |&self, fmt| self.size.fmt(fmt),
+        }
+        From {
+            from u32 => |size| Self::new(size),
+        }
+    }
+}
+
 /// Extension trait for coordinates.
 ///
 /// Note that the type of the values appearing in a point are not necessarily the same type expected
@@ -166,6 +205,9 @@ where
     /// Type of coordinate ranges.
     type Range;
 
+    /// Generates a default `Self` value.
+    fn default_val() -> Self;
+
     /// Zero value for the actual coordinates.
     fn zero() -> Self::Coord;
     /// True if a coordinate value is zero.
@@ -180,6 +222,9 @@ where
 impl CoordExt for time::Date {
     type Coord = time::chrono::Duration;
     type Range = coord::RangedDuration;
+    fn default_val() -> Self {
+        time::Date::from_timestamp(0, 0)
+    }
     fn zero() -> time::chrono::Duration {
         time::chrono::Duration::seconds(0)
     }
@@ -197,6 +242,29 @@ impl CoordExt for time::Date {
 impl CoordExt for u32 {
     type Coord = u32;
     type Range = coord::RangedCoordu32;
+    fn default_val() -> Self {
+        0
+    }
+    fn zero() -> u32 {
+        0
+    }
+    fn is_zero(val: &u32) -> bool {
+        *val == 0
+    }
+    fn default_min() -> u32 {
+        0
+    }
+    fn default_max() -> u32 {
+        5
+    }
+}
+
+impl CoordExt for Size {
+    type Coord = u32;
+    type Range = coord::RangedCoordu32;
+    fn default_val() -> Self {
+        0.into()
+    }
     fn zero() -> u32 {
         0
     }
@@ -214,6 +282,9 @@ impl CoordExt for u32 {
 impl CoordExt for f32 {
     type Coord = f32;
     type Range = coord::RangedCoordf32;
+    fn default_val() -> Self {
+        0.0
+    }
     fn zero() -> f32 {
         0.0
     }
@@ -236,6 +307,15 @@ pub trait RatioExt {
 impl RatioExt for u32 {
     fn ratio_wrt(&self, max: &Self) -> Res<f32> {
         let (slf, max) = (*self, *max);
+        if max == 0 || slf > max {
+            bail!("cannot compute u32 ratio of {} w.r.t. {}", slf, max)
+        }
+        Ok(((slf * 100) as f32) / (max as f32))
+    }
+}
+impl RatioExt for Size {
+    fn ratio_wrt(&self, max: &Self) -> Res<f32> {
+        let (slf, max) = (self.size, max.size);
         if max == 0 || slf > max {
             bail!("cannot compute u32 ratio of {} w.r.t. {}", slf, max)
         }
@@ -354,10 +434,12 @@ where
     ) -> Res<()>
     where
         DB: plotters::prelude::DrawingBackend,
+        X: fmt::Display,
         Y::Coord: RatioExt
             + std::ops::Add<Output = Y::Coord>
             + std::ops::Sub<Output = Y::Coord>
             + Clone
+            + fmt::Display
             + PartialOrd
             + Ord
             + PartialEq,
@@ -450,27 +532,117 @@ where
 
         Ok(())
     }
-
     /// Stacked area rendering.
     fn chart_render_stacked_area<'spec, DB>(
         &self,
-        _settings: &ChartSettings,
-        mut chart_builder: plotters::prelude::ChartBuilder<DB>,
+        settings: &ChartSettings,
+        chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
         active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
     ) -> Res<()>
     where
         DB: plotters::prelude::DrawingBackend,
+        X: fmt::Display,
         Y::Coord: RatioExt
             + std::ops::Add<Output = Y::Coord>
             + std::ops::Sub<Output = Y::Coord>
             + Clone
+            + fmt::Display
             + PartialOrd
             + Ord
             + PartialEq,
-        Self: ChartRender<X, Y>,
     {
+        self.chart_render_stacked_area_custom(
+            settings,
+            chart_builder,
+            style_conf,
+            is_active,
+            active_filters,
+            Y::zero,
+            |y_val, _y_max| y_val,
+            |min, max| (min..max).into(),
+            Self::y_label_formatter,
+            Y::default_val,
+        )
+    }
+
+    /// Percent stacked area rendering.
+    fn chart_render_stacked_area_percent<'spec, DB>(
+        &self,
+        settings: &ChartSettings,
+        chart_builder: plotters::prelude::ChartBuilder<DB>,
+        style_conf: &impl StyleExt,
+        is_active: impl Fn(uid::Line) -> bool,
+        active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
+    ) -> Res<()>
+    where
+        DB: plotters::prelude::DrawingBackend,
+        X: fmt::Display,
+        Y::Coord: RatioExt
+            + std::ops::Add<Output = Y::Coord>
+            + std::ops::Sub<Output = Y::Coord>
+            + Clone
+            + fmt::Display
+            + PartialOrd
+            + Ord
+            + PartialEq,
+    {
+        self.chart_render_stacked_area_custom(
+            settings,
+            chart_builder,
+            style_conf,
+            is_active,
+            active_filters,
+            || 0.0f32,
+            |y_val, y_max| {
+                if Y::is_zero(y_max) {
+                    f32::zero()
+                } else {
+                    y_val.ratio_wrt(y_max).expect(
+                        "\
+                                    logical error, maximum value for stacked area chart is not \
+                                    compatible with one of the individual values\
+                                ",
+                    )
+                }
+            },
+            |_min, _max| (0.0..100.0).into(),
+            |val| format!("{:.2}%", val),
+            f32::default_val,
+        )
+    }
+
+    /// Stacked area rendering.
+    fn chart_render_stacked_area_custom<'spec, DB, RealY: CoordExt>(
+        &self,
+        _settings: &ChartSettings,
+        mut chart_builder: plotters::prelude::ChartBuilder<DB>,
+        style_conf: &impl StyleExt,
+        is_active: impl Fn(uid::Line) -> bool,
+        active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
+        zero: impl Fn() -> RealY::Coord,
+        compute_from_val_and_max: impl Fn(Y::Coord, &Y::Coord) -> RealY::Coord,
+        range_do: impl Fn(Y::Coord, Y::Coord) -> RealY::Range,
+        label_formatter: impl Fn(&RealY::Coord) -> String,
+        _type_inference_help: fn() -> RealY,
+    ) -> Res<()>
+    where
+        DB: plotters::prelude::DrawingBackend,
+        X: fmt::Display,
+        Y::Coord: RatioExt
+            + std::ops::Add<Output = Y::Coord>
+            + std::ops::Sub<Output = Y::Coord>
+            + Clone
+            + fmt::Display
+            + PartialOrd
+            + Ord
+            + PartialEq,
+        RealY::Coord: ops::Add<RealY::Coord, Output = RealY::Coord> + fmt::Display,
+    {
+        let is_active = |uid: uid::Line| !uid.is_everything() && is_active(uid);
+        let active_filters = active_filters.filter(|uid| !uid.is_everything());
+
         let opt_ranges = self.ranges(&is_active);
         let raw_ranges = Self::ranges_processor(opt_ranges)?;
         let ranges = Self::coord_ranges_processor(&raw_ranges)?;
@@ -479,112 +651,45 @@ where
 
         let (y_min, mut y_max) = (ranges.y.min, Y::zero());
 
-        // Stores all the maximum values and the sum of the values for each filter that has been
+        // Stores all the maximum values and the result quantity for each filter that has been
         // processed so far (used in the loop below).
-        let mut memory: Vec<_> = self
-            .points()
-            .map(|point| {
-                let mut max = Y::zero();
-                for (uid, val) in &point.vals.map {
-                    if !uid.is_everything() && is_active(*uid) {
-                        max = max + Self::y_coord_processor(&raw_ranges.y, val);
+        let mut memory: Vec<_> = {
+            // Remembers the last values for each filter.
+            let mut last: HMap<_, _> = active_filters
+                .clone()
+                .map(|uid| (uid.uid(), Y::zero()))
+                .collect();
+            // Build the memory.
+            self.points()
+                .map(|point| {
+                    let mut max = Y::zero();
+                    for f in active_filters.clone() {
+                        let f_uid = f.uid();
+                        let y_val = if let Some(val) = point.vals.map.get(&f_uid) {
+                            let y_val = Self::y_coord_processor(&raw_ranges.y, val);
+                            let _prev = last.insert(f_uid, y_val.clone());
+                            y_val
+                        } else {
+                            last.get(&f_uid)
+                                .unwrap_or_else(|| panic!("unexpected filter UID {}", f_uid))
+                                .clone()
+                        };
+
+                        max = max + y_val;
                     }
-                }
-                if max > y_max {
-                    y_max = max.clone()
-                }
-                (max, Y::zero())
-            })
-            .collect();
+                    if max > y_max {
+                        y_max = max.clone()
+                    }
+                    (max, zero())
+                })
+                .collect()
+        };
 
         let x_range: X::Range = (ranges.x.min..ranges.x.max).into();
-        let y_range: Y::Range = (y_min..y_max).into();
+        let y_range = range_do(y_min, y_max);
 
         // Alright, time to build the actual chart context used for drawing.
-        let mut chart_cxt: ChartContext<DB, coord::Cartesian2d<X::Range, Y::Range>> = chart_builder
-            .build_cartesian_2d(x_range, y_range)
-            .map_err(|e| e.to_string())?;
-
-        // Mesh configuration.
-        {
-            let mut mesh = chart_cxt.configure_mesh();
-
-            // Apply caller's configuration.
-            style_conf.mesh_conf::<X, Y, DB>(&mut mesh);
-
-            // Set x/y formatters and draw this thing.
-            mesh.x_label_formatter(&Self::x_label_formatter)
-                .y_label_formatter(&Self::y_label_formatter)
-                .draw()
-                .map_err(|e| e.to_string())?;
-        }
-
-        // Invariant: `memory.len()` is the same length as `self.points()`.
-
-        // Time to add some points.
-        for filter_spec in active_filters.clone() {
-            let f_uid = filter_spec.uid();
-            if f_uid.is_everything() {
-                continue;
-            }
-
-            let points = self
-                .points()
-                .enumerate()
-                .filter_map(|(point_index, point)| {
-                    let (ref max, ref mut sum) = memory[point_index];
-                    point.vals.map.get(&f_uid).map(|val| {
-                        let y_val = Self::y_coord_processor(&raw_ranges.y, val);
-                        assert!(*max >= y_val);
-                        *sum = sum.clone() + y_val;
-                        (
-                            Self::x_coord_processor(&raw_ranges.x, &point.key),
-                            sum.clone(),
-                        )
-                    })
-                });
-
-            let style = style_conf.shape_conf(filter_spec.color()).filled();
-
-            chart_cxt
-                .draw_series(LineSeries::new(points, style))
-                .map_err(|e| e.to_string())?;
-        }
-
-        Ok(())
-    }
-
-    /// Percent stacked area rendering.
-    fn chart_render_stacked_area_percent<'spec, DB>(
-        &self,
-        _settings: &ChartSettings,
-        mut chart_builder: plotters::prelude::ChartBuilder<DB>,
-        style_conf: &impl StyleExt,
-        is_active: impl Fn(uid::Line) -> bool,
-        active_filters: impl Iterator<Item = &'spec filter::FilterSpec> + Clone,
-    ) -> Res<()>
-    where
-        DB: plotters::prelude::DrawingBackend,
-        Y::Coord: RatioExt
-            + std::ops::Add<Output = Y::Coord>
-            + std::ops::Sub<Output = Y::Coord>
-            + Clone
-            + PartialOrd
-            + Ord
-            + PartialEq,
-        Self: ChartRender<X, Y>,
-    {
-        let opt_ranges = self.ranges(&is_active);
-        let raw_ranges = Self::ranges_processor(opt_ranges)?;
-        let ranges = Self::coord_ranges_processor(&raw_ranges)?;
-
-        use plotters::prelude::*;
-
-        let x_range: X::Range = (ranges.x.min..ranges.x.max).into();
-        let y_range: coord::RangedCoordf32 = (0. ..100.).into();
-
-        // Alright, time to build the actual chart context used for drawing.
-        let mut chart_cxt: ChartContext<DB, coord::Cartesian2d<X::Range, coord::RangedCoordf32>> =
+        let mut chart_cxt: ChartContext<DB, coord::Cartesian2d<X::Range, RealY::Range>> =
             chart_builder
                 .build_cartesian_2d(x_range, y_range)
                 .map_err(|e| e.to_string())?;
@@ -594,29 +699,14 @@ where
             let mut mesh = chart_cxt.configure_mesh();
 
             // Apply caller's configuration.
-            style_conf.mesh_conf::<X, f32, DB>(&mut mesh);
+            style_conf.mesh_conf::<X, RealY, DB>(&mut mesh);
 
             // Set x/y formatters and draw this thing.
             mesh.x_label_formatter(&Self::x_label_formatter)
-                // .y_label_formatter(&Self::y_label_formatter)
+                .y_label_formatter(&label_formatter)
                 .draw()
                 .map_err(|e| e.to_string())?;
         }
-
-        // Stores all the maximum values and the sum of the values for each filter that has been
-        // processed so far (used in the loop below).
-        let mut memory: Vec<_> = self
-            .points()
-            .map(|point| {
-                let mut max = Y::zero();
-                for (uid, val) in &point.vals.map {
-                    if !uid.is_everything() && is_active(*uid) {
-                        max = max + Self::y_coord_processor(&raw_ranges.y, val);
-                    }
-                }
-                (max, 0.0f32)
-            })
-            .collect();
 
         // Invariant: `memory.len()` is the same length as `self.points()`.
 
@@ -626,30 +716,29 @@ where
             if f_uid.is_everything() {
                 continue;
             }
+            let mut prev = Y::zero();
 
-            let points = self
-                .points()
-                .enumerate()
-                .filter_map(|(point_index, point)| {
-                    let (ref max, ref mut sum) = memory[point_index];
-                    point.vals.map.get(&f_uid).map(|val| {
-                        let y_val = Self::y_coord_processor(&raw_ranges.y, val);
-                        assert!(*max >= y_val);
-
-                        let y_val = if Y::is_zero(max) {
-                            f32::zero()
-                        } else {
-                            y_val.ratio_wrt(max).expect(
-                                "\
-                                    logical error, maximum value for stacked area chart is not \
-                                    compatible with one of the individual values\
-                                ",
-                            )
-                        };
-                        *sum = *sum + y_val;
-                        (Self::x_coord_processor(&raw_ranges.x, &point.key), *sum)
-                    })
-                });
+            let points = self.points().enumerate().map(|(point_index, point)| {
+                let (ref max, ref mut sum) = memory[point_index];
+                let y_val = point
+                    .vals
+                    .map
+                    .get(&f_uid)
+                    .map(|val| Self::y_coord_processor(&raw_ranges.y, val))
+                    .unwrap_or_else(|| prev.clone());
+                prev = y_val.clone();
+                if *max < y_val {
+                    log::error!("expected `max < y_val");
+                    log::error!("max: {}, y_val: {}", max, y_val);
+                    log::error!("@ {} on filter {}", point.key, f_uid);
+                }
+                assert!(*max >= y_val);
+                *sum = sum.clone() + compute_from_val_and_max(y_val, max);
+                (
+                    Self::x_coord_processor(&raw_ranges.x, &point.key),
+                    sum.clone(),
+                )
+            });
 
             let style = style_conf.shape_conf(filter_spec.color()).filled();
 
@@ -728,7 +817,8 @@ impl<Y> PointValExt<time::Date> for PolyPoints<time::Date, Y> {
         range: &Range<time::Date>,
     ) -> Res<Range<<time::Date as CoordExt>::Coord>> {
         let min = time::chrono::Duration::seconds(0);
-        let max = range.max.date().clone() - range.min.date().clone();
+        let mut max = range.max.date().clone() - range.min.date().clone();
+        max = max + max / 20;
         Ok(Range { min, max })
     }
     fn val_coord_processor(
@@ -738,7 +828,47 @@ impl<Y> PointValExt<time::Date> for PolyPoints<time::Date, Y> {
         x.date().clone() - range.min.date().clone()
     }
     fn val_label_formatter(date: &<time::Date as CoordExt>::Coord) -> String {
-        time::SinceStart::from(date.to_std().unwrap()).to_string()
+        let mut res = time::SinceStart::from(date.to_std().unwrap())
+            .display_millis()
+            .to_string();
+        'rm_trailing_zeros: while let Some(last) = res.pop() {
+            if last == '0' {
+                continue 'rm_trailing_zeros;
+            } else {
+                res.push(last);
+                break 'rm_trailing_zeros;
+            }
+        }
+        res.push('s');
+        res
+    }
+}
+
+impl<X> PointValExt<Size> for PolyPoints<X, Size> {
+    fn val_range_processor(range: Range<Option<Size>>) -> Res<Range<Size>> {
+        Ok(Range {
+            min: range.min.unwrap_or_else(|| u32::default_min().into()),
+            max: range.max.unwrap_or_else(|| u32::default_max().into()),
+        })
+    }
+    fn val_coord_range_processor(range: &Range<Size>) -> Res<Range<<Size as CoordExt>::Coord>> {
+        let default_max = Size::default_max();
+        Ok(Range {
+            min: range.min.size,
+            max: if range.max.size < default_max {
+                default_max
+            } else {
+                range.max.size
+            },
+        })
+    }
+    fn val_coord_processor(_range: &Range<Size>, x: &Size) -> <Size as CoordExt>::Coord {
+        x.size
+    }
+    fn val_label_formatter(val: &<Size as CoordExt>::Coord) -> String {
+        let mut s = num_fmt::bin_str_do(*val, base::identity);
+        s.push('B');
+        s
     }
 }
 
@@ -769,7 +899,7 @@ impl<X> PointValExt<u32> for PolyPoints<X, u32> {
 }
 
 /// Points representing size over time.
-pub type TimeSizePoints = PolyPoints<time::Date, u32>;
+pub type TimeSizePoints = PolyPoints<time::Date, Size>;
 
 /// Some points for a time chart.
 #[derive(Debug, Clone, Serialize, Deserialize)]

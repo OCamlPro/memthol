@@ -219,15 +219,7 @@ mod diff_parse {
                 // let end_time = date_from_microsecs(header.header.timestamp.end).sub(start_time)?;
 
                 // Init info.
-                let init = {
-                    let trace_info = parser.trace_info();
-                    Init::new(
-                        start_time,
-                        None,
-                        convert(trace_info.word_size, "ctf parser: word_size"),
-                        false,
-                    )
-                };
+                let init = parser.trace_info().to_init(start_time);
 
                 init_action(factory, init);
                 prof.basic_parsing.stop();
@@ -248,7 +240,7 @@ mod diff_parse {
 
                         match event {
                             Event::Alloc(crate::ast::event::Alloc {
-                                id: uid, backtrace, len, common_pref_len, ..
+                                id: uid, backtrace, len, common_pref_len, nsamples, ..
                             }) => {
                                 let trace = {
                                     prof.trace_building.time(|| trace_builder.build_trace(
@@ -274,7 +266,7 @@ mod diff_parse {
                                         labels,
                                         time_since_start,
                                         None
-                                    );
+                                    ).nsamples(nsamples as u32);
                                     alloc
                                 };
 

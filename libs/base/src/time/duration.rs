@@ -57,14 +57,9 @@ pub trait DurationExt: From<Duration> {
             }
         }
 
-        println!();
-        println!("ts: `{}`", ts);
         let duration = match (subs.next(), subs.next()) {
             (Some(secs_str), None) => {
-                println!("case 1");
-                println!("- secs_str: `{}`", secs_str);
                 let secs = err! { try u64::from_str(secs_str) };
-                println!("- secs: {}", secs);
                 Duration::new(secs, 0)
             }
 
@@ -78,25 +73,16 @@ pub trait DurationExt: From<Duration> {
                     }
                 }
 
-                println!("case 2");
-                println!("- secs_str: `{}`", secs_str);
-                println!("- subsecs_str: `{}`", subsecs_str);
-
                 let secs = if secs_str.is_empty() {
                     0
                 } else {
                     err! { try u64::from_str(secs_str) }
                 };
 
-                println!("- secs: {}", secs);
-
                 let nanos = if subsecs_str.is_empty() && !secs_str.is_empty() {
                     0
                 } else {
                     let raw = err! { try u32::from_str(subsecs_str) };
-
-                    println!("- raw: {}", raw);
-                    println!("- original_subsecs_str_len: {}", original_subsecs_str_len);
 
                     if original_subsecs_str_len < 9 {
                         raw * 10u32.pow(9 - (original_subsecs_str_len as u32))
@@ -109,7 +95,6 @@ pub trait DurationExt: From<Duration> {
                         )
                     }
                 };
-                println!("- nanos: {}", nanos);
                 Duration::new(secs, nanos)
             }
             (None, _) => unreachable!("`str::split` never returns an empty iterator"),
@@ -122,12 +107,16 @@ pub trait DurationExt: From<Duration> {
         Ok(duration.into())
     }
 
+    /// Pretty displayable version of a duration, millisecond precision.
+    fn display_millis<'me>(&'me self) -> DurationDisplay<'me, Self, Millis> {
+        self.into()
+    }
     /// Pretty displayable version of a duration, microsecond precision.
-    fn display_micros<'me>(&'me self) -> DurationMilliDisplay<'me, Self> {
+    fn display_micros<'me>(&'me self) -> DurationDisplay<'me, Self, Micros> {
         self.into()
     }
     /// Pretty displayable version of a duration, nanosecond precision.
-    fn display_nanos<'me>(&'me self) -> DurationNanoDisplay<'me, Self> {
+    fn display_nanos<'me>(&'me self) -> DurationDisplay<'me, Self, Nanos> {
         self.into()
     }
 }
@@ -138,18 +127,17 @@ impl DurationExt for Duration {
     }
 }
 
-/// Wraps a duration representation, provides `Display` with nanosecond precision.
-pub struct DurationNanoDisplay<'a, T: DurationExt + ?Sized> {
-    duration: &'a T,
+/// Trait implemented by unit-structs representing time precision.
+pub trait TimePrecision {
+    /// Formats a duration with a given precision.
+    fn duration_fmt(duration: &Duration, fmt: &mut fmt::Formatter) -> fmt::Result;
 }
-impl<'a, T: DurationExt + ?Sized> From<&'a T> for DurationNanoDisplay<'a, T> {
-    fn from(duration: &'a T) -> Self {
-        Self { duration }
-    }
-}
-impl<T: DurationExt> fmt::Display for DurationNanoDisplay<'_, T> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let duration = self.duration.as_duration();
+
+/// Nanosecond precision.
+pub struct Nanos;
+impl TimePrecision for Nanos {
+    fn duration_fmt(duration: &Duration, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let duration = duration.as_duration();
         write!(
             fmt,
             "{}.{:0>9}",
@@ -159,23 +147,68 @@ impl<T: DurationExt> fmt::Display for DurationNanoDisplay<'_, T> {
     }
 }
 
-/// Wraps a duration representation, provides `Display` with microsecond precision.
-pub struct DurationMilliDisplay<'a, T: DurationExt + ?Sized> {
-    duration: &'a T,
-}
-impl<'a, T: DurationExt + ?Sized> From<&'a T> for DurationMilliDisplay<'a, T> {
-    fn from(duration: &'a T) -> Self {
-        Self { duration }
-    }
-}
-impl<T: DurationExt> fmt::Display for DurationMilliDisplay<'_, T> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let duration = self.duration.as_duration();
+/// Microsecond precision.
+pub struct Micros;
+impl TimePrecision for Micros {
+    fn duration_fmt(duration: &Duration, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let duration = duration.as_duration();
         write!(
             fmt,
             "{}.{:0>6}",
             duration.as_secs(),
             duration.subsec_micros()
         )
+    }
+}
+
+/// Millisecond precision
+pub struct Millis;
+impl TimePrecision for Millis {
+    fn duration_fmt(duration: &Duration, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let duration = duration.as_duration();
+        write!(
+            fmt,
+            "{}.{:0>3}",
+            duration.as_secs(),
+            duration.subsec_millis()
+        )
+    }
+}
+
+/// Thin wrapper around a reference to a duration.
+pub struct DurationDisplay<'a, T: DurationExt + ?Sized, Precision: TimePrecision> {
+    /// The actual duration.
+    duration: &'a T,
+    /// Phantom data for the precision.
+    _phantom: std::marker::PhantomData<Precision>,
+}
+
+impl<'a, T: DurationExt + ?Sized> From<&'a T> for DurationDisplay<'a, T, Nanos> {
+    fn from(duration: &'a T) -> Self {
+        Self {
+            duration,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl<'a, T: DurationExt + ?Sized> From<&'a T> for DurationDisplay<'a, T, Micros> {
+    fn from(duration: &'a T) -> Self {
+        Self {
+            duration,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl<'a, T: DurationExt + ?Sized> From<&'a T> for DurationDisplay<'a, T, Millis> {
+    fn from(duration: &'a T) -> Self {
+        Self {
+            duration,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl<T: DurationExt, Precision: TimePrecision> fmt::Display for DurationDisplay<'_, T, Precision> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        Precision::duration_fmt(self.duration.as_duration(), fmt)
     }
 }

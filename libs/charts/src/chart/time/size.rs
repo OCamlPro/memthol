@@ -5,6 +5,8 @@ prelude! {}
 #[cfg(any(test, feature = "server"))]
 use point::TimeSizePoints;
 
+use point::Size;
+
 /// Initial size value.
 const INIT_SIZE_VALUE: u32 = 0;
 
@@ -14,7 +16,7 @@ pub struct TimeSize {
     /// UID of the last allocation, and timestamp of the last deallocation.
     last: Option<(uid::Alloc, time::SinceStart)>,
     /// Current total size.
-    size: PointVal<u32>,
+    size: PointVal<Size>,
     /// Map used to construct the points.
     map: BTMap<time::Date, PointVal<(u32, u32)>>,
     /// Optional last timestamp.
@@ -41,9 +43,13 @@ impl TimeSize {
         filters: &mut Filters,
         init: bool,
         resolution: chart::settings::Resolution,
-    ) -> Res<Points> {
-        self.get_allocs(filters, init, resolution)?;
-        Ok(self.generate_points()?.into())
+    ) -> Res<Option<Points>> {
+        let new_stuff = self.get_allocs(filters, init, resolution)?;
+        Ok(if new_stuff {
+            Some(self.generate_points()?.into())
+        } else {
+            None
+        })
     }
 
     /// Resets (drops) all its points and re-initializes itself for `filters`.
@@ -57,7 +63,7 @@ impl TimeSize {
 impl TimeSize {
     /// Constructor.
     pub fn new(filters: &filter::Filters) -> Self {
-        let size = PointVal::new(0, filters);
+        let size = PointVal::new(INIT_SIZE_VALUE.into(), filters);
         let map = BTMap::new();
         Self {
             last: None,
@@ -68,8 +74,8 @@ impl TimeSize {
     }
 
     /// Initial size.
-    fn init_size_point(filters: &filter::Filters) -> PointVal<u32> {
-        PointVal::new(INIT_SIZE_VALUE, filters)
+    fn init_size_point(filters: &filter::Filters) -> PointVal<Size> {
+        PointVal::new(INIT_SIZE_VALUE.into(), filters)
     }
 }
 
@@ -94,12 +100,28 @@ impl TimeSize {
 
         let mut points = Vec::with_capacity(self.map.len());
 
-        for (time, point_val) in map {
-            let point_val = point_val.map(|uid, (to_add, to_sub)| {
-                let val = *self.size.get_mut_or(uid, INIT_SIZE_VALUE);
-                let sum = val + to_add;
-                let new_val = sum - to_sub;
-                Ok(new_val)
+        let map_len = map.len();
+        for (idx, (time, point_val)) in map.into_iter().enumerate() {
+            let (is_first, is_last) = (idx == 0, idx + 1 == map_len);
+            let pre_point = point_val.clone().filter_map(|uid, (to_add, to_sub)| {
+                if to_add + to_sub > 0 {
+                    let val = self.size.get_mut_or(uid, INIT_SIZE_VALUE.into()).size;
+                    Ok(Some(val.into()))
+                } else {
+                    Ok(None)
+                }
+            })?;
+            points.push(Point::new(time, pre_point));
+
+            let point_val = point_val.filter_map(|uid, (to_add, to_sub)| {
+                if is_first || is_last || to_add > 0 || to_sub > 0 {
+                    let val = self.size.get_mut_or(uid, INIT_SIZE_VALUE.into()).size;
+                    let sum = val + to_add;
+                    let new_val = sum - to_sub;
+                    Ok(Some(new_val.into()))
+                } else {
+                    Ok(None)
+                }
             })?;
             self.size = point_val.clone();
             let point = Point::new(time, point_val);
@@ -109,7 +131,7 @@ impl TimeSize {
         if points.len() == 1 {
             let mut before = points[0].clone();
             for value in before.vals.map.values_mut() {
-                *value = 0
+                value.size = 0
             }
             let mut after = before.clone();
 
@@ -133,7 +155,7 @@ impl TimeSize {
         filters: &mut Filters,
         init: bool,
         resolution: chart::settings::Resolution,
-    ) -> Res<()> {
+    ) -> Res<bool> {
         debug_assert!(self.map.is_empty());
         debug_assert!(init == self.last.is_none());
 
@@ -145,6 +167,12 @@ impl TimeSize {
             .start_time()
             .chain_err(|| "while building new points")?;
         let as_date = |duration: time::SinceStart| start_time + duration;
+        let factor: u32 = convert(
+            data.init()
+                .map(|init| init.sampling_rate.factor * init.word_size / 8)
+                .ok_or_else(|| "trying to construct points, but no data Init is available")?,
+            "generate_points: factor",
+        );
 
         if init {
             map!(entry my_map, with filters => at as_date(time::SinceStart::zero()));
@@ -186,11 +214,11 @@ impl TimeSize {
                     // Update the filter that matches the allocation.
                     toc_point_val
                         .get_mut_or(uid, (INIT_SIZE_VALUE, INIT_SIZE_VALUE))
-                        .0 += alloc.size;
+                        .0 += factor * alloc.nsamples;
                     // Update the everything line.
                     toc_point_val
                         .get_mut_or(uid::Line::Everything, (INIT_SIZE_VALUE, INIT_SIZE_VALUE))
-                        .0 += alloc.size;
+                        .0 += factor * alloc.nsamples;
                 }
                 Either::Right((tod, alloc)) => {
                     nu_last_dead = Some(tod);
@@ -215,13 +243,15 @@ impl TimeSize {
                     let toc_point_val =
                         map!(entry my_map, with filters => at as_date(adjusted_tod));
 
-                    toc_point_val.get_mut(uid)?.1 += alloc.size;
-                    toc_point_val.get_mut(uid::Line::Everything)?.1 += alloc.size
+                    toc_point_val.get_mut(uid)?.1 += factor * alloc.nsamples;
+                    toc_point_val.get_mut(uid::Line::Everything)?.1 += factor * alloc.nsamples
                 }
             }
 
             Ok(())
         })?;
+
+        let mut new_stuff = true;
 
         self.last = match (nu_last_new, nu_last_dead, self.last) {
             (Some(new), Some(dead_time), _) => Some((new.uid, dead_time)),
@@ -230,6 +260,7 @@ impl TimeSize {
             (Some(new), None, None) => Some((new.uid, time::SinceStart::zero())),
             // Nothing new this time.
             (None, None, last) => {
+                new_stuff = false;
                 self.map.clear();
                 last
             }
@@ -240,6 +271,6 @@ impl TimeSize {
             ),
         };
 
-        Ok(())
+        Ok(new_stuff)
     }
 }

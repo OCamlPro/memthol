@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 bincode = "*"
 chrono = { version = "*", features = ["serde"] }
+conv = "*"
 either = "*"
 error-chain = "*"
 derive_more = "*"

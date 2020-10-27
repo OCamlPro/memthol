@@ -147,10 +147,10 @@ impl Charts {
     }
 
     /// Handles a charts message from the client.
-    pub fn handle_chart_msg(&mut self, msg: msg::to_server::ChartsMsg) -> Res<()> {
+    pub fn handle_chart_msg(&mut self, msg: msg::to_server::ChartsMsg) -> Res<bool> {
         debug_assert!(self.to_client_msgs.is_empty());
 
-        match msg {
+        let reloaded = match msg {
             msg::to_server::ChartsMsg::New(x_axis, y_axis) => {
                 let nu_chart = chart::Chart::new(&mut self.filters, x_axis, y_axis)
                     .chain_err(|| "while creating new chart")?;
@@ -170,24 +170,29 @@ impl Charts {
                 // })?;
                 // to_client_msgs.push(msg::to_client::ChartMsg::new_points(nu_chart.uid(), points));
 
-                self.charts.push(nu_chart)
+                self.charts.push(nu_chart);
+                true
             }
 
             msg::to_server::ChartsMsg::Reload => {
                 let msg = self.reload_points(None, false)?;
-                self.to_client_msgs.push(msg)
+                self.to_client_msgs.push(msg);
+                true
             }
 
             msg::to_server::ChartsMsg::ChartUpdate { uid, msg } => {
                 let reload = self.get_mut(uid)?.update(msg);
                 if reload {
                     let msg = self.reload_points(Some(uid), false)?;
-                    self.to_client_msgs.push(msg)
+                    self.to_client_msgs.push(msg);
+                    reload
+                } else {
+                    false
                 }
             }
-        }
+        };
 
-        Ok(())
+        Ok(reloaded)
     }
 
     /// Recomputes all the points, and returns them as a message for the client.
@@ -225,20 +230,21 @@ impl Charts {
     pub fn handle_msg<'me>(
         &'me mut self,
         msg: msg::to_server::Msg,
-    ) -> Res<impl Iterator<Item = msg::to_client::Msg> + 'me> {
+    ) -> Res<(impl Iterator<Item = msg::to_client::Msg> + 'me, bool)> {
         use msg::to_server::Msg::*;
 
-        match msg {
+        let reload = match msg {
             Charts(msg) => self.handle_chart_msg(msg)?,
             Filters(msg) => {
                 let (mut msgs, should_reload) = self.filters.update(msg)?;
                 if should_reload {
                     msgs.push(self.reload_points(None, true)?)
                 }
-                self.to_client_msgs.extend(msgs)
+                self.to_client_msgs.extend(msgs);
+                should_reload
             }
         };
 
-        Ok(self.to_client_msgs.drain(0..))
+        Ok((self.to_client_msgs.drain(0..), reload))
     }
 }

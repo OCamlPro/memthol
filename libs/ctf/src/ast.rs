@@ -370,6 +370,17 @@ pub mod event {
         pub const fn name() -> &'static str {
             "trace_info"
         }
+
+        /// Turns itself into an `Init`.
+        pub fn to_init(&self, start_time: time::Date) -> alloc_data::Init {
+            alloc_data::Init::new(
+                start_time,
+                None,
+                convert(self.word_size, "ctf parser: word_size"),
+                false,
+            )
+            .sampling_rate(self.sample_rate)
+        }
     }
 
     /// Allocation event.

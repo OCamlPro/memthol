@@ -28,7 +28,7 @@ impl RawChart {
         filters: &mut Filters,
         init: bool,
         resolution: settings::Resolution,
-    ) -> Res<Points> {
+    ) -> Res<Option<Points>> {
         match self {
             Self::Time(time_chart) => time_chart.new_points(filters, init, resolution),
         }
@@ -125,10 +125,7 @@ impl Chart {
     pub fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Option<Points>> {
         self.still_init = self.still_init || init;
         if let Some(resolution) = self.settings.resolution() {
-            let res = self
-                .chart
-                .new_points(filters, self.still_init, resolution)
-                .map(Some);
+            let res = self.chart.new_points(filters, self.still_init, resolution);
             self.still_init = false;
             res
         } else {

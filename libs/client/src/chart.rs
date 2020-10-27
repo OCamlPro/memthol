@@ -104,9 +104,9 @@ impl Charts {
     }
 
     /// Runs post-rendering actions.
-    pub fn rendered(&mut self, filters: &filter::ReferenceFilters) {
+    pub fn rendered(&mut self, filters: &filter::ReferenceFilters, stats: &AllFilterStats) {
         for chart in &mut self.charts {
-            if let Err(e) = chart.rendered(filters) {
+            if let Err(e) = chart.rendered(filters, stats) {
                 alert!("error while running `rendered`: {}", e)
             }
         }
@@ -195,6 +195,7 @@ impl Charts {
     pub fn server_update(
         &mut self,
         filters: &filter::Filters,
+        stats: &AllFilterStats,
         action: msg::from_server::ChartsMsg,
     ) -> Res<ShouldRender> {
         use msg::from_server::{ChartMsg, ChartsMsg};
@@ -226,7 +227,7 @@ impl Charts {
             ChartsMsg::AddPoints(mut points) => {
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
-                        chart.add_points(points, filters)?
+                        chart.add_points(points, filters, stats)?
                     }
                 }
                 false
@@ -236,7 +237,7 @@ impl Charts {
                 let (_index, chart) = self.get_mut(uid)?;
                 match msg {
                     ChartMsg::NewPoints(points) => chart.overwrite_points(points)?,
-                    ChartMsg::Points(points) => chart.add_points(points, filters)?,
+                    ChartMsg::Points(points) => chart.add_points(points, filters, stats)?,
                 }
                 true
             }
@@ -445,17 +446,18 @@ impl Chart {
         &mut self,
         mut points: point::Points,
         filters: &filter::ReferenceFilters,
+        stats: &AllFilterStats,
     ) -> Res<()> {
         let mut redraw = false;
         if let Some(my_points) = &mut self.points {
             let changed = my_points.extend(&mut points)?;
             if changed {
-                self.draw(filters)?
+                self.draw(filters, stats)?
             }
             redraw = true;
         } else if !points.is_empty() {
             self.points = Some(points);
-            self.draw(filters)?;
+            self.draw(filters, stats)?;
             redraw = true;
         }
 
@@ -637,7 +639,7 @@ impl Chart {
     ///
     /// If the chart is not visible, drawing is postponed until the chart becomes visible. Meaning
     /// that this function does nothing if the chart is not visible.
-    pub fn draw(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
+    pub fn draw(&mut self, filters: &filter::ReferenceFilters, stats: &AllFilterStats) -> Res<()> {
         // If the chart's not visible, do nothing. We will draw once the chart becomes visible
         // again.
         if !self.settings.is_visible() {
@@ -674,8 +676,14 @@ impl Chart {
                     .x_label_area_size(Self::X_LABEL_AREA)
                     .y_label_area_size(Self::Y_LABEL_AREA);
 
-                let is_active =
-                    |f_uid: uid::Line| visible_filters.get(&f_uid).cloned().unwrap_or(false);
+                let is_catch_all_active = stats
+                    .get(uid::Line::CatchAll)
+                    .map(|stats| stats.alloc_count > 0)
+                    .unwrap_or(true);
+                let is_active = |f_uid: uid::Line| {
+                    visible_filters.get(&f_uid).cloned().unwrap_or(false)
+                        && (!f_uid.is_catch_all() || is_catch_all_active)
+                };
 
                 points.render(
                     &self.settings,
@@ -698,7 +706,11 @@ impl Chart {
 /// # Rendering
 impl Chart {
     /// Runs post-rendering actions.
-    pub fn rendered(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
+    pub fn rendered(
+        &mut self,
+        filters: &filter::ReferenceFilters,
+        stats: &AllFilterStats,
+    ) -> Res<()> {
         self.rebind_canvas()?;
 
         if self.chart.is_none() {
@@ -708,7 +720,7 @@ impl Chart {
 
         if self.redraw {
             // Do **not** unset `self.redraw` here, function `draw` is in charge of that.
-            self.draw(filters)?;
+            self.draw(filters, stats)?;
         }
         Ok(())
     }
