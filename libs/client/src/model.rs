@@ -78,7 +78,9 @@ impl Model {
                 alert!("{}{}", if fatal { "[fatal] " } else { "" }, msg);
                 Ok(false)
             }
-            Msg::Charts(msg) => self.charts.server_update(&self.filters, msg),
+            Msg::Charts(msg) => self
+                .charts
+                .server_update(&self.filters, &self.filter_stats, msg),
             Msg::Filters(msg) => self.filters.server_update(msg),
 
             Msg::AllocStats(stats) => {
@@ -203,7 +205,8 @@ impl Component for Model {
     }
 
     fn rendered(&mut self, _first_render: bool) {
-        self.charts.rendered(self.filters.reference_filters())
+        self.charts
+            .rendered(self.filters.reference_filters(), &self.filter_stats)
     }
 
     fn change(&mut self, _props: ()) -> bool {
