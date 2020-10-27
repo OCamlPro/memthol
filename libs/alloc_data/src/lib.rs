@@ -187,6 +187,8 @@ pub struct Builder {
     pub kind: AllocKind,
     /// Size of the allocation.
     pub size: u32,
+    /// Sample count.
+    pub nsamples: u32,
     /// Allocation-site callstack.
     trace: Trace,
     /// User-defined labels.
@@ -211,11 +213,18 @@ impl Builder {
             uid_hint,
             kind,
             size,
+            nsamples: size,
             trace,
             labels,
             toc,
             tod,
         }
+    }
+
+    /// Sets the number of samples.
+    pub fn nsamples(mut self, nsamples: u32) -> Self {
+        self.nsamples = nsamples;
+        self
     }
 
     /// Builds an `Alloc`.
@@ -224,6 +233,7 @@ impl Builder {
             uid_hint,
             kind,
             size,
+            nsamples,
             trace,
             labels,
             toc,
@@ -242,6 +252,7 @@ impl Builder {
             uid,
             kind,
             size,
+            nsamples,
             trace,
             labels,
             toc,
@@ -259,6 +270,8 @@ pub struct Alloc {
     pub kind: AllocKind,
     /// Size of the allocation.
     pub size: u32,
+    /// Sample count.
+    pub nsamples: u32,
     /// Allocation-site callstack.
     trace: Trace,
     /// User-defined labels.
@@ -285,11 +298,18 @@ impl Alloc {
             uid,
             kind,
             size,
+            nsamples: size,
             trace,
             labels,
             toc,
             tod,
         }
+    }
+
+    /// Sets the number of samples.
+    pub fn nsamples(mut self, nsamples: u32) -> Self {
+        self.nsamples = nsamples;
+        self
     }
 
     /// Sets the time of death.
@@ -385,6 +405,8 @@ pub struct Init {
     pub word_size: usize,
     /// True if the callstack go from `main` to allocation site, called *reversed order*.
     pub callstack_is_rev: bool,
+    /// Sampling rate.
+    pub sampling_rate: base::SampleRate,
 }
 
 impl Default for Init {
@@ -394,6 +416,7 @@ impl Default for Init {
             end_time: None,
             word_size: 8,
             callstack_is_rev: false,
+            sampling_rate: 1.0.into(),
         }
     }
 }
@@ -411,6 +434,13 @@ impl Init {
             end_time,
             word_size,
             callstack_is_rev,
+            sampling_rate: 1.0.into(),
         }
+    }
+
+    /// Sets the sampling rate.
+    pub fn sampling_rate(mut self, rate: f64) -> Self {
+        self.sampling_rate = rate.into();
+        self
     }
 }
