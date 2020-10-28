@@ -25,6 +25,11 @@ impl<Val> PointVal<Val> {
         Self { map }
     }
 
+    /// True if the inner map is empty.
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+
     /// Immutable ref over some value.
     pub fn get_mut_or(&mut self, uid: uid::Line, default: Val) -> &mut Val {
         self.map.entry(uid).or_insert(default)

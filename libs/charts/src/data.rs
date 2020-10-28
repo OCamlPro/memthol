@@ -55,6 +55,11 @@ impl<'a> FullFactory<'a> {
     pub fn fill_stats(&mut self) -> Res<()> {
         self.data.fill_stats()
     }
+
+    /// Marks a timestamp.
+    pub fn mark_timestamp(&mut self, ts: time::SinceStart) {
+        self.data.mark_timestamp(ts)
+    }
 }
 
 /// Starts global data handling.
@@ -209,6 +214,13 @@ impl Data {
     /// Reserves space for the `Alloc` vector.
     pub fn reserve(&mut self, capa: usize) {
         self.uid_map.reserve(capa)
+    }
+
+    /// Marks a timestamp.
+    ///
+    /// This sets the current time to the input timestamp.
+    pub fn mark_timestamp(&mut self, ts: time::SinceStart) {
+        self.current_time = ts
     }
 
     /// Init accessor.

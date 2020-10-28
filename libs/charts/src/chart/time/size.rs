@@ -98,32 +98,37 @@ impl TimeSize {
     fn generate_points(&mut self) -> Res<TimeSizePoints> {
         let map = std::mem::replace(&mut self.map, BTMap::new());
 
-        let mut points = Vec::with_capacity(self.map.len());
+        let mut points: TimeSizePoints = Vec::with_capacity(self.map.len());
 
         let map_len = map.len();
         for (idx, (time, point_val)) in map.into_iter().enumerate() {
             let (is_first, is_last) = (idx == 0, idx + 1 == map_len);
-            let pre_point = point_val.clone().filter_map(|uid, (to_add, to_sub)| {
-                if to_add + to_sub > 0 {
-                    let val = self.size.get_mut_or(uid, INIT_SIZE_VALUE.into()).size;
-                    Ok(Some(val.into()))
-                } else {
-                    Ok(None)
+
+            if !is_first {
+                let pre_point = point_val.clone().filter_map(|uid, (to_add, to_sub)| {
+                    if to_add + to_sub > 0 {
+                        let val = self.size.get_mut_or(uid, INIT_SIZE_VALUE.into()).size;
+                        Ok(Some(val.into()))
+                    } else {
+                        Ok(None)
+                    }
+                })?;
+                if !pre_point.is_empty() {
+                    points.push(Point::new(time, pre_point));
                 }
-            })?;
-            points.push(Point::new(time, pre_point));
+            }
 
             let point_val = point_val.filter_map(|uid, (to_add, to_sub)| {
                 if is_first || is_last || to_add > 0 || to_sub > 0 {
-                    let val = self.size.get_mut_or(uid, INIT_SIZE_VALUE.into()).size;
-                    let sum = val + to_add;
+                    let old_value: &mut Size = self.size.get_mut_or(uid, INIT_SIZE_VALUE.into());
+                    let sum = old_value.size + to_add;
                     let new_val = sum - to_sub;
+                    old_value.size = new_val.clone();
                     Ok(Some(new_val.into()))
                 } else {
                     Ok(None)
                 }
             })?;
-            self.size = point_val.clone();
             let point = Point::new(time, point_val);
             points.push(point)
         }
@@ -250,6 +255,8 @@ impl TimeSize {
 
             Ok(())
         })?;
+
+        map!(entry my_map, with filters => at as_date(*data.current_time()));
 
         let mut new_stuff = true;
 

@@ -182,6 +182,7 @@ mod diff_parse {
         init_action: impl FnOnce(&mut F, Init),
         mut new_action: impl FnMut(&mut F, Alloc),
         mut dead_action: impl FnMut(&mut F, time::SinceStart, uid::Alloc),
+        mut mark_timestamp: impl FnMut(&mut F, time::SinceStart),
     ) -> Res<()>
     where
         F: std::ops::DerefMut<Target = mem::Factory<'a>>,
@@ -314,6 +315,13 @@ mod diff_parse {
                             },
                         }
                     }
+
+                    let packet_end = date_from_microsecs(packet_parser.header().timestamp.end)
+                        - start_time;
+                    mark_timestamp(
+                        factory,
+                        packet_end,
+                    )
                 }
 
                 prof.all_do(

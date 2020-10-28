@@ -891,7 +891,7 @@ decl_impl_trait! {
             pinfo!(self, "parsing packet header");
             self.raw_package_header(true)
                 .map(|(header, cache_check)| header::Packet::new(id, header, cache_check))
-                .chain_err(|| "while parsing ctf header")
+                .chain_err(|| "while parsing packet header")
         }
 
         /// Parses the top-level CTF header.
@@ -902,7 +902,7 @@ decl_impl_trait! {
             pinfo!(self, "parsing ctf header");
             self.raw_package_header(false)
                 .map(|(header, _)| header::Ctf::new(header, self.big_endian))
-                .chain_err(|| "while parsing package header")
+                .chain_err(|| "while parsing ctf header")
         }
 
         /// Raw package header parser.
