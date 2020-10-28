@@ -39,6 +39,14 @@ impl Model {
     pub fn charts(&self) -> &Charts {
         &self.charts
     }
+
+    /// True if the `catch_all` filter does not catch any allocation.
+    pub fn is_catch_all_empty(&self) -> bool {
+        self.filter_stats
+            .get(uid::Line::CatchAll)
+            .map(|stats| stats.alloc_count == 0)
+            .unwrap_or(true)
+    }
 }
 
 impl Model {

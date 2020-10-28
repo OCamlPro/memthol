@@ -952,8 +952,10 @@ pub mod tabs {
                     push_filter(&mut tabs, index, filter)
                 }
 
-                tabs.push_sep();
-                push_spec(&mut tabs, catch_all, None);
+                if !model.is_catch_all_empty() {
+                    tabs.push_sep();
+                    push_spec(&mut tabs, catch_all, None);
+                }
             }
 
             html! {
