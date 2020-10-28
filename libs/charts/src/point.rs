@@ -25,6 +25,11 @@ impl<Val> PointVal<Val> {
         Self { map }
     }
 
+    /// Empty constructor.
+    pub fn empty() -> Self {
+        Self { map: BTMap::new() }
+    }
+
     /// True if the inner map is empty.
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()

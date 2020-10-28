@@ -83,8 +83,21 @@ impl TimeSize {
 #[cfg(any(test, feature = "server"))]
 macro_rules! map {
     (entry $map:expr, with $filters:expr => at $date:expr) => {
-        $map.entry($date).or_insert(PointVal::new((0, 0), $filters))
+        $map.entry($date).or_insert(PointVal::empty())
     };
+    (entry $map:expr, with $filters:expr, $val:expr => at $date:expr) => {
+        $map.entry($date).or_insert(PointVal::new($val, $filters))
+    };
+    (augment add $map:expr $(, $uid:expr => $val:expr)* $(,)?) => {{
+        $(
+            $map.get_mut_or($uid, (INIT_SIZE_VALUE, INIT_SIZE_VALUE)).0 += $val;
+        )*
+    }};
+    (augment sub $map:expr $(, $uid:expr => $val:expr)* $(,)?) => {{
+        $(
+            $map.get_mut_or($uid, (INIT_SIZE_VALUE, INIT_SIZE_VALUE)).1 += $val;
+        )*
+    }};
 }
 
 /// # Helpers for point generation
@@ -129,8 +142,9 @@ impl TimeSize {
                     Ok(None)
                 }
             })?;
-            let point = Point::new(time, point_val);
-            points.push(point)
+            if !point_val.is_empty() {
+                points.push(Point::new(time, point_val))
+            }
         }
 
         if points.len() == 1 {
@@ -180,7 +194,7 @@ impl TimeSize {
         );
 
         if init {
-            map!(entry my_map, with filters => at as_date(time::SinceStart::zero()));
+            map!(entry my_map, with filters, (0, 0) => at as_date(time::SinceStart::zero()));
             ()
         }
 
@@ -216,14 +230,11 @@ impl TimeSize {
                         uid::Line::CatchAll
                     };
 
-                    // Update the filter that matches the allocation.
-                    toc_point_val
-                        .get_mut_or(uid, (INIT_SIZE_VALUE, INIT_SIZE_VALUE))
-                        .0 += factor * alloc.nsamples;
-                    // Update the everything line.
-                    toc_point_val
-                        .get_mut_or(uid::Line::Everything, (INIT_SIZE_VALUE, INIT_SIZE_VALUE))
-                        .0 += factor * alloc.nsamples;
+                    map!(
+                        augment add toc_point_val,
+                            uid => factor * alloc.nsamples,
+                            uid::Line::Everything => factor * alloc.nsamples,
+                    )
                 }
                 Either::Right((tod, alloc)) => {
                     nu_last_dead = Some(tod);
@@ -245,18 +256,20 @@ impl TimeSize {
                         uid::Line::CatchAll
                     };
 
-                    let toc_point_val =
+                    let tod_point_val =
                         map!(entry my_map, with filters => at as_date(adjusted_tod));
-
-                    toc_point_val.get_mut(uid)?.1 += factor * alloc.nsamples;
-                    toc_point_val.get_mut(uid::Line::Everything)?.1 += factor * alloc.nsamples
+                    map!(
+                        augment sub tod_point_val,
+                            uid => factor * alloc.nsamples,
+                            uid::Line::Everything => factor * alloc.nsamples,
+                    )
                 }
             }
 
             Ok(())
         })?;
 
-        map!(entry my_map, with filters => at as_date(*data.current_time()));
+        map!(entry my_map, with filters, (0, 0) => at as_date(*data.current_time()));
 
         let mut new_stuff = true;
 
