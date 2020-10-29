@@ -371,7 +371,7 @@ pub mod to_client {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum ChartsMsg {
         /// Creates a new chart.
-        NewChart(chart::ChartSpec, chart::ChartSettings),
+        NewChart(chart::ChartSpec, settings::Chart),
         /// Message for a specific chart.
         Chart {
             /// UID of the chart this message is for.
@@ -391,7 +391,7 @@ pub mod to_client {
     }
     impl ChartsMsg {
         /// Constructor for `NewChart`.
-        pub fn new_chart(spec: chart::ChartSpec, settings: chart::ChartSettings) -> Msg {
+        pub fn new_chart(spec: chart::ChartSpec, settings: settings::Chart) -> Msg {
             Msg::charts(Self::NewChart(spec, settings))
         }
         /// Constructor for `NewPoints`.

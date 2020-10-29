@@ -273,15 +273,40 @@ impl Data {
         self.uid_map.iter()
     }
 
+    /// True if there are any new events since some timestamp.
+    pub fn has_new_stuff_since(&self, time: Option<(uid::Alloc, time::SinceStart)>) -> bool {
+        if let Some((uid, tod)) = time {
+            self.uid_map[uid..].is_empty() || self.tod_map.keys().rev().next() != Some(&tod)
+        } else {
+            !self.uid_map.is_empty()
+        }
+    }
+
+    /// Yields the last events at the current time.
+    pub fn last_events(&self) -> Option<(uid::Alloc, time::SinceStart)> {
+        self.uid_map.last().map(|alloc| {
+            (
+                alloc.uid,
+                self.tod_map
+                    .keys()
+                    .cloned()
+                    .last()
+                    .unwrap_or_else(time::SinceStart::zero),
+            )
+        })
+    }
+
     /// Iterates over the new (de)allocation events in chronological order.
     ///
     /// Argument `since` is an optional pair containing an allocation UID, and a time-of-death
     /// (TOD). Input `action` will run on all new allocations since the UID (exclusive), and all the
     /// deallocations since the TOD (exclusive).
+    ///
+    /// Input function `action` returns a boolean indicating whether the iteration should continue.
     pub fn iter_new_events<'me>(
         &'me self,
         since: Option<(uid::Alloc, time::SinceStart)>,
-        mut action: impl FnMut(Either<&'me Alloc, (time::SinceStart, &'me Alloc)>) -> Res<()>,
+        mut action: impl FnMut(Either<&'me Alloc, (time::SinceStart, &'me Alloc)>) -> Res<bool>,
     ) -> Res<()> {
         let (mut new_iter, mut dead_iter) = if let Some((last_alloc, last_time)) = since {
             let mut alloc_iter = self.uid_map[last_alloc..].iter();
@@ -300,22 +325,29 @@ impl Data {
         };
 
         let (mut next_new, mut next_dead) = (new_iter.next(), dead_iter.next());
+        let mut keep_going = true;
 
         macro_rules! work {
             (new: $alloc:expr) => {{
-                action(Either::Left($alloc))?;
+                let cont = action(Either::Left($alloc))?;
+                if !cont {
+                    keep_going = false
+                }
                 next_new = new_iter.next();
             }};
             (dead: $tod:expr, $uids:expr) => {{
                 for uid in $uids {
                     let alloc = &self.uid_map[*uid];
-                    action(Either::Right(($tod, alloc)))?
+                    let cont = action(Either::Right(($tod, alloc)))?;
+                    if !cont {
+                        keep_going = false
+                    }
                 }
                 next_dead = dead_iter.next();
             }};
         }
 
-        loop {
+        while keep_going {
             match (next_new, next_dead) {
                 (Some(alloc), None) => {
                     work!(new: alloc);

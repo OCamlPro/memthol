@@ -60,6 +60,8 @@ pub struct Charts {
     start_time: Option<time::Date>,
     /// List of messages for the client, populated/drained when receiving messages.
     to_client_msgs: msg::to_client::Msgs,
+    /// Settings.
+    settings: settings::Charts,
 }
 
 #[cfg(any(test, feature = "server"))]
@@ -71,6 +73,7 @@ impl Charts {
             filters: Filters::new(),
             start_time: None,
             to_client_msgs: msg::to_client::Msgs::with_capacity(7),
+            settings: settings::Charts::new(),
         }
     }
 
@@ -139,7 +142,11 @@ impl Charts {
         let restarted = self.restart_if_needed()?;
         let mut points = point::ChartPoints::new();
         for chart in &mut self.charts {
-            if let Some(chart_points) = chart.new_points(&mut self.filters, restarted || init)? {
+            if let Some(chart_points) = chart.new_points(
+                restarted || init,
+                &mut self.filters,
+                self.settings.time_windopt(),
+            )? {
                 let prev = points.insert(chart.uid(), chart_points);
                 debug_assert!(prev.is_none())
             }
@@ -212,7 +219,7 @@ impl Charts {
             chart.reset(&self.filters);
             self.filters.reset();
             let points_opt = chart
-                .new_points(&mut self.filters, true)
+                .new_points(true, &mut self.filters, self.settings.time_windopt())
                 .chain_err(|| format!("while generating points for chart #{}", chart.uid()))?;
             if let Some(points) = points_opt {
                 let prev = new_points.insert(chart.uid(), points);

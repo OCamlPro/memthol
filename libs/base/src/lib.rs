@@ -204,8 +204,19 @@ cfg_item! {
     }
 }
 
+/// Result of comparing a range to a value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+pub enum RangeCmp {
+    /// Value is strictly lower than the range's lower bound.
+    Below,
+    /// Value is inside the range.
+    Inside,
+    /// Values is strictly greater than the range's upper bound.
+    Above,
+}
+
 /// A range, inclusive on both ends.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct Range<T> {
     /// Lower bound.
     pub lbound: T,
@@ -227,19 +238,68 @@ impl<T> Range<T> {
     pub fn as_ref(&self) -> Range<&T> {
         Range::new(&self.lbound, &self.ubound)
     }
+
+    /// The spread of the range.
+    pub fn spread<Out>(self) -> Out
+    where
+        T: std::ops::Sub<T, Output = Out>,
+    {
+        self.ubound - self.lbound
+    }
 }
 impl<T> Range<T>
 where
     T: PartialOrd,
 {
-    /// True if the range contains some value.
-    pub fn contains(&self, val: T) -> bool {
-        self.lbound <= val && val <= self.ubound
+    /// Range/value comparison.
+    pub fn cmp(&self, val: impl prelude::Borrow<T>) -> RangeCmp {
+        let val = val.borrow();
+        if val < &self.lbound {
+            RangeCmp::Below
+        } else if &self.ubound < val {
+            RangeCmp::Above
+        } else {
+            debug_assert!(&self.lbound <= val);
+            debug_assert!(val <= &self.ubound);
+            RangeCmp::Inside
+        }
     }
+
     /// True if the range contains some value.
-    pub fn contains_ref(&self, val: &impl AsRef<T>) -> bool {
-        let val = val.as_ref();
-        &self.lbound <= val && val <= &self.ubound
+    pub fn contains(&self, val: impl prelude::Borrow<T>) -> bool {
+        match self.cmp(val) {
+            RangeCmp::Inside => true,
+            RangeCmp::Below | RangeCmp::Above => false,
+        }
+    }
+
+    /// True if the range is empty.
+    pub fn is_empty(&self) -> bool {
+        self.lbound > self.ubound
+    }
+
+    /// Intersection of two ranges.
+    pub fn intersection(self, other: Self) -> Self
+    where
+        T: Ord,
+    {
+        Self::new(
+            std::cmp::max(self.lbound, other.lbound),
+            std::cmp::min(self.ubound, other.ubound),
+        )
+    }
+}
+
+impl Range<Option<time::SinceStart>> {
+    /// Unwraps a time window with optional bounds.
+    ///
+    /// - if no lower bound, use `SinceStart::zero()`;
+    /// - if no upper bound, use `ubound()`.
+    pub fn to_time_window(
+        self,
+        ubound: impl FnOnce() -> time::SinceStart,
+    ) -> Range<time::SinceStart> {
+        self.unwrap_or_else(time::SinceStart::zero, ubound)
     }
 }
 

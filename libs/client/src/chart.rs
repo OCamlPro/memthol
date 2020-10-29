@@ -2,7 +2,7 @@
 
 use plotters::prelude::*;
 
-pub use charts::chart::{ChartSettings, ChartSpec};
+pub use charts::chart::{settings, ChartSpec};
 
 prelude! {}
 
@@ -255,7 +255,7 @@ pub struct Chart {
     /// Chart specification.
     spec: ChartSpec,
     /// Chart settings.
-    settings: ChartSettings,
+    settings: settings::Chart,
     /// Sends messages to the model.
     to_model: Callback<Msg>,
     /// DOM element containing the chart and its tabs.
@@ -293,7 +293,7 @@ impl Chart {
     /// Constructor.
     pub fn new(
         spec: ChartSpec,
-        settings: ChartSettings,
+        settings: settings::Chart,
         all_filters: &filter::ReferenceFilters,
         to_model: Callback<Msg>,
     ) -> Res<Self> {
@@ -360,7 +360,7 @@ impl Chart {
 
     /// Chart settings.
     #[inline]
-    pub fn settings(&self) -> &ChartSettings {
+    pub fn settings(&self) -> &settings::Chart {
         &self.settings
     }
     /// Chart title.

@@ -20,6 +20,11 @@ pub mod coord {
 
 pub use alloc::Alloc;
 
+/// A window of time, for a graph.
+pub type TimeWindow = Range<time::SinceStart>;
+/// A window of time, for a graph.
+pub type TimeWindopt = Range<Option<time::SinceStart>>;
+
 /// Imports this crate's prelude.
 macro_rules! prelude {
     () => {
@@ -34,7 +39,7 @@ base::cfg_item! {
 }
 
 pub use crate::{
-    chart::{self, settings::ChartSettings},
+    chart::{self, settings},
     color::Color,
     filter::{self, Filter, Filters},
     msg,

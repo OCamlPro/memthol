@@ -1,6 +1,7 @@
 //! Common imports.
 
 pub use std::{
+    borrow::Borrow,
     collections::{BTreeMap as BTMap, BTreeSet as BTSet, HashMap as HMap, HashSet as HSet},
     convert::{TryFrom, TryInto},
     fmt, ops,

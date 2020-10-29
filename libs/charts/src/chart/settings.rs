@@ -103,7 +103,7 @@ base::implement! {
 
 /// Settings for a chart.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ChartSettings {
+pub struct Chart {
     /// Title.
     title: String,
     /// Display mode.
@@ -119,7 +119,7 @@ pub struct ChartSettings {
     /// Resolution of the chart, if it is known.
     resolution: Option<Resolution>,
 }
-impl ChartSettings {
+impl Chart {
     /// Constructor.
     pub fn new(title: impl Into<String>, can_stacked_area: bool) -> Self {
         Self {
@@ -249,5 +249,35 @@ impl ChartSettings {
     /// Sets the y-axis-log setting.
     pub fn set_y_log(&mut self, y_log: bool) {
         self.y_log = y_log
+    }
+}
+
+/// Settings for all the charts.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub struct Charts {
+    /// Time window for all the charts.
+    ///
+    /// This only impacts actual point generation: only points that are in this window will be
+    /// generated.
+    time_window: TimeWindopt,
+}
+impl Charts {
+    /// Constructor.
+    pub fn new() -> Self {
+        Self {
+            time_window: TimeWindopt::new(None, None),
+        }
+    }
+
+    /// Time-window accessor.
+    pub fn time_windopt(&self) -> &TimeWindopt {
+        &self.time_window
+    }
+
+    /// Time-window accessor.
+    pub fn time_window(&self, current_time: time::SinceStart) -> TimeWindow {
+        self.time_window
+            .clone()
+            .unwrap_or_else(time::SinceStart::zero, || current_time)
     }
 }

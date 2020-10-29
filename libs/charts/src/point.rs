@@ -412,7 +412,7 @@ where
     /// Renders some points on a graph.
     fn render<'spec, DB>(
         &self,
-        settings: &ChartSettings,
+        settings: &settings::Chart,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
@@ -459,7 +459,7 @@ where
     /// Normal display mode rendering.
     fn chart_render<'spec, DB>(
         &self,
-        _settings: &ChartSettings,
+        _settings: &settings::Chart,
         mut chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
@@ -521,7 +521,7 @@ where
     /// Stacked area rendering.
     fn chart_render_stacked_area<'spec, DB>(
         &self,
-        settings: &ChartSettings,
+        settings: &settings::Chart,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
@@ -556,7 +556,7 @@ where
     /// Percent stacked area rendering.
     fn chart_render_stacked_area_percent<'spec, DB>(
         &self,
-        settings: &ChartSettings,
+        settings: &settings::Chart,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
@@ -602,7 +602,7 @@ where
     /// Stacked area rendering.
     fn chart_render_stacked_area_custom<'spec, DB, RealY: CoordExt>(
         &self,
-        _settings: &ChartSettings,
+        _settings: &settings::Chart,
         mut chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
@@ -935,7 +935,7 @@ impl TimePoints {
     /// Renders the points on a graph.
     pub fn render<'spec, DB>(
         &self,
-        settings: &ChartSettings,
+        settings: &settings::Chart,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
@@ -998,7 +998,7 @@ impl Points {
     /// Renders the points on a graph.
     pub fn render<'spec, DB>(
         &self,
-        settings: &ChartSettings,
+        settings: &settings::Chart,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
