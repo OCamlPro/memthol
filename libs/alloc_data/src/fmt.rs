@@ -3,12 +3,10 @@
 prelude! {}
 
 base::implement! {
-    impl Display for Span {
-        |&self, fmt| write!(fmt, "{}-{}", self.start, self.end)
-    }
-
     impl Display for Loc {
-        |&self, fmt| write!(fmt, "`{}`:{}:{}", self.file, self.line, self.span)
+        |&self, fmt| write!(fmt,
+            "`{}`:{}:{}-{}", self.file, self.line, self.span.lbound, self.span.ubound
+        )
     }
 
     impl Display for CLoc {

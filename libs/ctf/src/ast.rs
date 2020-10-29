@@ -2,80 +2,79 @@
 
 prelude! {}
 
-/// A span for some type.
-#[derive(Debug, Clone)]
-pub struct Span<T> {
-    /// Beginning of the span.
-    pub begin: T,
-    /// End of the span.
-    pub end: T,
-}
+// /// A span for some type.
+// pub type Span<T> {
+//     /// Beginning of the span.
+//     pub begin: T,
+//     /// End of the span.
+//     pub end: T,
+// }
 
-impl<T> Span<T>
-where
-    T: PartialOrd + Ord,
-{
-    /// Constructor.
-    ///
-    /// Fails if `begin > end`.
-    pub fn new(begin: T, end: T) -> Res<Self> {
-        if begin > end {
-            bail!("non-monotonous values")
-        }
-        Ok(Self { begin, end })
-    }
+// impl<T> Span<T>
+// where
+//     T: PartialOrd + Ord,
+// {
+//     /// Constructor.
+//     ///
+//     /// Fails if `begin > end`.
+//     pub fn new(begin: T, end: T) -> Res<Self> {
+//         if begin > end {
+//             bail!("non-monotonous values")
+//         }
+//         Ok(Self { begin, end })
+//     }
 
-    /// Checks whether the input value is in the span.
-    pub fn contains(&self, value: T) -> bool {
-        (self.begin <= value) && (value <= self.end)
-    }
+//     /// Checks whether the input value is in the span.
+//     pub fn contains(&self, value: T) -> bool {
+//         (self.begin <= value) && (value <= self.end)
+//     }
 
-    /// Checks whether the input value reference is in the span.
-    pub fn contains_ref(&self, value: impl AsRef<T>) -> bool
-    where
-        for<'a> &'a T: PartialOrd + Ord,
-    {
-        let value = value.as_ref();
-        (&self.begin <= value) && (value <= &self.end)
-    }
-}
+//     /// Checks whether the input value reference is in the span.
+//     pub fn contains_ref(&self, value: impl AsRef<T>) -> bool
+//     where
+//         for<'a> &'a T: PartialOrd + Ord,
+//     {
+//         let value = value.as_ref();
+//         (&self.begin <= value) && (value <= &self.end)
+//     }
+// }
 
-impl<T> Span<T> {
-    /// Map over the bounds of the span.
-    pub fn map<U>(self, f: impl Fn(T) -> U) -> Span<U> {
-        Span {
-            begin: f(self.begin),
-            end: f(self.end),
-        }
-    }
+// impl<T> Span<T> {
+//     /// Map over the bounds of the span.
+//     pub fn map<U>(self, f: impl Fn(T) -> U) -> Span<U> {
+//         Span {
+//             begin: f(self.begin),
+//             end: f(self.end),
+//         }
+//     }
 
-    /// Reference version of a span.
-    pub fn as_ref(&self) -> Span<&T> {
-        Span {
-            begin: &self.begin,
-            end: &self.end,
-        }
-    }
-}
+//     /// Reference version of a span.
+//     pub fn as_ref(&self) -> Span<&T> {
+//         Span {
+//             begin: &self.begin,
+//             end: &self.end,
+//         }
+//     }
+// }
 
-impl Span<Clock> {
-    /// Pretty printer for a span of `u64` durations.
-    pub fn pretty_time(&self) -> Span<time::Duration> {
-        Span {
-            begin: time::Duration::from_millis(self.begin),
-            end: time::Duration::from_millis(self.end),
-        }
-    }
-}
+// impl Span<Clock> {
+//     /// Pretty printer for a span of `u64` durations.
+//     pub fn pretty_time(&self) -> Span<time::Duration> {
+//         Span {
+//             begin: time::Duration::from_millis(self.begin),
+//             end: time::Duration::from_millis(self.end),
+//         }
+//     }
+// }
 
-impl<T> fmt::Display for Span<T>
-where
-    T: fmt::Display,
-{
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "[{}, {}]", self.begin, self.end)
-    }
-}
+// impl<T> fmt::Display for Span<T>
+// where
+//     T: fmt::Display,
+// {
+//     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+//         write!(fmt, "[{}, {}]", self.begin, self.end)
+//     }
+// }
 
 /// Header-related AST types.
 pub mod header {
@@ -92,9 +91,9 @@ pub mod header {
         /// Size of the content of the packet/stream, **with the header**.
         pub total_content_size: u32,
         /// Header timestamp.
-        pub timestamp: Span<Clock>,
+        pub timestamp: Range<Clock>,
         /// Allocation UID range created in whatever the header represents.
-        pub alloc_id: Span<AllocUid>,
+        pub alloc_id: Range<AllocUid>,
         /// Associated PID.
         pub pid: Pid,
         /// Memtrace version in use.
@@ -220,15 +219,15 @@ pub mod event {
     const COLLECTION_CODE: u32 = 4;
 
     /// Relative codes encoding small allocations.
-    const SMALL_ALLOC_REDUCED_CODES: Span<u32> = Span { begin: 1, end: 16 };
+    const SMALL_ALLOC_REDUCED_CODES: Range<u32> = Range::new(1, 16);
     /// Offset for small allocation codes.
     const SMALL_ALLOC_OFFSET: u32 = 100;
 
     /// Absolute codes encoding small allocations.
-    const SMALL_ALLOC_CODES: Span<u32> = Span {
-        begin: SMALL_ALLOC_REDUCED_CODES.begin + SMALL_ALLOC_OFFSET,
-        end: SMALL_ALLOC_REDUCED_CODES.end + SMALL_ALLOC_OFFSET,
-    };
+    const SMALL_ALLOC_CODES: Range<u32> = Range::new(
+        SMALL_ALLOC_REDUCED_CODES.lbound + SMALL_ALLOC_OFFSET,
+        SMALL_ALLOC_REDUCED_CODES.ubound + SMALL_ALLOC_OFFSET,
+    );
 
     /// Event kind.
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -252,7 +251,7 @@ pub mod event {
             if !SMALL_ALLOC_REDUCED_CODES.contains(code) {
                 panic!(
                     "illegal small allocation reduced code, expected {} <= {} <= {}",
-                    SMALL_ALLOC_REDUCED_CODES.begin, code, SMALL_ALLOC_REDUCED_CODES.end
+                    SMALL_ALLOC_REDUCED_CODES.lbound, code, SMALL_ALLOC_REDUCED_CODES.ubound
                 )
             }
         }

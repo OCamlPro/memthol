@@ -46,27 +46,8 @@ pub mod err {
 #[cfg(test)]
 mod test;
 
-/// A span.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Span {
-    /// Start of the span.
-    pub start: usize,
-    /// End of the span.
-    pub end: usize,
-}
-
-base::implement! {
-    impl From for Span {
-        from (usize, usize) => |(start, end)| Self { start, end }
-    }
-}
-
-impl Span {
-    /// Construtor.
-    pub fn new(start: usize, end: usize) -> Self {
-        Self { start, end }
-    }
-}
+/// A byte-span.
+pub type Span = base::Range<usize>;
 
 /// A location.
 ///

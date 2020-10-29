@@ -2,17 +2,17 @@
 
 prelude! {}
 
+/// Height of a line of the header.
+pub const HEADER_LINE_HEIGHT_PX: usize = 40;
+/// Number of lines in the header.
+pub const HEADER_LINE_COUNT: usize = 2;
 /// Height of the header in pixels.
-pub const HEADER_HEIGHT_PX: usize = 60;
+pub const HEADER_HEIGHT_PX: usize = HEADER_LINE_HEIGHT_PX * HEADER_LINE_COUNT;
 /// Font size in the header.
 pub const FONT_SIZE: usize = 130;
 
 /// Renders the top header.
 pub fn render(model: &Model) -> Html {
-    const center_width_pc: usize = 70;
-    const lft_width_pc: usize = (100 - center_width_pc) / 2;
-    const rgt_width_pc: usize = lft_width_pc;
-
     define_style! {
         HEADER_STYLE = {
             font({FONT_SIZE}%),
@@ -29,20 +29,99 @@ pub fn render(model: &Model) -> Html {
 
             z_index(600),
         };
+    }
 
-        tile_style! = {
-            block,
-            float(left),
-            height({HEADER_HEIGHT_PX}px),
-            overflow(scroll),
+    html! {
+        <header
+            style = HEADER_STYLE
+        >
+            {time_window_line(model)}
+            {info_line(model)}
+        </header>
+    }
+}
+
+/// Generates the line containing generic info about the dump(s) and the OCP logo.
+pub fn info_line(model: &Model) -> Html {
+    define_style! {
+        LOGO = {
+            height({HEADER_LINE_HEIGHT_PX}px)
         };
+    }
+    three_part_line(
+        // Left column.
+        html! {},
+        // Center column.
+        center(format_stats(model)),
+        // Right column.
+        center(html! {
+            <a
+                href = "https://www.ocamlpro.com"
+                target = "_blank"
+                style = LOGO
+            >
+                {ocp_pic()}
+            </a>
+        }),
+    )
+}
+
+/// Generates the time-window line.
+pub fn time_window_line(_model: &Model) -> Html {
+    three_part_line(
+        html! {},
+        center(html! {
+            <a>
+                { "time window" }
+            </a>
+        }),
+        html! {},
+    )
+}
+
+/// Centers its content using the `table`/`table cell` trick.
+pub fn center(inner: Html) -> Html {
+    define_style! {
         TABLE_STYLE = {
             table,
             width(100%),
             height(100%),
-            table,
         };
+        CENTER_CONTENT_STYLE = {
+            table cell,
+            padding(0%, 10 px),
+            white_space(nowrap),
+            text_align(center),
+            vertical_align(middle),
+            height({HEADER_LINE_HEIGHT_PX}px),
+        };
+    }
+    html! {
+        <div
+            style = TABLE_STYLE
+        >
+            <div
+                style = CENTER_CONTENT_STYLE
+            >
+                {inner}
+            </div>
+        </div>
+    }
+}
 
+/// Creates a header line with three columns (30%-70%-30%, float left).
+pub fn three_part_line(lft: Html, center: Html, rgt: Html) -> Html {
+    const center_width_pc: usize = 70;
+    const lft_width_pc: usize = (100 - center_width_pc) / 2;
+    const rgt_width_pc: usize = lft_width_pc;
+
+    define_style! {
+        tile_style! = {
+            block,
+            float(left),
+            height({HEADER_LINE_HEIGHT_PX}px),
+            overflow(scroll),
+        };
         LFT_STYLE = {
             extends(tile_style),
             width({lft_width_pc}%),
@@ -56,59 +135,26 @@ pub fn render(model: &Model) -> Html {
             extends(tile_style),
             width({rgt_width_pc}%),
         };
-
-        CENTER_CONTENT_STYLE = {
-            table cell,
-            padding(0%, 10 px),
-            white_space(nowrap),
-            text_align(center),
-            vertical_align(middle),
-        };
-        RGT_CONTENT_STYLE = {
-            table cell,
-            padding(0%, 10 px),
-            white_space(nowrap),
-            height({HEADER_HEIGHT_PX}px),
-        };
     }
 
     html! {
-        <header
-            style = HEADER_STYLE
-        >
+        <>
             <div
                 style = LFT_STYLE
-            />
+            >
+                {lft}
+            </div>
             <div
                 style = CENTER_STYLE
             >
-                <div
-                    style = TABLE_STYLE
-                >
-                    <div
-                        style = CENTER_CONTENT_STYLE
-                    >
-                        {format_stats(model)}
-                    </div>
-                </div>
+                {center}
             </div>
-
             <div
                 style = RGT_STYLE
             >
-                <div
-                    style = TABLE_STYLE
-                >
-                    <a
-                        href = "https://www.ocamlpro.com"
-                        target = "_blank"
-                        style = RGT_CONTENT_STYLE
-                    >
-                        {ocp_pic()}
-                    </a>
-                </div>
+                {rgt}
             </div>
-        </header>
+        </>
     }
 }
 

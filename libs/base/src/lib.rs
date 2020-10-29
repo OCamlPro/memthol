@@ -134,3 +134,152 @@ implement! {
         }
     }
 }
+
+cfg_item! {
+    cfg(client) {
+        /// Stores a current and reference version of something.
+        #[derive(Debug, Clone)]
+        pub struct Memory<T> {
+            /// Current version.
+            current: T,
+            /// Reference version.
+            reference: T,
+        }
+    } {
+        impl<T> Memory<T> {
+            /// Constructor.
+            pub fn new(reference: T) -> Self
+            where
+                T: Clone,
+            {
+                Self {
+                    current: reference.clone(),
+                    reference,
+                }
+            }
+
+            /// Current version.
+            pub fn get(&self) -> &T {
+                &self.current
+            }
+            /// Sets the current version.
+            pub fn set(&mut self, current: T) {
+                self.current = current
+            }
+            /// Current version (mutable).
+            pub fn get_mut(&mut self) -> &mut T {
+                &mut self.current
+            }
+
+            /// Reference version.
+            pub fn reference(&self) -> &T {
+                &self.reference
+            }
+
+            /// True if the current and reference versions are the same.
+            pub fn has_changed(&self) -> bool
+            where
+                T: PartialEq,
+            {
+                self.current != self.reference
+            }
+
+            /// Overwrites the reference and current version.
+            pub fn set_both(&mut self, reference: T)
+            where
+                T: Clone,
+            {
+                self.current = reference.clone();
+                self.reference = reference;
+            }
+
+            /// Overwrites the current version to be the reference version.
+            pub fn reset(&mut self)
+            where
+                T: Clone,
+            {
+                self.current = self.reference.clone()
+            }
+        }
+    }
+}
+
+/// A range, inclusive on both ends.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+pub struct Range<T> {
+    /// Lower bound.
+    pub lbound: T,
+    /// Upper bound.
+    pub ubound: T,
+}
+impl<T> Range<T> {
+    /// Constructor.
+    pub const fn new(lbound: T, ubound: T) -> Self {
+        Self { lbound, ubound }
+    }
+
+    /// Applies an action to the range's bounds.
+    pub fn map<U>(self, mut action: impl FnMut(T) -> U) -> Range<U> {
+        Range::new(action(self.lbound), action(self.ubound))
+    }
+
+    /// Reference version of the range bounds.
+    pub fn as_ref(&self) -> Range<&T> {
+        Range::new(&self.lbound, &self.ubound)
+    }
+}
+impl<T> Range<T>
+where
+    T: PartialOrd,
+{
+    /// True if the range contains some value.
+    pub fn contains(&self, val: T) -> bool {
+        self.lbound <= val && val <= self.ubound
+    }
+    /// True if the range contains some value.
+    pub fn contains_ref(&self, val: &impl AsRef<T>) -> bool {
+        let val = val.as_ref();
+        &self.lbound <= val && val <= &self.ubound
+    }
+}
+
+impl<T> Range<Option<T>> {
+    /// Unwraps optional bounds.
+    pub fn unwrap(self) -> Range<T> {
+        Range::new(
+            self.lbound.expect("while unwrapping range lower bound"),
+            self.ubound.expect("while unwrapping range upper bound"),
+        )
+    }
+
+    /// Unwraps optional bounds with a default.
+    pub fn unwrap_or(self, lbound: T, ubound: T) -> Range<T> {
+        Range::new(self.lbound.unwrap_or(lbound), self.ubound.unwrap_or(ubound))
+    }
+
+    /// Unwraps optional bounds with a lazy default.
+    pub fn unwrap_or_else(
+        self,
+        lbound: impl FnOnce() -> T,
+        ubound: impl FnOnce() -> T,
+    ) -> Range<T> {
+        Range::new(
+            self.lbound.unwrap_or_else(lbound),
+            self.ubound.unwrap_or_else(ubound),
+        )
+    }
+}
+
+implement! {
+    impl Range<T>, with (T: PartialOrd) {
+        From {
+            from (T, T) => |(lbound, ubound)| Self::new(lbound, ubound)
+        }
+    }
+
+    impl Range<T>, with (T: std::fmt::Display) {
+        Display {
+            |&self, fmt| write!(fmt, "[{}, {}]", self.lbound, self.ubound),
+        }
+    }
+}

@@ -58,6 +58,7 @@ pub struct Charts {
     /// This is used to check whether we need to detect that the init file of the run has changed
     /// and that we need to reset the charts.
     start_time: Option<time::Date>,
+    /// List of messages for the client, populated/drained when receiving messages.
     to_client_msgs: msg::to_client::Msgs,
 }
 

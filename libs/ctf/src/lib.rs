@@ -216,7 +216,7 @@ mod diff_parse {
 
                 // Start time of the run, used for init and to compute the time-since-start of all
                 // events.
-                let start_time = date_from_microsecs(header.timestamp.begin);
+                let start_time = date_from_microsecs(header.timestamp.lbound);
                 // let end_time = date_from_microsecs(header.header.timestamp.end).sub(start_time)?;
 
                 // Init info.
@@ -298,8 +298,8 @@ mod diff_parse {
                                         file,
                                         line,
                                         Span {
-                                            start: col.begin,
-                                            end: col.end,
+                                            lbound: col.lbound,
+                                            ubound: col.ubound,
                                         },
                                     )
                                 }).collect();
@@ -316,8 +316,9 @@ mod diff_parse {
                         }
                     }
 
-                    let packet_end = date_from_microsecs(packet_parser.header().timestamp.end)
-                        - start_time;
+                    let packet_end = date_from_microsecs(
+                        packet_parser.header().timestamp.ubound
+                    ) - start_time;
                     mark_timestamp(
                         factory,
                         packet_end,
