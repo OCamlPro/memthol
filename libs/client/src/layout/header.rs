@@ -35,7 +35,7 @@ pub fn render(model: &Model) -> Html {
         <header
             style = HEADER_STYLE
         >
-            {time_window_line(model)}
+            {model.settings.render(model)}
             {info_line(model)}
         </header>
     }
@@ -63,19 +63,6 @@ pub fn info_line(model: &Model) -> Html {
                 {ocp_pic()}
             </a>
         }),
-    )
-}
-
-/// Generates the time-window line.
-pub fn time_window_line(_model: &Model) -> Html {
-    three_part_line(
-        html! {},
-        center(html! {
-            <a>
-                { "time window" }
-            </a>
-        }),
-        html! {},
     )
 }
 
@@ -173,7 +160,8 @@ fn emph(s: impl std::fmt::Display) -> Html {
     }
 }
 
-fn code(s: impl std::fmt::Display) -> Html {
+/// Formats some text in code style.
+pub fn code(s: impl std::fmt::Display) -> Html {
     define_style! {
         CODE_STYLE = {
             font(code, 100%),

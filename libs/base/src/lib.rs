@@ -147,6 +147,15 @@ cfg_item! {
             reference: T,
         }
     } {
+        impl<T> Default for Memory<T>
+        where
+            T: Default + Clone,
+        {
+            fn default() -> Self {
+                Self::new(T::default())
+            }
+        }
+    } {
         impl<T> Memory<T> {
             /// Constructor.
             pub fn new(reference: T) -> Self

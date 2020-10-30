@@ -24,6 +24,9 @@ pub struct Model {
     pub progress: Option<LoadInfo>,
     /// Allocation statistics, for the header.
     pub alloc_stats: Option<AllocStats>,
+
+    /// Global chart settings.
+    pub settings: settings::Settings,
 }
 
 impl Model {
@@ -153,6 +156,7 @@ impl Component for Model {
             footer: footer::Footer::new(),
             progress: Some(LoadInfo::unknown()),
             alloc_stats: None,
+            settings: settings::Settings::new(),
         }
     }
 
@@ -189,6 +193,9 @@ impl Component for Model {
             ),
             Msg::Filter(msg) => unwrap_or_send_err!(
                 self.filters.update(msg) => self default false
+            ),
+            Msg::Settings(msg) => unwrap_or_send_err!(
+                self.settings.update(msg) => self default false
             ),
 
             // Basic communication messages.

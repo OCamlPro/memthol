@@ -63,6 +63,7 @@ pub use crate::{
     cst, filter, footer, js, layout,
     model::Model,
     msg::{self, Msg},
+    settings,
 };
 
 /// Trait for conversion to JS.

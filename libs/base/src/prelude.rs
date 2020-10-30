@@ -17,6 +17,12 @@ pub mod log {
     pub use log::{debug, error, info, trace, warn};
 }
 
+cfg_item! {
+    cfg(client) {
+        pub use crate::Memory;
+    }
+}
+
 pub use crate::{
     convert, destroy,
     err::{self, Res, ResExt},

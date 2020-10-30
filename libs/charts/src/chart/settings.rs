@@ -261,6 +261,11 @@ pub struct Charts {
     /// generated.
     time_window: TimeWindopt,
 }
+impl Default for Charts {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl Charts {
     /// Constructor.
     pub fn new() -> Self {
@@ -273,11 +278,29 @@ impl Charts {
     pub fn time_windopt(&self) -> &TimeWindopt {
         &self.time_window
     }
+    /// Time-window accessor.
+    pub fn time_windopt_mut(&mut self) -> &mut TimeWindopt {
+        &mut self.time_window
+    }
 
     /// Time-window accessor.
     pub fn time_window(&self, current_time: time::SinceStart) -> TimeWindow {
         self.time_window
             .clone()
             .unwrap_or_else(time::SinceStart::zero, || current_time)
+    }
+
+    /// Overwrites itself with a new value.
+    ///
+    /// Returns `true` if a reload of the points is necessary.
+    pub fn overwrite(&mut self, Self { time_window }: Self) -> bool {
+        let mut reload = false;
+
+        if self.time_window != time_window {
+            self.time_window = time_window;
+            reload = true
+        }
+
+        reload
     }
 }

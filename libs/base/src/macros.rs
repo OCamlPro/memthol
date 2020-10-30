@@ -56,10 +56,12 @@ macro_rules! __cfg_cond {
         $($stuff)*
     };
     (@cfg(client) $($stuff:tt)*) => {
-        __cfg_cond! { @cfg(not server) $($stuff)* }
+        #[cfg(any(test, feature = "client"))]
+        $($stuff)*
     };
     (@cfg(not client) $($stuff:tt)*) => {
-        __cfg_cond! { @cfg(server) $($stuff)* }
+        #[cfg(not(any(test, feature = "client")))]
+        $($stuff)*
     };
 
     (@cfg(debug) $($stuff:tt)*) => {

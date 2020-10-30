@@ -198,6 +198,8 @@ impl Charts {
                     false
                 }
             }
+
+            msg::to_server::ChartsMsg::Settings(settings) => self.settings.overwrite(settings),
         };
 
         Ok(reloaded)
