@@ -100,6 +100,7 @@ impl Model {
                     .as_ref()
                     .map(|s| s != &stats)
                     .unwrap_or(true);
+                self.settings.set_run_duration(stats.duration);
                 self.alloc_stats = Some(stats);
                 Ok(redraw)
             }
@@ -146,6 +147,7 @@ impl Component for Model {
         };
         let charts = Charts::new(link.callback(|msg: Msg| msg));
         let filters = filter::Filters::new(link.callback(|msg: Msg| msg));
+        let settings = settings::Settings::new(link.clone());
         Model {
             link,
             socket_task,
@@ -156,7 +158,7 @@ impl Component for Model {
             footer: footer::Footer::new(),
             progress: Some(LoadInfo::unknown()),
             alloc_stats: None,
-            settings: settings::Settings::new(),
+            settings,
         }
     }
 

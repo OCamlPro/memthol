@@ -225,6 +225,26 @@ impl CoordExt for time::Date {
     }
 }
 
+impl CoordExt for time::SinceStart {
+    type Coord = time::chrono::Duration;
+    type Range = coord::RangedDuration;
+    fn default_val() -> Self {
+        time::SinceStart::zero()
+    }
+    fn zero() -> time::chrono::Duration {
+        time::chrono::Duration::seconds(0)
+    }
+    fn is_zero(dur: &time::chrono::Duration) -> bool {
+        dur.is_zero()
+    }
+    fn default_min() -> time::chrono::Duration {
+        time::chrono::Duration::seconds(0)
+    }
+    fn default_max() -> time::chrono::Duration {
+        time::chrono::Duration::seconds(5)
+    }
+}
+
 impl CoordExt for u32 {
     type Coord = u32;
     type Range = coord::RangedCoordu32;
@@ -829,6 +849,43 @@ impl<Y> PointValExt<time::Date> for PolyPoints<time::Date, Y> {
     }
 }
 
+impl<Y> PointValExt<time::SinceStart> for PolyPoints<time::SinceStart, Y> {
+    fn val_range_processor(range: Range<Option<time::SinceStart>>) -> Res<Range<time::SinceStart>> {
+        match (range.lbound, range.ubound) {
+            (Some(min), Some(max)) => Ok(Range::new(min, max)),
+            (min, max) => bail!("failed to compute x-range: {:?}, {:?}", min, max),
+        }
+    }
+    fn val_coord_range_processor(
+        range: &Range<time::SinceStart>,
+    ) -> Res<Range<<time::SinceStart as CoordExt>::Coord>> {
+        let min = range.lbound.to_chrono_duration();
+        let max = range.ubound.to_chrono_duration();
+        Ok(Range::new(min, max))
+    }
+    fn val_coord_processor(
+        _range: &Range<time::SinceStart>,
+        x: &time::SinceStart,
+    ) -> <time::SinceStart as CoordExt>::Coord {
+        x.to_chrono_duration()
+    }
+    fn val_label_formatter(date: &<time::SinceStart as CoordExt>::Coord) -> String {
+        let mut res = time::SinceStart::from(date.to_std().unwrap())
+            .display_millis()
+            .to_string();
+        'rm_trailing_zeros: while let Some(last) = res.pop() {
+            if last == '0' {
+                continue 'rm_trailing_zeros;
+            } else {
+                res.push(last);
+                break 'rm_trailing_zeros;
+            }
+        }
+        res.push('s');
+        res
+    }
+}
+
 impl<X> PointValExt<Size> for PolyPoints<X, Size> {
     fn val_range_processor(range: Range<Option<Size>>) -> Res<Range<Size>> {
         Ok(range.unwrap_or_else(|| u32::default_min().into(), || u32::default_max().into()))
@@ -878,7 +935,7 @@ impl<X> PointValExt<u32> for PolyPoints<X, u32> {
 }
 
 /// Points representing size over time.
-pub type TimeSizePoints = PolyPoints<time::Date, Size>;
+pub type TimeSizePoints = PolyPoints<time::SinceStart, Size>;
 
 /// Some points for a time chart.
 #[derive(Debug, Clone, Serialize, Deserialize)]

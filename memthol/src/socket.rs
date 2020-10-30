@@ -539,6 +539,7 @@ impl Handler {
                     let msg = msg::from_client::Msg::from_bytes(&data)
                         .chain_err(|| "while parsing message from client")?;
                     self.com.log_receive_msg(Either::Left(&msg))?;
+                    log::info!("received message from client: {}", msg);
                     self.from_client.push(msg)?
                 }
 

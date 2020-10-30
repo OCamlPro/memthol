@@ -50,7 +50,7 @@ pub fn info_line(model: &Model) -> Html {
     }
     three_part_line(
         // Left column.
-        html! {},
+        model.settings.buttons(),
         // Center column.
         center(format_stats(model)),
         // Right column.
@@ -145,7 +145,8 @@ pub fn three_part_line(lft: Html, center: Html, rgt: Html) -> Html {
     }
 }
 
-fn emph(s: impl std::fmt::Display) -> Html {
+/// Produces emphasized text.
+pub fn emph(s: impl std::fmt::Display) -> Html {
     define_style! {
         EMPH_STYLE = {
             fg({"#c8f5fd"}),

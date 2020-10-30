@@ -199,7 +199,14 @@ impl Charts {
                 }
             }
 
-            msg::to_server::ChartsMsg::Settings(settings) => self.settings.overwrite(settings),
+            msg::to_server::ChartsMsg::Settings(settings) => {
+                let send_new_points = self.settings.overwrite(settings);
+                if send_new_points {
+                    let msg = self.reload_points(None, false)?;
+                    self.to_client_msgs.push(msg);
+                }
+                false
+            }
         };
 
         Ok(reloaded)

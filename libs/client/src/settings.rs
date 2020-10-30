@@ -49,6 +49,10 @@ impl DisplayMode {
 pub struct Settings {
     /// Current display mode.
     display_mode: DisplayMode,
+    /// Link to the model, to send messages.
+    link: ComponentLink<Model>,
+    /// Duration of the run.
+    run_duration: time::SinceStart,
 
     /// Global charts settings.
     charts_settings: Memory<charts::chart::settings::Charts>,
@@ -56,11 +60,18 @@ pub struct Settings {
 
 impl Settings {
     /// Constructor.
-    pub fn new() -> Self {
+    pub fn new(link: ComponentLink<Model>) -> Self {
         Self {
             display_mode: DisplayMode::new(),
             charts_settings: Memory::default(),
+            link,
+            run_duration: time::SinceStart::zero(),
         }
+    }
+
+    /// Update the current time since the run started.
+    pub fn set_run_duration(&mut self, run_duration: time::SinceStart) {
+        self.run_duration = run_duration
     }
 
     /// Renders the settings menu.
@@ -72,10 +83,67 @@ impl Settings {
         }
     }
 
+    /// True if the current settings are different form the server ones.
+    pub fn has_changed(&self) -> bool {
+        // Exhaustive deconstruction so that this breaks when new fields are added to `Self`.
+        let Self {
+            display_mode: _,
+            link: _,
+            run_duration: _,
+
+            charts_settings,
+        } = self;
+        charts_settings.has_changed()
+    }
+
+    /// Generates the save/undo buttons, if needed.
+    pub fn buttons(&self) -> Html {
+        define_style! {
+            RIGHT = {
+                float(right),
+            };
+        }
+
+        const BUTTON_SIZE: usize =
+            layout::header::HEADER_LINE_HEIGHT_PX - layout::header::HEADER_LINE_HEIGHT_PX / 10;
+
+        if self.has_changed() {
+            html! {
+                <>
+                    <div
+                        style = RIGHT
+                    >
+                        { layout::button::img::undo(
+                            Some(BUTTON_SIZE),
+                            "header_settings_undo",
+                            Some(self.link.callback(move |_| msg::Msg::from(Msg::Revert))),
+                            "revert changes",
+                        ) }
+                    </div>
+                    <div
+                        style = RIGHT
+                    >
+                        { layout::button::img::check(
+                            Some(BUTTON_SIZE),
+                            "header_settings_apply",
+                            Some(self.link.callback(move |_| msg::Msg::from(Msg::Save))),
+                            "apply changes"
+                        ) }
+                    </div>
+                </>
+            }
+        } else {
+            html! {}
+        }
+    }
+
     /// Generates the time-window line.
     pub fn time_window_line(&self, model: &Model) -> Html {
         define_style! {
             LEFT = {
+                float(left),
+            };
+            RIGHT = {
                 float(left),
             };
             INPUT_CONTAINER = {
@@ -92,7 +160,8 @@ impl Settings {
                     <div
                         style = LEFT
                     >
-                        { "time window (seconds) " }
+                        { layout::header::emph("time window") }
+                        { " (seconds) " }
                         { layout::header::code("[ ") }
                     </div>
 
@@ -147,7 +216,13 @@ impl Settings {
             self.charts_settings.get().time_windopt().ubound,
         );
         let res = match msg {
-            Msg::TimeWindowLb(lb) => {
+            Msg::TimeWindowLb(mut lb) => {
+                lb = match lb {
+                    Some(lb) if lb.is_zero() => None,
+                    Some(lb) if lb >= self.run_duration => Some(self.run_duration),
+                    lb => lb,
+                };
+
                 let lbound = &mut self.charts_settings.get_mut().time_windopt_mut().lbound;
                 if lbound != &lb {
                     *lbound = lb;
@@ -156,10 +231,31 @@ impl Settings {
                     Ok(false)
                 }
             }
-            Msg::TimeWindowUb(ub) => {
+            Msg::TimeWindowUb(mut ub) => {
+                ub = match ub {
+                    Some(ub) if ub >= self.run_duration => None,
+                    ub => ub,
+                };
+
                 let ubound = &mut self.charts_settings.get_mut().time_windopt_mut().ubound;
                 if ubound != &ub {
                     *ubound = ub;
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+            Msg::Revert => {
+                self.charts_settings.reset();
+                Ok(true)
+            }
+            Msg::Save => {
+                if self.has_changed() {
+                    self.link.send_message(msg::Msg::ToServer(
+                        msg::to_server::ChartsMsg::settings(self.charts_settings.get().clone())
+                            .into(),
+                    ));
+                    self.charts_settings.overwrite_reference();
                     Ok(true)
                 } else {
                     Ok(false)
@@ -182,6 +278,10 @@ pub enum Msg {
     TimeWindowLb(Option<time::SinceStart>),
     /// Updates the time window's upper bound.
     TimeWindowUb(Option<time::SinceStart>),
+    /// Reverts the settings.
+    Revert,
+    /// Saves the current settings.
+    Save,
 }
 base::implement! {
     impl Msg {
@@ -201,6 +301,8 @@ base::implement! {
                         .map(|ub| ub.to_string())
                         .unwrap_or("_".into()),
                 ),
+                Self::Revert => write!(fmt, "revert"),
+                Self::Save => write!(fmt, "save"),
             }
         }
     }

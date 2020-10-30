@@ -10,6 +10,13 @@ pub trait DurationExt: From<Duration> {
     /// Retrieves the duration from `Self`.
     fn as_duration(&self) -> &Duration;
 
+    /// Retrieves the chrono duration from `Self`.
+    fn to_chrono_duration(&self) -> chrono::Duration {
+        let duration = *self.as_duration();
+        chrono::Duration::from_std(duration)
+            .expect("error while converting duration from std to a chrono duration")
+    }
+
     /// Creates a duration from a timestamp in microseconds.
     fn from_micros(ts: u64) -> Self {
         let secs = ts / 1_000_000;

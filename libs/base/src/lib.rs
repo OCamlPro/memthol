@@ -210,6 +210,14 @@ cfg_item! {
             {
                 self.current = self.reference.clone()
             }
+
+            /// Overwrites the reference with the current version.
+            pub fn overwrite_reference(&mut self)
+            where
+                T: Clone,
+            {
+                self.reference = self.current.clone()
+            }
         }
     }
 }
