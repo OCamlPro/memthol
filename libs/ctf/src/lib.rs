@@ -180,7 +180,7 @@ mod diff_parse {
         mut factory: &mut F,
         mut bytes_progress: impl FnMut(usize),
         init_action: impl FnOnce(&mut F, Init),
-        mut new_action: impl FnMut(&mut F, Alloc),
+        mut new_action: impl FnMut(&mut F, alloc_data::Builder),
         mut dead_action: impl FnMut(&mut F, time::SinceStart, uid::Alloc),
         mut mark_timestamp: impl FnMut(&mut F, time::SinceStart),
     ) -> Res<()>
@@ -259,8 +259,8 @@ mod diff_parse {
                                     let time_since_start =
                                         date_from_microsecs(clock) - start_time;
                                     let labels = factory.empty_labels();
-                                    let alloc = Alloc::new(
-                                        uid,
+                                    let alloc = alloc_data::Builder::new(
+                                        Some(uid.into()),
                                         AllocKind::Minor,
                                         convert(len, "ctf parser: alloc size"),
                                         trace,

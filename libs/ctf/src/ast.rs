@@ -378,7 +378,7 @@ pub mod event {
                 convert(self.word_size, "ctf parser: word_size"),
                 false,
             )
-            .sampling_rate(self.sample_rate)
+            .sample_rate(self.sample_rate)
         }
     }
 

@@ -90,12 +90,6 @@ impl TimeSize {
         let start_time = data.start_time()?;
         let time_window = time_windopt.to_time_window(|| *data.current_time());
         let min_time_spacing = data.current_time().clone() / (resolution.width / 5);
-        let factor: u32 = convert(
-            data.init()
-                .map(|init| init.sampling_rate.factor * init.word_size / 8)
-                .ok_or_else(|| "trying to construct points, but no data Init is available")?,
-            "generate_points: factor",
-        );
 
         debug_assert!(self.points.is_empty());
         if init {
@@ -141,8 +135,8 @@ impl TimeSize {
 
         data.iter_new_events(last, |new_or_dead| {
             let (timestamp, size, add, alloc) = new_or_dead.as_ref().either(
-                |alloc| (alloc.toc, factor * alloc.nsamples, true, alloc),
-                |(tod, alloc)| (*tod, factor * alloc.nsamples, false, alloc),
+                |alloc| (alloc.toc, alloc.real_size, true, alloc),
+                |(tod, alloc)| (*tod, alloc.real_size, false, alloc),
             );
             let f_uid = if let Some(f_uid) = filters.find_match(data.current_time(), alloc) {
                 uid::Line::Filter(f_uid)

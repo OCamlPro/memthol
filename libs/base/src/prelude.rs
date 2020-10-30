@@ -23,7 +23,7 @@ pub use crate::{
     error_chain::{self, bail},
     identity,
     time::{self, DurationExt},
-    time_stats, uid, Range, SVec16, SVec32, SVec64, SVec8,
+    time_stats, uid, Range, SVec16, SVec32, SVec64, SVec8, SampleRate,
 };
 
 /// Serde trait re-exports.

@@ -416,20 +416,24 @@ impl Data {
             self.current_time = alloc.toc.clone()
         }
         let uid = self.uid_map.next_index();
-        let alloc = alloc.build(uid)?;
+        let alloc = alloc.build(
+            &self
+                .init
+                .as_ref()
+                .ok_or_else(|| "trying to build allocation without initialization")?
+                .sample_rate,
+            uid,
+        )?;
 
-        if let Some(tod) = alloc.tod.clone() {
-            self.add_dead(tod, uid.clone())?
-        }
-
-        let uid_check = self.uid_map.push(alloc);
-        debug_assert!(uid == uid_check);
-
-        Ok(())
+        self.add_new(alloc)
     }
 
     /// Registers a new allocation.
     pub fn add_new(&mut self, alloc: Alloc) -> Res<()> {
+        self.stats
+            .as_mut()
+            .ok_or_else(|| "trying to add allocation before initialization")?
+            .total_size += alloc.real_size as usize;
         self.current_time = alloc.toc;
         let uid = self.uid_map.next_index();
         if uid != alloc.uid {

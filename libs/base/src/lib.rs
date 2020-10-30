@@ -103,35 +103,36 @@ pub mod client {
 ///
 /// Contains the original sample rate (`f64`), as well as the integer factor corresponding to
 /// dividing by the sample rate.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SampleRate {
     /// Actual sample rate.
     pub sample_rate: f64,
     /// Factor version of the sample rate.
-    pub factor: usize,
+    pub factor: u32,
     /// True if `factor` is an approximation of `1 / sample_rate`.
     pub factor_is_approx: bool,
+    /// Word size in bytes.
+    pub word_size_bytes: u32,
 }
 impl SampleRate {
     /// Constructor.
-    pub fn new(sample_rate: f64) -> Self {
+    pub fn new(sample_rate: f64, word_size: u32) -> Self {
         use conv::*;
         let inv = 1. / sample_rate;
         let factor = inv.trunc();
         let factor_is_approx = factor == inv;
-        let factor = factor.approx().expect("error while handling sample rate");
+        let factor: u32 = factor.approx().expect("error while handling sample rate");
         Self {
             sample_rate,
             factor,
             factor_is_approx,
+            word_size_bytes: word_size / 8,
         }
     }
-}
-implement! {
-    impl SampleRate {
-        From {
-            from f64 => |sample_rate| Self::new(sample_rate)
-        }
+
+    /// Computes the real size of an allocation from its number of samples.
+    pub fn real_size_of(&self, nsamples: u32) -> u32 {
+        nsamples * self.word_size_bytes * self.factor
     }
 }
 

@@ -214,8 +214,10 @@ fn format_stats(model: &Model) -> Html {
                 {", ran for "}
                 {emph(stats.duration)}
                 {" with "}
-                {emph(num_fmt::str_do(stats.alloc_count as f64, base::identity))}
-                {" allocations | "}
+                {emph(num_fmt::str_do(stats.alloc_count as f64, identity))}
+                {" allocations, "}
+                {emph(num_fmt::bin_str_do(stats.total_size as f64, |mut s| {s.push('B') ; s}))}
+                {" | "}
                 {code(stats.dump_dir.display())}
             </p>
         }

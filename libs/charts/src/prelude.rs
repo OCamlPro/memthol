@@ -141,6 +141,8 @@ pub struct AllocStats {
     pub dump_dir: std::path::PathBuf,
     /// Total number of allocations.
     pub alloc_count: usize,
+    /// Total size of the allocations.
+    pub total_size: usize,
     /// Date at which the run started.
     pub start_date: time::Date,
     /// Duration of the run.
@@ -155,6 +157,7 @@ impl AllocStats {
         Self {
             dump_dir,
             alloc_count: 0,
+            total_size: 0,
             start_date,
             duration: time::SinceStart::zero(),
         }
