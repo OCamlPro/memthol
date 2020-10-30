@@ -283,16 +283,16 @@ impl TimeSize {
         self.last = data.last_events();
 
         debug_assert!(!points.is_empty());
-        println!();
-        println!("points {{");
-        for point in points.iter() {
-            print!("    {}:", point.key);
-            for (uid, val) in &point.vals.map {
-                print!(" {} -> {},", uid, val)
-            }
-            println!()
-        }
-        println!("}}");
+        // println!();
+        // println!("points {{");
+        // for point in points.iter() {
+        //     print!("    {}:", point.key);
+        //     for (uid, val) in &point.vals.map {
+        //         print!(" {} -> {},", uid, val)
+        //     }
+        //     println!()
+        // }
+        // println!("}}");
         Ok(Some(points.drain(0..).collect()))
     }
 }

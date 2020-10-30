@@ -98,11 +98,19 @@ pub fn center(inner: Html) -> Html {
 
 /// Creates a header line with three columns (30%-70%-30%, float left).
 pub fn three_part_line(lft: Html, center: Html, rgt: Html) -> Html {
+    three_part_line_with("", lft, center, rgt)
+}
+
+/// Creates a header line with three columns (30%-70%-30%, float left).
+pub fn three_part_line_with(style: &'static str, lft: Html, center: Html, rgt: Html) -> Html {
     const center_width_pc: usize = 70;
     const lft_width_pc: usize = (100 - center_width_pc) / 2;
     const rgt_width_pc: usize = lft_width_pc;
 
     define_style! {
+        CONTAINER = {
+            height({HEADER_LINE_HEIGHT_PX}px),
+        };
         tile_style! = {
             block,
             float(left),
@@ -125,7 +133,9 @@ pub fn three_part_line(lft: Html, center: Html, rgt: Html) -> Html {
     }
 
     html! {
-        <>
+        <div
+            style = format!("{}{}", &*CONTAINER, style)
+        >
             <div
                 style = LFT_STYLE
             >
@@ -141,7 +151,7 @@ pub fn three_part_line(lft: Html, center: Html, rgt: Html) -> Html {
             >
                 {rgt}
             </div>
-        </>
+        </div>
     }
 }
 

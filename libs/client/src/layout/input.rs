@@ -40,7 +40,7 @@ pub fn text_input(value: &str, onchange: OnChangeAction) -> Html {
 pub fn step_input(value: &str, step: impl fmt::Display, onchange: OnChangeAction) -> Html {
     html! {
         <input
-            type = "text"
+            type = "number"
             step = step
             class = "text_input"
             style = TEXT_INPUT_STYLE
@@ -114,7 +114,7 @@ pub fn lifetime_input(
 pub fn since_start_opt_input(
     model: &Model,
     step: impl fmt::Display,
-    value: &Option<time::SinceStart>,
+    value: Option<time::SinceStart>,
     msg: impl Fn(Res<Option<time::SinceStart>>) -> Msg + 'static,
 ) -> Html {
     step_input(
@@ -138,14 +138,12 @@ pub fn since_start_opt_input(
                 }
                 s
             })
-            .unwrap_or_else(|| "_".into()),
+            .unwrap_or_else(|| "".into()),
         step,
         model.link.callback(move |data| {
             let time_opt = parse_text_data(data).and_then(|txt| match &txt as &str {
-                "" | "_" => Ok(None),
-                txt => time::SinceStart::parse_secs(txt)
-                    .chain_err(|| "while parsing optional time value")
-                    .map(Some),
+                "" => Ok(None),
+                txt => Ok(time::SinceStart::parse_secs(txt).ok()),
             });
             msg(time_opt)
         }),

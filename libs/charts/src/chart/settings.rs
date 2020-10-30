@@ -274,6 +274,43 @@ impl Charts {
         }
     }
 
+    /// Checks whether `self` is legal.
+    pub fn is_legal(&self) -> Option<String> {
+        let mut error: Option<String> = None;
+        macro_rules! error_mut {
+            () => {{
+                if let Some(error) = error.as_mut() {
+                    error.push('\n')
+                }
+                error.get_or_insert_with(|| String::new())
+            }};
+        };
+
+        // Exhaustive deconstruction to create errors when new fields are added to `Self`.
+        //
+        // DO NOT USE `..` here.
+        let Self { time_window } = self;
+
+        match time_window {
+            Range {
+                lbound: Some(lb),
+                ubound: Some(ub),
+            } => {
+                if lb > ub {
+                    let error = error_mut!();
+                    error.push_str(&format!(
+                        "⚠ illegal time window [{}, {}]\n\
+                        ↪ lower bound needs to be less than upper bound",
+                        lb, ub,
+                    ));
+                }
+            }
+            _ => (),
+        }
+
+        error
+    }
+
     /// Time-window accessor.
     pub fn time_windopt(&self) -> &TimeWindopt {
         &self.time_window

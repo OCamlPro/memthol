@@ -86,6 +86,8 @@ impl Settings {
     /// True if the current settings are different form the server ones.
     pub fn has_changed(&self) -> bool {
         // Exhaustive deconstruction so that this breaks when new fields are added to `Self`.
+        //
+        // DO NOT USE `..` HERE.
         let Self {
             display_mode: _,
             link: _,
@@ -94,6 +96,22 @@ impl Settings {
             charts_settings,
         } = self;
         charts_settings.has_changed()
+    }
+
+    /// True if the current settings are legal.
+    pub fn is_legal(&self) -> Option<String> {
+        // Exhaustive deconstruction so that this breaks when new fields are added to `Self`.
+        //
+        // DO NOT USE `..` HERE.
+        let Self {
+            display_mode: _,
+            link: _,
+            run_duration: _,
+
+            charts_settings,
+        } = self;
+
+        charts_settings.get().is_legal()
     }
 
     /// Generates the save/undo buttons, if needed.
@@ -151,9 +169,27 @@ impl Settings {
                 width(10%),
                 height(80%),
             };
+            BOTTOM_BORDER = {
+                border(bottom, 2 px, {layout::LIGHT_BLUE_FG}),
+            };
         }
 
-        layout::header::three_part_line(
+        let (lb, ub) = (
+            self.charts_settings
+                .get()
+                .time_windopt()
+                .lbound
+                .unwrap_or_else(time::SinceStart::zero),
+            self.charts_settings
+                .get()
+                .time_windopt()
+                .ubound
+                .unwrap_or_else(|| self.run_duration),
+        );
+        let step = self.run_duration / 10;
+
+        layout::header::three_part_line_with(
+            &*BOTTOM_BORDER,
             html! {},
             layout::header::center(html! {
                 <div>
@@ -170,8 +206,8 @@ impl Settings {
                     >
                         { layout::input::since_start_opt_input(
                             model,
-                            "1",
-                            &self.charts_settings.get().time_windopt().lbound,
+                            step,
+                            Some(lb),
                             |since_start_opt| msg_of_res(
                                 since_start_opt.map(|lb| Msg::TimeWindowLb(lb).into())
                             )
@@ -189,8 +225,8 @@ impl Settings {
                     >
                         { layout::input::since_start_opt_input(
                             model,
-                            "1",
-                            &self.charts_settings.get().time_windopt().ubound,
+                            step,
+                            Some(ub),
                             |since_start_opt| msg_of_res(
                                 since_start_opt.map(|ub| Msg::TimeWindowUb(ub).into())
                             )
@@ -251,12 +287,18 @@ impl Settings {
             }
             Msg::Save => {
                 if self.has_changed() {
-                    self.link.send_message(msg::Msg::ToServer(
-                        msg::to_server::ChartsMsg::settings(self.charts_settings.get().clone())
-                            .into(),
-                    ));
-                    self.charts_settings.overwrite_reference();
-                    Ok(true)
+                    if let Some(mut errors) = self.is_legal() {
+                        errors.push_str("\n😿 cannot apply these settings , please fix them");
+                        self.link.send_message(msg::Msg::err(errors));
+                        Ok(false)
+                    } else {
+                        self.link.send_message(msg::Msg::ToServer(
+                            msg::to_server::ChartsMsg::settings(self.charts_settings.get().clone())
+                                .into(),
+                        ));
+                        self.charts_settings.overwrite_reference();
+                        Ok(true)
+                    }
                 } else {
                     Ok(false)
                 }

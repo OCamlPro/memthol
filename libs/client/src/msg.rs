@@ -47,8 +47,8 @@ impl Msg {
         Self::Warn(txt.into())
     }
     /// Error message constructor.
-    pub fn err(e: err::Error) -> Self {
-        Self::Err(e)
+    pub fn err(e: impl Into<err::Error>) -> Self {
+        Self::Err(e.into())
     }
 }
 
