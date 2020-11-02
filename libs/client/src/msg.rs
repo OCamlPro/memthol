@@ -23,6 +23,9 @@ pub enum Msg {
     Footer(FooterMsg),
     /// Filter operations.
     Filter(FiltersMsg),
+    /// Settings operations.
+    Settings(settings::Msg),
+
     /// A message to print in the JS console.
     Msg(String),
     /// A warning to print in the JS console.
@@ -44,8 +47,8 @@ impl Msg {
         Self::Warn(txt.into())
     }
     /// Error message constructor.
-    pub fn err(e: err::Error) -> Self {
-        Self::Err(e)
+    pub fn err(e: impl Into<err::Error>) -> Self {
+        Self::Err(e.into())
     }
 }
 
@@ -256,6 +259,7 @@ base::implement! {
                 Self::Charts(charts_msg) => write!(fmt, "charts, {}", charts_msg),
                 Self::Footer(footer_msg) => write!(fmt, "footer, {}", footer_msg),
                 Self::Filter(filter_msg) => write!(fmt, "filter, {}", filter_msg),
+                Self::Settings(settings_msg) => write!(fmt, "settings, {}", settings_msg),
                 Self::Msg(_) => write!(fmt, "info"),
                 Self::Warn(_) => write!(fmt, "warning"),
                 Self::Err(_) => write!(fmt, "error"),
@@ -274,6 +278,7 @@ base::implement! {
             },
             from FooterMsg => |msg| Self::Footer(msg),
             from FiltersMsg => |msg| Self::Filter(msg),
+            from settings::Msg => |msg| Self::Settings(msg),
         }
     }
 

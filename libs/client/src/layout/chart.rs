@@ -567,15 +567,17 @@ pub mod filter_toggles {
                 );
             }
 
-            tabs.push_sep();
-            tabs.push_tab(
-                model,
-                catch_all.name(),
-                TabProps::new(catch_all.color().to_string())
-                    .set_dimmed(!is_active(catch_all))
-                    .set_rev(),
-                callback(catch_all),
-            );
+            if !model.is_catch_all_empty() {
+                tabs.push_sep();
+                tabs.push_tab(
+                    model,
+                    catch_all.name(),
+                    TabProps::new(catch_all.color().to_string())
+                        .set_dimmed(!is_active(catch_all))
+                        .set_rev(),
+                    callback(catch_all),
+                )
+            }
         }
 
         html! {

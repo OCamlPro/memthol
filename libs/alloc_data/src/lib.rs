@@ -46,27 +46,8 @@ pub mod err {
 #[cfg(test)]
 mod test;
 
-/// A span.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Span {
-    /// Start of the span.
-    pub start: usize,
-    /// End of the span.
-    pub end: usize,
-}
-
-base::implement! {
-    impl From for Span {
-        from (usize, usize) => |(start, end)| Self { start, end }
-    }
-}
-
-impl Span {
-    /// Construtor.
-    pub fn new(start: usize, end: usize) -> Self {
-        Self { start, end }
-    }
-}
+/// A byte-span.
+pub type Span = base::Range<usize>;
 
 /// A location.
 ///
@@ -228,7 +209,7 @@ impl Builder {
     }
 
     /// Builds an `Alloc`.
-    pub fn build(self, uid: uid::Alloc) -> Res<Alloc> {
+    pub fn build(self, sample_rate: &SampleRate, uid: uid::Alloc) -> Res<Alloc> {
         let Self {
             uid_hint,
             kind,
@@ -239,6 +220,7 @@ impl Builder {
             toc,
             tod,
         } = self;
+        let real_size = sample_rate.real_size_of(nsamples);
         match uid_hint {
             None => (),
             Some(hint) if uid == hint => (),
@@ -252,6 +234,7 @@ impl Builder {
             uid,
             kind,
             size,
+            real_size,
             nsamples,
             trace,
             labels,
@@ -270,6 +253,8 @@ pub struct Alloc {
     pub kind: AllocKind,
     /// Size of the allocation.
     pub size: u32,
+    /// Real size of the allocation.
+    pub real_size: u32,
     /// Sample count.
     pub nsamples: u32,
     /// Allocation-site callstack.
@@ -285,6 +270,7 @@ pub struct Alloc {
 impl Alloc {
     /// Constructor.
     pub fn new(
+        sample_rate: &base::SampleRate,
         uid: impl Into<uid::Alloc>,
         kind: AllocKind,
         size: u32,
@@ -294,10 +280,13 @@ impl Alloc {
         tod: Option<time::SinceStart>,
     ) -> Self {
         let uid = uid.into();
+        let nsamples = size;
+        let real_size = sample_rate.real_size_of(nsamples);
         Self {
             uid,
             kind,
             size,
+            real_size,
             nsamples: size,
             trace,
             labels,
@@ -406,7 +395,7 @@ pub struct Init {
     /// True if the callstack go from `main` to allocation site, called *reversed order*.
     pub callstack_is_rev: bool,
     /// Sampling rate.
-    pub sampling_rate: base::SampleRate,
+    pub sample_rate: base::SampleRate,
 }
 
 impl Default for Init {
@@ -416,7 +405,7 @@ impl Default for Init {
             end_time: None,
             word_size: 8,
             callstack_is_rev: false,
-            sampling_rate: 1.0.into(),
+            sample_rate: SampleRate::new(1.0, 8),
         }
     }
 }
@@ -434,13 +423,16 @@ impl Init {
             end_time,
             word_size,
             callstack_is_rev,
-            sampling_rate: 1.0.into(),
+            sample_rate: SampleRate::new(1.0, convert(word_size, "Init::new, word_size")),
         }
     }
 
     /// Sets the sampling rate.
-    pub fn sampling_rate(mut self, rate: f64) -> Self {
-        self.sampling_rate = rate.into();
+    pub fn sample_rate(mut self, rate: f64) -> Self {
+        self.sample_rate = SampleRate::new(
+            rate,
+            convert(self.word_size, "Init::sample_rate, word_size"),
+        );
         self
     }
 }

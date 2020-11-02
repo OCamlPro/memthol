@@ -136,6 +136,8 @@ pub mod to_server {
             /// Actual message.
             msg: ChartMsg,
         },
+        /// New value for the global charts settings.
+        Settings(settings::Charts),
     }
     impl fmt::Display for ChartsMsg {
         fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -143,6 +145,7 @@ pub mod to_server {
                 Self::New(_, _) => write!(fmt, "new chart"),
                 Self::Reload => write!(fmt, "reload"),
                 Self::ChartUpdate { uid, msg } => write!(fmt, "update({}, {})", uid, msg),
+                Self::Settings(_) => write!(fmt, "new settings"),
             }
         }
     }
@@ -154,6 +157,10 @@ pub mod to_server {
         /// Reloads all charts.
         pub fn reload() -> Msg {
             Self::Reload.into()
+        }
+        /// New global chart settings.
+        pub fn settings(settings: settings::Charts) -> Msg {
+            Self::Settings(settings).into()
         }
     }
 
@@ -371,7 +378,7 @@ pub mod to_client {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum ChartsMsg {
         /// Creates a new chart.
-        NewChart(chart::ChartSpec, chart::ChartSettings),
+        NewChart(chart::ChartSpec, settings::Chart),
         /// Message for a specific chart.
         Chart {
             /// UID of the chart this message is for.
@@ -391,7 +398,7 @@ pub mod to_client {
     }
     impl ChartsMsg {
         /// Constructor for `NewChart`.
-        pub fn new_chart(spec: chart::ChartSpec, settings: chart::ChartSettings) -> Msg {
+        pub fn new_chart(spec: chart::ChartSpec, settings: settings::Chart) -> Msg {
             Msg::charts(Self::NewChart(spec, settings))
         }
         /// Constructor for `NewPoints`.

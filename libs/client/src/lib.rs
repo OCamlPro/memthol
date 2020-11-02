@@ -13,6 +13,7 @@ pub mod js;
 pub mod layout;
 
 pub mod model;
+pub mod settings;
 
 pub mod chart;
 pub mod cst;

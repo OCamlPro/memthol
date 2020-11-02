@@ -20,6 +20,11 @@ pub mod coord {
 
 pub use alloc::Alloc;
 
+/// A window of time, for a graph.
+pub type TimeWindow = Range<time::SinceStart>;
+/// A window of time, for a graph.
+pub type TimeWindopt = Range<Option<time::SinceStart>>;
+
 /// Imports this crate's prelude.
 macro_rules! prelude {
     () => {
@@ -34,7 +39,7 @@ base::cfg_item! {
 }
 
 pub use crate::{
-    chart::{self, settings::ChartSettings},
+    chart::{self, settings},
     color::Color,
     filter::{self, Filter, Filters},
     msg,
@@ -136,6 +141,8 @@ pub struct AllocStats {
     pub dump_dir: std::path::PathBuf,
     /// Total number of allocations.
     pub alloc_count: usize,
+    /// Total size of the allocations.
+    pub total_size: usize,
     /// Date at which the run started.
     pub start_date: time::Date,
     /// Duration of the run.
@@ -150,6 +157,7 @@ impl AllocStats {
         Self {
             dump_dir,
             alloc_count: 0,
+            total_size: 0,
             start_date,
             duration: time::SinceStart::zero(),
         }

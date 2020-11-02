@@ -25,6 +25,16 @@ impl<Val> PointVal<Val> {
         Self { map }
     }
 
+    /// Empty constructor.
+    pub fn empty() -> Self {
+        Self { map: BTMap::new() }
+    }
+
+    /// True if the inner map is empty.
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+
     /// Immutable ref over some value.
     pub fn get_mut_or(&mut self, uid: uid::Line, default: Val) -> &mut Val {
         self.map.entry(uid).or_insert(default)
@@ -90,30 +100,6 @@ impl<Key, Val> Point<Key, Val> {
     /// Constructor.
     pub fn new(key: Key, vals: PointVal<Val>) -> Self {
         Self { key, vals }
-    }
-}
-
-/// A range for some value-type.
-///
-/// Inclusive on both sides.
-pub struct Range<T> {
-    /// Lower-bound of the range.
-    pub min: T,
-    /// Upper-bound of the range.
-    pub max: T,
-}
-impl<T> Range<T> {
-    /// Constructor.
-    pub fn new(min: T, max: T) -> Self {
-        Self { min, max }
-    }
-
-    /// Map over the bounds of the range.
-    pub fn map<NewT>(self, f: impl Fn(T) -> NewT) -> Range<NewT> {
-        Range {
-            min: f(self.min),
-            max: f(self.max),
-        }
     }
 }
 
@@ -224,6 +210,26 @@ impl CoordExt for time::Date {
     type Range = coord::RangedDuration;
     fn default_val() -> Self {
         time::Date::from_timestamp(0, 0)
+    }
+    fn zero() -> time::chrono::Duration {
+        time::chrono::Duration::seconds(0)
+    }
+    fn is_zero(dur: &time::chrono::Duration) -> bool {
+        dur.is_zero()
+    }
+    fn default_min() -> time::chrono::Duration {
+        time::chrono::Duration::seconds(0)
+    }
+    fn default_max() -> time::chrono::Duration {
+        time::chrono::Duration::seconds(5)
+    }
+}
+
+impl CoordExt for time::SinceStart {
+    type Coord = time::chrono::Duration;
+    type Range = coord::RangedDuration;
+    fn default_val() -> Self {
+        time::SinceStart::zero()
     }
     fn zero() -> time::chrono::Duration {
         time::chrono::Duration::seconds(0)
@@ -426,7 +432,7 @@ where
     /// Renders some points on a graph.
     fn render<'spec, DB>(
         &self,
-        settings: &ChartSettings,
+        settings: &settings::Chart,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
@@ -473,7 +479,7 @@ where
     /// Normal display mode rendering.
     fn chart_render<'spec, DB>(
         &self,
-        _settings: &ChartSettings,
+        _settings: &settings::Chart,
         mut chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
@@ -488,8 +494,8 @@ where
 
         use plotters::prelude::*;
 
-        let x_range: X::Range = (ranges.x.min..ranges.x.max).into();
-        let y_range: Y::Range = (ranges.y.min..ranges.y.max).into();
+        let x_range: X::Range = (ranges.x.lbound..ranges.x.ubound).into();
+        let y_range: Y::Range = (ranges.y.lbound..ranges.y.ubound).into();
 
         // Alright, time to build the actual chart context used for drawing.
         let mut chart_cxt: ChartContext<DB, coord::Cartesian2d<X::Range, Y::Range>> = chart_builder
@@ -535,7 +541,7 @@ where
     /// Stacked area rendering.
     fn chart_render_stacked_area<'spec, DB>(
         &self,
-        settings: &ChartSettings,
+        settings: &settings::Chart,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
@@ -561,7 +567,7 @@ where
             active_filters,
             Y::zero,
             |y_val, _y_max| y_val,
-            |min, max| (min..max).into(),
+            |lbound, ubound| (lbound..ubound).into(),
             Self::y_label_formatter,
             Y::default_val,
         )
@@ -570,7 +576,7 @@ where
     /// Percent stacked area rendering.
     fn chart_render_stacked_area_percent<'spec, DB>(
         &self,
-        settings: &ChartSettings,
+        settings: &settings::Chart,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
@@ -616,7 +622,7 @@ where
     /// Stacked area rendering.
     fn chart_render_stacked_area_custom<'spec, DB, RealY: CoordExt>(
         &self,
-        _settings: &ChartSettings,
+        _settings: &settings::Chart,
         mut chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
@@ -649,7 +655,7 @@ where
 
         use plotters::prelude::*;
 
-        let (y_min, mut y_max) = (ranges.y.min, Y::zero());
+        let (y_min, mut y_max) = (ranges.y.lbound, Y::zero());
 
         // Stores all the maximum values and the result quantity for each filter that has been
         // processed so far (used in the loop below).
@@ -685,7 +691,7 @@ where
                 .collect()
         };
 
-        let x_range: X::Range = (ranges.x.min..ranges.x.max).into();
+        let x_range: X::Range = (ranges.x.lbound..ranges.x.ubound).into();
         let y_range = range_do(y_min, y_max);
 
         // Alright, time to build the actual chart context used for drawing.
@@ -766,38 +772,38 @@ where
         for point in self {
             // Update x-range.
             {
-                if ranges.x.min.is_none() {
-                    ranges.x.min = Some(&point.key)
+                if ranges.x.lbound.is_none() {
+                    ranges.x.lbound = Some(&point.key)
                 }
 
                 // Points must be ordered by their key, let's make sure that's the case.
-                debug_assert!(ranges.x.min.is_some());
-                debug_assert!(ranges.x.min.map(|min| min <= &point.key).unwrap());
+                debug_assert!(ranges.x.lbound.is_some());
+                debug_assert!(ranges.x.lbound.map(|min| min <= &point.key).unwrap());
                 // Now for max.
-                debug_assert!(ranges.x.max.map(|max| max <= &point.key).unwrap_or(true));
+                debug_assert!(ranges.x.ubound.map(|max| max <= &point.key).unwrap_or(true));
 
                 // Update max.
-                ranges.x.max = Some(&point.key);
+                ranges.x.ubound = Some(&point.key);
             }
 
             // Update y-range.
             for (_, val) in point.vals.map.iter().filter(|(uid, _)| is_active(**uid)) {
                 // Update min.
-                if let Some(min) = &mut ranges.y.min {
+                if let Some(min) = &mut ranges.y.lbound {
                     if val < min {
                         *min = val
                     }
                 } else {
-                    ranges.y.min = Some(val)
+                    ranges.y.lbound = Some(val)
                 }
 
                 // Update max.
-                if let Some(max) = &mut ranges.y.max {
+                if let Some(max) = &mut ranges.y.ubound {
                     if *max < val {
                         *max = val
                     }
                 } else {
-                    ranges.y.max = Some(val)
+                    ranges.y.ubound = Some(val)
                 }
             }
         }
@@ -808,8 +814,8 @@ where
 
 impl<Y> PointValExt<time::Date> for PolyPoints<time::Date, Y> {
     fn val_range_processor(range: Range<Option<time::Date>>) -> Res<Range<time::Date>> {
-        match (range.min, range.max) {
-            (Some(min), Some(max)) => Ok(Range { min, max }),
+        match (range.lbound, range.ubound) {
+            (Some(min), Some(max)) => Ok(Range::new(min, max)),
             (min, max) => bail!("failed to compute x-range: {:?}, {:?}", min, max),
         }
     }
@@ -817,15 +823,14 @@ impl<Y> PointValExt<time::Date> for PolyPoints<time::Date, Y> {
         range: &Range<time::Date>,
     ) -> Res<Range<<time::Date as CoordExt>::Coord>> {
         let min = time::chrono::Duration::seconds(0);
-        let mut max = range.max.date().clone() - range.min.date().clone();
-        max = max + max / 20;
-        Ok(Range { min, max })
+        let max = range.ubound.date().clone() - range.lbound.date().clone();
+        Ok(Range::new(min, max))
     }
     fn val_coord_processor(
         range: &Range<time::Date>,
         x: &time::Date,
     ) -> <time::Date as CoordExt>::Coord {
-        x.date().clone() - range.min.date().clone()
+        x.date().clone() - range.lbound.date().clone()
     }
     fn val_label_formatter(date: &<time::Date as CoordExt>::Coord) -> String {
         let mut res = time::SinceStart::from(date.to_std().unwrap())
@@ -844,23 +849,57 @@ impl<Y> PointValExt<time::Date> for PolyPoints<time::Date, Y> {
     }
 }
 
+impl<Y> PointValExt<time::SinceStart> for PolyPoints<time::SinceStart, Y> {
+    fn val_range_processor(range: Range<Option<time::SinceStart>>) -> Res<Range<time::SinceStart>> {
+        match (range.lbound, range.ubound) {
+            (Some(min), Some(max)) => Ok(Range::new(min, max)),
+            (min, max) => bail!("failed to compute x-range: {:?}, {:?}", min, max),
+        }
+    }
+    fn val_coord_range_processor(
+        range: &Range<time::SinceStart>,
+    ) -> Res<Range<<time::SinceStart as CoordExt>::Coord>> {
+        let min = range.lbound.to_chrono_duration();
+        let max = range.ubound.to_chrono_duration();
+        Ok(Range::new(min, max))
+    }
+    fn val_coord_processor(
+        _range: &Range<time::SinceStart>,
+        x: &time::SinceStart,
+    ) -> <time::SinceStart as CoordExt>::Coord {
+        x.to_chrono_duration()
+    }
+    fn val_label_formatter(date: &<time::SinceStart as CoordExt>::Coord) -> String {
+        let mut res = time::SinceStart::from(date.to_std().unwrap())
+            .display_millis()
+            .to_string();
+        'rm_trailing_zeros: while let Some(last) = res.pop() {
+            if last == '0' {
+                continue 'rm_trailing_zeros;
+            } else {
+                res.push(last);
+                break 'rm_trailing_zeros;
+            }
+        }
+        res.push('s');
+        res
+    }
+}
+
 impl<X> PointValExt<Size> for PolyPoints<X, Size> {
     fn val_range_processor(range: Range<Option<Size>>) -> Res<Range<Size>> {
-        Ok(Range {
-            min: range.min.unwrap_or_else(|| u32::default_min().into()),
-            max: range.max.unwrap_or_else(|| u32::default_max().into()),
-        })
+        Ok(range.unwrap_or_else(|| u32::default_min().into(), || u32::default_max().into()))
     }
     fn val_coord_range_processor(range: &Range<Size>) -> Res<Range<<Size as CoordExt>::Coord>> {
         let default_max = Size::default_max();
-        Ok(Range {
-            min: range.min.size,
-            max: if range.max.size < default_max {
+        Ok(Range::new(
+            range.lbound.size,
+            if range.ubound.size < default_max {
                 default_max
             } else {
-                range.max.size
+                range.ubound.size
             },
-        })
+        ))
     }
     fn val_coord_processor(_range: &Range<Size>, x: &Size) -> <Size as CoordExt>::Coord {
         x.size
@@ -874,21 +913,18 @@ impl<X> PointValExt<Size> for PolyPoints<X, Size> {
 
 impl<X> PointValExt<u32> for PolyPoints<X, u32> {
     fn val_range_processor(range: Range<Option<u32>>) -> Res<Range<u32>> {
-        Ok(Range {
-            min: range.min.unwrap_or_else(u32::default_min),
-            max: range.max.unwrap_or_else(u32::default_max),
-        })
+        Ok(range.unwrap_or_else(u32::default_min, u32::default_max))
     }
     fn val_coord_range_processor(range: &Range<u32>) -> Res<Range<<u32 as CoordExt>::Coord>> {
         let default_max = u32::default_max();
-        Ok(Range {
-            min: range.min,
-            max: if range.max < default_max {
+        Ok(Range::new(
+            range.lbound,
+            if range.ubound < default_max {
                 default_max
             } else {
-                range.max
+                range.ubound
             },
-        })
+        ))
     }
     fn val_coord_processor(_range: &Range<u32>, x: &u32) -> <u32 as CoordExt>::Coord {
         *x
@@ -899,7 +935,7 @@ impl<X> PointValExt<u32> for PolyPoints<X, u32> {
 }
 
 /// Points representing size over time.
-pub type TimeSizePoints = PolyPoints<time::Date, Size>;
+pub type TimeSizePoints = PolyPoints<time::SinceStart, Size>;
 
 /// Some points for a time chart.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -956,7 +992,7 @@ impl TimePoints {
     /// Renders the points on a graph.
     pub fn render<'spec, DB>(
         &self,
-        settings: &ChartSettings,
+        settings: &settings::Chart,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,
@@ -1019,7 +1055,7 @@ impl Points {
     /// Renders the points on a graph.
     pub fn render<'spec, DB>(
         &self,
-        settings: &ChartSettings,
+        settings: &settings::Chart,
         chart_builder: plotters::prelude::ChartBuilder<DB>,
         style_conf: &impl StyleExt,
         is_active: impl Fn(uid::Line) -> bool,

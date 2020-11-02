@@ -180,8 +180,9 @@ mod diff_parse {
         mut factory: &mut F,
         mut bytes_progress: impl FnMut(usize),
         init_action: impl FnOnce(&mut F, Init),
-        mut new_action: impl FnMut(&mut F, Alloc),
+        mut new_action: impl FnMut(&mut F, alloc_data::Builder),
         mut dead_action: impl FnMut(&mut F, time::SinceStart, uid::Alloc),
+        mut mark_timestamp: impl FnMut(&mut F, time::SinceStart),
     ) -> Res<()>
     where
         F: std::ops::DerefMut<Target = mem::Factory<'a>>,
@@ -215,7 +216,7 @@ mod diff_parse {
 
                 // Start time of the run, used for init and to compute the time-since-start of all
                 // events.
-                let start_time = date_from_microsecs(header.timestamp.begin);
+                let start_time = date_from_microsecs(header.timestamp.lbound);
                 // let end_time = date_from_microsecs(header.header.timestamp.end).sub(start_time)?;
 
                 // Init info.
@@ -258,8 +259,8 @@ mod diff_parse {
                                     let time_since_start =
                                         date_from_microsecs(clock) - start_time;
                                     let labels = factory.empty_labels();
-                                    let alloc = Alloc::new(
-                                        uid,
+                                    let alloc = alloc_data::Builder::new(
+                                        Some(uid.into()),
                                         AllocKind::Minor,
                                         convert(len, "ctf parser: alloc size"),
                                         trace,
@@ -297,8 +298,8 @@ mod diff_parse {
                                         file,
                                         line,
                                         Span {
-                                            start: col.begin,
-                                            end: col.end,
+                                            lbound: col.lbound,
+                                            ubound: col.ubound,
                                         },
                                     )
                                 }).collect();
@@ -314,6 +315,14 @@ mod diff_parse {
                             },
                         }
                     }
+
+                    let packet_end = date_from_microsecs(
+                        packet_parser.header().timestamp.ubound
+                    ) - start_time;
+                    mark_timestamp(
+                        factory,
+                        packet_end,
+                    )
                 }
 
                 prof.all_do(

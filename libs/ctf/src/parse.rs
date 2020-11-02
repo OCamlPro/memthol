@@ -852,9 +852,9 @@ decl_impl_trait! {
 
             let code = self.u32()?;
             pinfo!(self, "code: {}", code);
-            pinfo!(self, "timestamp begin: {}", header.timestamp.begin);
+            pinfo!(self, "timestamp lbound: {}", header.timestamp.lbound);
             // This conversion will pretty much always be OOB.
-            let timestamp_begin = header.timestamp.begin as u32;
+            let timestamp_begin = header.timestamp.lbound as u32;
             let start_low = EVENT_HEADER_TIME_MASK & timestamp_begin;
             let time_low: u64 = convert(
                 {
@@ -869,11 +869,11 @@ decl_impl_trait! {
                 "event_kind: time_low",
             );
 
-            let time = (header.timestamp.begin & (!EVENT_HEADER_TIME_MASK_U64)) + time_low;
+            let time = (header.timestamp.lbound & (!EVENT_HEADER_TIME_MASK_U64)) + time_low;
             // if !header.timestamp.contains(time) {
             //     bail!(
             //         "inconsistent event header time, expected `{} <= {} <= {}`",
-            //         header.timestamp.begin,
+            //         header.timestamp.lbound,
             //         time,
             //         header.timestamp.end
             //     )
@@ -891,7 +891,7 @@ decl_impl_trait! {
             pinfo!(self, "parsing packet header");
             self.raw_package_header(true)
                 .map(|(header, cache_check)| header::Packet::new(id, header, cache_check))
-                .chain_err(|| "while parsing ctf header")
+                .chain_err(|| "while parsing packet header")
         }
 
         /// Parses the top-level CTF header.
@@ -902,7 +902,7 @@ decl_impl_trait! {
             pinfo!(self, "parsing ctf header");
             self.raw_package_header(false)
                 .map(|(header, _)| header::Ctf::new(header, self.big_endian))
-                .chain_err(|| "while parsing package header")
+                .chain_err(|| "while parsing ctf header")
         }
 
         /// Raw package header parser.
@@ -924,12 +924,7 @@ decl_impl_trait! {
 
             let (begin, end) = (self.clock()?, self.clock()?);
             pinfo!(self, "    begin/end times {}/{}", begin, end);
-            let timestamp = Span::new(begin, end).chain_err(|| {
-                format!(
-                    "while parsing timestamp begin/end values ({}/{})",
-                    begin, end
-                )
-            })?;
+            let timestamp = Range::new(begin, end);
 
             let _flush_duration = self.u32()?;
             pinfo!(self, "    flush duration {}", _flush_duration);
@@ -949,12 +944,7 @@ decl_impl_trait! {
                 alloc_begin,
                 alloc_end
             );
-            let alloc_id = Span::new(alloc_begin, alloc_end).chain_err(|| {
-                format!(
-                    "while parsing allocation id begin/end values ({}/{})",
-                    alloc_begin, alloc_end
-                )
-            })?;
+            let alloc_id = Range::new(alloc_begin, alloc_end);
 
             if VERSION == version {
                 ()

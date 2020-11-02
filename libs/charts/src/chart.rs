@@ -9,8 +9,6 @@ pub mod spec;
 pub mod axis;
 pub mod settings;
 pub mod time;
-
-pub use settings::ChartSettings;
 pub use spec::ChartSpec;
 
 /// A chart with no UID.
@@ -28,9 +26,12 @@ impl RawChart {
         filters: &mut Filters,
         init: bool,
         resolution: settings::Resolution,
+        time_windopt: &TimeWindopt,
     ) -> Res<Option<Points>> {
         match self {
-            Self::Time(time_chart) => time_chart.new_points(filters, init, resolution),
+            Self::Time(time_chart) => {
+                time_chart.new_points(filters, init, resolution, time_windopt)
+            }
         }
     }
 
@@ -61,7 +62,7 @@ pub struct Chart {
     /// Chart specification.
     spec: ChartSpec,
     /// Chart settings.
-    settings: ChartSettings,
+    settings: settings::Chart,
     /// Raw chart.
     #[allow(dead_code)]
     chart: RawChart,
@@ -76,7 +77,7 @@ impl Chart {
     /// Creates a time chart.
     pub fn new(filters: &filter::Filters, x_axis: XAxis, y_axis: YAxis) -> Res<Self> {
         let spec = ChartSpec::new(x_axis, y_axis);
-        let settings = ChartSettings::from_axes(spec.desc(), x_axis, y_axis);
+        let settings = settings::Chart::from_axes(spec.desc(), x_axis, y_axis);
         let chart = RawChart::new(filters, x_axis, y_axis)?;
         let slf = Self {
             spec,
@@ -103,12 +104,12 @@ impl Chart {
 
     /// Settings accessor.
     #[inline]
-    pub fn settings(&self) -> &ChartSettings {
+    pub fn settings(&self) -> &settings::Chart {
         &self.settings
     }
     /// Settings mutable accessor.
     #[inline]
-    pub fn settings_mut(&mut self) -> &mut ChartSettings {
+    pub fn settings_mut(&mut self) -> &mut settings::Chart {
         &mut self.settings
     }
 
@@ -122,10 +123,17 @@ impl Chart {
 #[cfg(any(test, feature = "server"))]
 impl Chart {
     /// Retrieves new points since the last time it was called.
-    pub fn new_points(&mut self, filters: &mut Filters, init: bool) -> Res<Option<Points>> {
+    pub fn new_points(
+        &mut self,
+        init: bool,
+        filters: &mut Filters,
+        time_windopt: &TimeWindopt,
+    ) -> Res<Option<Points>> {
         self.still_init = self.still_init || init;
         if let Some(resolution) = self.settings.resolution() {
-            let res = self.chart.new_points(filters, self.still_init, resolution);
+            let res = self
+                .chart
+                .new_points(filters, self.still_init, resolution, time_windopt);
             self.still_init = false;
             res
         } else {

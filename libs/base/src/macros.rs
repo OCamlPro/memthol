@@ -55,6 +55,14 @@ macro_rules! __cfg_cond {
         #[cfg(not(any(test, feature = "server")))]
         $($stuff)*
     };
+    (@cfg(client) $($stuff:tt)*) => {
+        #[cfg(any(test, feature = "client"))]
+        $($stuff)*
+    };
+    (@cfg(not client) $($stuff:tt)*) => {
+        #[cfg(not(any(test, feature = "client")))]
+        $($stuff)*
+    };
 
     (@cfg(debug) $($stuff:tt)*) => {
         #[cfg(any(test, debug_assertions))]
@@ -128,19 +136,26 @@ macro_rules! cfg_item {
     };
 
     (
+        cfg $cfg_conf:tt $({
+            $($cfg_stuff:tt)*
+        })*
+    ) => {
+        $(
+            $crate::__cfg_cond! {
+                @cfg
+                $cfg_conf
+                $($cfg_stuff)*
+            }
+        )*
+    };
+
+    (
         pref {
             $($pref_stuff:tt)*
         }
     ) => {};
 
-    (
-        cfg $($tail:tt)*
-    ) => {
-        $crate::cfg_item! {
-            pref {}
-            cfg $($tail)*
-        }
-    };
+    () => {};
 }
 
 cfg_item! {
@@ -213,76 +228,76 @@ cfg_item! {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __implement_trait {
-    (@Display ($ty:ty) ($($args:tt)*) {
+    (@Display ($ty:ty) ($($ty_args:tt)*) {
         |&$slf:ident, $fmt:pat| $def:expr $(,)?
     }) => {
-        impl < $($args)* > std::fmt::Display for $ty {
+        impl < $($ty_args)* > std::fmt::Display for $ty {
             fn fmt(&$slf, $fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
                 $def
             }
         }
     };
 
-    (@From ($ty:ty) ($($args:tt)*) {
+    (@From ($ty:ty) ($($ty_args:tt)*) {
         from $src:ty => |$param:pat| $def:expr $(,)?
     }) => {
-        impl < $($args)* > std::convert::From<$src> for $ty {
+        impl < $($ty_args)* > std::convert::From<$src> for $ty {
             fn from($param: $src) -> Self {
                 $def
             }
         }
     };
-    (@From ($ty:ty) ($($args:tt)*) {
+    (@From ($ty:ty) ($($ty_args:tt)*) {
         from $src:ty => |$param:pat| $def:expr,
         $($tail:tt)*
     }) => {
-        impl < $($args)* > std::convert::From<$src> for $ty {
+        impl < $($ty_args)* > std::convert::From<$src> for $ty {
             fn from($param: $src) -> Self {
                 $def
             }
         }
         $crate::__implement_trait! {
-            @From ($ty) ($($args)*) { $($tail)* }
+            @From ($ty) ($($ty_args)*) { $($tail)* }
         }
     };
 
-    (@Into ($ty:ty) ($($args:tt)*) {
+    (@Into ($ty:ty) ($($ty_args:tt)*) {
         to $tgt:ty => |$slf:ident| $def:expr $(,)?
     }) => {
-        impl < $($args)* > std::convert::Into<$tgt> for $ty {
+        impl < $($ty_args)* > std::convert::Into<$tgt> for $ty {
             fn into($slf) -> $tgt {
                 $def
             }
         }
     };
-    (@Into ($ty:ty) ($($args:tt)*) {
+    (@Into ($ty:ty) ($($ty_args:tt)*) {
         to $tgt:ty => |$slf:ident| $def:expr,
         $($tail:tt)*
     }) => {
-        impl < $($args)* > std::convert::Into<$tgt> for $ty {
+        impl < $($ty_args)* > std::convert::Into<$tgt> for $ty {
             fn into($slf) -> $tgt {
                 $def
             }
         }
         $crate::__implement_trait! {
-            @Into ($ty) ($($args)*) { $($tail)* }
+            @Into ($ty) ($($ty_args)*) { $($tail)* }
         }
     };
 
-    (@Default ($ty:ty) ($($args:tt)*) {
+    (@Default ($ty:ty) ($($ty_args:tt)*) {
         $def:expr $(,)?
     }) => {
-        impl < $($args)* > std::default::Default for $ty {
+        impl < $($ty_args)* > std::default::Default for $ty {
             fn default() -> Self {
                 $def
             }
         }
     };
 
-    (@Deref ($ty:ty) ($($args:tt)*) {
+    (@Deref ($ty:ty) ($($ty_args:tt)*) {
         to $tgt:ty => |&$slf:ident| $def:expr $(,)?
     }) => {
-        impl $(< $($args)* >)* std::ops::Deref for $ty {
+        impl $(< $($ty_args)* >)* std::ops::Deref for $ty {
             type Target = $tgt;
             fn deref(&$slf) -> &$tgt {
                 $def
@@ -290,10 +305,10 @@ macro_rules! __implement_trait {
         }
     };
 
-    (@DerefMut ($ty:ty) ($($args:tt)*) {
+    (@DerefMut ($ty:ty) ($($ty_args:tt)*) {
         |&mut $slf:ident| $def:expr $(,)?
     }) => {
-        impl $(< $($args)* >)* std::ops::DerefMut for $ty {
+        impl $(< $($ty_args)* >)* std::ops::DerefMut for $ty {
             fn deref_mut(&mut $slf) -> &mut Self::Target {
                 $def
             }
@@ -341,7 +356,7 @@ macro_rules! implement {
     };
 
     (
-        impl $ty_args:tt $ty:ty {
+        impl $ty:ty, with $ty_args:tt {
             $(
                 $trait:ident {
                     $($trait_def:tt)*

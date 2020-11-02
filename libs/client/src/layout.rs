@@ -50,35 +50,35 @@ pub fn render(model: &Model) -> Html {
             fg(black),
             border_radius(20 px, 20 px, 0 px, 0 px),
         };
-
-        COLLAPSED_FOOTER_BODY_STYLE = {
-            extends(body_style),
-            padding(
-                {header::HEADER_HEIGHT_PX + 30}px,
-                0%,
-                {foot::collapsed_height_px}px,
-                0%,
-            ),
-        };
-        EXPANDED_FOOTER_BODY_STYLE = {
-            extends(body_style),
-            padding(
-                {header::HEADER_HEIGHT_PX + 30}px,
-                0%,
-                {foot::expanded_height_px}px,
-                0%,
-            ),
-        };
     }
+
+    let collapsed_footer_body_style = inline_css! {
+        extends(body_style),
+        padding(
+            {model.header.height_px(model) + 30}px,
+            0%,
+            {foot::collapsed_height_px}px,
+            0%,
+        ),
+    };
+    let expanded_footer_body_style = inline_css! {
+        extends(body_style),
+        padding(
+            {model.header.height_px(model) + 30}px,
+            0%,
+            {foot::expanded_height_px}px,
+            0%,
+        ),
+    };
 
     html! {
         <>
-            { header::render(model) }
+            { model.header.render(model) }
             <div
                 style = if model.footer.is_expanded() {
-                    &*EXPANDED_FOOTER_BODY_STYLE
+                    expanded_footer_body_style
                 } else {
-                    &*COLLAPSED_FOOTER_BODY_STYLE
+                    collapsed_footer_body_style
                 }
             >
                 {

@@ -121,8 +121,9 @@ impl Watcher {
                     factory.data.reset(target, init)
                 }
             },
-            |factory, alloc| factory.add_new(alloc).unwrap(),
+            |factory, builder| factory.build_new(builder).unwrap(),
             |factory, timestamp, uid| factory.add_dead(timestamp, uid).unwrap(),
+            |factory, timestamp| factory.mark_timestamp(timestamp),
         )
         .chain_err(|| format!("while parsing ctf file `{}`", target.display()))?;
         prof.parse.stop();
