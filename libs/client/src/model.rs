@@ -5,7 +5,7 @@ prelude! {}
 /// Model of the client.
 pub struct Model {
     /// Component link.
-    pub link: ComponentLink<Self>,
+    pub link: Link,
     /// Socket task for receiving/sending messages from/to the server.
     pub socket_task: Option<WebSocketTask>,
     /// Errors.
@@ -19,6 +19,8 @@ pub struct Model {
 
     /// Footer DOM element.
     pub footer: footer::Footer,
+    /// Header DOM element.
+    pub header: header::Header,
 
     /// If not `None`, then the server is currently loading the dumps.
     pub progress: Option<LoadInfo>,
@@ -54,7 +56,7 @@ impl Model {
 
 impl Model {
     /// Activates the websocket to receive data from the server.
-    fn activate_ws(link: &mut ComponentLink<Self>) -> Res<WebSocketTask> {
+    fn activate_ws(link: &mut Link) -> Res<WebSocketTask> {
         log::info!("fetching server's websocket info");
         let (addr, port) = js::server::address()?;
         let addr = format!("ws://{}:{}", addr, port + 1);
@@ -140,7 +142,7 @@ impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, mut link: ComponentLink<Self>) -> Self {
+    fn create(_: Self::Properties, mut link: Link) -> Self {
         let (socket_task, errors) = match Self::activate_ws(&mut link) {
             Ok(res) => (Some(res), vec![]),
             Err(e) => (None, vec![e]),
@@ -148,6 +150,7 @@ impl Component for Model {
         let charts = Charts::new(link.callback(|msg: Msg| msg));
         let filters = filter::Filters::new(link.callback(|msg: Msg| msg));
         let settings = settings::Settings::new(link.clone());
+        let header = header::Header::new(link.clone());
         Model {
             link,
             socket_task,
@@ -155,7 +158,10 @@ impl Component for Model {
             charts,
             filters,
             filter_stats: AllFilterStats::new(),
+
             footer: footer::Footer::new(),
+            header,
+
             progress: Some(LoadInfo::unknown()),
             alloc_stats: None,
             settings,

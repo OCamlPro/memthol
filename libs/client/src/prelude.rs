@@ -3,7 +3,7 @@ pub use yew::{
     html,
     html::ChangeData,
     services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask},
-    Callback, Component, ComponentLink, Renderable, ShouldRender,
+    Callback, Component, Renderable, ShouldRender,
 };
 pub use yew_components::Select;
 
@@ -61,10 +61,14 @@ pub use point::Point;
 pub use crate::{
     chart::{self, Chart, Charts},
     cst, filter, footer, js, layout,
+    layout::header,
     model::Model,
     msg::{self, Msg},
     settings,
 };
+
+/// Component link to the model, can send messages to the model.
+pub type Link = yew::ComponentLink<Model>;
 
 /// Trait for conversion to JS.
 pub trait JsExt {

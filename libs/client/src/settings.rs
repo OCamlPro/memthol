@@ -10,6 +10,13 @@ pub enum DisplayMode {
     /// Expanded for some *depth*.
     Expanded(u8),
 }
+
+impl Default for DisplayMode {
+    fn default() -> Self {
+        Self::Expanded(0)
+    }
+}
+
 impl DisplayMode {
     const MAX: u8 = 0;
 
@@ -18,27 +25,60 @@ impl DisplayMode {
         Self::Collapsed
     }
 
+    /// Number of header lines for this display mode.
+    pub fn line_count(&self) -> usize {
+        match self {
+            Self::Collapsed => 0,
+            Self::Expanded(_) => 1,
+        }
+    }
+
+    /// True if the display mode can be augmented.
+    pub fn can_inc(self) -> bool {
+        match self {
+            Self::Expanded(n) if n >= Self::MAX => false,
+            Self::Collapsed | Self::Expanded(_) => true,
+        }
+    }
+
+    /// True if the display mode can be reduced.
+    pub fn can_dec(self) -> bool {
+        match self {
+            Self::Collapsed => false,
+            Self::Expanded(_) => true,
+        }
+    }
+
     /// Augments the display mode.
-    pub fn inc(&mut self) {
-        *self = match *self {
-            Self::Collapsed => Self::Expanded(0),
-            Self::Expanded(mut n) => {
-                if n < Self::MAX {
-                    n += 1
+    pub fn inc(&mut self) -> bool {
+        match self {
+            Self::Collapsed => {
+                *self = Self::Expanded(0);
+                true
+            }
+            Self::Expanded(ref mut n) => {
+                if *n < Self::MAX {
+                    *n = *n + 1;
+                    true
+                } else {
+                    false
                 }
-                Self::Expanded(n)
             }
         }
     }
 
     /// Decreases the display mode.
-    pub fn dec(&mut self) {
-        *self = match *self {
-            Self::Collapsed | Self::Expanded(0) => Self::Collapsed,
-            Self::Expanded(mut n) => {
-                debug_assert!(n > 0);
-                n -= 1;
-                Self::Expanded(n)
+    pub fn dec(&mut self) -> bool {
+        match self {
+            Self::Collapsed => false,
+            Self::Expanded(0) => {
+                *self = Self::Collapsed;
+                true
+            }
+            Self::Expanded(ref mut n) => {
+                debug_assert!(*n > 0);
+                *n = *n + 1;
+                true
             }
         }
     }
@@ -50,7 +90,7 @@ pub struct Settings {
     /// Current display mode.
     display_mode: DisplayMode,
     /// Link to the model, to send messages.
-    link: ComponentLink<Model>,
+    link: Link,
     /// Duration of the run.
     run_duration: time::SinceStart,
 
@@ -60,13 +100,27 @@ pub struct Settings {
 
 impl Settings {
     /// Constructor.
-    pub fn new(link: ComponentLink<Model>) -> Self {
+    pub fn new(link: Link) -> Self {
         Self {
-            display_mode: DisplayMode::new(),
+            display_mode: DisplayMode::default(),
             charts_settings: Memory::default(),
             link,
             run_duration: time::SinceStart::zero(),
         }
+    }
+
+    /// True if the settings menu can be expanded.
+    pub fn can_expand(&self) -> bool {
+        self.display_mode.can_inc()
+    }
+    /// True if the settings menu can be collapsed.
+    pub fn can_collapse(&self) -> bool {
+        self.display_mode.can_dec()
+    }
+
+    /// Number of header lines for the current display mode.
+    pub fn line_count(&self) -> usize {
+        self.display_mode.line_count()
     }
 
     /// Update the current time since the run started.
@@ -76,6 +130,14 @@ impl Settings {
 
     /// Renders the settings menu.
     pub fn render(&self, model: &Model) -> Html {
+        match self.display_mode {
+            DisplayMode::Collapsed => html! {},
+            DisplayMode::Expanded(_) => self.render_0(model),
+        }
+    }
+
+    /// Renders the settings menu in display mode 0.
+    pub fn render_0(&self, model: &Model) -> Html {
         html! {
             <>
                 {self.time_window_line(model)}
@@ -122,9 +184,6 @@ impl Settings {
             };
         }
 
-        const BUTTON_SIZE: usize =
-            layout::header::HEADER_LINE_HEIGHT_PX - layout::header::HEADER_LINE_HEIGHT_PX / 10;
-
         if self.has_changed() {
             html! {
                 <>
@@ -132,7 +191,7 @@ impl Settings {
                         style = RIGHT
                     >
                         { layout::button::img::undo(
-                            Some(BUTTON_SIZE),
+                            Some(header::HEADER_INFO_LINE_BUTTON_HEIGHT_PX),
                             "header_settings_undo",
                             Some(self.link.callback(move |_| msg::Msg::from(Msg::Revert))),
                             "revert changes",
@@ -142,7 +201,7 @@ impl Settings {
                         style = RIGHT
                     >
                         { layout::button::img::check(
-                            Some(BUTTON_SIZE),
+                            Some(header::HEADER_INFO_LINE_BUTTON_HEIGHT_PX),
                             "header_settings_apply",
                             Some(self.link.callback(move |_| msg::Msg::from(Msg::Save))),
                             "apply changes"
@@ -157,6 +216,8 @@ impl Settings {
 
     /// Generates the time-window line.
     pub fn time_window_line(&self, model: &Model) -> Html {
+        const BORDER_HEIGHT_PX: usize = 2;
+        const LINE_HEIGHT_PX: usize = header::HEADER_LINE_HEIGHT_PX - BORDER_HEIGHT_PX;
         define_style! {
             LEFT = {
                 float(left),
@@ -169,8 +230,9 @@ impl Settings {
                 width(10%),
                 height(80%),
             };
-            BOTTOM_BORDER = {
-                border(bottom, 2 px, {layout::LIGHT_BLUE_FG}),
+            SETTINGS_LINE = {
+                border(bottom, {BORDER_HEIGHT_PX}px, {layout::LIGHT_BLUE_FG}),
+                height({LINE_HEIGHT_PX}px),
             };
         }
 
@@ -188,10 +250,10 @@ impl Settings {
         );
         let step = self.run_duration / 10;
 
-        layout::header::three_part_line_with(
-            &*BOTTOM_BORDER,
+        header::Header::three_part_line_with(
+            &*SETTINGS_LINE,
             html! {},
-            layout::header::center(html! {
+            header::Header::center(html! {
                 <div>
                     <div
                         style = LEFT
@@ -246,11 +308,6 @@ impl Settings {
 
     /// Updates itself given a settings message.
     pub fn update(&mut self, msg: Msg) -> Res<ShouldRender> {
-        log::info!(
-            "updating settings: [{:?}, {:?}]",
-            self.charts_settings.get().time_windopt().lbound,
-            self.charts_settings.get().time_windopt().ubound,
-        );
         let res = match msg {
             Msg::TimeWindowLb(mut lb) => {
                 lb = match lb {
@@ -281,6 +338,14 @@ impl Settings {
                     Ok(false)
                 }
             }
+            Msg::Expand => {
+                let changed = self.display_mode.inc();
+                Ok(changed)
+            }
+            Msg::Collapse => {
+                let changed = self.display_mode.dec();
+                Ok(changed)
+            }
             Msg::Revert => {
                 self.charts_settings.reset();
                 Ok(true)
@@ -304,11 +369,6 @@ impl Settings {
                 }
             }
         };
-        log::info!(
-            "done updating settings: [{:?}, {:?}]",
-            self.charts_settings.get().time_windopt().lbound,
-            self.charts_settings.get().time_windopt().ubound,
-        );
         res
     }
 }
@@ -324,6 +384,10 @@ pub enum Msg {
     Revert,
     /// Saves the current settings.
     Save,
+    /// Expands the settings.
+    Expand,
+    /// Collapses the settings.
+    Collapse,
 }
 base::implement! {
     impl Msg {
@@ -345,6 +409,8 @@ base::implement! {
                 ),
                 Self::Revert => write!(fmt, "revert"),
                 Self::Save => write!(fmt, "save"),
+                Self::Expand => write!(fmt, "expand"),
+                Self::Collapse => write!(fmt, "collapse"),
             }
         }
     }
