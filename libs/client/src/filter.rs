@@ -246,6 +246,12 @@ impl FilterInfo {
             })
             .ok_or_else(|| format!("unknown filter uid #{}", uid).into())
     }
+    /// Removes the filter and returns its index before removing.
+    fn rm_filter(&mut self, uid: uid::Filter) -> Res<(usize, Filter)> {
+        let (index, _) = self.get_filter(uid)?;
+        let filter = self.states.get_mut().filters.remove(index);
+        Ok((index, filter))
+    }
 
     /// Returns the current index and state for a filter from its UID.
     fn _get(&self, uid: uid::Line) -> Res<(Option<usize>, &FilterSpec)> {
@@ -273,7 +279,7 @@ impl FilterInfo {
     /// Removes a filter from the current filter states.
     fn remove(&mut self, uid: uid::Filter) -> Res<ShouldRender> {
         // Find the index of the filter to remove.
-        let (index, _) = self.get_filter(uid)?;
+        let (index, _) = self.rm_filter(uid)?;
 
         let current = self.states.get_mut();
 

@@ -78,7 +78,7 @@ const CENTER_TILE_WIDTH: usize = 70;
 /// Width of the center tile (percents).
 const LEFT_TILE_WIDTH: usize = (WIDTH_WRT_FULL - CENTER_TILE_WIDTH) / 2;
 /// Width of the center tile (percents).
-const RIGHT_TILE_WIDTH: usize = ((WIDTH_WRT_FULL - CENTER_TILE_WIDTH) / 2) - LEFT_TILE_WIDTH;
+const RIGHT_TILE_WIDTH: usize = WIDTH_WRT_FULL - CENTER_TILE_WIDTH - LEFT_TILE_WIDTH;
 
 /// Height of the tabs of the footer (pixels).
 const TAB_HEIGHT_PX: usize = 50;
