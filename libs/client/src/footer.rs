@@ -305,52 +305,8 @@ pub mod menu {
         use super::*;
 
         /// Renders the right tile of the menu for some filter.
-        pub fn render(model: &Model, uid: uid::Line) -> Html {
-            html! {
-                <>
-                    <br/><br/>
-                    {add_subfilter_button(model, uid)}
-                    <br/>
-                </>
-            }
-        }
-
-        /// Renders a right-tile button.
-        pub fn button(id: &str, txt: impl fmt::Display, onclick: Option<OnClickAction>) -> Html {
-            define_style! {
-                BUTTON_CONTAINER = {
-                    width(70%),
-                    height(10%),
-                    margin(auto),
-                };
-            }
-
-            html! {
-                <div
-                    id = format!("{}_container", id)
-                    style = BUTTON_CONTAINER
-                >
-                    {layout::button::text::render_default_button(
-                        id,
-                        txt,
-                        onclick,
-                        false,
-                    )}
-                </div>
-            }
-        }
-
-        /// Button for adding sub-filters.
-        pub fn add_subfilter_button(model: &Model, uid: uid::Line) -> Html {
-            let action = match uid {
-                uid::Line::Filter(uid) => Some(
-                    model
-                        .link
-                        .callback(move |_| msg::filter::FilterMsg::add_new(uid)),
-                ),
-                uid::Line::Everything | uid::Line::CatchAll => None,
-            };
-            button("add_subfilter_button", "add subfilter", action)
+        pub fn render(_model: &Model, _uid: uid::Line) -> Html {
+            html! {}
         }
     }
 
@@ -422,9 +378,7 @@ pub mod menu {
 
         /// Renders the sub-filters of a filter.
         pub fn render(model: &Model, filter: &filter::Filter) -> Html {
-            // if !filter.has_sub_filters() {
-            //     return html! {<></>};
-            // }
+            let uid = filter.uid();
 
             html! {
                 <>
@@ -434,11 +388,28 @@ pub mod menu {
 
                     {
                         for filter.iter().enumerate().map(
-                            |(index, sub)| render_sub(model, filter.uid(), index == 0, sub)
+                            |(index, sub)| render_sub(model, uid, index == 0, sub)
                         )
                     }
+
+                    <br/>
+
+                    {add_subfilter(model, uid)}
                 </>
             }
+        }
+
+        /// Button for adding sub-filters.
+        pub fn add_subfilter(model: &Model, uid: uid::Filter) -> Html {
+            let action = model
+                .link
+                .callback(move |_| msg::to_server::FiltersMsg::request_new_sub(uid));
+            layout::button::img::plus(
+                Some(TAB_HEIGHT_PX),
+                "add_subfilter",
+                Some(action),
+                "add a new subfilter",
+            )
         }
 
         /// Renders a sub-filter for a filter.

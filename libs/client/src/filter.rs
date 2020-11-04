@@ -336,11 +336,6 @@ impl FilterInfo {
     /// Applies an update to a filter.
     fn filter_update(filter: &mut Filter, msg: FilterMsg) -> Res<ShouldRender> {
         match msg {
-            FilterMsg::AddNew => {
-                let sub = SubFilter::default();
-                filter.insert(sub)?;
-                Ok(true)
-            }
             FilterMsg::Sub(sub) => {
                 filter.replace(sub)?;
                 Ok(true)
@@ -442,6 +437,11 @@ impl FilterInfo {
                     )));
                 Ok(true)
             }
+            AddSub(uid, subfilter) => {
+                let (_, filter) = self.states.get_mut().get_filter_mut(uid)?;
+                filter.insert(subfilter)?;
+                Ok(true)
+            }
             Revert {
                 everything,
                 filters,
@@ -540,18 +540,12 @@ impl SpecMsg {
 /// A message for a specific filter.
 #[derive(Debug)]
 pub enum FilterMsg {
-    /// Adds a new subfilter.
-    AddNew,
     /// Updates a subfilter.
     Sub(filter::SubFilter),
     /// Removes a subfilter.
     RmSub(uid::SubFilter),
 }
 impl FilterMsg {
-    /// Adds a new subfilter.
-    pub fn add_new(uid: uid::Filter) -> msg::Msg {
-        Msg::filter(uid, Self::AddNew).into()
-    }
     /// Updates a subfilter.
     pub fn update_sub(uid: uid::Filter, sub: filter::SubFilter) -> msg::Msg {
         Msg::filter(uid, Self::Sub(sub.into())).into()
@@ -591,7 +585,6 @@ base::implement! {
     impl FilterMsg {
         Display {
             |&self, fmt| match self {
-                Self::AddNew => write!(fmt, "add new"),
                 Self::Sub(_) => write!(fmt, "subfilter update"),
                 Self::RmSub(_) => write!(fmt, "remove subfilter"),
             }
