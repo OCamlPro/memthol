@@ -95,7 +95,6 @@ pub fn render(footer: &footer::Footer, model: &Model) -> Html {
                 />
             </footer>
         },
-        Some(footer::FooterTab::Normal(_)) => unimplemented!(),
         Some(footer::FooterTab::Filter(filter_uid)) => {
             html! {
                 <footer
@@ -113,7 +112,7 @@ pub fn render(footer: &footer::Footer, model: &Model) -> Html {
                         style = EXPANDED_MENU_STYLE
                     >
                         {
-                            if let Ok(filter) = model.footer_filters().get_spec(filter_uid) {
+                            if let Ok((_, filter)) = model.footer_filters().get(filter_uid) {
                                 menu::render_filter(model, filter)
                             } else {
                                 html!(<></>)
@@ -269,9 +268,11 @@ pub mod menu {
         /// Button for adding sub-filters.
         pub fn add_subfilter_button(model: &Model, uid: uid::Line) -> Html {
             let action = match uid {
-                uid::Line::Filter(uid) => {
-                    Some(model.link.callback(move |_| msg::FilterMsg::add_new(uid)))
-                }
+                uid::Line::Filter(uid) => Some(
+                    model
+                        .link
+                        .callback(move |_| msg::filter::FilterMsg::add_new(uid)),
+                ),
                 uid::Line::Everything | uid::Line::CatchAll => None,
             };
             button("add_subfilter_button", "add subfilter", action)
@@ -317,7 +318,7 @@ pub mod menu {
                     filter.name(),
                     model
                         .link
-                        .callback(move |data| msg::FilterSpecMsg::change_name(uid, data)),
+                        .callback(move |data| msg::filter::SpecMsg::change_name(uid, data)),
                 )
             });
             table_row.render()
@@ -332,7 +333,7 @@ pub mod menu {
                     filter.color(),
                     model
                         .link
-                        .callback(move |data| msg::FilterSpecMsg::change_color(uid, data)),
+                        .callback(move |data| msg::filter::SpecMsg::change_color(uid, data)),
                 )
             });
             table_row.render()
@@ -379,7 +380,7 @@ pub mod menu {
                 RawSubFilter::Size(sub) => {
                     size::render(&mut table_row, model, sub, move |size_sub_filter_res| {
                         msg_of_res(size_sub_filter_res.map(|size| {
-                            msg::FilterMsg::update_sub(
+                            msg::filter::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Size(size)),
                             )
@@ -389,7 +390,7 @@ pub mod menu {
                 RawSubFilter::Lifetime(sub) => {
                     lifetime::render(&mut table_row, model, sub, move |lifetime_sub_filter_res| {
                         msg_of_res(lifetime_sub_filter_res.map(|lifetime| {
-                            msg::FilterMsg::update_sub(
+                            msg::filter::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Lifetime(lifetime)),
                             )
@@ -399,7 +400,7 @@ pub mod menu {
                 RawSubFilter::Label(sub) => {
                     label::render(&mut table_row, model, sub, move |label_sub_filter_res| {
                         msg_of_res(label_sub_filter_res.map(|label| {
-                            msg::FilterMsg::update_sub(
+                            msg::filter::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Label(label)),
                             )
@@ -409,7 +410,7 @@ pub mod menu {
                 RawSubFilter::Loc(sub) => {
                     location::render(&mut table_row, model, sub, move |loc_sub_filter_res| {
                         msg_of_res(loc_sub_filter_res.map(|loc| {
-                            msg::FilterMsg::update_sub(
+                            msg::filter::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Loc(loc)),
                             )
@@ -462,10 +463,10 @@ pub mod menu {
                             SubKey::Change(kind) => {
                                 let mut sub = sub_clone.clone();
                                 sub.change_kind(kind);
-                                msg::FilterMsg::update_sub(uid, sub)
+                                msg::filter::FilterMsg::update_sub(uid, sub)
                             }
                             SubKey::Remove => {
-                                msg::FilterMsg::rm_sub(uid, sub_uid)
+                                msg::filter::FilterMsg::rm_sub(uid, sub_uid)
                             }
                         }
                     )
@@ -780,7 +781,7 @@ pub mod tabs {
         pub fn render(model: &Model) -> Html {
             let mut tabs = layout::tabs::Tabs::new();
 
-            let edited = model.footer_filters().edited();
+            let edited = model.filters.has_changed();
 
             tabs.push_img_tab(
                 img_dim_px,
@@ -801,7 +802,7 @@ pub mod tabs {
                 img_dim_px,
                 TabProps::new_footer_gray(),
                 if edited {
-                    Some(model.link.callback(move |_| msg::FiltersMsg::save()))
+                    Some(model.link.callback(move |_| msg::filter::Msg::save()))
                 } else {
                     None
                 },
@@ -854,7 +855,7 @@ pub mod tabs {
             tabs.push_img_tab(
                 img_dim_px,
                 TabProps::new_footer_gray(),
-                current_filter.map(|uid| model.link.callback(move |_| msg::FiltersMsg::rm(uid))),
+                current_filter.map(|uid| model.link.callback(move |_| msg::filter::Msg::rm(uid))),
                 layout::button::img::Img::Minus,
                 "remove current filter",
             );
@@ -910,7 +911,7 @@ pub mod tabs {
                  index_uid_opt: Option<(usize, uid::Filter)>| {
                     let edited = is_edited(filter);
 
-                    let name = match model.filter_stats.get(filter.uid()) {
+                    let name = match model.filters.ref_stats().get(filter.uid()) {
                         Some(stats) if !edited => {
                             format!("{} ({})", filter.name(), stats.alloc_count)
                         }

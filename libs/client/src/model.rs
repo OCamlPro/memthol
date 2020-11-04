@@ -12,10 +12,9 @@ pub struct Model {
     pub errors: Vec<err::Error>,
     /// Collection of charts.
     pub charts: Charts,
+
     /// Allocation filters.
-    pub filters: filter::Filters,
-    /// Filter statistics.
-    pub filter_stats: AllFilterStats,
+    pub filters: filter::FilterInfo,
 
     /// Footer DOM element.
     pub footer: footer::Footer,
@@ -33,12 +32,12 @@ pub struct Model {
 
 impl Model {
     /// Reference filters accessor.
-    pub fn filters(&self) -> &filter::ReferenceFilters {
-        self.filters.reference_filters()
+    pub fn filters(&self) -> filter::Reference {
+        self.filters.reference()
     }
     /// Client-side filters accessor.
-    pub fn footer_filters(&self) -> &filter::Filters {
-        &self.filters
+    pub fn footer_filters(&self) -> filter::Current {
+        self.filters.current()
     }
     /// Charts accessor.
     pub fn charts(&self) -> &Charts {
@@ -47,7 +46,8 @@ impl Model {
 
     /// True if the `catch_all` filter does not catch any allocation.
     pub fn is_catch_all_empty(&self) -> bool {
-        self.filter_stats
+        self.filters
+            .ref_stats()
             .get(uid::Line::CatchAll)
             .map(|stats| stats.alloc_count == 0)
             .unwrap_or(true)
@@ -91,9 +91,10 @@ impl Model {
                 alert!("{}{}", if fatal { "[fatal] " } else { "" }, msg);
                 Ok(false)
             }
-            Msg::Charts(msg) => self
-                .charts
-                .server_update(&self.filters, &self.filter_stats, msg),
+            Msg::Charts(msg) => {
+                self.charts
+                    .server_update(self.filters.reference(), self.filters.ref_stats(), msg)
+            }
             Msg::Filters(msg) => self.filters.server_update(msg),
 
             Msg::AllocStats(stats) => {
@@ -108,7 +109,7 @@ impl Model {
             }
             Msg::FilterStats(stats) => {
                 log::info!("updating filter stats");
-                self.filter_stats = stats;
+                self.filters.update_ref_stats(stats);
                 Ok(true)
             }
 
@@ -147,8 +148,8 @@ impl Component for Model {
             Ok(res) => (Some(res), vec![]),
             Err(e) => (None, vec![e]),
         };
-        let charts = Charts::new(link.callback(|msg: Msg| msg));
-        let filters = filter::Filters::new(link.callback(|msg: Msg| msg));
+        let charts = Charts::new(link.clone());
+        let filters = filter::FilterInfo::new(link.clone());
         let settings = settings::Settings::new(link.clone());
         let header = header::Header::new(link.clone());
         Model {
@@ -156,8 +157,8 @@ impl Component for Model {
             socket_task,
             errors,
             charts,
+
             filters,
-            filter_stats: AllFilterStats::new(),
 
             footer: footer::Footer::new(),
             header,
@@ -194,7 +195,7 @@ impl Component for Model {
 
             // Internal operations.
             Msg::Charts(msg) => unwrap_or_send_err!(
-                self.charts.update(&self.filters, msg) => self default false
+                self.charts.update(self.filters.reference(), msg) => self default false
             ),
             Msg::Footer(msg) => unwrap_or_send_err!(
                 self.footer.update(msg) => self default false
@@ -229,7 +230,7 @@ impl Component for Model {
 
     fn rendered(&mut self, _first_render: bool) {
         self.charts
-            .rendered(self.filters.reference_filters(), &self.filter_stats)
+            .rendered(self.filters.reference(), self.filters.ref_stats())
     }
 
     fn change(&mut self, _props: ()) -> bool {

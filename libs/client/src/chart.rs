@@ -13,20 +13,20 @@ pub mod new;
 pub struct Charts {
     /// The actual collection of charts.
     charts: Vec<Chart>,
-    /// Callback to send messages to the model.
-    to_model: Callback<Msg>,
     /// Chart constructor element.
     new_chart: new::NewChart,
     /// Name of the DOM node containing all the charts.
     dom_node_id: &'static str,
+    /// Link to the model.
+    link: Link,
 }
 
 impl Charts {
     /// Constructs an empty collection of charts.
-    pub fn new(to_model: Callback<Msg>) -> Self {
+    pub fn new(link: Link) -> Self {
         Self {
             charts: vec![],
-            to_model,
+            link,
             new_chart: new::NewChart::new(),
             dom_node_id: "charts_list",
         }
@@ -44,7 +44,7 @@ impl Charts {
 
     /// Sends a message to the model.
     pub fn send(&self, msg: Msg) {
-        self.to_model.emit(msg)
+        self.link.send_message(msg)
     }
 
     /// Retrieves the chart corresponding to some UID.
@@ -80,12 +80,10 @@ impl Charts {
     /// Applies an operation.
     pub fn update(
         &mut self,
-        filters: &filter::Filters,
+        filters: filter::Reference,
         action: msg::ChartsMsg,
     ) -> Res<ShouldRender> {
         use msg::ChartsMsg::*;
-
-        let filters = filters.reference_filters();
 
         match action {
             Move { uid, up } => self.move_chart(uid, up),
@@ -104,7 +102,7 @@ impl Charts {
     }
 
     /// Runs post-rendering actions.
-    pub fn rendered(&mut self, filters: &filter::ReferenceFilters, stats: &AllFilterStats) {
+    pub fn rendered(&mut self, filters: filter::Reference, stats: &AllFilterStats) {
         for chart in &mut self.charts {
             if let Err(e) = chart.rendered(filters, stats) {
                 alert!("error while running `rendered`: {}", e)
@@ -113,7 +111,7 @@ impl Charts {
     }
 
     /// Refreshes all filters in all charts.
-    fn refresh_filters(&mut self, filters: &filter::ReferenceFilters) -> Res<ShouldRender> {
+    fn refresh_filters(&mut self, filters: filter::Reference) -> Res<ShouldRender> {
         for chart in &mut self.charts {
             chart.replace_filters(filters)?
         }
@@ -194,18 +192,16 @@ impl Charts {
     /// Applies an operation from the server.
     pub fn server_update(
         &mut self,
-        filters: &filter::Filters,
+        filters: filter::Reference,
         stats: &AllFilterStats,
         action: msg::from_server::ChartsMsg,
     ) -> Res<ShouldRender> {
         use msg::from_server::{ChartMsg, ChartsMsg};
 
-        let filters = filters.reference_filters();
-
         let should_render = match action {
             ChartsMsg::NewChart(spec, settings) => {
                 log::info!("creating new chart");
-                let chart = Chart::new(spec, settings, filters, self.to_model.clone())?;
+                let chart = Chart::new(spec, settings, filters, self.link.clone())?;
                 self.charts.push(chart);
                 true
             }
@@ -256,8 +252,8 @@ pub struct Chart {
     spec: ChartSpec,
     /// Chart settings.
     settings: settings::Chart,
-    /// Sends messages to the model.
-    to_model: Callback<Msg>,
+    /// Link to the model.
+    link: Link,
     /// DOM element containing the chart and its tabs.
     top_container: String,
     /// DOM element containing the canvas.
@@ -294,8 +290,8 @@ impl Chart {
     pub fn new(
         spec: ChartSpec,
         settings: settings::Chart,
-        all_filters: &filter::ReferenceFilters,
-        to_model: Callback<Msg>,
+        all_filters: filter::Reference,
+        link: Link,
     ) -> Res<Self> {
         let top_container = format!("chart_container_{}", spec.uid().get());
         let container = format!("chart_canvas_container_{}", spec.uid().get());
@@ -312,7 +308,7 @@ impl Chart {
         Ok(Self {
             spec,
             settings,
-            to_model,
+            link,
             top_container,
             container,
             canvas,
@@ -423,7 +419,7 @@ impl Chart {
     }
 
     /// Replaces the filters of the chart.
-    pub fn replace_filters(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
+    pub fn replace_filters(&mut self, filters: filter::Reference) -> Res<()> {
         self.prev_filters.clear();
         std::mem::swap(&mut self.filters, &mut self.prev_filters);
 
@@ -445,7 +441,7 @@ impl Chart {
     pub fn add_points(
         &mut self,
         mut points: point::Points,
-        filters: &filter::ReferenceFilters,
+        filters: filter::Reference,
         stats: &AllFilterStats,
     ) -> Res<()> {
         let mut redraw = false;
@@ -571,7 +567,7 @@ impl Chart {
                     width,
                     height
                 );
-                self.to_model.emit(Msg::ToServer(
+                self.link.send_message(Msg::ToServer(
                     charts::msg::ChartSettingsMsg::set_resolution(
                         self.spec.uid(),
                         (res_width, res_height),
@@ -639,7 +635,7 @@ impl Chart {
     ///
     /// If the chart is not visible, drawing is postponed until the chart becomes visible. Meaning
     /// that this function does nothing if the chart is not visible.
-    pub fn draw(&mut self, filters: &filter::ReferenceFilters, stats: &AllFilterStats) -> Res<()> {
+    pub fn draw(&mut self, filters: filter::Reference, stats: &AllFilterStats) -> Res<()> {
         // If the chart's not visible, do nothing. We will draw once the chart becomes visible
         // again.
         if !self.settings.is_visible() {
@@ -706,11 +702,7 @@ impl Chart {
 /// # Rendering
 impl Chart {
     /// Runs post-rendering actions.
-    pub fn rendered(
-        &mut self,
-        filters: &filter::ReferenceFilters,
-        stats: &AllFilterStats,
-    ) -> Res<()> {
+    pub fn rendered(&mut self, filters: filter::Reference, stats: &AllFilterStats) -> Res<()> {
         self.rebind_canvas()?;
 
         if self.chart.is_none() {

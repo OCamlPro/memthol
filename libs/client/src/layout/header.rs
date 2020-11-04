@@ -114,7 +114,7 @@ impl Header {
             if model.settings.can_collapse() {
                 Some(
                     self.link
-                        .callback(move |_| msg::Msg::from(settings::Msg::Collapse)),
+                        .callback(move |_| msg::Msg::from(msg::settings::Msg::Collapse)),
                 )
             } else {
                 None
@@ -127,7 +127,7 @@ impl Header {
             if model.settings.can_expand() {
                 Some(
                     self.link
-                        .callback(move |_| msg::Msg::from(settings::Msg::Expand)),
+                        .callback(move |_| msg::Msg::from(msg::settings::Msg::Expand)),
                 )
             } else {
                 None

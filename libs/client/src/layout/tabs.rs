@@ -256,7 +256,7 @@ impl Tabs {
                         {Self::raw_tab(
                             &props,
                             model.link.callback(
-                                move |_| msg::FiltersMsg::move_filter(uid, true)
+                                move |_| msg::filter::Msg::move_filter(uid, true)
                             ),
                             "<"
                         )}
@@ -271,7 +271,7 @@ impl Tabs {
                         {Self::raw_tab(
                             &props,
                             model.link.callback(
-                                move |_| msg::FiltersMsg::move_filter(uid, false)
+                                move |_| msg::filter::Msg::move_filter(uid, false)
                             ),
                             ">"
                         )}

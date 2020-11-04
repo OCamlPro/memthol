@@ -512,9 +512,8 @@ pub mod to_client {
             /// Specification for the `catch_all` filter.
             catch_all: FilterSpec,
         },
-
-        /// Updates all the specs.
-        UpdateSpecs(BTMap<uid::Line, FilterSpec>),
+        // /// Updates all the specs.
+        // UpdateSpecs(BTMap<uid::Line, FilterSpec>),
     }
     impl FiltersMsg {
         /// Adds a filter.
@@ -532,10 +531,10 @@ pub mod to_client {
             .into()
         }
 
-        /// Updates all the specs.
-        pub fn update_specs(specs: BTMap<uid::Line, FilterSpec>) -> Msg {
-            Self::UpdateSpecs(specs).into()
-        }
+        // /// Updates all the specs.
+        // pub fn update_specs(specs: BTMap<uid::Line, FilterSpec>) -> Msg {
+        //     Self::UpdateSpecs(specs).into()
+        // }
     }
 
     /// A raw message from the server.
