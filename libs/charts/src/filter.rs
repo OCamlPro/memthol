@@ -283,6 +283,7 @@ impl Filters {
         use msg::to_server::FiltersMsg::*;
         let (res, should_reload) = match msg {
             RequestNew => (self.add_new(), false),
+            RequestNewSub(uid) => (self.add_new_sub(uid), false),
             Revert => (self.revert(), false),
             UpdateAll {
                 everything,
@@ -321,6 +322,12 @@ impl Filters {
         let spec = FilterSpec::new(Color::random());
         let filter = Filter::new(spec).chain_err(|| "while creating new filter")?;
         let msg = msg::to_client::FiltersMsg::add(filter);
+        Ok(vec![msg])
+    }
+
+    /// Adds a new sub-filter.
+    pub fn add_new_sub(&mut self, uid: uid::Filter) -> Res<msg::to_client::Msgs> {
+        let msg = msg::to_client::FiltersMsg::add_sub(uid, SubFilter::default());
         Ok(vec![msg])
     }
 

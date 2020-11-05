@@ -60,8 +60,8 @@ pub use point::Point;
 
 pub use crate::{
     chart::{self, Chart, Charts},
-    cst, filter, footer, js, layout,
-    layout::header,
+    cst, filter, js,
+    layout::{self, footer, header},
     model::Model,
     msg::{self, Msg},
     settings,

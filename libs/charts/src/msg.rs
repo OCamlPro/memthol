@@ -211,6 +211,16 @@ pub mod to_server {
         /// (The Add message)
         RequestNew,
 
+        /// Requests a new sub filter.
+        ///
+        /// This will cause the server to generate a new sub filter to send to the client (*via*
+        /// [`FiltersMsg::AddSub`]). The server will **not** register the filter in any way, this
+        /// will happen when/if the user saves the modifications.
+        ///
+        /// [`FiltersMsg::AddSub`]: ../to_client/enum.FiltersMsg.html#variant.AddSub
+        /// (The Add message)
+        RequestNewSub(uid::Filter),
+
         /// Requests the current server-side list of filters.
         Revert,
 
@@ -228,6 +238,7 @@ pub mod to_server {
         fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
             match self {
                 Self::RequestNew => write!(fmt, "request new"),
+                Self::RequestNewSub(_) => write!(fmt, "request new sub"),
                 Self::Revert => write!(fmt, "revert"),
                 Self::UpdateAll { .. } => write!(fmt, "update all"),
             }
@@ -238,6 +249,10 @@ pub mod to_server {
         /// Requests a new filter.
         pub fn request_new() -> Msg {
             Self::RequestNew.into()
+        }
+        /// Requests a new subfilter.
+        pub fn request_new_sub(uid: uid::Filter) -> Msg {
+            Self::RequestNewSub(uid).into()
         }
         /// Requests the current server-side list of filters.
         pub fn revert() -> Msg {
@@ -502,6 +517,14 @@ pub mod to_client {
         /// [`FiltersMsg::RequestNew`]: ../to_server/enum.FiltersMsg.html#variant.RequestNew
         /// (The RequestNew message)
         Add(filter::Filter),
+        /// Adds a subfilter.
+        ///
+        /// This message always comes in response to a [`FiltersMsg::RequestNewSub`] message for the
+        /// server.
+        ///
+        /// [`FiltersMsg::RequestNewSub`]: ../to_server/enum.FiltersMsg.html#variant.RequestNewSub
+        /// (The RequestNew message)
+        AddSub(uid::Filter, filter::SubFilter),
 
         /// Orders the client to revert all its filters.
         Revert {
@@ -512,14 +535,17 @@ pub mod to_client {
             /// Specification for the `catch_all` filter.
             catch_all: FilterSpec,
         },
-
-        /// Updates all the specs.
-        UpdateSpecs(BTMap<uid::Line, FilterSpec>),
+        // /// Updates all the specs.
+        // UpdateSpecs(BTMap<uid::Line, FilterSpec>),
     }
     impl FiltersMsg {
         /// Adds a filter.
         pub fn add(filter: filter::Filter) -> Msg {
             Self::Add(filter).into()
+        }
+        /// Adds a subfilter.
+        pub fn add_sub(uid: uid::Filter, subfilter: filter::SubFilter) -> Msg {
+            Self::AddSub(uid, subfilter).into()
         }
 
         /// Orders the client to revert all its filters.
@@ -532,10 +558,10 @@ pub mod to_client {
             .into()
         }
 
-        /// Updates all the specs.
-        pub fn update_specs(specs: BTMap<uid::Line, FilterSpec>) -> Msg {
-            Self::UpdateSpecs(specs).into()
-        }
+        // /// Updates all the specs.
+        // pub fn update_specs(specs: BTMap<uid::Line, FilterSpec>) -> Msg {
+        //     Self::UpdateSpecs(specs).into()
+        // }
     }
 
     /// A raw message from the server.

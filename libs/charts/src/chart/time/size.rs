@@ -5,7 +5,7 @@ prelude! {}
 use point::{Size, TimeSizePoints};
 
 /// Initial size value.
-const INIT_SIZE_VALUE: u32 = 0;
+const INIT_SIZE_VALUE: u64 = 0;
 
 /// Total size over time chart.
 #[derive(Debug, Serialize, Deserialize)]
@@ -111,8 +111,8 @@ impl TimeSize {
         let (last_time_stamp, last_size, last) =
             (&mut self.last_time_stamp, &mut self.size, self.last.clone());
 
-        macro_rules! map_do {
-            ($f_uid:expr, _ => |ref mut $val:pat| $action:expr) => {{
+        macro_rules! update {
+            ($f_uid:expr, _, last_size => |ref mut $val:pat| $action:expr) => {{
                 let $val = last_size
                     .map
                     .entry($f_uid)
@@ -125,13 +125,53 @@ impl TimeSize {
                 $action;
             }};
             ($f_uid:expr, $map:expr => |ref mut $val:pat| $action:expr) => {{
-                let $val = $map.entry($f_uid).or_insert_with(|| INIT_SIZE_VALUE.into());
+                let $val = $map.entry($f_uid).or_insert_with(|| update!(@last size $f_uid));
                 $action;
                 let $val = $map
                     .entry(uid::Line::Everything)
-                    .or_insert_with(|| INIT_SIZE_VALUE.into());
+                    .or_insert_with(|| update!(@last size $f_uid));
                 $action;
-                map_do!($f_uid, _ => |ref mut $val| $action)
+            }};
+            ($f_uid:expr, $map:expr, last_size => |ref mut $val:pat| $action:expr) => {{
+                update!($f_uid, $map => |ref mut $val| $action);
+                update!($f_uid, _, last_size => |ref mut $val| $action);
+            }};
+
+            (@last size $f_uid:expr) => {
+                *last_size.map.entry($f_uid).or_insert_with(|| INIT_SIZE_VALUE.into())
+            };
+        }
+
+        macro_rules! show_last_two_points {
+            ($($stuff:tt)*) => {
+                ()
+            };
+            // (prompt) => {{
+            //     let _ = std::io::stdin().read_line(&mut String::new());
+            // }};
+            ($add:expr, $uid:expr => $size:expr) => {{
+                println!();
+                if $add {
+                    log::info!("{} => +{}", $uid, $size)
+                } else {
+                    log::info!("{} => -{}", $uid, $size)
+                }
+                for (idx, point) in points.iter().enumerate().rev() {
+                    if idx > 0 {
+                        log::info!("point[{}] @{} {{", idx, point.key);
+                        for (uid, val) in point.vals.map.iter() {
+                            log::info!("    {} -> {},", uid, val)
+                        }
+                        log::info!("}}")
+                    }
+                }
+                log::info!("last_size {{");
+                for (uid, val) in last_size.map.iter() {
+                    if val.size > 0 {
+                        log::info!("    {} -> {},", uid, val)
+                    }
+                }
+                log::info!("}}");
             }};
         }
 
@@ -162,13 +202,23 @@ impl TimeSize {
                         &mut last.vals.map
                     };
 
-                    map_do!(
-                        f_uid, last_map => |ref mut val| if add {
-                            val.size += size
+                    let mut underflow = false;
+
+                    update!(
+                        f_uid, last_map, last_size => |ref mut val| if add {
+                            val.size += size as u64
                         } else {
-                            val.size -= size
+                            if val.size < size as u64 {
+                                underflow = true;
+                            }
+                            val.size -= size as u64
                         }
                     );
+
+                    if underflow {
+                        show_last_two_points!(add, f_uid => size);
+                        bail!("underflow")
+                    }
 
                     debug_assert!(points.len() == 1);
                     Ok(true)
@@ -232,12 +282,22 @@ impl TimeSize {
                         (&mut last.vals.map, false)
                     };
 
-                    map_do! {
+                    let mut underflow = None;
+
+                    update! {
                         f_uid, vals => |ref mut val| if add {
-                            val.size += size
+                            val.size += size as u64
                         } else {
-                            val.size -= size
+                            if val.size < size as u64 {
+                                underflow = Some(val.size)
+                            }
+                            val.size -= size as u64
                         }
+                    }
+
+                    if let Some(prev) = underflow {
+                        show_last_two_points!(add, f_uid => size);
+                        bail!("underflow on {} (map)", prev)
                     }
 
                     if repeat_previous && points.len() >= 2 {
@@ -253,6 +313,25 @@ impl TimeSize {
                             );
                             debug_assert_eq!(prev, None)
                         }
+                    }
+
+                    let mut underflow = None;
+
+                    update! {
+                        f_uid, _, last_size => |ref mut val| if add {
+                            val.size += size as u64
+                        } else {
+                            if val.size < size as u64 {
+                                underflow = Some(val.size)
+                            }
+                            val.size -= size as u64
+                        }
+                    }
+
+                    show_last_two_points!(add, f_uid => size);
+
+                    if let Some(prev) = underflow {
+                        bail!("underflow on {} (last_size)", prev)
                     }
 
                     Ok(true)
@@ -274,7 +353,7 @@ impl TimeSize {
         })?;
 
         if let Some(ts) = last_time_stamp {
-            if ts != data.current_time() {
+            if *ts != time_window.ubound {
                 let point = Point::new(*data.current_time(), self.size.clone());
                 points.push(point)
             }

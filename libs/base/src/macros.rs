@@ -297,7 +297,7 @@ macro_rules! __implement_trait {
     (@Deref ($ty:ty) ($($ty_args:tt)*) {
         to $tgt:ty => |&$slf:ident| $def:expr $(,)?
     }) => {
-        impl $(< $($ty_args)* >)* std::ops::Deref for $ty {
+        impl < $($ty_args)* > std::ops::Deref for $ty {
             type Target = $tgt;
             fn deref(&$slf) -> &$tgt {
                 $def
@@ -308,7 +308,7 @@ macro_rules! __implement_trait {
     (@DerefMut ($ty:ty) ($($ty_args:tt)*) {
         |&mut $slf:ident| $def:expr $(,)?
     }) => {
-        impl $(< $($ty_args)* >)* std::ops::DerefMut for $ty {
+        impl < $($ty_args)* > std::ops::DerefMut for $ty {
             fn deref_mut(&mut $slf) -> &mut Self::Target {
                 $def
             }

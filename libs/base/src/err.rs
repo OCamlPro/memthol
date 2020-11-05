@@ -140,7 +140,10 @@ pub struct ErrorCxt {
     idx: std::cell::RefCell<Option<usize>>,
 }
 
-pub use list::{register, register_fatal, register_non_fatal};
+pub use list::{
+    register, register_fatal, register_non_fatal, unwrap_register, unwrap_register_fatal,
+    unwrap_register_non_fatal,
+};
 
 /// Stores a global list of errors.
 mod list {
@@ -153,6 +156,34 @@ mod list {
         /// This is **never** popped. Instead server and clients store an `ErrorIdx` that points to
         /// the latest error they have treated using `since_do`.
         static ref ERRORS: sync::RwLock<Vec<(String, bool)>> = sync::RwLock::new(vec![]);
+    }
+
+    /// Destroys a unit result, registering the error if any.
+    pub fn unwrap_register<E>(res: Result<(), E>, fatal: bool)
+    where
+        E: Into<err::Error>,
+    {
+        match res {
+            Ok(()) => (),
+            Err(e) => {
+                register(e, fatal);
+                ()
+            }
+        }
+    }
+    /// Destroys a unit result, registering the error as fatal if any.
+    pub fn unwrap_register_non_fatal<E>(res: Result<(), E>)
+    where
+        E: Into<err::Error>,
+    {
+        unwrap_register(res, false)
+    }
+    /// Destroys a unit result, registering the error as fatal if any.
+    pub fn unwrap_register_fatal<E>(res: Result<(), E>)
+    where
+        E: Into<err::Error>,
+    {
+        unwrap_register(res, true)
     }
 
     /// Registers an error in the global list of errors.

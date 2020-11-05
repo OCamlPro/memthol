@@ -202,6 +202,11 @@ cfg_item! {
                 self.current = reference.clone();
                 self.reference = reference;
             }
+            /// Applies an action to the reference and current version.
+            pub fn do_both(&mut self, mut action: impl FnMut(&mut T)) {
+                action(&mut self.current);
+                action(&mut self.reference)
+            }
 
             /// Overwrites the current version to be the reference version.
             pub fn reset(&mut self)

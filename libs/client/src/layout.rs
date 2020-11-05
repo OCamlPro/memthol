@@ -6,7 +6,7 @@ prelude! {}
 
 pub mod button;
 pub mod chart;
-pub mod foot;
+pub mod footer;
 pub mod header;
 pub mod input;
 pub mod progress;
@@ -52,21 +52,12 @@ pub fn render(model: &Model) -> Html {
         };
     }
 
-    let collapsed_footer_body_style = inline_css! {
+    let body_style = inline_css! {
         extends(body_style),
         padding(
             {model.header.height_px(model) + 30}px,
             0%,
-            {foot::collapsed_height_px}px,
-            0%,
-        ),
-    };
-    let expanded_footer_body_style = inline_css! {
-        extends(body_style),
-        padding(
-            {model.header.height_px(model) + 30}px,
-            0%,
-            {foot::expanded_height_px}px,
+            {model.footer.height_px()}px,
             0%,
         ),
     };
@@ -75,11 +66,7 @@ pub fn render(model: &Model) -> Html {
         <>
             { model.header.render(model) }
             <div
-                style = if model.footer.is_expanded() {
-                    expanded_footer_body_style
-                } else {
-                    collapsed_footer_body_style
-                }
+                style = body_style
             >
                 {
                     if let Some(load_info) = model.progress.as_ref() {

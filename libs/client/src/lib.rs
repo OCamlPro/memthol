@@ -18,7 +18,6 @@ pub mod settings;
 pub mod chart;
 pub mod cst;
 pub mod filter;
-pub mod footer;
 pub mod msg;
 
 prelude! {}

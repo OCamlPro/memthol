@@ -4,6 +4,15 @@ prelude! {}
 
 pub use charts::msg::{to_client as from_server, to_server, ChartSettingsMsg};
 
+/// Filter messages.
+pub mod filter {
+    pub use crate::filter::{FilterMsg, Msg, SpecMsg};
+}
+/// Settings messages.
+pub mod settings {
+    pub use crate::settings::Msg;
+}
+
 /// Internal model messages.
 ///
 /// These messages are sent by the model's components to the model. The only exception is
@@ -22,7 +31,7 @@ pub enum Msg {
     /// Footer operations.
     Footer(FooterMsg),
     /// Filter operations.
-    Filter(FiltersMsg),
+    Filter(filter::Msg),
     /// Settings operations.
     Settings(settings::Msg),
 
@@ -152,103 +161,6 @@ impl FooterMsg {
     // }
 }
 
-/// Operations over filters.
-#[derive(Debug)]
-pub enum FiltersMsg {
-    /// Updates a filter on the server.
-    Save,
-    /// Removes a filter.
-    Rm(uid::Filter),
-    /// A message for a specific filter specification.
-    FilterSpec {
-        /// Uid of the filter.
-        uid: uid::Line,
-        /// Message.
-        msg: FilterSpecMsg,
-    },
-    /// A message for a specific filter.
-    Filter {
-        /// UID of the iflter.
-        uid: uid::Filter,
-        /// Message.
-        msg: FilterMsg,
-    },
-    /// Moves a filter left or right.
-    Move {
-        /// Filter UID.
-        uid: uid::Filter,
-        /// Move left iff true.
-        left: bool,
-    },
-}
-
-impl FiltersMsg {
-    /// Updates a filter on the server.
-    pub fn save() -> Msg {
-        Self::Save.into()
-    }
-    /// Removes a filter.
-    pub fn rm(uid: uid::Filter) -> Msg {
-        Self::Rm(uid).into()
-    }
-    /// A message for a specific filter specification.
-    pub fn filter_spec(uid: uid::Line, msg: FilterSpecMsg) -> Msg {
-        Self::FilterSpec { uid, msg }.into()
-    }
-    /// A message for a specific filter.
-    pub fn filter(uid: uid::Filter, msg: FilterMsg) -> Msg {
-        Self::Filter { uid, msg }.into()
-    }
-    /// Moves a filter left or right.
-    pub fn move_filter(uid: uid::Filter, left: bool) -> Msg {
-        Self::Move { uid, left }.into()
-    }
-}
-
-/// An action over the specification of a filter.
-#[derive(Debug)]
-pub enum FilterSpecMsg {
-    /// Changes the name of a filter.
-    ChangeName(ChangeData),
-    /// Changes the color of a filter.
-    ChangeColor(ChangeData),
-}
-impl FilterSpecMsg {
-    /// Changes the name of a filter.
-    pub fn change_name(uid: uid::Line, new_name: ChangeData) -> Msg {
-        FiltersMsg::filter_spec(uid, Self::ChangeName(new_name)).into()
-    }
-    /// Changes the color of a filter.
-    pub fn change_color(uid: uid::Line, new_color: ChangeData) -> Msg {
-        FiltersMsg::filter_spec(uid, Self::ChangeColor(new_color)).into()
-    }
-}
-
-/// A message for a specific filter.
-#[derive(Debug)]
-pub enum FilterMsg {
-    /// Adds a new subfilter.
-    AddNew,
-    /// Updates a subfilter.
-    Sub(filter::SubFilter),
-    /// Removes a subfilter.
-    RmSub(uid::SubFilter),
-}
-impl FilterMsg {
-    /// Adds a new subfilter.
-    pub fn add_new(uid: uid::Filter) -> Msg {
-        FiltersMsg::filter(uid, Self::AddNew)
-    }
-    /// Updates a subfilter.
-    pub fn update_sub(uid: uid::Filter, sub: filter::SubFilter) -> Msg {
-        FiltersMsg::filter(uid, Self::Sub(sub.into()))
-    }
-    /// Removes a subfilter.
-    pub fn rm_sub(uid: uid::Filter, sub_uid: uid::SubFilter) -> Msg {
-        FiltersMsg::filter(uid, Self::RmSub(sub_uid))
-    }
-}
-
 base::implement! {
     impl Msg {
         Display {
@@ -277,7 +189,6 @@ base::implement! {
                 Err(e) => Self::err(e),
             },
             from FooterMsg => |msg| Self::Footer(msg),
-            from FiltersMsg => |msg| Self::Filter(msg),
             from settings::Msg => |msg| Self::Settings(msg),
         }
     }
@@ -322,37 +233,6 @@ base::implement! {
             |&self, fmt| match self {
                 Self::ToggleTab(_) => write!(fmt, "toggle tab"),
                 // Self::Removed(f_uid) => write!(fmt, "remove {}", f_uid),
-            }
-        }
-    }
-
-    impl FiltersMsg {
-        Display {
-            |&self, fmt| match self {
-                Self::Save => write!(fmt, "save"),
-                Self::Rm(f_uid) => write!(fmt, "rm {}", f_uid),
-                Self::FilterSpec { uid, msg } => write!(fmt, "filter spec {}, {}", uid, msg),
-                Self::Filter { uid, msg } => write!(fmt, "filter {}, {}", uid, msg),
-                Self::Move { uid, left } => write!(fmt, "move {} ({})", uid, left),
-            }
-        }
-    }
-
-    impl FilterSpecMsg {
-        Display {
-            |&self, fmt| match self {
-                Self::ChangeName(_) => write!(fmt, "change name"),
-                Self::ChangeColor(_) => write!(fmt, "change color"),
-            }
-        }
-    }
-
-    impl FilterMsg {
-        Display {
-            |&self, fmt| match self {
-                Self::AddNew => write!(fmt, "add new"),
-                Self::Sub(_) => write!(fmt, "subfilter update"),
-                Self::RmSub(_) => write!(fmt, "remove subfilter"),
             }
         }
     }

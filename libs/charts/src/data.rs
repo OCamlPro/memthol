@@ -433,7 +433,7 @@ impl Data {
         self.stats
             .as_mut()
             .ok_or_else(|| "trying to add allocation before initialization")?
-            .total_size += alloc.real_size as usize;
+            .total_size += alloc.real_size as u64;
         self.current_time = alloc.toc;
         let uid = self.uid_map.next_index();
         if uid != alloc.uid {
