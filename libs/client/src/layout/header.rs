@@ -11,11 +11,11 @@ pub struct Header {
 }
 
 /// Height of the info of the header.
-pub const HEADER_INFO_LINE_HEIGHT_PX: usize = 60;
+const HEADER_INFO_LINE_HEIGHT_PX: usize = 60;
 /// Vertical button padding.
 const HEADER_VERTICAL_LEFT_BUTTON_PADDING: usize = HEADER_INFO_LINE_HEIGHT_PX / 10;
 /// Height of the info of the header.
-pub const HEADER_INFO_LINE_LEFT_BUTTON_HEIGHT_PX: usize =
+const HEADER_INFO_LINE_LEFT_BUTTON_HEIGHT_PX: usize =
     HEADER_INFO_LINE_HEIGHT_PX - HEADER_VERTICAL_LEFT_BUTTON_PADDING;
 /// Vertical button padding.
 const HEADER_VERTICAL_BUTTON_PADDING: usize = HEADER_INFO_LINE_HEIGHT_PX / 4;

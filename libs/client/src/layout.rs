@@ -6,6 +6,7 @@ prelude! {}
 
 pub mod button;
 pub mod chart;
+pub mod footer;
 pub mod header;
 pub mod input;
 pub mod progress;
