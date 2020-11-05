@@ -958,9 +958,14 @@ pub mod tabs {
                     let edited = is_edited(filter);
 
                     let name = match model.filters.ref_stats().get(filter.uid()) {
-                        Some(stats) if !edited => {
-                            format!("{} ({})", filter.name(), stats.alloc_count)
-                        }
+                        Some(stats) if !edited => format!(
+                            "{} ({})",
+                            filter.name(),
+                            num_fmt::str_do(
+                                convert::<usize, u32>(stats.alloc_count, "footer: stats"),
+                                identity,
+                            )
+                        ),
                         _ => filter.name().into(),
                     };
 

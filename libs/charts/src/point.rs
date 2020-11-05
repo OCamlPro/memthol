@@ -151,12 +151,12 @@ where
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Size {
     /// Actual size value.
-    pub size: u32,
+    pub size: u64,
 }
 impl Size {
     /// Constructor.
-    pub fn new(size: u32) -> Self {
-        Self { size }
+    pub fn new(size: impl Into<u64>) -> Self {
+        Self { size: size.into() }
     }
 }
 base::implement! {
@@ -165,7 +165,7 @@ base::implement! {
             |&self, fmt| self.size.fmt(fmt),
         }
         From {
-            from u32 => |size| Self::new(size),
+            from u64 => |size| Self::new(size),
         }
     }
 }
@@ -245,42 +245,42 @@ impl CoordExt for time::SinceStart {
     }
 }
 
-impl CoordExt for u32 {
-    type Coord = u32;
-    type Range = coord::RangedCoordu32;
+impl CoordExt for u64 {
+    type Coord = u64;
+    type Range = coord::RangedCoordu64;
     fn default_val() -> Self {
         0
     }
-    fn zero() -> u32 {
+    fn zero() -> u64 {
         0
     }
-    fn is_zero(val: &u32) -> bool {
+    fn is_zero(val: &u64) -> bool {
         *val == 0
     }
-    fn default_min() -> u32 {
+    fn default_min() -> u64 {
         0
     }
-    fn default_max() -> u32 {
+    fn default_max() -> u64 {
         5
     }
 }
 
 impl CoordExt for Size {
-    type Coord = u32;
-    type Range = coord::RangedCoordu32;
+    type Coord = u64;
+    type Range = coord::RangedCoordu64;
     fn default_val() -> Self {
         0.into()
     }
-    fn zero() -> u32 {
+    fn zero() -> u64 {
         0
     }
-    fn is_zero(val: &u32) -> bool {
+    fn is_zero(val: &u64) -> bool {
         *val == 0
     }
-    fn default_min() -> u32 {
+    fn default_min() -> u64 {
         0
     }
-    fn default_max() -> u32 {
+    fn default_max() -> u64 {
         5
     }
 }
@@ -310,11 +310,11 @@ pub trait RatioExt {
     /// Returns the percentage (between `0` and `100`) of the ratio between `self` and `max`.
     fn ratio_wrt(&self, max: &Self) -> Res<f32>;
 }
-impl RatioExt for u32 {
+impl RatioExt for u64 {
     fn ratio_wrt(&self, max: &Self) -> Res<f32> {
         let (slf, max) = (*self, *max);
         if max == 0 || slf > max {
-            bail!("cannot compute u32 ratio of {} w.r.t. {}", slf, max)
+            bail!("cannot compute u64 ratio of {} w.r.t. {}", slf, max)
         }
         Ok(((slf * 100) as f32) / (max as f32))
     }
@@ -323,7 +323,7 @@ impl RatioExt for Size {
     fn ratio_wrt(&self, max: &Self) -> Res<f32> {
         let (slf, max) = (self.size, max.size);
         if max == 0 || slf > max {
-            bail!("cannot compute u32 ratio of {} w.r.t. {}", slf, max)
+            bail!("cannot compute u64 ratio of {} w.r.t. {}", slf, max)
         }
         Ok(((slf * 100) as f32) / (max as f32))
     }
@@ -888,7 +888,7 @@ impl<Y> PointValExt<time::SinceStart> for PolyPoints<time::SinceStart, Y> {
 
 impl<X> PointValExt<Size> for PolyPoints<X, Size> {
     fn val_range_processor(range: Range<Option<Size>>) -> Res<Range<Size>> {
-        Ok(range.unwrap_or_else(|| u32::default_min().into(), || u32::default_max().into()))
+        Ok(range.unwrap_or_else(|| u64::default_min().into(), || u64::default_max().into()))
     }
     fn val_coord_range_processor(range: &Range<Size>) -> Res<Range<<Size as CoordExt>::Coord>> {
         let default_max = Size::default_max();
@@ -905,18 +905,18 @@ impl<X> PointValExt<Size> for PolyPoints<X, Size> {
         x.size
     }
     fn val_label_formatter(val: &<Size as CoordExt>::Coord) -> String {
-        let mut s = num_fmt::bin_str_do(*val, base::identity);
+        let mut s = num_fmt::bin_str_do(*val as f64, base::identity);
         s.push('B');
         s
     }
 }
 
-impl<X> PointValExt<u32> for PolyPoints<X, u32> {
-    fn val_range_processor(range: Range<Option<u32>>) -> Res<Range<u32>> {
-        Ok(range.unwrap_or_else(u32::default_min, u32::default_max))
+impl<X> PointValExt<u64> for PolyPoints<X, u64> {
+    fn val_range_processor(range: Range<Option<u64>>) -> Res<Range<u64>> {
+        Ok(range.unwrap_or_else(u64::default_min, u64::default_max))
     }
-    fn val_coord_range_processor(range: &Range<u32>) -> Res<Range<<u32 as CoordExt>::Coord>> {
-        let default_max = u32::default_max();
+    fn val_coord_range_processor(range: &Range<u64>) -> Res<Range<<u64 as CoordExt>::Coord>> {
+        let default_max = u64::default_max();
         Ok(Range::new(
             range.lbound,
             if range.ubound < default_max {
@@ -926,11 +926,11 @@ impl<X> PointValExt<u32> for PolyPoints<X, u32> {
             },
         ))
     }
-    fn val_coord_processor(_range: &Range<u32>, x: &u32) -> <u32 as CoordExt>::Coord {
+    fn val_coord_processor(_range: &Range<u64>, x: &u64) -> <u64 as CoordExt>::Coord {
         *x
     }
-    fn val_label_formatter(val: &<u32 as CoordExt>::Coord) -> String {
-        num_fmt::str_do(*val, base::identity)
+    fn val_label_formatter(val: &<u64 as CoordExt>::Coord) -> String {
+        num_fmt::str_do(*val as f64, base::identity)
     }
 }
 

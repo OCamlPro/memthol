@@ -14,7 +14,7 @@ pub mod coord {
     pub use plotters::coord::{
         cartesian::Cartesian2d,
         ranged1d::{AsRangedCoord, Ranged, ValueFormatter},
-        types::{RangedCoordf32, RangedCoordu32, RangedDuration},
+        types::{RangedCoordf32, RangedCoordu32, RangedCoordu64, RangedDuration},
     };
 }
 
@@ -142,7 +142,7 @@ pub struct AllocStats {
     /// Total number of allocations.
     pub alloc_count: usize,
     /// Total size of the allocations.
-    pub total_size: usize,
+    pub total_size: u64,
     /// Date at which the run started.
     pub start_date: time::Date,
     /// Duration of the run.

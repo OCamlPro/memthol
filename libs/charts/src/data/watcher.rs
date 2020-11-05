@@ -113,7 +113,9 @@ impl Watcher {
         ctf::parse(
             &bytes,
             &mut factory,
-            |bytes_progress| super::progress::set_loaded(bytes_progress).unwrap(),
+            |bytes_progress| {
+                err::unwrap_register_fatal(super::progress::set_loaded(bytes_progress))
+            },
             |factory, init| {
                 if factory.data.has_init() {
                     panic!("live profiling restart is not supported yet")
@@ -121,8 +123,8 @@ impl Watcher {
                     factory.data.reset(target, init)
                 }
             },
-            |factory, builder| factory.build_new(builder).unwrap(),
-            |factory, timestamp, uid| factory.add_dead(timestamp, uid).unwrap(),
+            |factory, builder| err::unwrap_register_fatal(factory.build_new(builder)),
+            |factory, timestamp, uid| err::unwrap_register_fatal(factory.add_dead(timestamp, uid)),
             |factory, timestamp| factory.mark_timestamp(timestamp),
         )
         .chain_err(|| format!("while parsing ctf file `{}`", target.display()))?;
