@@ -201,7 +201,7 @@ impl Charts {
         let should_render = match action {
             ChartsMsg::NewChart(spec, settings) => {
                 log::info!("creating new chart");
-                let chart = Chart::new(spec, settings, filters, self.link.clone())?;
+                let chart = Chart::new(spec, settings, self.link.clone())?;
                 self.charts.push(chart);
                 true
             }
@@ -270,10 +270,8 @@ pub struct Chart {
     )>,
     /// The points.
     points: Option<point::Points>,
-    /// The filters, used to color the series and hide what the user asks to hide.
-    filters: BTMap<uid::Line, bool>,
     /// Previous filter map, used when updating filters to keep track of those that are hidden.
-    prev_filters: BTMap<uid::Line, bool>,
+    prev_active: BTMap<uid::Line, bool>,
 
     /// This flag indicates whether the chart should be redrawn after HTML rendering.
     ///
@@ -287,23 +285,11 @@ pub struct Chart {
 }
 impl Chart {
     /// Constructor.
-    pub fn new(
-        spec: ChartSpec,
-        settings: settings::Chart,
-        all_filters: filter::Reference,
-        link: Link,
-    ) -> Res<Self> {
+    pub fn new(spec: ChartSpec, settings: settings::Chart, link: Link) -> Res<Self> {
         let top_container = format!("chart_container_{}", spec.uid().get());
         let container = format!("chart_canvas_container_{}", spec.uid().get());
         let canvas = format!("chart_canvas_{}", spec.uid().get());
         let collapsed_canvas = format!("{}_collapsed", canvas);
-
-        let mut filters = BTMap::new();
-        all_filters.specs_apply(|spec| {
-            let prev = filters.insert(spec.uid(), true);
-            debug_assert!(prev.is_none());
-            Ok(())
-        })?;
 
         Ok(Self {
             spec,
@@ -315,8 +301,7 @@ impl Chart {
             collapsed_canvas,
             chart: None,
             points: None,
-            filters,
-            prev_filters: BTMap::new(),
+            prev_active: BTMap::new(),
             settings_visible: false,
             redraw: true,
         })
@@ -398,7 +383,7 @@ impl Chart {
 
     /// Accessor for filter visibility.
     pub fn filter_visibility(&self) -> &BTMap<uid::Line, bool> {
-        &self.filters
+        &self.spec.active()
     }
 
     /// Destroys the chart.
@@ -409,7 +394,7 @@ impl Chart {
 impl Chart {
     /// Toggles the visibility of a filter for the chart.
     pub fn filter_toggle_visible(&mut self, uid: uid::Line) -> Res<()> {
-        if let Some(is_visible) = self.filters.get_mut(&uid) {
+        if let Some(is_visible) = self.spec.active_mut().get_mut(&uid) {
             *is_visible = !*is_visible;
             self.redraw = true;
         } else {
@@ -420,15 +405,17 @@ impl Chart {
 
     /// Replaces the filters of the chart.
     pub fn replace_filters(&mut self, filters: filter::Reference) -> Res<()> {
-        self.prev_filters.clear();
-        std::mem::swap(&mut self.filters, &mut self.prev_filters);
+        self.prev_active.clear();
+        let active = self.spec.active_mut();
+        let prev_active = &mut self.prev_active;
+        std::mem::swap(active, prev_active);
 
-        debug_assert!(self.filters.is_empty());
+        debug_assert!(active.is_empty());
 
         filters.specs_apply(|spec| {
             let spec_uid = spec.uid();
-            let visible = self.prev_filters.get(&spec_uid).cloned().unwrap_or(true);
-            let prev = self.filters.insert(spec_uid, visible);
+            let visible = prev_active.get(&spec_uid).cloned().unwrap_or(true);
+            let prev = active.insert(spec_uid, visible);
             debug_assert!(prev.is_none());
             Ok(())
         })?;
@@ -620,7 +607,7 @@ impl Chart {
     /// Size of the x-axis label area.
     const X_LABEL_AREA: u32 = 30;
     /// Size of the y-axis label area.
-    const Y_LABEL_AREA: u32 = 99;
+    const Y_LABEL_AREA: u32 = 120;
     /// Size of the top margin.
     const TOP_MARGIN: u32 = Self::X_LABEL_AREA / 3;
     /// Size of the right margin.
@@ -642,7 +629,7 @@ impl Chart {
             return Ok(());
         }
 
-        let visible_filters = &self.filters;
+        let visible_filters = self.spec.active();
 
         if let Some((chart, canvas)) = &mut self.chart {
             let width = canvas.client_width();

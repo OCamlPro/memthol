@@ -15,17 +15,22 @@ use filter::gen::*;
 pub struct AllocSiteParams {
     /// Minimum number of allocations needed for a filter to be created for a given file.
     min_count: Option<usize>,
+    /// Chart generation.
+    chart_gen: bool,
 }
 impl Default for AllocSiteParams {
     fn default() -> Self {
-        Self { min_count: None }
+        Self {
+            min_count: None,
+            chart_gen: true,
+        }
     }
 }
 
 impl AllocSiteParams {
     /// Constructor.
-    pub fn new(min_count: Option<usize>) -> Self {
-        Self { min_count }
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -34,7 +39,7 @@ type FileName = String;
 /// Actual alloc-site generator worker.
 pub struct AllocSiteWork {
     /// Maps file names to the number of allocations in them.
-    map: BTMap<FileName, usize>,
+    map: BTMap<FileName, (usize, Option<uid::Filter>)>,
     /// Number of allocations in unknown files.
     unk: usize,
 }
@@ -54,10 +59,10 @@ impl AllocSiteWork {
     pub fn inc(&mut self, file: Option<alloc::Str>) {
         if let Some(file) = file {
             file.str_do(|file| {
-                if let Some(count) = self.map.get_mut(file) {
+                if let Some((count, _)) = self.map.get_mut(file) {
                     *count += 1
                 } else {
-                    let prev = self.map.insert(file.to_string(), 1);
+                    let prev = self.map.insert(file.to_string(), (1, None));
                     debug_assert!(prev.is_none())
                 }
             })
@@ -87,7 +92,7 @@ impl AllocSiteWork {
     }
 
     /// Extracts allocation-site-file filters.
-    pub fn extract(self, params: AllocSiteParams) -> Res<Vec<Filter>> {
+    pub fn extract(&mut self, params: &AllocSiteParams) -> Res<Vec<Filter>> {
         let mut res = Vec::with_capacity(self.map.len());
 
         if self.map.is_empty() || (self.map.len() == 1 && self.unk == 0) {
@@ -95,7 +100,6 @@ impl AllocSiteWork {
         }
 
         let min_count = if let Some(min) = params.min_count {
-            log::info!("min_count is {}", min);
             min
         } else {
             // let avg = self.map.values().fold(0, |acc, cnt| acc + *cnt) / self.map.len();
@@ -107,12 +111,12 @@ impl AllocSiteWork {
 
         let filter_count = self.map.iter().fold(
             0,
-            |acc, (_, count)| if validate(*count) { acc + 1 } else { acc },
+            |acc, (_, (count, _))| if validate(*count) { acc + 1 } else { acc },
         );
 
         let mut colors = Color::randoms(filter_count).into_iter();
 
-        for (file, count) in &self.map {
+        for (file, (count, uid_opt)) in &mut self.map {
             if validate(*count) {
                 let sub_filter = Self::generate_subfilter(&file);
 
@@ -125,6 +129,9 @@ impl AllocSiteWork {
                 let mut filter = filter::Filter::new(spec)?;
                 filter.insert(sub_filter)?;
 
+                debug_assert_eq!(*uid_opt, None);
+                *uid_opt = Some(filter.uid());
+
                 res.push(filter)
             }
         }
@@ -134,13 +141,32 @@ impl AllocSiteWork {
         // Rev-sorting by number of allocations. Note that the order does not matter as the filter
         // exact-match different allocation-site-files.
         res.sort_by(|lft, rgt| {
-            let lft = self.map.get(lft.name()).cloned().unwrap_or(0);
-            let rgt = self.map.get(rgt.name()).cloned().unwrap_or(0);
+            let lft = self.map.get(lft.name()).cloned().unwrap_or((0, None));
+            let rgt = self.map.get(rgt.name()).cloned().unwrap_or((0, None));
             // rev-sorting
             rgt.cmp(&lft)
         });
 
+        // log::info!("allocation sites:");
+        // for (file, (count, uid)) in &self.map {
+        //     log::info!("    {:>30}: {}, captured by {:?}", file, count, uid)
+        // }
+
         Ok(res)
+    }
+
+    /// Runs chart generation.
+    pub fn chart_gen(self, params: &AllocSiteParams, filters: &Filters) -> Res<Vec<chart::Chart>> {
+        if params.chart_gen {
+            chart_gen::alloc_file_prefix(
+                filters,
+                self.map
+                    .iter()
+                    .filter_map(|(file, (_count, uid))| uid.map(|uid| (file, uid))),
+            )
+        } else {
+            chart_gen::default(filters)
+        }
     }
 }
 
@@ -150,17 +176,21 @@ pub struct AllocSite;
 
 /// Name of the `min` key.
 const MIN_KEY: &str = "min";
+/// Name of the `chart_gen` key.
+const CHART_GEN_KEY: &str = "chart_gen";
 
 impl FilterGenExt for AllocSite {
     type Params = AllocSiteParams;
 
     const KEY: &'static str = "alloc_site";
-    const FMT: Option<&'static str> = Some("min: <int>");
+    const FMT: Option<&'static str> = Some("min: <int>, chart_gen: <bool>");
 
-    fn work(data: &data::Data, params: Self::Params) -> Res<Vec<Filter>> {
+    fn work(data: &data::Data, params: Self::Params) -> Res<(Filters, Vec<chart::Chart>)> {
         let mut work = AllocSiteWork::new();
         work.scan(data);
-        work.extract(params)
+        let filters = work.extract(&params).map(Filters::new_with)?;
+        let charts = work.chart_gen(&params, &filters)?;
+        Ok((filters, charts))
     }
 
     fn parse_args(parser: Option<Parser>) -> Option<FilterGen> {
@@ -170,26 +200,41 @@ impl FilterGenExt for AllocSite {
             return Some(Self::Params::default().into());
         };
 
-        if !parser.tag(MIN_KEY) {
-            return None;
-        }
-        parser.ws();
-        if !parser.char(':') {
-            return None;
-        }
-        parser.ws();
+        let mut params = AllocSiteParams::default();
 
-        let min_count = parser.usize()?;
+        loop {
+            if parser.id_tag(MIN_KEY) {
+                parser.ws();
+                if !parser.char(':') {
+                    return None;
+                }
+                parser.ws();
+                params.min_count = Some(parser.usize()?);
+            } else if parser.id_tag(CHART_GEN_KEY) {
+                parser.ws();
+                if !parser.char(':') {
+                    return None;
+                }
+                parser.ws();
+                params.chart_gen = parser.bool()?;
+            } else {
+                return None;
+            }
 
-        parser.ws();
-        let _optional = parser.char(',');
-        parser.ws();
+            parser.ws();
+            if parser.is_at_eoi() {
+                break;
+            } else if parser.char(',') {
+                parser.ws();
+                continue;
+            }
+        }
 
         if !parser.is_at_eoi() {
             return None;
         }
 
-        Some(AllocSiteParams::new(Some(min_count)).into())
+        Some(params.into())
     }
 
     fn add_help(s: &mut String) {

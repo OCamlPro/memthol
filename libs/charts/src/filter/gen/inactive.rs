@@ -11,8 +11,10 @@ impl FilterGenExt for Inactive {
     const KEY: &'static str = "none";
     const FMT: Option<&'static str> = None;
 
-    fn work(_data: &data::Data, (): Self::Params) -> Res<Vec<Filter>> {
-        Ok(vec![])
+    fn work(_data: &data::Data, (): Self::Params) -> Res<(Filters, Vec<chart::Chart>)> {
+        let filters = Filters::new();
+        let charts = chart_gen::single(&filters)?;
+        Ok((filters, charts))
     }
 
     fn parse_args(parser: Option<Parser>) -> Option<FilterGen> {
