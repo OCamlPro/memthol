@@ -11,14 +11,17 @@ pub struct ChartSpec {
     x_axis: XAxis,
     /// Y-axis.
     y_axis: YAxis,
+    /// Active filters.
+    active: BTMap<uid::Line, bool>,
 }
 impl ChartSpec {
     /// Creates a new chart spec.
-    pub fn new(x_axis: XAxis, y_axis: YAxis) -> Self {
+    pub fn new(x_axis: XAxis, y_axis: YAxis, active: BTMap<uid::Line, bool>) -> Self {
         Self {
             uid: uid::Chart::fresh(),
             x_axis,
             y_axis,
+            active,
         }
     }
 
@@ -39,5 +42,19 @@ impl ChartSpec {
     /// Y-axis accessor.
     pub fn y_axis(&self) -> &YAxis {
         &self.y_axis
+    }
+
+    /// Active filters.
+    pub fn active(&self) -> &BTMap<uid::Line, bool> {
+        &self.active
+    }
+    /// Active filters.
+    pub fn active_mut(&mut self) -> &mut BTMap<uid::Line, bool> {
+        &mut self.active
+    }
+
+    /// True if the spec has active filters.
+    pub fn has_active_filters(&self) -> bool {
+        self.active.iter().any(|(_, active)| *active)
     }
 }

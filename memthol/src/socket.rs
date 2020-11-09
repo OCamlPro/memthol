@@ -301,11 +301,9 @@ impl Handler {
 
         com.send(msg::to_client::Msg::DoneLoading)?;
 
-        let mut charts = Charts::new();
-
-        time! {
-            charts
-                .auto_gen()
+        let charts = time! {
+            Charts
+                ::auto_gen()
                 .chain_err(|| "during default filter generation")?,
             |time| log::info!("done with filter generation in {}", time)
         };
@@ -492,15 +490,8 @@ impl Handler {
 
     /// Initializes a client.
     pub fn init(&mut self) -> Res<()> {
-        use charts::chart::{
-            axis::{XAxis, YAxis},
-            Chart,
-        };
-
         self.send_stats()?;
 
-        let chart = Chart::new(self.charts.filters(), XAxis::Time, YAxis::TotalSize)?;
-        self.charts.push(chart);
         self.send_filters()
             .chain_err(|| "while sending filters for client init")?;
         self.send_all_charts()

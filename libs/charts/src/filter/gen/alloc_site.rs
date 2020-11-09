@@ -34,7 +34,7 @@ type FileName = String;
 /// Actual alloc-site generator worker.
 pub struct AllocSiteWork {
     /// Maps file names to the number of allocations in them.
-    map: BTMap<FileName, usize>,
+    map: BTMap<FileName, (usize, Option<uid::Filter>)>,
     /// Number of allocations in unknown files.
     unk: usize,
 }
@@ -54,10 +54,10 @@ impl AllocSiteWork {
     pub fn inc(&mut self, file: Option<alloc::Str>) {
         if let Some(file) = file {
             file.str_do(|file| {
-                if let Some(count) = self.map.get_mut(file) {
+                if let Some((count, _)) = self.map.get_mut(file) {
                     *count += 1
                 } else {
-                    let prev = self.map.insert(file.to_string(), 1);
+                    let prev = self.map.insert(file.to_string(), (1, None));
                     debug_assert!(prev.is_none())
                 }
             })
@@ -87,7 +87,7 @@ impl AllocSiteWork {
     }
 
     /// Extracts allocation-site-file filters.
-    pub fn extract(self, params: AllocSiteParams) -> Res<Vec<Filter>> {
+    pub fn extract(&mut self, params: AllocSiteParams) -> Res<Vec<Filter>> {
         let mut res = Vec::with_capacity(self.map.len());
 
         if self.map.is_empty() || (self.map.len() == 1 && self.unk == 0) {
@@ -95,7 +95,6 @@ impl AllocSiteWork {
         }
 
         let min_count = if let Some(min) = params.min_count {
-            log::info!("min_count is {}", min);
             min
         } else {
             // let avg = self.map.values().fold(0, |acc, cnt| acc + *cnt) / self.map.len();
@@ -107,12 +106,12 @@ impl AllocSiteWork {
 
         let filter_count = self.map.iter().fold(
             0,
-            |acc, (_, count)| if validate(*count) { acc + 1 } else { acc },
+            |acc, (_, (count, _))| if validate(*count) { acc + 1 } else { acc },
         );
 
         let mut colors = Color::randoms(filter_count).into_iter();
 
-        for (file, count) in &self.map {
+        for (file, (count, uid_opt)) in &mut self.map {
             if validate(*count) {
                 let sub_filter = Self::generate_subfilter(&file);
 
@@ -125,6 +124,9 @@ impl AllocSiteWork {
                 let mut filter = filter::Filter::new(spec)?;
                 filter.insert(sub_filter)?;
 
+                debug_assert_eq!(*uid_opt, None);
+                *uid_opt = Some(filter.uid());
+
                 res.push(filter)
             }
         }
@@ -134,13 +136,28 @@ impl AllocSiteWork {
         // Rev-sorting by number of allocations. Note that the order does not matter as the filter
         // exact-match different allocation-site-files.
         res.sort_by(|lft, rgt| {
-            let lft = self.map.get(lft.name()).cloned().unwrap_or(0);
-            let rgt = self.map.get(rgt.name()).cloned().unwrap_or(0);
+            let lft = self.map.get(lft.name()).cloned().unwrap_or((0, None));
+            let rgt = self.map.get(rgt.name()).cloned().unwrap_or((0, None));
             // rev-sorting
             rgt.cmp(&lft)
         });
 
+        // log::info!("allocation sites:");
+        // for (file, (count, uid)) in &self.map {
+        //     log::info!("    {:>30}: {}, captured by {:?}", file, count, uid)
+        // }
+
         Ok(res)
+    }
+
+    /// Runs chart generation.
+    pub fn chart_gen(self, filters: &Filters) -> Res<Vec<chart::Chart>> {
+        chart_gen::alloc_file_prefix(
+            filters,
+            self.map
+                .iter()
+                .filter_map(|(file, (_count, uid))| uid.map(|uid| (file, uid))),
+        )
     }
 }
 
@@ -157,10 +174,12 @@ impl FilterGenExt for AllocSite {
     const KEY: &'static str = "alloc_site";
     const FMT: Option<&'static str> = Some("min: <int>");
 
-    fn work(data: &data::Data, params: Self::Params) -> Res<Vec<Filter>> {
+    fn work(data: &data::Data, params: Self::Params) -> Res<(Filters, Vec<chart::Chart>)> {
         let mut work = AllocSiteWork::new();
         work.scan(data);
-        work.extract(params)
+        let filters = work.extract(params).map(Filters::new_with)?;
+        let charts = work.chart_gen(&filters)?;
+        Ok((filters, charts))
     }
 
     fn parse_args(parser: Option<Parser>) -> Option<FilterGen> {

@@ -74,9 +74,14 @@ pub struct Chart {
 }
 #[cfg(any(test, feature = "server"))]
 impl Chart {
-    /// Creates a time chart.
-    pub fn new(filters: &filter::Filters, x_axis: XAxis, y_axis: YAxis) -> Res<Self> {
-        let spec = ChartSpec::new(x_axis, y_axis);
+    /// Creates a chart.
+    pub fn new(
+        filters: &filter::Filters,
+        x_axis: XAxis,
+        y_axis: YAxis,
+        active: BTMap<uid::Line, bool>,
+    ) -> Res<Self> {
+        let spec = ChartSpec::new(x_axis, y_axis, active);
         let settings = settings::Chart::from_axes(spec.desc(), x_axis, y_axis);
         let chart = RawChart::new(filters, x_axis, y_axis)?;
         let slf = Self {
@@ -86,6 +91,22 @@ impl Chart {
             still_init: true,
         };
         Ok(slf)
+    }
+
+    /// Constructor.
+    pub fn from_spec(title: Option<String>, filters: &Filters, spec: ChartSpec) -> Res<Self> {
+        let settings = settings::Chart::from_axes(
+            title.unwrap_or_else(|| spec.desc()),
+            spec.x_axis().clone(),
+            spec.y_axis().clone(),
+        );
+        let chart = RawChart::new(filters, spec.x_axis().clone(), spec.y_axis().clone())?;
+        Ok(Self {
+            spec,
+            settings,
+            chart,
+            still_init: true,
+        })
     }
 
     /// Applies an update to its settings.

@@ -94,8 +94,15 @@ impl Charts {
     ///
     /// Returns the number of filter generated.
     #[cfg(any(test, feature = "server"))]
-    pub fn auto_gen(&mut self) -> Res<usize> {
-        self.filters.auto_gen(&*data::get()?, filter::gen::get())
+    pub fn auto_gen() -> Res<Self> {
+        let (filters, charts) = Filters::auto_gen(&*data::get()?, filter::gen::get())?;
+        Ok(Self {
+            charts,
+            filters,
+            start_time: None,
+            to_client_msgs: msg::to_client::Msgs::with_capacity(7),
+            settings: settings::Charts::new(),
+        })
     }
 
     /// Pushes a new chart.
@@ -160,7 +167,12 @@ impl Charts {
 
         let reloaded = match msg {
             msg::to_server::ChartsMsg::New(x_axis, y_axis) => {
-                let nu_chart = chart::Chart::new(&mut self.filters, x_axis, y_axis)
+                let all_active = self.filters.fold(BTMap::new(), |mut map, uid| {
+                    let prev = map.insert(uid, true);
+                    debug_assert_eq!(prev, None);
+                    map
+                });
+                let nu_chart = chart::Chart::new(&mut self.filters, x_axis, y_axis, all_active)
                     .chain_err(|| "while creating new chart")?;
 
                 // Chart creation message.

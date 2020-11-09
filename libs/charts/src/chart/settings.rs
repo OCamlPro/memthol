@@ -222,6 +222,18 @@ impl Chart {
             self.display_mode = setting
         }
     }
+    /// Sets the display mode to stacked area.
+    pub fn set_display_mode_stacked_area(&mut self) {
+        if self.can_stacked_area {
+            self.display_mode = DisplayMode::StackedArea
+        }
+    }
+    /// Sets the display mode to stacked area.
+    pub fn set_display_mode_stacked_area_percent(&mut self) {
+        if self.can_stacked_area {
+            self.display_mode = DisplayMode::StackedAreaPercent
+        }
+    }
     /// List of legal display modes for this chart.
     ///
     /// None if the chart supports only one display mode.
