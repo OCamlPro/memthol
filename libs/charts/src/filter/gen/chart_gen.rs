@@ -29,6 +29,11 @@ impl ChartDesc {
     }
 }
 
+/// Default chart generation.
+pub fn default(filters: &Filters) -> Res<Vec<chart::Chart>> {
+    single(filters)
+}
+
 /// Generates a single graph containing everything.
 pub fn single(filters: &Filters) -> Res<Vec<chart::Chart>> {
     Ok(vec![ChartDesc::new_size_over_time(
