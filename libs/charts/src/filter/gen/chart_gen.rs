@@ -65,7 +65,7 @@ pub fn alloc_file_prefix<'a>(
     let mut pref_filters = vec![];
     let mut lonely = ChartDesc::new_size_over_time(Some("others".into()), all_inactive.clone());
     let mut no_pref =
-        ChartDesc::new_size_over_time(Some("prefix-less files".into()), all_inactive.clone());
+        ChartDesc::new_size_over_time(Some("root files".into()), all_inactive.clone());
 
     for (pref, uids) in pref_to_filters {
         debug_assert!(!uids.is_empty());
