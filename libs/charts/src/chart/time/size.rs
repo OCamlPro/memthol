@@ -354,7 +354,7 @@ impl TimeSize {
 
         if let Some(ts) = last_time_stamp {
             if *ts != time_window.ubound {
-                let point = Point::new(*data.current_time(), self.size.clone());
+                let point = Point::new(time_window.ubound, self.size.clone());
                 points.push(point)
             }
         }
