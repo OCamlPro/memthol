@@ -86,6 +86,65 @@ impl FilterStates {
         )
     }
 
+    /// (In)active filters to render.
+    fn inner_filters_to_render<'me>(
+        &'me self,
+        is_active: &'me impl Fn(&FilterSpec) -> bool,
+        active: bool,
+    ) -> (
+        Option<&'me FilterSpec>,
+        Option<impl Iterator<Item = &'me Filter> + 'me>,
+        Option<&'me FilterSpec>,
+    ) {
+        let has_user_filters = !self.filters.is_empty();
+        (
+            // Everything.
+            if is_active(&self.everything) == active {
+                Some(&self.everything)
+            } else {
+                None
+            },
+            // Custom filters.
+            if has_user_filters {
+                Some(
+                    self.filters
+                        .iter()
+                        .filter(move |filter| is_active(filter.spec()) == active),
+                )
+            } else {
+                None
+            },
+            // Catch-all.
+            if has_user_filters && is_active(&self.catch_all) == active {
+                Some(&self.catch_all)
+            } else {
+                None
+            },
+        )
+    }
+    /// The active filters to render.
+    pub fn active_filters_to_render<'me>(
+        &'me self,
+        is_active: &'me impl Fn(&FilterSpec) -> bool,
+    ) -> (
+        Option<&'me FilterSpec>,
+        Option<impl Iterator<Item = &'me Filter>>,
+        Option<&'me FilterSpec>,
+    ) {
+        self.inner_filters_to_render(is_active, true)
+    }
+    /// The active filters to render.
+    pub fn inactive_filters_to_render<'me>(
+        &'me self,
+        is_active: &'me impl Fn(&FilterSpec) -> bool,
+    ) -> (
+        Option<&'me FilterSpec>,
+        Option<impl Iterator<Item = &'me Filter>>,
+        Option<&'me FilterSpec>,
+    ) {
+        self.inner_filters_to_render(is_active, false)
+    }
+
     /// Yields an iterator ovec the filter specifications.
     pub fn specs_iter(&self) -> impl Iterator<Item = &FilterSpec> + Clone {
         Some(&self.everything)

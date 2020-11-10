@@ -532,6 +532,7 @@ pub mod filter_toggles {
                 .cloned()
                 .unwrap_or(false)
         };
+
         let callback = |spec: &filter::FilterSpec| {
             let uid = spec.uid();
             model
@@ -539,63 +540,84 @@ pub mod filter_toggles {
                 .callback(move |_| msg::ChartMsg::filter_toggle_visible(chart_uid, uid))
         };
 
-        let mut tabs = Tabs::new();
+        macro_rules! render_line {
+            (active: $active:expr =>
+                $everything_opt:expr,
+                $filters_opt:expr,
+                $catch_all_opt:expr $(,)?
+            ) => {{
+                let mut tabs = None;
+                if let Some(everything) = $everything_opt {
+                    render_line!(@push(tabs) everything, $active)
+                }
+                if let Some(filters) = $filters_opt {
+                    for (idx, filter) in filters.enumerate() {
+                        if idx == 0 {
+                            render_line!(@push_sep(tabs))
+                        }
+                        render_line!(@push(tabs) filter.spec(), $active);
+                    }
+                }
+                if let Some(catch_all) = $catch_all_opt {
+                    if !model.is_catch_all_empty() {
+                        render_line!(@push_sep(tabs));
+                        render_line!(@push(tabs) catch_all, $active);
+                    }
+                }
 
-        let (everything, other_opt) = model.filters().filters_to_render();
+                if let Some(tabs) = tabs {
+                    html! {
+                        <div
+                            id = if $active {
+                                format!("active_filter_toggle_bar_for_chart{}", chart.uid())
+                            } else {
+                                format!("inactive_filter_toggle_bar_for_chart{}", chart.uid())
+                            }
+                            style = TOGGLE_BAR
+                        >
+                            <center
+                                style = TOGGLE_CONTAINER
+                                class = "h_scroll"
+                            >
+                                <div
+                                    style = SUBCONTAINER
+                                >
+                                    {tabs.render()}
+                                </div>
+                            </center>
+                        </div>
+                    }
+                } else {
+                    html! {}
+                }
+            }};
 
-        if let Some((catch_all, others)) = other_opt {
-            tabs.push_tab(
-                model,
-                everything.name(),
-                TabProps::new(everything.color().to_string())
-                    .set_dimmed(!is_active(everything))
-                    .set_rev(),
-                callback(everything),
-            );
-
-            tabs.push_sep();
-
-            for filter in others {
-                let spec = filter.spec();
+            (@push($tabs:expr) $filter_spec:expr, $active:expr) => {{
+                let tabs = $tabs.get_or_insert_with(Tabs::new);
                 tabs.push_tab(
                     model,
-                    spec.name(),
-                    TabProps::new(spec.color().to_string())
-                        .set_dimmed(!is_active(spec))
-                        .set_rev(),
-                    callback(spec),
+                    $filter_spec.name(),
+                    TabProps::new($filter_spec.color().to_string())
+                        .set_dimmed(!$active)
+                        .set_rev()
+                        .set_round(!$active),
+                    callback($filter_spec),
                 );
-            }
-
-            if !model.is_catch_all_empty() {
-                tabs.push_sep();
-                tabs.push_tab(
-                    model,
-                    catch_all.name(),
-                    TabProps::new(catch_all.color().to_string())
-                        .set_dimmed(!is_active(catch_all))
-                        .set_rev(),
-                    callback(catch_all),
-                )
-            }
+            }};
+            (@push_sep($tabs:expr)) => {
+                if let Some(tabs) = $tabs.as_mut() {
+                    tabs.push_sep()
+                }
+            };
         }
 
+        let (e, f, c) = model.filters().active_filters_to_render(&is_active);
+        let active = render_line!(active: true => e, f, c);
+        let (e, f, c) = model.filters().inactive_filters_to_render(&is_active);
+        let inactive = render_line!(active: false => e, f, c);
+
         html! {
-            <div
-                id = format!("toggle_bar_for_chart{}", chart.uid())
-                style = TOGGLE_BAR
-            >
-                <center
-                    style = TOGGLE_CONTAINER
-                    class = "h_scroll"
-                >
-                    <div
-                        style = SUBCONTAINER
-                    >
-                        {tabs.render()}
-                    </div>
-                </center>
-            </div>
+            <> {active} {inactive} </>
         }
     }
 }
