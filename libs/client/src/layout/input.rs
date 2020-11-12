@@ -36,6 +36,19 @@ pub fn text_input(value: &str, onchange: OnChangeAction) -> Html {
         />
     }
 }
+/// Generates HTML for an input field with steps.
+pub fn step_input(value: &str, step: impl fmt::Display, onchange: OnChangeAction) -> Html {
+    html! {
+        <input
+            type = "number"
+            step = step
+            class = "text_input"
+            style = TEXT_INPUT_STYLE
+            value = value
+            onchange = onchange
+        />
+    }
+}
 
 /// Parses a modification from a text-input field as a string.
 fn parse_text_data(data: ChangeData) -> Res<String> {
@@ -93,6 +106,46 @@ pub fn lifetime_input(
                 time::Lifetime::parse_secs(&txt).chain_err(|| "while parsing lifetime value")
             });
             msg(lifetime)
+        }),
+    )
+}
+
+/// Generates a text-input field expecting an optional time-like (SinceStart) value.
+pub fn since_start_opt_input(
+    model: &Model,
+    step: impl fmt::Display,
+    value: Option<time::SinceStart>,
+    msg: impl Fn(Res<Option<time::SinceStart>>) -> Msg + 'static,
+) -> Html {
+    step_input(
+        &value
+            .map(|t| {
+                let mut s = t.to_string();
+                loop {
+                    match s.pop() {
+                        Some('0') => (),
+                        Some(c) => {
+                            if c != '.' {
+                                s.push(c)
+                            }
+                            break;
+                        }
+                        None => {
+                            s.push('0');
+                            break;
+                        }
+                    }
+                }
+                s
+            })
+            .unwrap_or_else(|| "".into()),
+        step,
+        model.link.callback(move |data| {
+            let time_opt = parse_text_data(data).and_then(|txt| match &txt as &str {
+                "" => Ok(None),
+                txt => Ok(time::SinceStart::parse_secs(txt).ok()),
+            });
+            msg(time_opt)
         }),
     )
 }

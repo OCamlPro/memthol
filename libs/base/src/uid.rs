@@ -156,7 +156,7 @@ implement! {
 ///
 /// A line in the chart is either an actual filter, or the "catch-all" line, or the "everything"
 /// line.
-#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub enum Line {
     /// An actual filter.
     Filter(Filter),

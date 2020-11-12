@@ -2,7 +2,7 @@
 
 pub use base::prelude::*;
 
-pub use crate::{ast::Span, parse::CanParse, *};
+pub use crate::{parse::CanParse, *};
 
 /// A duration since the start of the run as microseconds.
 pub type Clock = u64;

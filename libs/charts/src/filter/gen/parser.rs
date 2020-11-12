@@ -102,6 +102,17 @@ impl<'input> Parser<'input> {
         }
     }
 
+    /// Parses a `bool`.
+    pub fn bool(&mut self) -> Option<bool> {
+        if self.id_tag("true") {
+            Some(true)
+        } else if self.id_tag("false") {
+            Some(false)
+        } else {
+            None
+        }
+    }
+
     /// Parses an identifier.
     pub fn ident(&mut self) -> Option<&'input str> {
         let mut chars = chars!(self);
@@ -131,12 +142,28 @@ impl<'input> Parser<'input> {
         if self.pos + tag.len() > self.txt.len() {
             false
         } else {
-            if tag == &self.txt[self.pos..tag.len()] {
+            if tag == &self.txt[self.pos..self.pos + tag.len()] {
                 self.pos += tag.len();
                 true
             } else {
                 false
             }
+        }
+    }
+
+    /// Parses an identifier not followed by an alphanumeric character.
+    pub fn id_tag(&mut self, tag: impl AsRef<str>) -> bool {
+        let start = self.pos;
+        if self.tag(tag) {
+            match self.rest().chars().next() {
+                Some(c) if c.is_alphanumeric() => {
+                    self.pos = start;
+                    return false;
+                }
+                _ => true,
+            }
+        } else {
+            false
         }
     }
 

@@ -174,8 +174,7 @@ impl Com {
 
     /// Sends chart statistics to the client.
     fn send_stats(&mut self, charts: &Charts) -> Res<()> {
-        use charts::prelude::AllocStats;
-        if let Some(stats) = AllocStats::get()? {
+        if let Some(stats) = charts::prelude::AllocStats::get()? {
             if let Some(log) = self.log.as_mut() {
                 use std::io::Write;
                 writeln!(
@@ -189,7 +188,7 @@ impl Com {
             self.send(msg::to_client::Msg::alloc_stats(stats))?;
             self.send(msg::to_client::Msg::filter_stats(
                 charts.filters().filter_stats()?,
-            ))?
+            ))?;
         }
 
         Ok(())
@@ -260,6 +259,7 @@ pub struct Handler {
 
     instance_prof: HandlerProf,
     total_prof: HandlerProf,
+    msgs: Vec<msg::to_client::Msg>,
 }
 
 impl Handler {
@@ -302,11 +302,9 @@ impl Handler {
 
         com.send(msg::to_client::Msg::DoneLoading)?;
 
-        let mut charts = Charts::new();
-
-        time! {
-            charts
-                .auto_gen()
+        let charts = time! {
+            Charts
+                ::auto_gen()
                 .chain_err(|| "during default filter generation")?,
             |time| log::info!("done with filter generation in {}", time)
         };
@@ -321,6 +319,7 @@ impl Handler {
 
             instance_prof,
             total_prof,
+            msgs: Vec::with_capacity(7),
         };
 
         log::info!("successfully connected to {}", slf.ip());
@@ -406,16 +405,28 @@ impl Handler {
 
             // List of messages to send to the client in response to the messages received from the
             // client.
-            let mut to_client_msgs = vec![];
+            debug_assert!(self.msgs.is_empty());
 
             // Handle the messages.
+            let mut send_stats = false;
             for msg in self.from_client.drain() {
-                let msgs = self.charts.handle_msg(msg)?;
-                to_client_msgs.extend(msgs)
+                log::debug!("handling message from client: {}", msg);
+                time! {
+                    {
+                        let (msgs, reloaded) = self.charts.handle_msg(msg)?;
+                        self.msgs.extend(msgs);
+                        if reloaded {
+                            send_stats = true
+                        }
+                    },
+                    |time| log::debug!("handled message in {}", time)
+                }
             }
 
-            for msg in to_client_msgs {
-                self.send(msg)?
+            self.send_all()?;
+
+            if send_stats {
+                self.send_stats()?
             }
 
             // Wait before rendering if necessary.
@@ -425,28 +436,7 @@ impl Handler {
             }
 
             // Render.
-            let (points, overwrite) = time! {
-                > self.instance_prof.point_extraction,
-                > self.total_prof.point_extraction,
-                self
-                    .charts
-                    .new_points(false)
-                    .chain_err(|| "while constructing points for the client")?
-            };
-
-            if overwrite || !points.is_empty() {
-                time! {
-                    > self.instance_prof.point_sending,
-                    > self.total_prof.point_sending,
-
-                    self.send(msg::to_client::ChartsMsg::points(points, overwrite))
-                        .chain_err(|| "while sending points to the client")?
-                }
-
-                self.send_stats()?;
-
-                self.show_time_stats("done extracting/sending points");
-            }
+            self.send_points(false)?
         }
 
         Ok(())
@@ -478,12 +468,12 @@ impl Handler {
         self.send(msg)
     }
     /// Sends all the points in all the charts to the client.
-    fn send_all_points(&mut self) -> Res<()> {
+    fn send_points(&mut self, init: bool) -> Res<()> {
         let (points, overwrite) = time! {
-            > self.instance_prof.point_extraction.start(),
-            > self.total_prof.point_extraction.start(),
+            > self.instance_prof.point_extraction,
+            > self.total_prof.point_extraction,
 
-            self.charts.new_points(true)?
+            self.charts.new_points(init)?
         };
 
         if !points.is_empty() {
@@ -506,20 +496,13 @@ impl Handler {
 
     /// Initializes a client.
     pub fn init(&mut self) -> Res<()> {
-        use charts::chart::{
-            axis::{XAxis, YAxis},
-            Chart,
-        };
-
         self.send_stats()?;
 
-        let chart = Chart::new(self.charts.filters(), XAxis::Time, YAxis::TotalSize)?;
-        self.charts.push(chart);
         self.send_filters()
             .chain_err(|| "while sending filters for client init")?;
         self.send_all_charts()
             .chain_err(|| "while sending charts for client init")?;
-        self.send_all_points()
+        self.send_points(true)
             .chain_err(|| "while sending points for client init")?;
 
         Ok(())
@@ -535,6 +518,13 @@ impl Handler {
     /// Sends a message to the client.
     pub fn send(&mut self, msg: impl Into<msg::to_client::Msg>) -> Res<()> {
         self.com.send(msg)
+    }
+    /// Sends all its internal messages to the client.
+    pub fn send_all(&mut self) -> Res<()> {
+        for msg in self.msgs.drain(0..) {
+            self.com.send(msg)?
+        }
+        Ok(())
     }
 
     /// Retrieves actions to perform from the client before rendering.
@@ -553,6 +543,7 @@ impl Handler {
                     let msg = msg::from_client::Msg::from_bytes(&data)
                         .chain_err(|| "while parsing message from client")?;
                     self.com.log_receive_msg(Either::Left(&msg))?;
+                    log::info!("received message from client: {}", msg);
                     self.from_client.push(msg)?
                 }
 

@@ -28,6 +28,11 @@ impl SinceStart {
         }
     }
 
+    /// Constructor from an amount of seconds.
+    pub fn from_secs(secs: u64) -> Self {
+        Self::from_nano_timestamp(secs, 0)
+    }
+
     /// Constructor from a timestamp in nanos seconds.
     pub fn from_nano_timestamp(secs: u64, nanos: u32) -> Self {
         Self {

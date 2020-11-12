@@ -55,6 +55,11 @@ impl<'a> FullFactory<'a> {
     pub fn fill_stats(&mut self) -> Res<()> {
         self.data.fill_stats()
     }
+
+    /// Marks a timestamp.
+    pub fn mark_timestamp(&mut self, ts: time::SinceStart) {
+        self.data.mark_timestamp(ts)
+    }
 }
 
 /// Starts global data handling.
@@ -211,6 +216,13 @@ impl Data {
         self.uid_map.reserve(capa)
     }
 
+    /// Marks a timestamp.
+    ///
+    /// This sets the current time to the input timestamp.
+    pub fn mark_timestamp(&mut self, ts: time::SinceStart) {
+        self.current_time = ts
+    }
+
     /// Init accessor.
     pub fn init(&self) -> Option<&alloc::Init> {
         self.init.as_ref()
@@ -261,15 +273,40 @@ impl Data {
         self.uid_map.iter()
     }
 
+    /// True if there are any new events since some timestamp.
+    pub fn has_new_stuff_since(&self, time: Option<(uid::Alloc, time::SinceStart)>) -> bool {
+        if let Some((uid, tod)) = time {
+            self.uid_map[uid..].is_empty() || self.tod_map.keys().rev().next() != Some(&tod)
+        } else {
+            !self.uid_map.is_empty()
+        }
+    }
+
+    /// Yields the last events at the current time.
+    pub fn last_events(&self) -> Option<(uid::Alloc, time::SinceStart)> {
+        self.uid_map.last().map(|alloc| {
+            (
+                alloc.uid,
+                self.tod_map
+                    .keys()
+                    .cloned()
+                    .last()
+                    .unwrap_or_else(time::SinceStart::zero),
+            )
+        })
+    }
+
     /// Iterates over the new (de)allocation events in chronological order.
     ///
     /// Argument `since` is an optional pair containing an allocation UID, and a time-of-death
     /// (TOD). Input `action` will run on all new allocations since the UID (exclusive), and all the
     /// deallocations since the TOD (exclusive).
+    ///
+    /// Input function `action` returns a boolean indicating whether the iteration should continue.
     pub fn iter_new_events<'me>(
         &'me self,
         since: Option<(uid::Alloc, time::SinceStart)>,
-        mut action: impl FnMut(Either<&'me Alloc, (time::SinceStart, &'me Alloc)>) -> Res<()>,
+        mut action: impl FnMut(Either<&'me Alloc, (time::SinceStart, &'me Alloc)>) -> Res<bool>,
     ) -> Res<()> {
         let (mut new_iter, mut dead_iter) = if let Some((last_alloc, last_time)) = since {
             let mut alloc_iter = self.uid_map[last_alloc..].iter();
@@ -288,22 +325,29 @@ impl Data {
         };
 
         let (mut next_new, mut next_dead) = (new_iter.next(), dead_iter.next());
+        let mut keep_going = true;
 
         macro_rules! work {
             (new: $alloc:expr) => {{
-                action(Either::Left($alloc))?;
+                let cont = action(Either::Left($alloc))?;
+                if !cont {
+                    keep_going = false
+                }
                 next_new = new_iter.next();
             }};
             (dead: $tod:expr, $uids:expr) => {{
                 for uid in $uids {
                     let alloc = &self.uid_map[*uid];
-                    action(Either::Right(($tod, alloc)))?
+                    let cont = action(Either::Right(($tod, alloc)))?;
+                    if !cont {
+                        keep_going = false
+                    }
                 }
                 next_dead = dead_iter.next();
             }};
         }
 
-        loop {
+        while keep_going {
             match (next_new, next_dead) {
                 (Some(alloc), None) => {
                     work!(new: alloc);
@@ -372,20 +416,24 @@ impl Data {
             self.current_time = alloc.toc.clone()
         }
         let uid = self.uid_map.next_index();
-        let alloc = alloc.build(uid)?;
+        let alloc = alloc.build(
+            &self
+                .init
+                .as_ref()
+                .ok_or_else(|| "trying to build allocation without initialization")?
+                .sample_rate,
+            uid,
+        )?;
 
-        if let Some(tod) = alloc.tod.clone() {
-            self.add_dead(tod, uid.clone())?
-        }
-
-        let uid_check = self.uid_map.push(alloc);
-        debug_assert!(uid == uid_check);
-
-        Ok(())
+        self.add_new(alloc)
     }
 
     /// Registers a new allocation.
     pub fn add_new(&mut self, alloc: Alloc) -> Res<()> {
+        self.stats
+            .as_mut()
+            .ok_or_else(|| "trying to add allocation before initialization")?
+            .total_size += alloc.real_size as u64;
         self.current_time = alloc.toc;
         let uid = self.uid_map.next_index();
         if uid != alloc.uid {

@@ -18,6 +18,8 @@
 //! > `all_gens` private macro in this module. Overall, you should take inspiration from
 //! > [`alloc_site`] when adding a new generator.
 //!
+//! Filter generation also handles *chart generation*, which is is the [`chart_gen` module].
+//!
 //! [`FilterGen`]: enum.FilterGen.html (FilterGen enum)
 //! [`get`]: fn.get.html (get function)
 //! [`set`]: fn.set.html (set function)
@@ -27,12 +29,14 @@
 //! [`AllocSite`]: ./alloc_site/struct.AllocSite.html (AllocSite struct)
 //! [ext]: trait.FilterGenExt.html (FilterGenExt trait)
 //! [`Params`]: trait.FilterGenExt.html#associatedtype.Params (FilterGenExt trait)
+//! [`chart_gen` module]: ./chart_gen (chart_gen module)
 
 prelude! {}
 
 pub mod parser;
 
 pub mod alloc_site;
+pub mod chart_gen;
 pub mod inactive;
 
 use self::{
@@ -122,7 +126,7 @@ macro_rules! all_gens {
 
 impl FilterGen {
     /// Runs the filter generator represented by `self` on some data.
-    pub fn run(self, data: &data::Data) -> Res<Vec<Filter>> {
+    pub fn run(self, data: &data::Data) -> Res<(Filters, Vec<chart::Chart>)> {
         match self {
             Self::AllocSite(params) => AllocSite::work(data, params),
             Self::Inactive => Inactive::work(data, ()),
@@ -254,7 +258,7 @@ The different generators are
 /// [`add_help`]: #tymethod.add_help (add_help abstract method)
 /// [`FMT`]: #associatedconstant.FMT (FMT abstract constant)
 /// [`work`]: #tymethod.work (work abstract method)
-pub trait FilterGenExt: Sized {
+pub trait FilterGenExt {
     /// Type of the parameters of the filter generator.
     type Params: Default;
 
@@ -277,5 +281,5 @@ pub trait FilterGenExt: Sized {
     fn add_help(s: &mut String);
 
     /// Runs the generator on some data given some parameters.
-    fn work(data: &data::Data, params: Self::Params) -> Res<Vec<Filter>>;
+    fn work(data: &data::Data, params: Self::Params) -> Res<(Filters, Vec<chart::Chart>)>;
 }

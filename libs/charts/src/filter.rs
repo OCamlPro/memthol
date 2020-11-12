@@ -170,6 +170,15 @@ impl Filters {
             memory: BTMap::new(),
         }
     }
+    /// Constructor.
+    pub fn new_with(filters: Vec<Filter>) -> Self {
+        Filters {
+            filters,
+            catch_all: FilterSpec::new_catch_all(),
+            everything: FilterSpec::new_everything(),
+            memory: BTMap::new(),
+        }
+    }
 
     /// Specification of the `catch_all` filter.
     pub fn catch_all(&self) -> &FilterSpec {
@@ -189,15 +198,11 @@ impl Filters {
     /// Returns the number of filter generated.
     #[cfg(any(test, feature = "server"))]
     pub fn auto_gen(
-        &mut self,
         data: &data::Data,
         generator: impl Into<filter::gen::FilterGen>,
-    ) -> Res<usize> {
+    ) -> Res<(Self, Vec<chart::Chart>)> {
         let generator = generator.into();
-        let filters = generator.run(data)?;
-        let count = filters.len();
-        self.filters.extend(filters);
-        Ok(count)
+        generator.run(data)
     }
 
     /// Length of the list of filters.
@@ -274,6 +279,27 @@ impl Filters {
     pub fn reset(&mut self) {
         self.memory.clear()
     }
+
+    /// Fold over all the filter UIDs.
+    pub fn fold<T>(&self, mut init: T, mut fold: impl FnMut(T, uid::Line) -> T) -> T {
+        init = fold(init, self.everything.uid());
+        for filter in &self.filters {
+            init = fold(init, filter.spec().uid());
+        }
+        fold(init, self.catch_all.uid())
+    }
+
+    /// Generates a UID map.
+    pub fn uid_map<T>(&self, default: T) -> BTMap<uid::Line, T>
+    where
+        T: Clone + fmt::Debug + std::cmp::PartialEq,
+    {
+        self.fold(BTMap::new(), |mut map, uid| {
+            let prev = map.insert(uid, default.clone());
+            debug_assert_eq!(prev, None);
+            map
+        })
+    }
 }
 
 /// # Message handling
@@ -283,6 +309,7 @@ impl Filters {
         use msg::to_server::FiltersMsg::*;
         let (res, should_reload) = match msg {
             RequestNew => (self.add_new(), false),
+            RequestNewSub(uid) => (self.add_new_sub(uid), false),
             Revert => (self.revert(), false),
             UpdateAll {
                 everything,
@@ -321,6 +348,12 @@ impl Filters {
         let spec = FilterSpec::new(Color::random());
         let filter = Filter::new(spec).chain_err(|| "while creating new filter")?;
         let msg = msg::to_client::FiltersMsg::add(filter);
+        Ok(vec![msg])
+    }
+
+    /// Adds a new sub-filter.
+    pub fn add_new_sub(&mut self, uid: uid::Filter) -> Res<msg::to_client::Msgs> {
+        let msg = msg::to_client::FiltersMsg::add_sub(uid, SubFilter::default());
         Ok(vec![msg])
     }
 

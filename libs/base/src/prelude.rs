@@ -1,6 +1,7 @@
 //! Common imports.
 
 pub use std::{
+    borrow::Borrow,
     collections::{BTreeMap as BTMap, BTreeSet as BTSet, HashMap as HMap, HashSet as HSet},
     convert::{TryFrom, TryInto},
     fmt, ops,
@@ -16,13 +17,19 @@ pub mod log {
     pub use log::{debug, error, info, trace, warn};
 }
 
+cfg_item! {
+    cfg(client) {
+        pub use crate::Memory;
+    }
+}
+
 pub use crate::{
     convert, destroy,
     err::{self, Res, ResExt},
     error_chain::{self, bail},
     identity,
     time::{self, DurationExt},
-    time_stats, uid, SVec16, SVec32, SVec64, SVec8,
+    time_stats, uid, Range, SVec16, SVec32, SVec64, SVec8, SampleRate,
 };
 
 /// Serde trait re-exports.

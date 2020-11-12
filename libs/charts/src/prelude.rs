@@ -14,11 +14,16 @@ pub mod coord {
     pub use plotters::coord::{
         cartesian::Cartesian2d,
         ranged1d::{AsRangedCoord, Ranged, ValueFormatter},
-        types::{RangedCoordf32, RangedCoordu32, RangedDuration},
+        types::{RangedCoordf32, RangedCoordu32, RangedCoordu64, RangedDuration},
     };
 }
 
 pub use alloc::Alloc;
+
+/// A window of time, for a graph.
+pub type TimeWindow = Range<time::SinceStart>;
+/// A window of time, for a graph.
+pub type TimeWindopt = Range<Option<time::SinceStart>>;
 
 /// Imports this crate's prelude.
 macro_rules! prelude {
@@ -34,7 +39,7 @@ base::cfg_item! {
 }
 
 pub use crate::{
-    chart::{self, settings::ChartSettings},
+    chart::{self, settings},
     color::Color,
     filter::{self, Filter, Filters},
     msg,
@@ -63,6 +68,32 @@ pub mod num_fmt {
     ) -> Res {
         use number_prefix::NumberPrefix::{self, *};
         let s = match stuff.clone().try_into().map(NumberPrefix::decimal) {
+            Ok(Prefixed(pref, val)) => format!("{:.2}{}", val, pref),
+            Err(_) | Ok(Standalone(_)) => stuff.to_string(),
+        };
+        action(s)
+    }
+
+    /// Applies an action to a pretty string representation of a number.
+    ///
+    /// ```rust
+    /// # use charts::prelude::num_fmt::*;
+    /// let mut s = String::new();
+    /// str_do(16_504_670, |pretty| s = pretty);
+    /// assert_eq!(&s, "16.50M");
+    ///
+    /// str_do(670, |pretty| s = pretty);
+    /// assert_eq!(&s, "670");
+    ///
+    /// str_do(1_052_504_670u32, |pretty| s = pretty);
+    /// assert_eq!(&s, "1.05G");
+    /// ```
+    pub fn bin_str_do<Res>(
+        stuff: impl std::convert::TryInto<f64> + std::fmt::Display + Clone,
+        action: impl FnOnce(String) -> Res,
+    ) -> Res {
+        use number_prefix::NumberPrefix::{self, *};
+        let s = match stuff.clone().try_into().map(NumberPrefix::binary) {
             Ok(Prefixed(pref, val)) => format!("{:.2}{}", val, pref),
             Err(_) | Ok(Standalone(_)) => stuff.to_string(),
         };
@@ -110,6 +141,8 @@ pub struct AllocStats {
     pub dump_dir: std::path::PathBuf,
     /// Total number of allocations.
     pub alloc_count: usize,
+    /// Total size of the allocations.
+    pub total_size: u64,
     /// Date at which the run started.
     pub start_date: time::Date,
     /// Duration of the run.
@@ -124,6 +157,7 @@ impl AllocStats {
         Self {
             dump_dir,
             alloc_count: 0,
+            total_size: 0,
             start_date,
             duration: time::SinceStart::zero(),
         }

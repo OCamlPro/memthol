@@ -58,7 +58,10 @@ pub struct Charts {
     /// This is used to check whether we need to detect that the init file of the run has changed
     /// and that we need to reset the charts.
     start_time: Option<time::Date>,
+    /// List of messages for the client, populated/drained when receiving messages.
     to_client_msgs: msg::to_client::Msgs,
+    /// Settings.
+    settings: settings::Charts,
 }
 
 #[cfg(any(test, feature = "server"))]
@@ -70,6 +73,7 @@ impl Charts {
             filters: Filters::new(),
             start_time: None,
             to_client_msgs: msg::to_client::Msgs::with_capacity(7),
+            settings: settings::Charts::new(),
         }
     }
 
@@ -90,8 +94,15 @@ impl Charts {
     ///
     /// Returns the number of filter generated.
     #[cfg(any(test, feature = "server"))]
-    pub fn auto_gen(&mut self) -> Res<usize> {
-        self.filters.auto_gen(&*data::get()?, filter::gen::get())
+    pub fn auto_gen() -> Res<Self> {
+        let (filters, charts) = Filters::auto_gen(&*data::get()?, filter::gen::get())?;
+        Ok(Self {
+            charts,
+            filters,
+            start_time: None,
+            to_client_msgs: msg::to_client::Msgs::with_capacity(7),
+            settings: settings::Charts::new(),
+        })
     }
 
     /// Pushes a new chart.
@@ -138,7 +149,11 @@ impl Charts {
         let restarted = self.restart_if_needed()?;
         let mut points = point::ChartPoints::new();
         for chart in &mut self.charts {
-            if let Some(chart_points) = chart.new_points(&mut self.filters, restarted || init)? {
+            if let Some(chart_points) = chart.new_points(
+                restarted || init,
+                &mut self.filters,
+                self.settings.time_windopt(),
+            )? {
                 let prev = points.insert(chart.uid(), chart_points);
                 debug_assert!(prev.is_none())
             }
@@ -147,12 +162,17 @@ impl Charts {
     }
 
     /// Handles a charts message from the client.
-    pub fn handle_chart_msg(&mut self, msg: msg::to_server::ChartsMsg) -> Res<()> {
+    pub fn handle_chart_msg(&mut self, msg: msg::to_server::ChartsMsg) -> Res<bool> {
         debug_assert!(self.to_client_msgs.is_empty());
 
-        match msg {
+        let reloaded = match msg {
             msg::to_server::ChartsMsg::New(x_axis, y_axis) => {
-                let nu_chart = chart::Chart::new(&mut self.filters, x_axis, y_axis)
+                let all_active = self.filters.fold(BTMap::new(), |mut map, uid| {
+                    let prev = map.insert(uid, true);
+                    debug_assert_eq!(prev, None);
+                    map
+                });
+                let nu_chart = chart::Chart::new(&mut self.filters, x_axis, y_axis, all_active)
                     .chain_err(|| "while creating new chart")?;
 
                 // Chart creation message.
@@ -170,24 +190,38 @@ impl Charts {
                 // })?;
                 // to_client_msgs.push(msg::to_client::ChartMsg::new_points(nu_chart.uid(), points));
 
-                self.charts.push(nu_chart)
+                self.charts.push(nu_chart);
+                true
             }
 
             msg::to_server::ChartsMsg::Reload => {
                 let msg = self.reload_points(None, false)?;
-                self.to_client_msgs.push(msg)
+                self.to_client_msgs.push(msg);
+                true
             }
 
             msg::to_server::ChartsMsg::ChartUpdate { uid, msg } => {
                 let reload = self.get_mut(uid)?.update(msg);
                 if reload {
                     let msg = self.reload_points(Some(uid), false)?;
-                    self.to_client_msgs.push(msg)
+                    self.to_client_msgs.push(msg);
+                    reload
+                } else {
+                    false
                 }
             }
-        }
 
-        Ok(())
+            msg::to_server::ChartsMsg::Settings(settings) => {
+                let send_new_points = self.settings.overwrite(settings);
+                if send_new_points {
+                    let msg = self.reload_points(None, false)?;
+                    self.to_client_msgs.push(msg);
+                }
+                false
+            }
+        };
+
+        Ok(reloaded)
     }
 
     /// Recomputes all the points, and returns them as a message for the client.
@@ -206,7 +240,7 @@ impl Charts {
             chart.reset(&self.filters);
             self.filters.reset();
             let points_opt = chart
-                .new_points(&mut self.filters, true)
+                .new_points(true, &mut self.filters, self.settings.time_windopt())
                 .chain_err(|| format!("while generating points for chart #{}", chart.uid()))?;
             if let Some(points) = points_opt {
                 let prev = new_points.insert(chart.uid(), points);
@@ -225,20 +259,21 @@ impl Charts {
     pub fn handle_msg<'me>(
         &'me mut self,
         msg: msg::to_server::Msg,
-    ) -> Res<impl Iterator<Item = msg::to_client::Msg> + 'me> {
+    ) -> Res<(impl Iterator<Item = msg::to_client::Msg> + 'me, bool)> {
         use msg::to_server::Msg::*;
 
-        match msg {
+        let reload = match msg {
             Charts(msg) => self.handle_chart_msg(msg)?,
             Filters(msg) => {
                 let (mut msgs, should_reload) = self.filters.update(msg)?;
                 if should_reload {
                     msgs.push(self.reload_points(None, true)?)
                 }
-                self.to_client_msgs.extend(msgs)
+                self.to_client_msgs.extend(msgs);
+                should_reload
             }
         };
 
-        Ok(self.to_client_msgs.drain(0..))
+        Ok((self.to_client_msgs.drain(0..), reload))
     }
 }

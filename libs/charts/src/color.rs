@@ -68,6 +68,9 @@ impl Color {
         Self { r, g, b }
     }
 
+    /// Black.
+    pub const BLACK: Self = Self { r: 0, g: 0, b: 0 };
+
     /// Constructs a color from a string.
     ///
     /// - only accepts RGB strings starting with `#`.

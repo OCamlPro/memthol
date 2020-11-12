@@ -136,6 +136,8 @@ pub mod to_server {
             /// Actual message.
             msg: ChartMsg,
         },
+        /// New value for the global charts settings.
+        Settings(settings::Charts),
     }
     impl fmt::Display for ChartsMsg {
         fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -143,6 +145,7 @@ pub mod to_server {
                 Self::New(_, _) => write!(fmt, "new chart"),
                 Self::Reload => write!(fmt, "reload"),
                 Self::ChartUpdate { uid, msg } => write!(fmt, "update({}, {})", uid, msg),
+                Self::Settings(_) => write!(fmt, "new settings"),
             }
         }
     }
@@ -154,6 +157,10 @@ pub mod to_server {
         /// Reloads all charts.
         pub fn reload() -> Msg {
             Self::Reload.into()
+        }
+        /// New global chart settings.
+        pub fn settings(settings: settings::Charts) -> Msg {
+            Self::Settings(settings).into()
         }
     }
 
@@ -204,6 +211,16 @@ pub mod to_server {
         /// (The Add message)
         RequestNew,
 
+        /// Requests a new sub filter.
+        ///
+        /// This will cause the server to generate a new sub filter to send to the client (*via*
+        /// [`FiltersMsg::AddSub`]). The server will **not** register the filter in any way, this
+        /// will happen when/if the user saves the modifications.
+        ///
+        /// [`FiltersMsg::AddSub`]: ../to_client/enum.FiltersMsg.html#variant.AddSub
+        /// (The Add message)
+        RequestNewSub(uid::Filter),
+
         /// Requests the current server-side list of filters.
         Revert,
 
@@ -221,6 +238,7 @@ pub mod to_server {
         fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
             match self {
                 Self::RequestNew => write!(fmt, "request new"),
+                Self::RequestNewSub(_) => write!(fmt, "request new sub"),
                 Self::Revert => write!(fmt, "revert"),
                 Self::UpdateAll { .. } => write!(fmt, "update all"),
             }
@@ -231,6 +249,10 @@ pub mod to_server {
         /// Requests a new filter.
         pub fn request_new() -> Msg {
             Self::RequestNew.into()
+        }
+        /// Requests a new subfilter.
+        pub fn request_new_sub(uid: uid::Filter) -> Msg {
+            Self::RequestNewSub(uid).into()
         }
         /// Requests the current server-side list of filters.
         pub fn revert() -> Msg {
@@ -371,7 +393,7 @@ pub mod to_client {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum ChartsMsg {
         /// Creates a new chart.
-        NewChart(chart::ChartSpec, chart::ChartSettings),
+        NewChart(chart::ChartSpec, settings::Chart),
         /// Message for a specific chart.
         Chart {
             /// UID of the chart this message is for.
@@ -391,7 +413,7 @@ pub mod to_client {
     }
     impl ChartsMsg {
         /// Constructor for `NewChart`.
-        pub fn new_chart(spec: chart::ChartSpec, settings: chart::ChartSettings) -> Msg {
+        pub fn new_chart(spec: chart::ChartSpec, settings: settings::Chart) -> Msg {
             Msg::charts(Self::NewChart(spec, settings))
         }
         /// Constructor for `NewPoints`.
@@ -495,6 +517,14 @@ pub mod to_client {
         /// [`FiltersMsg::RequestNew`]: ../to_server/enum.FiltersMsg.html#variant.RequestNew
         /// (The RequestNew message)
         Add(filter::Filter),
+        /// Adds a subfilter.
+        ///
+        /// This message always comes in response to a [`FiltersMsg::RequestNewSub`] message for the
+        /// server.
+        ///
+        /// [`FiltersMsg::RequestNewSub`]: ../to_server/enum.FiltersMsg.html#variant.RequestNewSub
+        /// (The RequestNew message)
+        AddSub(uid::Filter, filter::SubFilter),
 
         /// Orders the client to revert all its filters.
         Revert {
@@ -505,14 +535,17 @@ pub mod to_client {
             /// Specification for the `catch_all` filter.
             catch_all: FilterSpec,
         },
-
-        /// Updates all the specs.
-        UpdateSpecs(BTMap<uid::Line, FilterSpec>),
+        // /// Updates all the specs.
+        // UpdateSpecs(BTMap<uid::Line, FilterSpec>),
     }
     impl FiltersMsg {
         /// Adds a filter.
         pub fn add(filter: filter::Filter) -> Msg {
             Self::Add(filter).into()
+        }
+        /// Adds a subfilter.
+        pub fn add_sub(uid: uid::Filter, subfilter: filter::SubFilter) -> Msg {
+            Self::AddSub(uid, subfilter).into()
         }
 
         /// Orders the client to revert all its filters.
@@ -525,10 +558,10 @@ pub mod to_client {
             .into()
         }
 
-        /// Updates all the specs.
-        pub fn update_specs(specs: BTMap<uid::Line, FilterSpec>) -> Msg {
-            Self::UpdateSpecs(specs).into()
-        }
+        // /// Updates all the specs.
+        // pub fn update_specs(specs: BTMap<uid::Line, FilterSpec>) -> Msg {
+        //     Self::UpdateSpecs(specs).into()
+        // }
     }
 
     /// A raw message from the server.

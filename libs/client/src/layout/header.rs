@@ -2,23 +2,49 @@
 
 prelude! {}
 
-/// Height of the header in pixels.
-pub const HEADER_HEIGHT_PX: usize = 60;
+/// Header of the UI.
+///
+/// Renders the info line and the settings.
+pub struct Header {
+    /// Link to the model.
+    link: Link,
+}
+
+/// Height of the info of the header.
+const HEADER_INFO_LINE_HEIGHT_PX: usize = 60;
+/// Vertical button padding.
+const HEADER_VERTICAL_LEFT_BUTTON_PADDING: usize = HEADER_INFO_LINE_HEIGHT_PX / 10;
+/// Height of the info of the header.
+const HEADER_INFO_LINE_LEFT_BUTTON_HEIGHT_PX: usize =
+    HEADER_INFO_LINE_HEIGHT_PX - HEADER_VERTICAL_LEFT_BUTTON_PADDING;
+/// Vertical button padding.
+const HEADER_VERTICAL_BUTTON_PADDING: usize = HEADER_INFO_LINE_HEIGHT_PX / 4;
+/// Height of the info of the header.
+pub const HEADER_INFO_LINE_BUTTON_HEIGHT_PX: usize =
+    HEADER_INFO_LINE_HEIGHT_PX - HEADER_VERTICAL_BUTTON_PADDING;
+/// Height of a line of the header.
+pub const HEADER_LINE_HEIGHT_PX: usize = 40;
 /// Font size in the header.
-pub const FONT_SIZE: usize = 130;
+const FONT_SIZE: usize = 130;
 
-/// Renders the top header.
-pub fn render(model: &Model) -> Html {
-    const center_width_pc: usize = 70;
-    const lft_width_pc: usize = (100 - center_width_pc) / 2;
-    const rgt_width_pc: usize = lft_width_pc;
+impl Header {
+    /// Constructor.
+    pub fn new(link: Link) -> Self {
+        Self { link }
+    }
 
-    define_style! {
-        HEADER_STYLE = {
+    /// Height of the header in pixels.
+    pub fn height_px(&self, model: &Model) -> usize {
+        HEADER_INFO_LINE_HEIGHT_PX + model.settings.line_count() * HEADER_LINE_HEIGHT_PX
+    }
+
+    /// Renders the top header.
+    pub fn render(&self, model: &Model) -> Html {
+        let header_style = inline_css! {
             font({FONT_SIZE}%),
 
             width(100%),
-            height({HEADER_HEIGHT_PX}px),
+            height({self.height_px(model)}px),
 
             fg({layout::LIGHT_BLUE_FG}),
             bg({layout::DARK_GREY_BG}),
@@ -30,89 +56,229 @@ pub fn render(model: &Model) -> Html {
             z_index(600),
         };
 
-        tile_style! = {
-            block,
-            float(left),
-            height({HEADER_HEIGHT_PX}px),
-            overflow(scroll),
-        };
-        TABLE_STYLE = {
-            table,
-            width(100%),
-            height(100%),
-            table,
-        };
-
-        LFT_STYLE = {
-            extends(tile_style),
-            width({lft_width_pc}%),
-        };
-        CENTER_STYLE = {
-            extends(tile_style),
-            block,
-            width({center_width_pc}%),
-        };
-        RGT_STYLE = {
-            extends(tile_style),
-            width({rgt_width_pc}%),
-        };
-
-        CENTER_CONTENT_STYLE = {
-            table cell,
-            padding(0%, 10 px),
-            white_space(nowrap),
-            text_align(center),
-            vertical_align(middle),
-        };
-        RGT_CONTENT_STYLE = {
-            table cell,
-            padding(0%, 10 px),
-            white_space(nowrap),
-            height({HEADER_HEIGHT_PX}px),
-        };
+        html! {
+            <header
+                style = header_style
+            >
+                {model.settings.render(model)}
+                {self.info_line(model)}
+            </header>
+        }
     }
 
-    html! {
-        <header
-            style = HEADER_STYLE
-        >
-            <div
-                style = LFT_STYLE
-            />
-            <div
-                style = CENTER_STYLE
-            >
-                <div
-                    style = TABLE_STYLE
+    /// Generates the line containing generic info about the dump(s) and the OCP logo.
+    pub fn info_line(&self, model: &Model) -> Html {
+        define_style! {
+            INFO_LINE = {
+                height({HEADER_INFO_LINE_HEIGHT_PX}px)
+            };
+            LOGO = {
+                height({HEADER_INFO_LINE_HEIGHT_PX - HEADER_INFO_LINE_HEIGHT_PX / 20}px)
+            };
+        }
+        Self::three_part_line_with(
+            &*INFO_LINE,
+            // Left column.
+            Self::center(self.info_line_buttons(model)),
+            // Center column.
+            Self::center(self.format_stats(model)),
+            // Right column.
+            Self::center(html! {
+                <a
+                    href = "https://www.ocamlpro.com"
+                    target = "_blank"
+                    style = LOGO
                 >
-                    <div
-                        style = CENTER_CONTENT_STYLE
-                    >
-                        {format_stats(model)}
-                    </div>
-                </div>
-            </div>
+                    { ocp_pic() }
+                </a>
+            }),
+        )
+    }
 
+    /// Generates the buttons for the info line.
+    pub fn info_line_buttons(&self, model: &Model) -> Html {
+        define_style! {
+            LEFT = {
+                float(left),
+                padding({HEADER_VERTICAL_LEFT_BUTTON_PADDING / 2}px, 0%),
+            };
+            RIGHT = {
+                float(right),
+                padding({HEADER_VERTICAL_BUTTON_PADDING / 2}px, 0%),
+            };
+        }
+
+        let collapse = layout::button::img::collapse(
+            Some(HEADER_INFO_LINE_LEFT_BUTTON_HEIGHT_PX),
+            "collapsed_settings",
+            if model.settings.can_collapse() {
+                Some(
+                    self.link
+                        .callback(move |_| msg::Msg::from(msg::settings::Msg::Collapse)),
+                )
+            } else {
+                None
+            },
+            "collapses the settings menu",
+        );
+        let expand = layout::button::img::expand(
+            Some(HEADER_INFO_LINE_LEFT_BUTTON_HEIGHT_PX),
+            "expand settings",
+            if model.settings.can_expand() {
+                Some(
+                    self.link
+                        .callback(move |_| msg::Msg::from(msg::settings::Msg::Expand)),
+                )
+            } else {
+                None
+            },
+            "expands the settings menu",
+        );
+
+        html! {
+            <>
+                <div
+                    style = LEFT
+                >
+                    {expand}
+                </div>
+                <div
+                    style = LEFT
+                >
+                    {collapse}
+                </div>
+                <div
+                    style = RIGHT
+                >
+                    {model.settings.buttons()}
+                </div>
+            </>
+        }
+    }
+
+    /// Centers its content using the `table`/`table cell` trick.
+    pub fn center(inner: Html) -> Html {
+        define_style! {
+            TABLE_STYLE = {
+                table,
+                width(100%),
+                height(100%),
+            };
+            CENTER_CONTENT_STYLE = {
+                table cell,
+                padding(0%, 10 px),
+                white_space(nowrap),
+                text_align(center),
+                vertical_align(middle),
+            };
+        }
+        html! {
             <div
-                style = RGT_STYLE
+                style = TABLE_STYLE
             >
                 <div
-                    style = TABLE_STYLE
+                    style = CENTER_CONTENT_STYLE
                 >
-                    <a
-                        href = "https://www.ocamlpro.com"
-                        target = "_blank"
-                        style = RGT_CONTENT_STYLE
-                    >
-                        {ocp_pic()}
-                    </a>
+                    {inner}
                 </div>
             </div>
-        </header>
+        }
+    }
+
+    /// Creates a header line with three columns (15%-70%-15%, float left).
+    pub fn three_part_line_with(style: &'static str, lft: Html, center: Html, rgt: Html) -> Html {
+        const center_width_pc: usize = 70;
+        const lft_width_pc: usize = (100 - center_width_pc) / 2;
+        const rgt_width_pc: usize = lft_width_pc;
+
+        define_style! {
+            tile_style! = {
+                block,
+                float(left),
+                height(100%),
+                overflow(scroll),
+            };
+            LFT_STYLE = {
+                extends(tile_style),
+                width({lft_width_pc}%),
+            };
+            CENTER_STYLE = {
+                extends(tile_style),
+                block,
+                width({center_width_pc}%),
+            };
+            RGT_STYLE = {
+                extends(tile_style),
+                width({rgt_width_pc}%),
+            };
+        }
+
+        html! {
+            <div
+                style = style
+            >
+                <div
+                    style = LFT_STYLE
+                >
+                    {lft}
+                </div>
+                <div
+                    style = CENTER_STYLE
+                >
+                    {center}
+                </div>
+                <div
+                    style = RGT_STYLE
+                >
+                    {rgt}
+                </div>
+            </div>
+        }
+    }
+
+    /// Formats the statistics, if any.
+    fn format_stats(&self, model: &Model) -> Html {
+        static LOCAL: time::chrono::Local = time::chrono::Local;
+
+        define_style! {
+            TXT_STYLE = {
+                margin(0 px),
+            };
+            EMPH_STYLE = {
+                fg({"#c8f5fd"}),
+            };
+        }
+
+        if let Some(stats) = model.alloc_stats.as_ref() {
+            let start = stats.start_date.date().with_timezone(&LOCAL);
+            html! {
+                <p
+                    style = TXT_STYLE
+                >
+                    {"run started at "}
+                    {emph(format!("{} (LT)", start.time().format("%H:%M:%S")))}
+                    {", on "}
+                    {emph(start.date().naive_local())}
+                    {", ran for "}
+                    {emph(stats.duration)}
+                    {" with "}
+                    {emph(num_fmt::str_do(stats.alloc_count as f64, identity))}
+                    {" allocations, "}
+                    {emph(num_fmt::bin_str_do(stats.total_size as f64, |mut s| {s.push('B') ; s}))}
+                    {" | "}
+                    {code(stats.dump_dir.display())}
+                </p>
+            }
+        } else {
+            html! {
+                "No allocation statistics available at this moment..."
+            }
+        }
     }
 }
 
-fn emph(s: impl std::fmt::Display) -> Html {
+/// Produces emphasized text.
+pub fn emph(s: impl std::fmt::Display) -> Html {
     define_style! {
         EMPH_STYLE = {
             fg({"#c8f5fd"}),
@@ -127,7 +293,8 @@ fn emph(s: impl std::fmt::Display) -> Html {
     }
 }
 
-fn code(s: impl std::fmt::Display) -> Html {
+/// Formats some text in code style.
+pub fn code(s: impl std::fmt::Display) -> Html {
     define_style! {
         CODE_STYLE = {
             font(code, 100%),
@@ -143,45 +310,11 @@ fn code(s: impl std::fmt::Display) -> Html {
     }
 }
 
-fn format_stats(model: &Model) -> Html {
-    static LOCAL: time::chrono::Local = time::chrono::Local;
-
-    define_style! {
-        TXT_STYLE = {
-            margin(0 px),
-        };
-        EMPH_STYLE = {
-            fg({"#c8f5fd"}),
-        };
-    }
-
-    if let Some(stats) = model.alloc_stats.as_ref() {
-        let start = stats.start_date.date().with_timezone(&LOCAL);
-        html! {
-            <p
-                style = TXT_STYLE
-            >
-                {"run started at "}
-                {emph(format!("{} (LT)", start.time().format("%H:%M:%S")))}
-                {", on "}
-                {emph(start.date().naive_local())}
-                {", ran for "}
-                {emph(stats.duration)}
-                {" with "}
-                {emph(num_fmt::str_do(stats.alloc_count as f64, base::identity))}
-                {" allocations | "}
-                {code(stats.dump_dir.display())}
-            </p>
-        }
-    } else {
-        html! {}
-    }
-}
-
 fn ocp_pic() -> Html {
     define_style! {
         STYLE = {
-            height(100%),
+            width(auto),
+            height({HEADER_INFO_LINE_HEIGHT_PX - HEADER_INFO_LINE_HEIGHT_PX / 20}px)
         };
     }
     html! {

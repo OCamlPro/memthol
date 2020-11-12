@@ -13,9 +13,6 @@ crate-type = ["cdylib", "rlib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-base = { path = "../base", default_features = false, features = ["client"] }
-charts = { path = "../charts", default_features = false, features = ["client"] }
-
 plotters-canvas = "*"
 serde = "*"
 serde_derive = "*"
@@ -31,7 +28,16 @@ wee_alloc = "*"
 yew = "*"
 yew-components = "*"
 
+[dependencies.base]
+path = "../base"
+default-features = false
+features = ["client"]
+
+[dependencies.charts]
+path = "../charts"
+default-features = false
+features = ["client"]
+
 [features]
 default = []
-time_stats = []
 all_time_stats = []

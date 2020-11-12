@@ -28,9 +28,12 @@ impl TimeChart {
         filters: &mut Filters,
         init: bool,
         resolution: chart::settings::Resolution,
-    ) -> Res<Points> {
+        time_windopt: &TimeWindopt,
+    ) -> Res<Option<Points>> {
         match self {
-            Self::Size(time_size_chart) => time_size_chart.new_points(filters, init, resolution),
+            Self::Size(time_size_chart) => {
+                time_size_chart.new_points(filters, init, resolution, time_windopt)
+            }
         }
     }
 

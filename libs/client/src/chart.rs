@@ -2,7 +2,7 @@
 
 use plotters::prelude::*;
 
-pub use charts::chart::{ChartSettings, ChartSpec};
+pub use charts::chart::{settings, ChartSpec};
 
 prelude! {}
 
@@ -13,20 +13,20 @@ pub mod new;
 pub struct Charts {
     /// The actual collection of charts.
     charts: Vec<Chart>,
-    /// Callback to send messages to the model.
-    to_model: Callback<Msg>,
     /// Chart constructor element.
     new_chart: new::NewChart,
     /// Name of the DOM node containing all the charts.
     dom_node_id: &'static str,
+    /// Link to the model.
+    link: Link,
 }
 
 impl Charts {
     /// Constructs an empty collection of charts.
-    pub fn new(to_model: Callback<Msg>) -> Self {
+    pub fn new(link: Link) -> Self {
         Self {
             charts: vec![],
-            to_model,
+            link,
             new_chart: new::NewChart::new(),
             dom_node_id: "charts_list",
         }
@@ -44,7 +44,7 @@ impl Charts {
 
     /// Sends a message to the model.
     pub fn send(&self, msg: Msg) {
-        self.to_model.emit(msg)
+        self.link.send_message(msg)
     }
 
     /// Retrieves the chart corresponding to some UID.
@@ -80,12 +80,10 @@ impl Charts {
     /// Applies an operation.
     pub fn update(
         &mut self,
-        filters: &filter::Filters,
+        filters: filter::Reference,
         action: msg::ChartsMsg,
     ) -> Res<ShouldRender> {
         use msg::ChartsMsg::*;
-
-        let filters = filters.reference_filters();
 
         match action {
             Move { uid, up } => self.move_chart(uid, up),
@@ -104,16 +102,16 @@ impl Charts {
     }
 
     /// Runs post-rendering actions.
-    pub fn rendered(&mut self, filters: &filter::ReferenceFilters) {
+    pub fn rendered(&mut self, filters: filter::Reference, stats: &AllFilterStats) {
         for chart in &mut self.charts {
-            if let Err(e) = chart.rendered(filters) {
+            if let Err(e) = chart.rendered(filters, stats) {
                 alert!("error while running `rendered`: {}", e)
             }
         }
     }
 
     /// Refreshes all filters in all charts.
-    fn refresh_filters(&mut self, filters: &filter::ReferenceFilters) -> Res<ShouldRender> {
+    fn refresh_filters(&mut self, filters: filter::Reference) -> Res<ShouldRender> {
         for chart in &mut self.charts {
             chart.replace_filters(filters)?
         }
@@ -194,17 +192,16 @@ impl Charts {
     /// Applies an operation from the server.
     pub fn server_update(
         &mut self,
-        filters: &filter::Filters,
+        filters: filter::Reference,
+        stats: &AllFilterStats,
         action: msg::from_server::ChartsMsg,
     ) -> Res<ShouldRender> {
         use msg::from_server::{ChartMsg, ChartsMsg};
 
-        let filters = filters.reference_filters();
-
         let should_render = match action {
             ChartsMsg::NewChart(spec, settings) => {
                 log::info!("creating new chart");
-                let chart = Chart::new(spec, settings, filters, self.to_model.clone())?;
+                let chart = Chart::new(spec, settings, self.link.clone())?;
                 self.charts.push(chart);
                 true
             }
@@ -226,7 +223,7 @@ impl Charts {
             ChartsMsg::AddPoints(mut points) => {
                 for chart in &mut self.charts {
                     if let Some(points) = points.remove(&chart.uid()) {
-                        chart.add_points(points, filters)?
+                        chart.add_points(points, filters, stats)?
                     }
                 }
                 false
@@ -236,7 +233,7 @@ impl Charts {
                 let (_index, chart) = self.get_mut(uid)?;
                 match msg {
                     ChartMsg::NewPoints(points) => chart.overwrite_points(points)?,
-                    ChartMsg::Points(points) => chart.add_points(points, filters)?,
+                    ChartMsg::Points(points) => chart.add_points(points, filters, stats)?,
                 }
                 true
             }
@@ -254,9 +251,9 @@ pub struct Chart {
     /// Chart specification.
     spec: ChartSpec,
     /// Chart settings.
-    settings: ChartSettings,
-    /// Sends messages to the model.
-    to_model: Callback<Msg>,
+    settings: settings::Chart,
+    /// Link to the model.
+    link: Link,
     /// DOM element containing the chart and its tabs.
     top_container: String,
     /// DOM element containing the canvas.
@@ -273,10 +270,8 @@ pub struct Chart {
     )>,
     /// The points.
     points: Option<point::Points>,
-    /// The filters, used to color the series and hide what the user asks to hide.
-    filters: BTMap<uid::Line, bool>,
     /// Previous filter map, used when updating filters to keep track of those that are hidden.
-    prev_filters: BTMap<uid::Line, bool>,
+    prev_active: BTMap<uid::Line, bool>,
 
     /// This flag indicates whether the chart should be redrawn after HTML rendering.
     ///
@@ -290,36 +285,23 @@ pub struct Chart {
 }
 impl Chart {
     /// Constructor.
-    pub fn new(
-        spec: ChartSpec,
-        settings: ChartSettings,
-        all_filters: &filter::ReferenceFilters,
-        to_model: Callback<Msg>,
-    ) -> Res<Self> {
+    pub fn new(spec: ChartSpec, settings: settings::Chart, link: Link) -> Res<Self> {
         let top_container = format!("chart_container_{}", spec.uid().get());
         let container = format!("chart_canvas_container_{}", spec.uid().get());
         let canvas = format!("chart_canvas_{}", spec.uid().get());
         let collapsed_canvas = format!("{}_collapsed", canvas);
 
-        let mut filters = BTMap::new();
-        all_filters.specs_apply(|spec| {
-            let prev = filters.insert(spec.uid(), true);
-            debug_assert!(prev.is_none());
-            Ok(())
-        })?;
-
         Ok(Self {
             spec,
             settings,
-            to_model,
+            link,
             top_container,
             container,
             canvas,
             collapsed_canvas,
             chart: None,
             points: None,
-            filters,
-            prev_filters: BTMap::new(),
+            prev_active: BTMap::new(),
             settings_visible: false,
             redraw: true,
         })
@@ -359,7 +341,7 @@ impl Chart {
 
     /// Chart settings.
     #[inline]
-    pub fn settings(&self) -> &ChartSettings {
+    pub fn settings(&self) -> &settings::Chart {
         &self.settings
     }
     /// Chart title.
@@ -401,7 +383,7 @@ impl Chart {
 
     /// Accessor for filter visibility.
     pub fn filter_visibility(&self) -> &BTMap<uid::Line, bool> {
-        &self.filters
+        &self.spec.active()
     }
 
     /// Destroys the chart.
@@ -412,7 +394,7 @@ impl Chart {
 impl Chart {
     /// Toggles the visibility of a filter for the chart.
     pub fn filter_toggle_visible(&mut self, uid: uid::Line) -> Res<()> {
-        if let Some(is_visible) = self.filters.get_mut(&uid) {
+        if let Some(is_visible) = self.spec.active_mut().get_mut(&uid) {
             *is_visible = !*is_visible;
             self.redraw = true;
         } else {
@@ -422,16 +404,18 @@ impl Chart {
     }
 
     /// Replaces the filters of the chart.
-    pub fn replace_filters(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
-        self.prev_filters.clear();
-        std::mem::swap(&mut self.filters, &mut self.prev_filters);
+    pub fn replace_filters(&mut self, filters: filter::Reference) -> Res<()> {
+        self.prev_active.clear();
+        let active = self.spec.active_mut();
+        let prev_active = &mut self.prev_active;
+        std::mem::swap(active, prev_active);
 
-        debug_assert!(self.filters.is_empty());
+        debug_assert!(active.is_empty());
 
         filters.specs_apply(|spec| {
             let spec_uid = spec.uid();
-            let visible = self.prev_filters.get(&spec_uid).cloned().unwrap_or(true);
-            let prev = self.filters.insert(spec_uid, visible);
+            let visible = prev_active.get(&spec_uid).cloned().unwrap_or(true);
+            let prev = active.insert(spec_uid, visible);
             debug_assert!(prev.is_none());
             Ok(())
         })?;
@@ -444,18 +428,19 @@ impl Chart {
     pub fn add_points(
         &mut self,
         mut points: point::Points,
-        filters: &filter::ReferenceFilters,
+        filters: filter::Reference,
+        stats: &AllFilterStats,
     ) -> Res<()> {
         let mut redraw = false;
         if let Some(my_points) = &mut self.points {
             let changed = my_points.extend(&mut points)?;
             if changed {
-                self.draw(filters)?
+                self.draw(filters, stats)?
             }
             redraw = true;
         } else if !points.is_empty() {
             self.points = Some(points);
-            self.draw(filters)?;
+            self.draw(filters, stats)?;
             redraw = true;
         }
 
@@ -569,7 +554,7 @@ impl Chart {
                     width,
                     height
                 );
-                self.to_model.emit(Msg::ToServer(
+                self.link.send_message(Msg::ToServer(
                     charts::msg::ChartSettingsMsg::set_resolution(
                         self.spec.uid(),
                         (res_width, res_height),
@@ -622,7 +607,7 @@ impl Chart {
     /// Size of the x-axis label area.
     const X_LABEL_AREA: u32 = 30;
     /// Size of the y-axis label area.
-    const Y_LABEL_AREA: u32 = 99;
+    const Y_LABEL_AREA: u32 = 120;
     /// Size of the top margin.
     const TOP_MARGIN: u32 = Self::X_LABEL_AREA / 3;
     /// Size of the right margin.
@@ -637,14 +622,14 @@ impl Chart {
     ///
     /// If the chart is not visible, drawing is postponed until the chart becomes visible. Meaning
     /// that this function does nothing if the chart is not visible.
-    pub fn draw(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
+    pub fn draw(&mut self, filters: filter::Reference, stats: &AllFilterStats) -> Res<()> {
         // If the chart's not visible, do nothing. We will draw once the chart becomes visible
         // again.
         if !self.settings.is_visible() {
             return Ok(());
         }
 
-        let visible_filters = &self.filters;
+        let visible_filters = self.spec.active();
 
         if let Some((chart, canvas)) = &mut self.chart {
             let width = canvas.client_width();
@@ -674,8 +659,14 @@ impl Chart {
                     .x_label_area_size(Self::X_LABEL_AREA)
                     .y_label_area_size(Self::Y_LABEL_AREA);
 
-                let is_active =
-                    |f_uid: uid::Line| visible_filters.get(&f_uid).cloned().unwrap_or(false);
+                let is_catch_all_active = stats
+                    .get(uid::Line::CatchAll)
+                    .map(|stats| stats.alloc_count > 0)
+                    .unwrap_or(true);
+                let is_active = |f_uid: uid::Line| {
+                    visible_filters.get(&f_uid).cloned().unwrap_or(false)
+                        && (!f_uid.is_catch_all() || is_catch_all_active)
+                };
 
                 points.render(
                     &self.settings,
@@ -698,7 +689,7 @@ impl Chart {
 /// # Rendering
 impl Chart {
     /// Runs post-rendering actions.
-    pub fn rendered(&mut self, filters: &filter::ReferenceFilters) -> Res<()> {
+    pub fn rendered(&mut self, filters: filter::Reference, stats: &AllFilterStats) -> Res<()> {
         self.rebind_canvas()?;
 
         if self.chart.is_none() {
@@ -708,7 +699,7 @@ impl Chart {
 
         if self.redraw {
             // Do **not** unset `self.redraw` here, function `draw` is in charge of that.
-            self.draw(filters)?;
+            self.draw(filters, stats)?;
         }
         Ok(())
     }

@@ -269,7 +269,7 @@ pub struct Location<'data> {
     /// Line index (from zero).
     pub line: usize,
     /// Column span (from zero).
-    pub col: Span<usize>,
+    pub col: Range<usize>,
     /// Definition name.
     ///
     /// Currently unused in memthol proper.
@@ -306,7 +306,7 @@ impl<'data> Location<'data> {
         let line = convert(0xfffffu64 & encoded, "loc: line");
         let start_char = convert(0xffu64 & (encoded >> 20), "loc: start_char");
         let end_char = convert(0x3ffu64 & (encoded >> 20 + 8), "loc: end_char");
-        let col = Span::new(start_char, end_char)?;
+        let col = Range::new(start_char, end_char);
         let file_path_code = convert(0x1fu64 & (encoded >> (20 + 8 + 10)), "loc: file_path_code");
         let def_name_code = convert(
             0x1fu64 & (encoded >> (20 + 8 + 10 + 5)),
@@ -378,7 +378,7 @@ impl fmt::Display for Location<'_> {
         write!(
             fmt,
             "{}@{}:{}:{}-{}",
-            self.def_name, self.file_path, self.line, self.col.begin, self.col.end
+            self.def_name, self.file_path, self.line, self.col.lbound, self.col.ubound
         )
     }
 }

@@ -29,6 +29,8 @@ pub struct TabProps {
     /// Footer tabs have a higher z-index than tabs that appear in the body. So they should
     /// respectively set this `top` field to `true` and `false`.
     top: bool,
+    /// Makes the whole tab round (*i.e.*, not oriented).
+    round: bool,
 }
 impl TabProps {
     /// Creates a tab with some color.
@@ -40,6 +42,7 @@ impl TabProps {
             dimmed: false,
             rev: false,
             top: false,
+            round: false,
         }
     }
 
@@ -52,11 +55,18 @@ impl TabProps {
             dimmed: false,
             rev: false,
             top: true,
+            round: false,
         }
     }
     /// Creates a new gray footer tab.
     pub fn new_footer_gray() -> Self {
         Self::new_footer("#c1c1c1")
+    }
+
+    /// Forces all corners of the tab to be round.
+    pub fn set_round(mut self, is_round: bool) -> Self {
+        self.round = is_round;
+        self
     }
 
     /// Turns itself into button box properties
@@ -73,6 +83,7 @@ impl TabProps {
             .with_radius_px(10)
             .revert_if(self.rev)
             .for_footer(self.top)
+            .round_if(self.round)
     }
 
     /// Activates the tab.
@@ -256,7 +267,7 @@ impl Tabs {
                         {Self::raw_tab(
                             &props,
                             model.link.callback(
-                                move |_| msg::FiltersMsg::move_filter(uid, true)
+                                move |_| msg::filter::Msg::move_filter(uid, true)
                             ),
                             "<"
                         )}
@@ -271,7 +282,7 @@ impl Tabs {
                         {Self::raw_tab(
                             &props,
                             model.link.callback(
-                                move |_| msg::FiltersMsg::move_filter(uid, false)
+                                move |_| msg::filter::Msg::move_filter(uid, false)
                             ),
                             ">"
                         )}

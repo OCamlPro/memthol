@@ -29,4 +29,5 @@ default = []
 time_stats = []
 all_time_stats = [
     "charts/all_time_stats",
+    "base/time_stats",
 ]

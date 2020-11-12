@@ -1,126 +1,200 @@
-//! HTML builders.
-#![allow(non_upper_case_globals)]
+//! Footer state.
 
 prelude! {}
 
-const width_wrt_full: usize = 100;
-
-/// Height of the footer when it is collapsed.
-pub const collapsed_height_px: usize = 50;
-/// Height of the footer when it is expanded.
-pub const expanded_height_px: usize = 500;
-
-const tabs_height_px: usize = collapsed_height_px;
-
-const expanded_tabs_height_px: usize = tabs_height_px;
-const expanded_menu_height_px: usize = expanded_height_px - expanded_tabs_height_px;
-
-const collapsed_tabs_height_px: usize = tabs_height_px;
-// const collapsed_menu_height_px: usize = tabs_height_px - collapsed_tabs_height_px;
-
-const center_tile_width: usize = 70;
-const left_tile_width: usize = (width_wrt_full - center_tile_width) / 2;
-const right_tile_width: usize = left_tile_width;
-
-define_style! {
-    footer_style! = {
-        font(default),
-        fg({layout::LIGHT_BLUE_FG}),
-        bg(transparent),
-        fixed(bottom),
-        z_index(600),
-        width({width_wrt_full}%),
-    };
-
-    COLLAPSED_STYLE = {
-        extends(footer_style),
-        height({collapsed_height_px}px)
-    };
-
-    EXPANDED_STYLE = {
-        extends(footer_style),
-        height({expanded_height_px}px)
-    };
-
-    tabs_style! = {
-        top,
-        width({width_wrt_full}%),
-    };
-    COLLAPSED_TABS_STYLE = {
-        extends(tabs_style),
-        height({collapsed_tabs_height_px}px),
-    };
-    EXPANDED_TABS_STYLE = {
-        extends(tabs_style),
-        height({expanded_tabs_height_px}px),
-    };
-
-    menu_style! = {
-        fg({layout::LIGHT_BLUE_FG}),
-        bg({layout::DARK_GREY_BG}),
-        bottom,
-        width({width_wrt_full}%),
-        // box_shadow(0 px, {-7} px, 50 px, 1 px, {layout::DARK_GREY_BG}),
-        border_radius(20 px, 20 px, 0 px, 0 px),
-        z_index(600),
-        pos(relative),
-    };
-    COLLAPSED_MENU_STYLE = {
-        extends(menu_style),
-        height(100%),
-    };
-    EXPANDED_MENU_STYLE = {
-        extends(menu_style),
-        height({expanded_menu_height_px}px),
-    };
+/// Footer tabs.
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+pub enum FooterTab {
+    /// Filters tab.
+    Filter(uid::Line),
 }
 
-/// Renders the footer.
-pub fn render(footer: &footer::Footer, model: &Model) -> Html {
-    match footer.active {
-        None => html! {
-            <footer
-                id = "collapsed_footer"
-                style = COLLAPSED_STYLE
-            >
-                <div
-                    id = "collapsed_tabs_tile"
-                    style = COLLAPSED_TABS_STYLE
-                >
-                    { tabs::render(model, None) }
-                </div>
-                <div
-                    id = "collapsed_menu_tile"
-                    style = COLLAPSED_MENU_STYLE
-                />
-            </footer>
-        },
-        Some(footer::FooterTab::Normal(_)) => unimplemented!(),
-        Some(footer::FooterTab::Filter(filter_uid)) => {
-            html! {
+impl FooterTab {
+    /// Filter tab constructor.
+    pub fn filter(uid: uid::Line) -> Self {
+        Self::Filter(uid)
+    }
+
+    /// The active filter, if any.
+    pub fn get_filter(self) -> Option<uid::Line> {
+        match self {
+            Self::Filter(uid) => Some(uid),
+        }
+    }
+}
+
+impl fmt::Display for FooterTab {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            FooterTab::Filter(uid) => write!(fmt, "Filter({})", uid),
+        }
+    }
+}
+
+impl From<uid::Line> for FooterTab {
+    fn from(uid: uid::Line) -> Self {
+        FooterTab::Filter(uid)
+    }
+}
+
+/// Footer state.
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Footer {
+    /// Active footer tab, if any.
+    pub active: Option<FooterTab>,
+}
+
+impl Footer {
+    /// Constructor.
+    pub fn new() -> Self {
+        Self { active: None }
+    }
+
+    /// Applies a footer action.
+    pub fn update(&mut self, msg: msg::FooterMsg) -> Res<ShouldRender> {
+        use msg::FooterMsg::*;
+        match msg {
+            ToggleTab(tab) => {
+                if self.active == Some(tab) {
+                    self.active = None
+                } else {
+                    self.active = Some(tab)
+                }
+                Ok(true)
+            }
+        }
+    }
+
+    /// True if the footer is expanded.
+    pub fn is_expanded(&self) -> bool {
+        self.active.is_some()
+    }
+}
+
+/// Width of the footer (percents).
+const WIDTH_WRT_FULL: usize = 100;
+/// Width of the center tile (percents).
+const CENTER_TILE_WIDTH: usize = 70;
+/// Width of the center tile (percents).
+const LEFT_TILE_WIDTH: usize = (WIDTH_WRT_FULL - CENTER_TILE_WIDTH) / 2;
+/// Width of the center tile (percents).
+const RIGHT_TILE_WIDTH: usize = WIDTH_WRT_FULL - CENTER_TILE_WIDTH - LEFT_TILE_WIDTH;
+
+/// Height of the tabs of the footer (pixels).
+const TAB_HEIGHT_PX: usize = 50;
+/// Height of filter menu of the footer (pixels).
+const MENU_HEIGHT_PX: usize = 450;
+/// Height of the footer when collapsed.
+const COLLAPSED_HEIGHT_PX: usize = TAB_HEIGHT_PX;
+/// Height of the footer when expanded.
+const EXPANDED_HEIGHT_PX: usize = TAB_HEIGHT_PX + MENU_HEIGHT_PX;
+
+/// Rendering.
+impl Footer {
+    /// Height of the footer in pixels.
+    pub fn height_px(&self) -> usize {
+        if self.is_expanded() {
+            EXPANDED_HEIGHT_PX
+        } else {
+            COLLAPSED_HEIGHT_PX
+        }
+    }
+
+    /// Renders the footer.
+    pub fn render(&self, model: &Model) -> Html {
+        define_style! {
+            footer_style! = {
+                font(default),
+                fg({layout::LIGHT_BLUE_FG}),
+                bg(transparent),
+                fixed(bottom),
+                z_index(600),
+                width({WIDTH_WRT_FULL}%),
+            };
+
+            COLLAPSED_STYLE = {
+                extends(footer_style),
+                height({COLLAPSED_HEIGHT_PX}px)
+            };
+
+            EXPANDED_STYLE = {
+                extends(footer_style),
+                height({EXPANDED_HEIGHT_PX}px)
+            };
+
+            tabs_style! = {
+                top,
+                width({WIDTH_WRT_FULL}%),
+            };
+            TABS_STYLE = {
+                extends(tabs_style),
+                height({TAB_HEIGHT_PX}px),
+            };
+
+            menu_style! = {
+                fg({layout::LIGHT_BLUE_FG}),
+                bg({layout::DARK_GREY_BG}),
+                bottom,
+                width({WIDTH_WRT_FULL}%),
+                // box_shadow(0 px, {-7} px, 50 px, 1 px, {layout::DARK_GREY_BG}),
+                border_radius(20 px, 20 px, 0 px, 0 px),
+                z_index(600),
+                pos(relative),
+            };
+            COLLAPSED_MENU_STYLE = {
+                extends(menu_style),
+                height(100%),
+            };
+            EXPANDED_MENU_STYLE = {
+                extends(menu_style),
+                height({MENU_HEIGHT_PX}px),
+            };
+        }
+
+        match self.active {
+            None => html! {
                 <footer
-                    id = "expanded_footer"
-                    style = EXPANDED_STYLE
+                    id = "collapsed_footer"
+                    style = COLLAPSED_STYLE
                 >
                     <div
-                        id = "expanded_tabs_tile"
-                        style = EXPANDED_TABS_STYLE
+                        id = "collapsed_tabs_tile"
+                        style = TABS_STYLE
                     >
-                        { tabs::render(model, Some(filter_uid)) }
+                        { tabs::render(model, None) }
                     </div>
                     <div
-                        id = "expanded_menu_tile"
-                        style = EXPANDED_MENU_STYLE
-                    >
-                        {
-                            if let Ok(filter) = model.footer_filters().get_spec(filter_uid) {
-                                menu::render_filter(model, filter)
-                            } else {
-                                html!(<></>)
-                            }
-                        }
-                    </div>
+                        id = "collapsed_menu_tile"
+                        style = COLLAPSED_MENU_STYLE
+                    />
                 </footer>
+            },
+            Some(footer::FooterTab::Filter(filter_uid)) => {
+                html! {
+                    <footer
+                        id = "expanded_footer"
+                        style = EXPANDED_STYLE
+                    >
+                        <div
+                            id = "expanded_tabs_tile"
+                            style = TABS_STYLE
+                        >
+                            { tabs::render(model, Some(filter_uid)) }
+                        </div>
+                        <div
+                            id = "expanded_menu_tile"
+                            style = EXPANDED_MENU_STYLE
+                        >
+                            {
+                                if let Ok((_, filter)) = model.footer_filters().get(filter_uid) {
+                                    menu::render_filter(model, filter)
+                                } else {
+                                    html!(<></>)
+                                }
+                            }
+                        </div>
+                    </footer>
+                }
             }
         }
     }
@@ -144,20 +218,20 @@ pub mod menu {
         MENU_LEFT_TILE = {
             extends(menu_fg),
             height(100%),
-            width({left_tile_width}%),
+            width({LEFT_TILE_WIDTH}%),
             float(left),
         };
         MENU_RIGHT_TILE = {
             extends(menu_fg),
             height(100%),
-            width({right_tile_width}%),
+            width({RIGHT_TILE_WIDTH}%),
             float(left),
             text_align(center),
         };
         MENU_CENTER_TILE = {
             extends(menu_fg),
             height(100%),
-            width({center_tile_width}%),
+            width({CENTER_TILE_WIDTH}%),
             float(left),
             overflow(auto),
             // border(left, 1 px, white),
@@ -231,50 +305,8 @@ pub mod menu {
         use super::*;
 
         /// Renders the right tile of the menu for some filter.
-        pub fn render(model: &Model, uid: uid::Line) -> Html {
-            html! {
-                <>
-                    <br/><br/>
-                    {add_subfilter_button(model, uid)}
-                    <br/>
-                </>
-            }
-        }
-
-        /// Renders a right-tile button.
-        pub fn button(id: &str, txt: impl fmt::Display, onclick: Option<OnClickAction>) -> Html {
-            define_style! {
-                BUTTON_CONTAINER = {
-                    width(70%),
-                    height(10%),
-                    margin(auto),
-                };
-            }
-
-            html! {
-                <div
-                    id = format!("{}_container", id)
-                    style = BUTTON_CONTAINER
-                >
-                    {layout::button::text::render_default_button(
-                        id,
-                        txt,
-                        onclick,
-                        false,
-                    )}
-                </div>
-            }
-        }
-
-        /// Button for adding sub-filters.
-        pub fn add_subfilter_button(model: &Model, uid: uid::Line) -> Html {
-            let action = match uid {
-                uid::Line::Filter(uid) => {
-                    Some(model.link.callback(move |_| msg::FilterMsg::add_new(uid)))
-                }
-                uid::Line::Everything | uid::Line::CatchAll => None,
-            };
-            button("add_subfilter_button", "add subfilter", action)
+        pub fn render(_model: &Model, _uid: uid::Line) -> Html {
+            html! {}
         }
     }
 
@@ -317,7 +349,7 @@ pub mod menu {
                     filter.name(),
                     model
                         .link
-                        .callback(move |data| msg::FilterSpecMsg::change_name(uid, data)),
+                        .callback(move |data| msg::filter::SpecMsg::change_name(uid, data)),
                 )
             });
             table_row.render()
@@ -332,7 +364,7 @@ pub mod menu {
                     filter.color(),
                     model
                         .link
-                        .callback(move |data| msg::FilterSpecMsg::change_color(uid, data)),
+                        .callback(move |data| msg::filter::SpecMsg::change_color(uid, data)),
                 )
             });
             table_row.render()
@@ -346,23 +378,38 @@ pub mod menu {
 
         /// Renders the sub-filters of a filter.
         pub fn render(model: &Model, filter: &filter::Filter) -> Html {
-            // if !filter.has_sub_filters() {
-            //     return html! {<></>};
-            // }
+            let uid = filter.uid();
 
             html! {
                 <>
                     <br/>
-                    {layout::section_title("Sub-Filters")}
+                    {layout::section_title("Catch allocation if ...")}
                     <br/>
 
                     {
                         for filter.iter().enumerate().map(
-                            |(index, sub)| render_sub(model, filter.uid(), index == 0, sub)
+                            |(index, sub)| render_sub(model, uid, index == 0, sub)
                         )
                     }
+
+                    <br/>
+
+                    {add_subfilter(model, uid)}
                 </>
             }
+        }
+
+        /// Button for adding sub-filters.
+        pub fn add_subfilter(model: &Model, uid: uid::Filter) -> Html {
+            let action = model
+                .link
+                .callback(move |_| msg::to_server::FiltersMsg::request_new_sub(uid));
+            layout::button::img::plus(
+                Some(TAB_HEIGHT_PX),
+                "add_subfilter",
+                Some(action),
+                "add a new subfilter",
+            )
         }
 
         /// Renders a sub-filter for a filter.
@@ -379,7 +426,7 @@ pub mod menu {
                 RawSubFilter::Size(sub) => {
                     size::render(&mut table_row, model, sub, move |size_sub_filter_res| {
                         msg_of_res(size_sub_filter_res.map(|size| {
-                            msg::FilterMsg::update_sub(
+                            msg::filter::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Size(size)),
                             )
@@ -389,7 +436,7 @@ pub mod menu {
                 RawSubFilter::Lifetime(sub) => {
                     lifetime::render(&mut table_row, model, sub, move |lifetime_sub_filter_res| {
                         msg_of_res(lifetime_sub_filter_res.map(|lifetime| {
-                            msg::FilterMsg::update_sub(
+                            msg::filter::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Lifetime(lifetime)),
                             )
@@ -399,7 +446,7 @@ pub mod menu {
                 RawSubFilter::Label(sub) => {
                     label::render(&mut table_row, model, sub, move |label_sub_filter_res| {
                         msg_of_res(label_sub_filter_res.map(|label| {
-                            msg::FilterMsg::update_sub(
+                            msg::filter::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Label(label)),
                             )
@@ -409,7 +456,7 @@ pub mod menu {
                 RawSubFilter::Loc(sub) => {
                     location::render(&mut table_row, model, sub, move |loc_sub_filter_res| {
                         msg_of_res(loc_sub_filter_res.map(|loc| {
-                            msg::FilterMsg::update_sub(
+                            msg::filter::FilterMsg::update_sub(
                                 uid,
                                 filter::SubFilter::new(sub_uid, RawSubFilter::Loc(loc)),
                             )
@@ -462,10 +509,10 @@ pub mod menu {
                             SubKey::Change(kind) => {
                                 let mut sub = sub_clone.clone();
                                 sub.change_kind(kind);
-                                msg::FilterMsg::update_sub(uid, sub)
+                                msg::filter::FilterMsg::update_sub(uid, sub)
                             }
                             SubKey::Remove => {
-                                msg::FilterMsg::rm_sub(uid, sub_uid)
+                                msg::filter::FilterMsg::rm_sub(uid, sub_uid)
                             }
                         }
                     )
@@ -752,7 +799,7 @@ pub mod tabs {
     use super::*;
     use layout::tabs::TabProps;
 
-    const img_dim_px: usize = 4 * (tabs_height_px / 5);
+    const IMG_DIM_PX: usize = 4 * (TAB_HEIGHT_PX / 5);
 
     /// Renders the footer tabs.
     pub fn render(model: &Model, active: Option<uid::Line>) -> Html {
@@ -772,7 +819,7 @@ pub mod tabs {
         define_style! {
             LEFT_STYLE = {
                 extends(tile_style),
-                width({left_tile_width}%),
+                width({LEFT_TILE_WIDTH}%),
                 table,
             };
         }
@@ -780,10 +827,10 @@ pub mod tabs {
         pub fn render(model: &Model) -> Html {
             let mut tabs = layout::tabs::Tabs::new();
 
-            let edited = model.footer_filters().edited();
+            let edited = model.filters.has_changed();
 
             tabs.push_img_tab(
-                img_dim_px,
+                IMG_DIM_PX,
                 TabProps::new_footer_gray(),
                 if edited {
                     Some(
@@ -798,10 +845,10 @@ pub mod tabs {
                 "undo all modifications",
             );
             tabs.push_img_tab(
-                img_dim_px,
+                IMG_DIM_PX,
                 TabProps::new_footer_gray(),
                 if edited {
-                    Some(model.link.callback(move |_| msg::FiltersMsg::save()))
+                    Some(model.link.callback(move |_| msg::filter::Msg::save()))
                 } else {
                     None
                 },
@@ -829,7 +876,7 @@ pub mod tabs {
         define_style! {
             RIGHT_STYLE = {
                 extends(tile_style),
-                width({right_tile_width}%),
+                width({RIGHT_TILE_WIDTH}%),
                 table,
             };
         }
@@ -841,7 +888,7 @@ pub mod tabs {
             tabs.push_sep();
 
             tabs.push_img_tab(
-                img_dim_px,
+                IMG_DIM_PX,
                 TabProps::new_footer_gray(),
                 Some(
                     model
@@ -852,9 +899,9 @@ pub mod tabs {
                 "add a new filter",
             );
             tabs.push_img_tab(
-                img_dim_px,
+                IMG_DIM_PX,
                 TabProps::new_footer_gray(),
-                current_filter.map(|uid| model.link.callback(move |_| msg::FiltersMsg::rm(uid))),
+                current_filter.map(|uid| model.link.callback(move |_| msg::filter::Msg::rm(uid))),
                 layout::button::img::Img::Minus,
                 "remove current filter",
             );
@@ -877,7 +924,7 @@ pub mod tabs {
         define_style! {
             CENTER_STYLE = {
                 extends(tile_style),
-                width({center_tile_width}%),
+                width({CENTER_TILE_WIDTH}%),
                 block,
                 overflow(x: auto),
             };
@@ -910,10 +957,15 @@ pub mod tabs {
                  index_uid_opt: Option<(usize, uid::Filter)>| {
                     let edited = is_edited(filter);
 
-                    let name = match model.filter_stats.get(filter.uid()) {
-                        Some(stats) if !edited => {
-                            format!("{} ({})", filter.name(), stats.alloc_count)
-                        }
+                    let name = match model.filters.ref_stats().get(filter.uid()) {
+                        Some(stats) if !edited => format!(
+                            "{} ({})",
+                            filter.name(),
+                            num_fmt::str_do(
+                                convert::<usize, u32>(stats.alloc_count, "footer: stats"),
+                                identity,
+                            )
+                        ),
                         _ => filter.name().into(),
                     };
 
@@ -952,8 +1004,10 @@ pub mod tabs {
                     push_filter(&mut tabs, index, filter)
                 }
 
-                tabs.push_sep();
-                push_spec(&mut tabs, catch_all, None);
+                if !model.is_catch_all_empty() {
+                    tabs.push_sep();
+                    push_spec(&mut tabs, catch_all, None);
+                }
             }
 
             html! {
