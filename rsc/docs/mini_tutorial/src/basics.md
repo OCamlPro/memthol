@@ -1,9 +1,65 @@
 # Basics
 
-Once memthol is running, then `http://localhost:7878/` will lead you to memthol's BUI, which will
-look something like this:
+Our running example in this section will be `rsc/dumps/mini_ae.ctf`:
+
+```bash
+❯ ls rsc/dumps/ctf/mini_ae.ctf
+rsc/dumps/ctf/mini_ae.ctf
+
+❯ memthol rsc/dumps/ctf/mini_ae.ctf
+|===| Starting
+| url: http://localhost:7878
+| target: `rsc/dumps/ctf/mini_ae.ctf`
+|===|
+
+```
+
+Once memthol is running, `http://localhost:7878/` (here) will lead you to memthol's BUI, which
+should look something like this:
 
 ![](basics_pics/default.png)
+
+Click on the orange **everything** tab at the bottom left of the screen.
+
+![](basics_pics/three_parts.png)
+
+Memthol's interface is split in three parts:
+
+- the central, main part displays charts. There is only one here, showing the evolution of the
+  program's total memory size over time based on the memory dump.
+
+- the header gives statistics about the memory dump and handles general settings. There is currently
+  only one, the *time window*.
+
+- the footer controls your *filters* (there is only one here), which we are going to discuss right
+  now.
+
+
+## Filters
+
+*Filters* allow to split allocations and display them separately. A filter is essentially a set of
+allocations. Memthol has two built-in filters. The first one is the **everything** filter. You
+cannot really do anything with it except for changing its name and color using the filter settings
+in the footer.
+
+![](basics_pics/everything_name_color.png)
+
+Notice that when a filter is modified, two buttons appear in the top-left part of the footer. The
+first reverts the changes while the second one saves them. Let's save these changes.
+
+![](basics_pics/everything_saved.png)
+
+The **everything** filter always contains all allocations in the memory dump. It cannot be changed
+besides the cosmetic changes we just did. These changes are reverted in the rest of the section.
+
+Let's create a new filter using the `+` add button in the top-right part of the footer.
+
+![](basics_pics/new_filter.png)
+
+Notice that, unlike **everything**, the settings for our new filter have a `Sub-filter` (empty)
+section with a `+` add button. Let's click on that.
+
+![](basics_pics/new_sub_filter.png)
 
 The (only) graph shown here displays the sum of the sizes of the allocations (in bytes) over time.
 
