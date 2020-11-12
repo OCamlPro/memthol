@@ -100,7 +100,7 @@ impl fmt::Display for FilterKind {
             Self::Size => write!(fmt, "size"),
             Self::Lifetime => write!(fmt, "lifetime"),
             Self::Label => write!(fmt, "labels"),
-            Self::Loc => write!(fmt, "locations"),
+            Self::Loc => write!(fmt, "callstack"),
         }
     }
 }
@@ -123,7 +123,7 @@ impl FilterKind {
         vec![
             FilterKind::Size,
             FilterKind::Lifetime,
-            FilterKind::Label,
+            // FilterKind::Label,
             FilterKind::Loc,
         ]
     }
