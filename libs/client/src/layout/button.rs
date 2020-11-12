@@ -107,6 +107,23 @@ impl<'color> BoxProps<'color> {
         self
     }
 
+    /// Makes all corners of the box round.
+    pub fn round(mut self) -> Self {
+        self.tl_rounded = true;
+        self.tr_rounded = true;
+        self.bl_rounded = true;
+        self.br_rounded = true;
+        self
+    }
+    /// Makes all corners of the box round.
+    pub fn round_if(self, cond: bool) -> Self {
+        if cond {
+            self.round()
+        } else {
+            self
+        }
+    }
+
     /// Sets the color of the border.
     pub const fn with_border_color(mut self, border_color: &'color str) -> Self {
         self.border_color = border_color;

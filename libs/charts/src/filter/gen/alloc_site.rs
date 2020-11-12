@@ -114,15 +114,11 @@ impl AllocSiteWork {
             |acc, (_, (count, _))| if validate(*count) { acc + 1 } else { acc },
         );
 
-        let mut colors = Color::randoms(filter_count).into_iter();
-
         for (file, (count, uid_opt)) in &mut self.map {
             if validate(*count) {
                 let sub_filter = Self::generate_subfilter(&file);
 
-                let color = colors.next().expect(
-                    "internal error, `filter_count` is not consistant with the actual filter count",
-                );
+                let color = Color::BLACK.clone();
                 let mut spec = filter::FilterSpec::new(color);
                 spec.set_name(file.clone());
 
@@ -146,6 +142,13 @@ impl AllocSiteWork {
             // rev-sorting
             rgt.cmp(&lft)
         });
+
+        let mut colors = Color::randoms(filter_count).into_iter();
+        for filter in &mut res {
+            filter.spec_mut().set_color(colors.next().expect(
+                "internal error, `filter_count` is not consistant with the actual filter count",
+            ))
+        }
 
         // log::info!("allocation sites:");
         // for (file, (count, uid)) in &self.map {
