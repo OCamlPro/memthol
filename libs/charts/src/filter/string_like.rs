@@ -63,7 +63,7 @@ pub trait SpecExt: Default + Clone + fmt::Display + Sized {
 }
 
 /// A filter for a lists of string-like elements.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StringLikeFilter<Spec> {
     /// The predicate.
     pred: Pred,

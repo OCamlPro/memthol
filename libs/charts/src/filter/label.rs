@@ -24,6 +24,18 @@ pub enum LabelSpec {
     #[serde(with = "serde_regex")]
     Regex(Regex),
 }
+impl std::cmp::PartialEq for LabelSpec {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Anything, Self::Anything) => true,
+            (Self::Value(lft), Self::Value(rgt)) => lft == rgt,
+            (Self::Regex(lft), Self::Regex(rgt)) => lft.as_str() == rgt.as_str(),
+            (Self::Anything, _) | (Self::Value(_), _) | (Self::Regex(_), _) => false,
+        }
+    }
+}
+impl std::cmp::Eq for LabelSpec {}
+
 impl FilterExt<str> for LabelSpec {
     fn apply(&self, label: &str) -> bool {
         match self {

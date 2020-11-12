@@ -19,4 +19,6 @@ toml = "*"
 server = [ "base/server" ]
 client = [ "base/client" ]
 default = [ "server" ]
-time_stats = []
+time_stats = [
+    "base/time_stats",
+]

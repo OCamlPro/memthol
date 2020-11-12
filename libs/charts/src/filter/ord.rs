@@ -78,7 +78,7 @@ impl fmt::Display for Cmp {
 }
 
 /// A filter for ordered quantities.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OrdFilter<Num> {
     /// Comparison with a constant.
     Cmp {
