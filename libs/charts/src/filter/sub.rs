@@ -8,7 +8,7 @@ prelude! {}
 use filter::*;
 
 /// An allocation filter.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RawSubFilter {
     /// Filter over allocation sizes.
     Size(SizeFilter),
@@ -95,7 +95,7 @@ static CREATOR_FLAG: bool = false;
 /// A sub-filter: a [`RawSubFilter`] with a UID.
 ///
 /// [`RawSubFilter`]: enum.RawSubFilter.html (RawSubFilter enum)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SubFilter {
     /// The UID.
     uid: uid::SubFilter,
@@ -114,12 +114,6 @@ impl SubFilter {
     }
 }
 
-impl std::cmp::PartialEq for SubFilter {
-    fn eq(&self, other: &Self) -> bool {
-        self.uid.eq(&other.uid)
-    }
-}
-impl std::cmp::Eq for SubFilter {}
 impl std::cmp::PartialOrd for SubFilter {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.uid.cmp(&other.uid))

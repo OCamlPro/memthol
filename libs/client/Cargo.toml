@@ -40,5 +40,4 @@ features = ["client"]
 
 [features]
 default = []
-time_stats = []
 all_time_stats = []

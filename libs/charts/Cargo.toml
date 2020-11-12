@@ -33,4 +33,5 @@ all_time_stats = [
     "time_stats",
     "ctf/time_stats",
     "alloc_data/time_stats",
+    "base/time_stats",
 ]

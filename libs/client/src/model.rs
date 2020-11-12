@@ -170,6 +170,7 @@ impl Component for Model {
     }
 
     fn update(&mut self, msg: Msg) -> ShouldRender {
+        log::debug!("handling message {}", msg);
         match msg {
             // Messages to/from the server.
             Msg::FromServer(msg) => {

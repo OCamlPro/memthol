@@ -383,7 +383,7 @@ pub mod menu {
             html! {
                 <>
                     <br/>
-                    {layout::section_title("Sub-Filters")}
+                    {layout::section_title("Catch allocation if ...")}
                     <br/>
 
                     {

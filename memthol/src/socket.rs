@@ -259,6 +259,7 @@ pub struct Handler {
 
     instance_prof: HandlerProf,
     total_prof: HandlerProf,
+    msgs: Vec<msg::to_client::Msg>,
 }
 
 impl Handler {
@@ -318,6 +319,7 @@ impl Handler {
 
             instance_prof,
             total_prof,
+            msgs: Vec::with_capacity(7),
         };
 
         log::info!("successfully connected to {}", slf.ip());
@@ -403,21 +405,25 @@ impl Handler {
 
             // List of messages to send to the client in response to the messages received from the
             // client.
-            let mut to_client_msgs = vec![];
+            debug_assert!(self.msgs.is_empty());
 
             // Handle the messages.
             let mut send_stats = false;
             for msg in self.from_client.drain() {
-                let (msgs, reloaded) = self.charts.handle_msg(msg)?;
-                to_client_msgs.extend(msgs);
-                if reloaded {
-                    send_stats = true
+                log::debug!("handling message from client: {}", msg);
+                time! {
+                    {
+                        let (msgs, reloaded) = self.charts.handle_msg(msg)?;
+                        self.msgs.extend(msgs);
+                        if reloaded {
+                            send_stats = true
+                        }
+                    },
+                    |time| log::debug!("handled message in {}", time)
                 }
             }
 
-            for msg in to_client_msgs {
-                self.send(msg)?
-            }
+            self.send_all()?;
 
             if send_stats {
                 self.send_stats()?
@@ -464,8 +470,8 @@ impl Handler {
     /// Sends all the points in all the charts to the client.
     fn send_points(&mut self, init: bool) -> Res<()> {
         let (points, overwrite) = time! {
-            > self.instance_prof.point_extraction.start(),
-            > self.total_prof.point_extraction.start(),
+            > self.instance_prof.point_extraction,
+            > self.total_prof.point_extraction,
 
             self.charts.new_points(init)?
         };
@@ -512,6 +518,13 @@ impl Handler {
     /// Sends a message to the client.
     pub fn send(&mut self, msg: impl Into<msg::to_client::Msg>) -> Res<()> {
         self.com.send(msg)
+    }
+    /// Sends all its internal messages to the client.
+    pub fn send_all(&mut self) -> Res<()> {
+        for msg in self.msgs.drain(0..) {
+            self.com.send(msg)?
+        }
+        Ok(())
     }
 
     /// Retrieves actions to perform from the client before rendering.

@@ -202,6 +202,36 @@ pub enum LocSpec {
         line: LineSpec,
     },
 }
+impl std::cmp::Eq for LocSpec {}
+impl std::cmp::PartialEq for LocSpec {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Anything, Self::Anything) => true,
+            (
+                Self::Value {
+                    value: lft_value,
+                    line: lft_line,
+                },
+                Self::Value {
+                    value: rgt_value,
+                    line: rgt_line,
+                },
+            ) => lft_value == rgt_value && lft_line == rgt_line,
+            (
+                Self::Regex {
+                    regex: lft_regex,
+                    line: lft_line,
+                },
+                Self::Regex {
+                    regex: rgt_regex,
+                    line: rgt_line,
+                },
+            ) => lft_regex.as_str() == rgt_regex.as_str() && lft_line == rgt_line,
+            (Self::Anything, _) | (Self::Value { .. }, _) | (Self::Regex { .. }, _) => false,
+        }
+    }
+}
+
 impl FilterExt<alloc::CLoc> for LocSpec {
     fn apply(&self, alloc::CLoc { loc, .. }: &alloc::CLoc) -> bool {
         match self {
