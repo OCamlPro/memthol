@@ -1236,6 +1236,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d947cbb889ed21c2a84be6ffbaebf5b4e0f4340638cba0444907e38b56be084"
 
 [[package]]
+name = "manage"
+version = "0.1.0"
+dependencies = [
+ "error-chain",
+ "log",
+ "pretty_env_logger",
+ "walkdir",
+]
+
+[[package]]
 name = "matches"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"

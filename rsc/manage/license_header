@@ -17,6 +17,3 @@
     along with Memthol.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-//! Messages to and from the client.
-
-pub use charts::msg::{to_client, to_server as from_client};
