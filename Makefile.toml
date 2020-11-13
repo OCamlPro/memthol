@@ -110,6 +110,10 @@ cp target/release/memthol ./memthol_ui
 '''
 ]
 
+[tasks.license]
+command = "cargo"
+args = [ "run", "-p", "manage" ]
+
 [tasks.clean]
 command = "cargo"
 args = [

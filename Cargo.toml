@@ -7,6 +7,8 @@ members = [
     "libs/client",
 
     "memthol",
+
+    "rsc/manage",
 ]
 
 # The client is not in the `default-members` since it can only be built for the wasm target. This
@@ -21,6 +23,8 @@ default-members = [
     "libs/charts",
 
     "memthol",
+
+    "rsc/manage",
 ]
 
 [profile.release]
