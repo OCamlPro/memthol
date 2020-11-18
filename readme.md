@@ -8,10 +8,10 @@ Memthol is a memory profiler for [OCaml]. This repository contains the **B**rows
     the data separately
 - [x] self-contained: the BUI packs all its static assets, once you have the binary you do not need
     anything else (except a browser)
+- [x] data-splitting: plot several families of data separately in the same chart by separating them
+    based on size, allocation lifetime, source locations in the allocation callstack, *etc.*
 - [ ] multiple metrics to plot different kinds of data: allocation lifetime, size, time of creation,
     *etc.*
-- [ ] data-splitting: plot several families of data separately in the same chart by separating them
-    based on size, allocation lifetime, source locations in the allocation callstack, *etc.*
 
 
 # Quick Note About Dump Files
