@@ -1,0 +1,24 @@
+(lang dune 2.0)
+(name min_memtrace)
+(allow_approximate_merlin)
+(generate_opam_files true)
+(version 0.1.0)
+(formatting (enabled_for ocaml reason))
+
+(package
+ (name min_memtrace)
+ (synopsis "The min_memtrace project")
+ (description "This is the description\nof the min_memtrace OCaml project\n")
+ (depends
+   (ocaml (>= 4.10.0))
+   (min_memtrace_lib (= version))
+ ))
+
+(package
+ (name min_memtrace_lib)
+ (synopsis "The min_memtrace project")
+ (description "This is the description\nof the min_memtrace OCaml project\n")
+ (depends
+   (ocaml (>= 4.10.0))
+   memtrace
+ ))

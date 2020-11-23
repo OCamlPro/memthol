@@ -20,6 +20,9 @@ Memthol's current official input format is memory dumps produced by [*Memtrace*]
 github][memtrace git]). A memtrace dump for a program execution is a single [**C**ommon **T**race
 **F**ormat](https://diamon.org/ctf) (CTF) file.
 
+Note that this repository contains a minimal Memtrace example in [`rsc/memtrace_example`][memtrace
+example].
+
 
 # Build
 
@@ -117,3 +120,4 @@ Most icons used in memthol come from the [bootstrap library][bootstrap].
 (Blog post: Finding Memory Leaks With Memtrace)
 [memtrace git]: https://github.com/janestreet/memtrace
 (Memtrace on github.com)
+[memtrace example]: ./rsc/memtrace_example
