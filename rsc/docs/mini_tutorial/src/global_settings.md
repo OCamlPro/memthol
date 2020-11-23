@@ -22,12 +22,12 @@ The *time window* global setting controls the time interval displayed by all the
 
 In our example,
 
-![](global_settings/init.png)
+![](global_settings_pics/init.png)
 
 not much is happening before (roughly) `0.065` seconds. Let's have the time window start at that
 point:
 
-![](global_settings/time_window_1.png)
+![](global_settings_pics/time_window_1.png)
 
 \
 \
@@ -37,11 +37,11 @@ the bottom-left corner of the header.
 
 Saving these changes yields
 
-![](global_settings/time_window_2.png)
+![](global_settings_pics/time_window_2.png)
 
 \
 \
 
 Here is the same chart but with the time window upper-bound set at `0.074`.
 
-![](global_settings/time_window_3.png)
+![](global_settings_pics/time_window_3.png)

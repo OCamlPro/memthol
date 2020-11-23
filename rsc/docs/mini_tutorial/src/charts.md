@@ -18,11 +18,11 @@ tabs allowing to toggle filters on/off.
 
 From the initial settings
 
-![](charts/init.png)
+![](charts_pics/init.png)
 
 click on all filters but **everything** to toggle them off.
 
-![](charts/only_everything.png)
+![](charts_pics/only_everything.png)
 
 \
 \
@@ -30,14 +30,14 @@ click on all filters but **everything** to toggle them off.
 Let's create a new chart. The only kind of chart that can be constructed currently is total size
 over time, so click on **create chart** below our current, lone chart.
 
-![](charts/two_charts_1.png)
+![](charts_pics/two_charts_1.png)
 
 \
 \
 
 Deactivate **everything** in the second chart.
 
-![](charts/two_charts_2.png)
+![](charts_pics/two_charts_2.png)
 
 Nice. We now have the overall total size over time in the first chart, and the details for each
 filter in the second one.
@@ -52,7 +52,7 @@ On the right of the title, we have a settings `...` buttons which is discussed
 [below](#chart-settings). The next button collapses the chart. If we click on the *collapse* button
 of the first chart, it collapses and the button turns into an *expand* button.
 
-![](charts/collapsed.png)
+![](charts_pics/collapsed.png)
 
 \
 \
@@ -65,7 +65,7 @@ The last button in the chart header removes the chart.
 Clicking the settings `...` button in the header of any chart display its settings. (Clicking on the
 button again hides them.)
 
-![](charts/settings_1.png)
+![](charts_pics/settings_1.png)
 
 Currently, these chart settings only allow to rename the chart and change its **display mode**.
 
@@ -85,7 +85,7 @@ In memthol, a chart can be displayed in one of three ways:
 
 Here is the second chart from our example displayed as stacked area for instance:
 
-![](charts/settings_stacked.png)
+![](charts_pics/settings_stacked.png)
 
 
 

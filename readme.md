@@ -3,7 +3,6 @@ Memthol is a memory profiler for [OCaml]. This repository contains the **B**rows
 
 # Features
 
-- [x] real-time/offline: inspect your program as it's running or *a posteriori*
 - [x] multi-client: open several tabs in your browser for the same profiling session to visualize
     the data separately
 - [x] self-contained: the BUI packs all its static assets, once you have the binary you do not need
@@ -12,6 +11,7 @@ Memthol is a memory profiler for [OCaml]. This repository contains the **B**rows
     based on size, allocation lifetime, source locations in the allocation callstack, *etc.*
 - [ ] multiple metrics to plot different kinds of data: allocation lifetime, size, time of creation,
     *etc.*
+- [ ] flamegraphs
 
 
 # Quick Note About Dump Files
