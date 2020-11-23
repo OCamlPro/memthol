@@ -106,7 +106,7 @@ dependencies = [
 script = [
 '''
 #!@shell
-cp target/release/memthol ./memthol_ui
+cp target/release/memthol ./memthol
 '''
 ]
 
