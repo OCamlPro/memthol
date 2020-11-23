@@ -159,6 +159,9 @@ filter we wrote previously where catching all the allocations.
 So, `weak.ml` only catches one of the three allocations: **catch-all** appears and indicates it
 matches the remaining two.
 
+> It is also possible to write filter criteria over allocations' callstacks. This is discussed in
+> the [Callstack Filters Section][callstack].
+
 
 ## Filter Generation
 
@@ -184,3 +187,4 @@ we get something like this (actual colors may vary):
 ![](basics_pics/filter_gen.png)
 
 [filter gen]: #filter-generation (Filter Generation Section)
+[callstack]: ./callstack_filters.md
