@@ -4,6 +4,9 @@
 information about the size and (de)allocation date of (some of) the allocations performed by some
 execution of a program.
 
+> For information regarding building memthol, features, browser compatibility... refer to the
+> [memthol repository].
+
 This tutorial deals with the BUI (**B**rowser **U**ser **I**nterface) aspect of the profiling. How
 the dumps are generated is outside of the scope of this document. Currently, memthol accepts memory
 dumps produced by [*Memtrace*][memtrace] (github repository [here][memtrace git]). A memtrace dump
@@ -39,3 +42,5 @@ rsc/dumps/ctf/flamba.ctf
 (Blog post: Finding Memory Leaks With Memtrace)
 [memtrace git]: https://github.com/janestreet/memtrace
 (Memtrace on github.com)
+[memthol repository]: https://github.com/OCamlPro/memthol
+(Memthol on github.com)
