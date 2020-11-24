@@ -1,5 +1,4 @@
-Memthol is a memory profiler for [OCaml]. This repository contains the **B**rowser **U**ser
-**I**nterface (*BUI*) for memthol.
+Memthol is a visualizer for memory profiling data generated from [OCaml] programs.
 
 
 # Features
