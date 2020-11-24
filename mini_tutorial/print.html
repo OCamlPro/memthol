@@ -1,0 +1,576 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Memthol Mini Tutorial</title>
+        
+        <meta name="robots" content="noindex" />
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="favicon.png">
+        
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="basics.html"><strong aria-hidden="true">2.</strong> Basics</a></li><li class="chapter-item expanded "><a href="charts.html"><strong aria-hidden="true">3.</strong> Charts</a></li><li class="chapter-item expanded "><a href="global_settings.html"><strong aria-hidden="true">4.</strong> Global Settings</a></li><li class="chapter-item expanded "><a href="callstack_filters.html"><strong aria-hidden="true">5.</strong> Callstack Filters</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Memthol Mini Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#introduction" id="introduction">Introduction</a></h1>
+<p><em>Memthol</em> is a visualizer and analyzer for program profiling. It works on memory <em>dumps</em> containing
+information about the size and (de)allocation date of (some of) the allocations performed by some
+execution of a program.</p>
+<blockquote>
+<p>For information regarding building memthol, features, browser compatibility... refer to the
+<a href="https://github.com/OCamlPro/memthol" title="Memthol on github.com">memthol repository</a>.</p>
+</blockquote>
+<p>This tutorial deals with the BUI (<strong>B</strong>rowser <strong>U</strong>ser <strong>I</strong>nterface) aspect of the profiling. How
+the dumps are generated is outside of the scope of this document. Currently, memthol accepts memory
+dumps produced by <a href="https://blog.janestreet.com/finding-memory-leaks-with-memtrace" title="Blog post: Finding Memory Leaks With Memtrace"><em>Memtrace</em></a> (github repository <a href="https://github.com/janestreet/memtrace" title="Memtrace on github.com">here</a>). A memtrace dump
+for a program execution is a single <a href="https://diamon.org/ctf"><strong>C</strong>ommon <strong>T</strong>race <strong>F</strong>ormat</a> (CTF)
+file.</p>
+<p>This tutorial uses CTF files from the memthol repository. All paths mentioned in the examples are
+from its root.</p>
+<p>Memthol is written in Rust and is composed of</p>
+<ul>
+<li>a server, written in pure Rust, and</li>
+<li>a client, written in Rust and compiled to web assembly.</li>
+</ul>
+<p>The server contains the client, which it will serve at some address on some port when launched.</p>
+<h2><a class="header" href="#running-memthol" id="running-memthol">Running Memthol</a></h2>
+<p>Memthol must be given a path to a CTF file generated by memtrace. </p>
+<pre><code class="language-bash">&gt; ls rsc/dumps/ctf/flamba.ctf
+rsc/dumps/ctf/flamba.ctf
+&gt; memthol rsc/dumps/ctf/flamba.ctf
+|===| Starting
+| url: http://localhost:7878
+| target: `rsc/dumps/ctf/flamba.ctf`
+|===|
+
+</code></pre>
+<h1><a class="header" href="#basics" id="basics">Basics</a></h1>
+<p>Our running example in this section will be <code>rsc/dumps/mini_ae.ctf</code>:</p>
+<pre><code class="language-bash">❯ memthol --filter_gen none rsc/dumps/ctf/mini_ae.ctf
+|===| Starting
+| url: http://localhost:7878
+| target: `rsc/dumps/ctf/mini_ae.ctf`
+|===|
+
+</code></pre>
+<p>Notice the odd <code>--filter_gen none</code> passed to memthol. Ignore it for now, it will be discussed <a href="basics.html#filter-generation" title="Filter Generation Section">later
+in this section</a>.</p>
+<p>Once memthol is running, <code>http://localhost:7878/</code> (here) will lead you to memthol's BUI, which
+should look something like this:</p>
+<p><img src="basics_pics/default.png" alt="" /></p>
+<p><br />
+</p>
+<p>Click on the orange <strong>everything</strong> tab at the bottom left of the screen.</p>
+<p><img src="basics_pics/three_parts.png" alt="" /></p>
+<p><br />
+</p>
+<p>Memthol's interface is split in three parts:</p>
+<ul>
+<li>
+<p>the central, main part displays charts. There is only one here, showing the evolution of the
+program's total memory size over time based on the memory dump.</p>
+</li>
+<li>
+<p>the header gives statistics about the memory dump and handles general settings. There is currently
+only one, the <em>time window</em>.</p>
+</li>
+<li>
+<p>the footer controls your <em>filters</em> (there is only one here), which we are going to discuss right
+now.</p>
+</li>
+</ul>
+<h2><a class="header" href="#filters" id="filters">Filters</a></h2>
+<p><em>Filters</em> allow to split allocations and display them separately. A filter is essentially a set of
+allocations. Memthol has two built-in filters. The first one is the <strong>everything</strong> filter. You
+cannot really do anything with it except for changing its name and color using the filter settings
+in the footer.</p>
+<p><img src="basics_pics/everything_name_color.png" alt="" /></p>
+<p><br />
+</p>
+<p>Notice that when a filter is modified, two buttons appear in the top-left part of the footer. The
+first reverts the changes while the second one saves them. Let's save these changes.</p>
+<p><img src="basics_pics/everything_saved.png" alt="" /></p>
+<p><br />
+</p>
+<p>The <strong>everything</strong> filter always contains all allocations in the memory dump. It cannot be changed
+besides the cosmetic changes we just did. These changes are reverted in the rest of the section.</p>
+<h2><a class="header" href="#custom-filters" id="custom-filters">Custom Filters</a></h2>
+<p>Let's create a new filter using the <code>+</code> add button in the top-right part of the footer.</p>
+<p><img src="basics_pics/new_filter.png" alt="" /></p>
+<p><br />
+</p>
+<p>Notice that, unlike <strong>everything</strong>, the settings for our new filter have a <strong>Catch allocation if
+...</strong> (empty) section with a <code>+</code> add button. Let's click on that.</p>
+<p><img src="basics_pics/new_sub_filter.png" alt="" /></p>
+<p><br />
+</p>
+<p>This adds a criterion to our filter. Let's modify it so that the our filter catches everything of size greater than zero machine words, rename the filter, and save these changes.</p>
+<p><img src="basics_pics/new_filter_1.png" alt="" /></p>
+<p>The tab for our filter now shows <strong>(3)</strong> next to its name, indicating that this filter catches 3
+allocations, which is all the allocations of the (tiny) dump.</p>
+<p><br />
+</p>
+<p>Now, create a new filter and modify it so that it catches allocations made in file <code>weak.ml</code>. This requires</p>
+<ul>
+<li>
+<p>creating a filter,</p>
+</li>
+<li>
+<p>adding a criterion to that filter,</p>
+</li>
+<li>
+<p>switching it from <code>size</code> to <code>callstack</code></p>
+</li>
+<li>
+<p>removing the trailing <code>**</code> (anything) by erasing it,</p>
+</li>
+<li>
+<p>write <code>weak.ml</code> as the last file that should appear in the callstack.</p>
+</li>
+</ul>
+<p>After saving it, you should get the following.</p>
+<p><img src="basics_pics/new_filter_2.png" alt="" /></p>
+<p><br />
+</p>
+<p>Sadly, this filter does not match anything, although some allocations fit this filter. This is
+because a <strong>custom filter</strong> <code>F</code> &quot;catches&quot; an allocation if</p>
+<ul>
+<li>all of the criteria of <code>F</code> are true for this allocation, and</li>
+<li>the allocation is not caught by any <strong>custom</strong> filter at the left of <code>F</code> (note that the
+<strong>everything</strong> filter is not a **custom filter).</li>
+</ul>
+<p>In other words, all allocations go through the list of custom filters from left to right, and are
+caught by the first filter such that all of its criteria are true for this allocation. As such, it
+is similar to switch/case and pattern matching.</p>
+<p><br />
+</p>
+<p>Let's move our new filter to the left by clicking the left arrow next to it, and save the change.</p>
+<p><img src="basics_pics/new_filter_3.png" alt="" /></p>
+<p><br />
+</p>
+<p>Nice.</p>
+<p><br />
+</p>
+<p>You can remove a filter by selecting it and clicking the <code>-</code> remove button in the top-right part of
+the footer, next to the <code>+</code> add filter button. This only works for <strong>custom</strong> filters, you cannot
+remove built-in filters.</p>
+<p>Now, remove the first filter we created (size ≥ 0), which should give you this:</p>
+<p><img src="basics_pics/new_filter_4.png" alt="" /></p>
+<p><br />
+</p>
+<p>Out of nowhere, we get the second and last built-in filter: <strong>catch-all</strong>. When some allocations are
+not caught by any of your filters, they will end up in this filter. <strong>Catch-all</strong> is not visible
+when it does not catch any allocation, which is why it was (mostly) not visible until now. The
+filter we wrote previously where catching all the allocations.</p>
+<blockquote>
+<p>In the switch/case analogy, <strong>catch-all</strong> is the <code>else</code>/<code>default</code> branch. In pattern matching, it
+would be a trailing wildcard <code>_</code>.</p>
+</blockquote>
+<p>So, <code>weak.ml</code> only catches one of the three allocations: <strong>catch-all</strong> appears and indicates it
+matches the remaining two.</p>
+<blockquote>
+<p>It is also possible to write filter criteria over allocations' callstacks. This is discussed in
+the <a href="./callstack_filters.html">Callstack Filters Section</a>.</p>
+</blockquote>
+<h2><a class="header" href="#filter-generation" id="filter-generation">Filter Generation</a></h2>
+<p>When we launched this section's running example, we passed <code>--filter_gen none</code> to memthol. This is
+because, by default, memthol will run <em>automatic filter generation</em> which scans allocations and
+generates filters. The default (and currently only) one creates one filter per allocation-site file.</p>
+<blockquote>
+<p>For more details, in particular filter generation customization, run <code>memthol --filter_gen help</code>.</p>
+</blockquote>
+<p>If we relaunch the example without <code>--filter_gen none</code></p>
+<pre><code class="language-bash">❯ memthol rsc/dumps/ctf/mini_ae.ctf
+|===| Starting
+| url: http://localhost:7878
+| target: `rsc/dumps/ctf/mini_ae.ctf`
+|===|
+
+</code></pre>
+<p>we get something like this (actual colors may vary):</p>
+<p><img src="basics_pics/filter_gen.png" alt="" /></p>
+<h1><a class="header" href="#charts" id="charts">Charts</a></h1>
+<p>This section uses the same running example as the last section.</p>
+<pre><code class="language-bash">❯ memthol rsc/dumps/ctf/mini_ae.ctf
+|===| Starting
+| url: http://localhost:7878
+| target: `rsc/dumps/ctf/mini_ae.ctf`
+|===|
+
+</code></pre>
+<h2><a class="header" href="#filter-toggling" id="filter-toggling">Filter Toggling</a></h2>
+<p>The first way to interact with a chart is to (de)activate filters. Each chart has its own filter
+tabs allowing to toggle filters on/off.</p>
+<p>From the initial settings</p>
+<p><img src="charts_pics/init.png" alt="" /></p>
+<p>click on all filters but <strong>everything</strong> to toggle them off.</p>
+<p><img src="charts_pics/only_everything.png" alt="" /></p>
+<p><br />
+</p>
+<p>Let's create a new chart. The only kind of chart that can be constructed currently is total size
+over time, so click on <strong>create chart</strong> below our current, lone chart.</p>
+<p><img src="charts_pics/two_charts_1.png" alt="" /></p>
+<p><br />
+</p>
+<p>Deactivate <strong>everything</strong> in the second chart.</p>
+<p><img src="charts_pics/two_charts_2.png" alt="" /></p>
+<p>Nice. We now have the overall total size over time in the first chart, and the details for each
+filter in the second one.</p>
+<p><br />
+</p>
+<p>Next, notice that both charts have, on the left of their title, a down (first chart) and up (second
+chart) arrow. This moves the charts up and down.</p>
+<p>On the right of the title, we have a settings <code>...</code> buttons which is discussed
+<a href="charts.html#chart-settings">below</a>. The next button collapses the chart. If we click on the <em>collapse</em> button
+of the first chart, it collapses and the button turns into an <em>expand</em> button.</p>
+<p><img src="charts_pics/collapsed.png" alt="" /></p>
+<p><br />
+</p>
+<p>The last button in the chart header removes the chart.</p>
+<h2><a class="header" href="#chart-settings" id="chart-settings">Chart Settings</a></h2>
+<p>Clicking the settings <code>...</code> button in the header of any chart display its settings. (Clicking on the
+button again hides them.)</p>
+<p><img src="charts_pics/settings_1.png" alt="" /></p>
+<p>Currently, these chart settings only allow to rename the chart and change its <strong>display mode</strong>.</p>
+<h3><a class="header" href="#display-mode" id="display-mode">Display Mode</a></h3>
+<p>In memthol, a chart can be displayed in one of three ways:</p>
+<ul>
+<li>
+<p>normal, the one we used so far,</p>
+</li>
+<li>
+<p>stacked area, where the values of each filter are displayed on top of each other, and</p>
+</li>
+<li>
+<p>stacked area percent, same as stacked area but values are displayed as percents of the total.</p>
+</li>
+</ul>
+<p><br />
+</p>
+<p>Here is the second chart from our example displayed as stacked area for instance:</p>
+<p><img src="charts_pics/settings_stacked.png" alt="" /></p>
+<h1><a class="header" href="#global-settings" id="global-settings">Global Settings</a></h1>
+<p>This section uses the same running example as the last section.</p>
+<pre><code class="language-bash">❯ memthol rsc/dumps/ctf/mini_ae.ctf
+|===| Starting
+| url: http://localhost:7878
+| target: `rsc/dumps/ctf/mini_ae.ctf`
+|===|
+
+</code></pre>
+<p><br />
+</p>
+<p>There is currently only one global setting: the <em>time window</em>.</p>
+<h2><a class="header" href="#time-window" id="time-window">Time Window</a></h2>
+<p>The <em>time window</em> global setting controls the time interval displayed by all the charts.</p>
+<p>In our example,</p>
+<p><img src="global_settings_pics/init.png" alt="" /></p>
+<p>not much is happening before (roughly) <code>0.065</code> seconds. Let's have the time window start at that
+point:</p>
+<p><img src="global_settings_pics/time_window_1.png" alt="" /></p>
+<p><br />
+</p>
+<p>Similar to filter edition, we can apply or cancel this change using the two buttons that appeared in
+the bottom-left corner of the header.</p>
+<p>Saving these changes yields</p>
+<p><img src="global_settings_pics/time_window_2.png" alt="" /></p>
+<p><br />
+</p>
+<p>Here is the same chart but with the time window upper-bound set at <code>0.074</code>.</p>
+<p><img src="global_settings_pics/time_window_3.png" alt="" /></p>
+<h1><a class="header" href="#callstack-filters" id="callstack-filters">Callstack Filters</a></h1>
+<p>Callstack filters are filters operating over allocation properties that are sequences of strings
+(potentially with some other data). Currently, this means <strong>allocation callstacks</strong>, where the
+strings are file names with line/column information.</p>
+<h2><a class="header" href="#string-filters" id="string-filters">String Filters</a></h2>
+<p>A string filter can have three shapes: an actual <em>string value</em>, a <em>regex</em>, or a <em>match anything</em> /
+<em>wildcard</em> filter represented by the string <code>&quot;...&quot;</code>. This wildcard filter is discussed in <a href="callstack_filters.html#the-wildcard-filter" title="The Wildcard Filter">its own
+section</a> below.</p>
+<p>A string value is simply given as a value. To match precisely the string <code>&quot;file_name&quot;</code>, one only
+needs to write <code>file_name</code>. So, a filter that matches precisely the list of strings <code>[ &quot;file_name_1&quot;, &quot;file_name_2&quot; ]</code> will be written</p>
+<table><thead><tr><th align="center"></th><th align="center"></th><th align="center"></th></tr></thead><tbody>
+<tr><td align="center">string list</td><td align="center">contains</td><td align="center"><code>[</code> <code>file_name_1</code> <code>file_name_2</code> <code>]</code></td></tr>
+</tbody></table>
+<p>A <em>regex</em> on the other hand has to be written between <code>#&quot;</code> and <code>&quot;#</code>. If we want the same filter as
+above, but want to relax the first string description to be <code>file_name_&lt;i&gt;</code> where <code>&lt;i&gt;</code> is a single
+digit, we write the filter as</p>
+<table><thead><tr><th align="center"></th><th align="center"></th><th align="center"></th></tr></thead><tbody>
+<tr><td align="center">string list</td><td align="center">contains</td><td align="center"><code>[</code> <code>#&quot;file_name_[0-9]&quot;#</code> <code>file_name_2</code> <code>]</code></td></tr>
+</tbody></table>
+<h2><a class="header" href="#the-wildcard-filter" id="the-wildcard-filter">The Wildcard Filter</a></h2>
+<p>The wildcard filter, written <code>...</code>, <strong>lazily</strong> (in general, see below) matches a repetition of any
+string-like element of the list. To break this definition down, let us separate two cases: the first
+one is when <code>...</code> is not followed by another string-like filter, and second one is when it is
+followed by another filter.</p>
+<p>In the first case, <code>...</code> simply matches everything. Consider for instance the filter</p>
+<table><thead><tr><th align="center"></th><th align="center"></th><th align="center"></th></tr></thead><tbody>
+<tr><td align="center">string list</td><td align="center">contain</td><td align="center"><code>[</code> <code>#&quot;file_name_[0-9]&quot;#</code> <code>...</code> <code>]</code></td></tr>
+</tbody></table>
+<p>This filter matches any list of strings that starts with a string accepted by the first regex
+filter. The following lists of strings are all accepted by the filter above.</p>
+<ul>
+<li><code>[</code> <code>file_name_0</code> <code>]</code></li>
+<li><code>[</code> <code>file_name_7</code> <code>anything</code> <code>at</code> <code>all</code> <code>]</code></li>
+<li><code>[</code> <code>file_name_3</code> <code>file_name_7</code> <code>]</code></li>
+</ul>
+<p>Now, there is one case when <code>...</code> is not actually lazy: when the <code>n</code> string-filters <em>after</em> it are
+not <code>...</code>. In this case, all elements of the list but the <code>n</code> last ones will be skipped, leaving them for the <code>n</code> last string filters.</p>
+<p>For this reason</p>
+<table><thead><tr><th align="center"></th><th align="center"></th><th align="center"></th></tr></thead><tbody>
+<tr><td align="center">string list</td><td align="center">contain</td><td align="center"><code>[</code> <code>...</code> <code>#&quot;file_name_[0-9]&quot;#</code> <code>]</code></td></tr>
+</tbody></table>
+<p>does work as expected. For example, on the string list</p>
+<pre><code>[ &quot;some_file_name&quot; &quot;file_name_7&quot; &quot;another_file_name&quot; &quot;file_name_0&quot; ]
+</code></pre>
+<p>a lazy behavior would not match. First, <code>...</code> would match anything up to and excluding a string
+recognized by <code>#&quot;file_name_[0-9]&quot;#</code>. So <code>...</code> would match <code>some_file_name</code>, but that's it since
+<code>file_name_7</code> is a match for <code>#&quot;file_name_[0-9]&quot;#</code>. Hence the filter would reject this list of
+strings, because there should be nothing left after the match for <code>#&quot;file_name_[0-9]&quot;#</code>. But there
+are still <code>another_file_name</code> and <code>file_name_0</code> left.</p>
+<p>Instead, the filter works as expected. <code>...</code> discards all elements but the last one <code>file_name_0</code>,
+which is accepted by <code>#&quot;file_name_[0-9]&quot;#</code>.</p>
+<h2><a class="header" href="#callstack-location-filters" id="callstack-location-filters">Callstack (Location) Filters</a></h2>
+<p>Allocation callstack information is a list of tuples containing:</p>
+<ul>
+<li>the name of the file,</li>
+<li>the line in the file,</li>
+<li>a column range.</li>
+</ul>
+<p>Currently, the range information is ignored. The line in the file is not, and one can specify a line
+constraint while writing a callstack filter. The <em>normal</em> syntax is</p>
+<pre><code>&lt;string-filter&gt;:&lt;line-filter&gt;
+</code></pre>
+<p>Now, a line filter has two basic shapes</p>
+<ul>
+<li><code>_</code>: anything,</li>
+<li><code>&lt;number&gt;</code>: an actual value.</li>
+</ul>
+<p>It can also be a range:</p>
+<ul>
+<li><code>[&lt;basic-line-filter&gt;, &lt;basic-line-filter&gt;]</code>: a potentially open range.</li>
+</ul>
+<h3><a class="header" href="#line-filter-examples" id="line-filter-examples">Line Filter Examples</a></h3>
+<table><thead><tr><th align="center"></th><th align="left"></th></tr></thead><tbody>
+<tr><td align="center"><code>_</code></td><td align="left">matches any line at all</td></tr>
+<tr><td align="center"><code>7</code></td><td align="left">matches line 7</td></tr>
+<tr><td align="center"><code>[50, 102]</code></td><td align="left">matches any line between <code>50</code> and <code>102</code></td></tr>
+<tr><td align="center"><code>[50, _]</code></td><td align="left">matches any line greater than <code>50</code></td></tr>
+<tr><td align="center"><code>[_, 102]</code></td><td align="left">matches any line less than <code>102</code></td></tr>
+<tr><td align="center"><code>[_, _]</code></td><td align="left">same as <code>_</code> (matches any line)</td></tr>
+</tbody></table>
+<h3><a class="header" href="#callstack-filter-examples" id="callstack-filter-examples">Callstack Filter Examples</a></h3>
+<p>Whitespaces are inserted for readability but are not needed:</p>
+<table><thead><tr><th align="center"></th><th align="left"></th></tr></thead><tbody>
+<tr><td align="center"><code>src/main.ml : _</code></td><td align="left">matches any line of <code>src/main.ml</code></td></tr>
+<tr><td align="center"><code>#&quot;.*/main.ml&quot;# : 107</code></td><td align="left">matches line 107 of any <code>main.ml</code> file regardless of its path</td></tr>
+</tbody></table>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+        
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+        
+        
+
+    </body>
+</html>

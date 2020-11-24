@@ -1,6 +1,0 @@
-[book]
-authors = ["Adrien Champion"]
-language = "en"
-multilingual = false
-src = "src"
-title = "Memthol Mini Tutorial"

@@ -1,6 +1,0 @@
-(library
-  (name min_memtrace_lib)
-  (public_name min_memtrace_lib)
-  (wrapped true)
-  (libraries  memtrace) 
-  )

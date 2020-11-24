@@ -1,8 +1,0 @@
-2.616
-new {
-    8677: Minor 2 [ `src/main.ml`:40:24-64#543 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 2.616 _
-    8676: Minor 128 [ `src/main.ml`:40:24-64#572 `src/main.ml`:52:21-28#1 `src/main.ml`:59:12-21#2 `src/memthol.ml`:419:22-26#1 `src/main.ml`:85:4-91#1 `src/main.ml`:91:12-18#1 ] [ `enumerate` `4` ] 2.615 _
-}
-dead {
-}
-

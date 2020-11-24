@@ -1,8 +1,0 @@
-3.502
-new {
-    10028: Minor 2 [ `src/main.ml`:40:24-64#665 ] [ `enumerate` `4` ] 3.502 _
-    10027: Minor 2 [ `src/main.ml`:40:24-64#665 ] [ `enumerate` `4` ] 3.501 _
-}
-dead {
-}
-

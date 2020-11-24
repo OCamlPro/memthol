@@ -1,0 +1,308 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Callstack Filters - Memthol Mini Tutorial</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="favicon.png">
+        
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="basics.html"><strong aria-hidden="true">2.</strong> Basics</a></li><li class="chapter-item expanded "><a href="charts.html"><strong aria-hidden="true">3.</strong> Charts</a></li><li class="chapter-item expanded "><a href="global_settings.html"><strong aria-hidden="true">4.</strong> Global Settings</a></li><li class="chapter-item expanded "><a href="callstack_filters.html" class="active"><strong aria-hidden="true">5.</strong> Callstack Filters</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Memthol Mini Tutorial</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#callstack-filters" id="callstack-filters">Callstack Filters</a></h1>
+<p>Callstack filters are filters operating over allocation properties that are sequences of strings
+(potentially with some other data). Currently, this means <strong>allocation callstacks</strong>, where the
+strings are file names with line/column information.</p>
+<h2><a class="header" href="#string-filters" id="string-filters">String Filters</a></h2>
+<p>A string filter can have three shapes: an actual <em>string value</em>, a <em>regex</em>, or a <em>match anything</em> /
+<em>wildcard</em> filter represented by the string <code>&quot;...&quot;</code>. This wildcard filter is discussed in <a href="#the-wildcard-filter" title="The Wildcard Filter">its own
+section</a> below.</p>
+<p>A string value is simply given as a value. To match precisely the string <code>&quot;file_name&quot;</code>, one only
+needs to write <code>file_name</code>. So, a filter that matches precisely the list of strings <code>[ &quot;file_name_1&quot;, &quot;file_name_2&quot; ]</code> will be written</p>
+<table><thead><tr><th align="center"></th><th align="center"></th><th align="center"></th></tr></thead><tbody>
+<tr><td align="center">string list</td><td align="center">contains</td><td align="center"><code>[</code> <code>file_name_1</code> <code>file_name_2</code> <code>]</code></td></tr>
+</tbody></table>
+<p>A <em>regex</em> on the other hand has to be written between <code>#&quot;</code> and <code>&quot;#</code>. If we want the same filter as
+above, but want to relax the first string description to be <code>file_name_&lt;i&gt;</code> where <code>&lt;i&gt;</code> is a single
+digit, we write the filter as</p>
+<table><thead><tr><th align="center"></th><th align="center"></th><th align="center"></th></tr></thead><tbody>
+<tr><td align="center">string list</td><td align="center">contains</td><td align="center"><code>[</code> <code>#&quot;file_name_[0-9]&quot;#</code> <code>file_name_2</code> <code>]</code></td></tr>
+</tbody></table>
+<h2><a class="header" href="#the-wildcard-filter" id="the-wildcard-filter">The Wildcard Filter</a></h2>
+<p>The wildcard filter, written <code>...</code>, <strong>lazily</strong> (in general, see below) matches a repetition of any
+string-like element of the list. To break this definition down, let us separate two cases: the first
+one is when <code>...</code> is not followed by another string-like filter, and second one is when it is
+followed by another filter.</p>
+<p>In the first case, <code>...</code> simply matches everything. Consider for instance the filter</p>
+<table><thead><tr><th align="center"></th><th align="center"></th><th align="center"></th></tr></thead><tbody>
+<tr><td align="center">string list</td><td align="center">contain</td><td align="center"><code>[</code> <code>#&quot;file_name_[0-9]&quot;#</code> <code>...</code> <code>]</code></td></tr>
+</tbody></table>
+<p>This filter matches any list of strings that starts with a string accepted by the first regex
+filter. The following lists of strings are all accepted by the filter above.</p>
+<ul>
+<li><code>[</code> <code>file_name_0</code> <code>]</code></li>
+<li><code>[</code> <code>file_name_7</code> <code>anything</code> <code>at</code> <code>all</code> <code>]</code></li>
+<li><code>[</code> <code>file_name_3</code> <code>file_name_7</code> <code>]</code></li>
+</ul>
+<p>Now, there is one case when <code>...</code> is not actually lazy: when the <code>n</code> string-filters <em>after</em> it are
+not <code>...</code>. In this case, all elements of the list but the <code>n</code> last ones will be skipped, leaving them for the <code>n</code> last string filters.</p>
+<p>For this reason</p>
+<table><thead><tr><th align="center"></th><th align="center"></th><th align="center"></th></tr></thead><tbody>
+<tr><td align="center">string list</td><td align="center">contain</td><td align="center"><code>[</code> <code>...</code> <code>#&quot;file_name_[0-9]&quot;#</code> <code>]</code></td></tr>
+</tbody></table>
+<p>does work as expected. For example, on the string list</p>
+<pre><code>[ &quot;some_file_name&quot; &quot;file_name_7&quot; &quot;another_file_name&quot; &quot;file_name_0&quot; ]
+</code></pre>
+<p>a lazy behavior would not match. First, <code>...</code> would match anything up to and excluding a string
+recognized by <code>#&quot;file_name_[0-9]&quot;#</code>. So <code>...</code> would match <code>some_file_name</code>, but that's it since
+<code>file_name_7</code> is a match for <code>#&quot;file_name_[0-9]&quot;#</code>. Hence the filter would reject this list of
+strings, because there should be nothing left after the match for <code>#&quot;file_name_[0-9]&quot;#</code>. But there
+are still <code>another_file_name</code> and <code>file_name_0</code> left.</p>
+<p>Instead, the filter works as expected. <code>...</code> discards all elements but the last one <code>file_name_0</code>,
+which is accepted by <code>#&quot;file_name_[0-9]&quot;#</code>.</p>
+<h2><a class="header" href="#callstack-location-filters" id="callstack-location-filters">Callstack (Location) Filters</a></h2>
+<p>Allocation callstack information is a list of tuples containing:</p>
+<ul>
+<li>the name of the file,</li>
+<li>the line in the file,</li>
+<li>a column range.</li>
+</ul>
+<p>Currently, the range information is ignored. The line in the file is not, and one can specify a line
+constraint while writing a callstack filter. The <em>normal</em> syntax is</p>
+<pre><code>&lt;string-filter&gt;:&lt;line-filter&gt;
+</code></pre>
+<p>Now, a line filter has two basic shapes</p>
+<ul>
+<li><code>_</code>: anything,</li>
+<li><code>&lt;number&gt;</code>: an actual value.</li>
+</ul>
+<p>It can also be a range:</p>
+<ul>
+<li><code>[&lt;basic-line-filter&gt;, &lt;basic-line-filter&gt;]</code>: a potentially open range.</li>
+</ul>
+<h3><a class="header" href="#line-filter-examples" id="line-filter-examples">Line Filter Examples</a></h3>
+<table><thead><tr><th align="center"></th><th align="left"></th></tr></thead><tbody>
+<tr><td align="center"><code>_</code></td><td align="left">matches any line at all</td></tr>
+<tr><td align="center"><code>7</code></td><td align="left">matches line 7</td></tr>
+<tr><td align="center"><code>[50, 102]</code></td><td align="left">matches any line between <code>50</code> and <code>102</code></td></tr>
+<tr><td align="center"><code>[50, _]</code></td><td align="left">matches any line greater than <code>50</code></td></tr>
+<tr><td align="center"><code>[_, 102]</code></td><td align="left">matches any line less than <code>102</code></td></tr>
+<tr><td align="center"><code>[_, _]</code></td><td align="left">same as <code>_</code> (matches any line)</td></tr>
+</tbody></table>
+<h3><a class="header" href="#callstack-filter-examples" id="callstack-filter-examples">Callstack Filter Examples</a></h3>
+<p>Whitespaces are inserted for readability but are not needed:</p>
+<table><thead><tr><th align="center"></th><th align="left"></th></tr></thead><tbody>
+<tr><td align="center"><code>src/main.ml : _</code></td><td align="left">matches any line of <code>src/main.ml</code></td></tr>
+<tr><td align="center"><code>#&quot;.*/main.ml&quot;# : 107</code></td><td align="left">matches line 107 of any <code>main.ml</code> file regardless of its path</td></tr>
+</tbody></table>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="global_settings.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="global_settings.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>
