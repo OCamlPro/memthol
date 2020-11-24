@@ -118,7 +118,7 @@ Most icons used in memthol come from the [bootstrap library][bootstrap].
 [Rust]: https://www.rust-lang.org/ (Rust official page)
 [rust toolchain]: https://www.rust-lang.org/tools/install (Rust installation instructions)
 [wasm-pack]: https://crates.io/crates/cargo-web (Cargo-web on crates.io)
-[tuto]: ./rsc/docs/mini_tutorial (Small memthol tutorial)
+[tuto]: https://ocamlpro.github.io/memthol/mini_tutorial/ (Memthol's tutorial on github pages)
 [install wasm-pack]: https://rustwasm.github.io/wasm-pack/installer (wasm-pack install instructions)
 [bootstrap]: https://icons.getbootstrap.com (the bootstrap library)
 [cargo make]: https://crates.io/crates/cargo-make (cargo-make on crates.io)
