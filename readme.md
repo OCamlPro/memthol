@@ -1,6 +1,11 @@
 Memthol is a visualizer for memory profiling data generated from [OCaml] programs.
 
 
+# Resources
+
+- [Memthol's small tutorial][tuto]
+
+
 # Features
 
 - [x] multi-client: open several tabs in your browser for the same profiling session to visualize
@@ -12,6 +17,11 @@ Memthol is a visualizer for memory profiling data generated from [OCaml] program
 - [ ] multiple metrics to plot different kinds of data: allocation lifetime, size, time of creation,
     *etc.*
 - [ ] flamegraphs
+
+
+# What It Looks Like
+
+![](rsc/example.png)
 
 
 # Browser Compatibility
@@ -103,11 +113,6 @@ mode for this one:
 ```bash
 memthol rsc/dumps/ctf/flambda.ctf
 ```
-
-
-# Other Resources
-
-- [a small tutorial][tuto]
 
 # Icons
 
