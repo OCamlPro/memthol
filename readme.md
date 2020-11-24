@@ -1,6 +1,7 @@
 Memthol is a memory profiler for [OCaml]. This repository contains the **B**rowser **U**ser
 **I**nterface (*BUI*) for memthol.
 
+
 # Features
 
 - [x] multi-client: open several tabs in your browser for the same profiling session to visualize
@@ -12,6 +13,12 @@ Memthol is a memory profiler for [OCaml]. This repository contains the **B**rows
 - [ ] multiple metrics to plot different kinds of data: allocation lifetime, size, time of creation,
     *etc.*
 - [ ] flamegraphs
+
+
+# Browser Compatibility
+
+Memthol is mostly tested on the Chrome web browser. You might experience problems with other
+browser, in which case we recommend you open an [issue][memthol issues].
 
 
 # Dump Files
@@ -121,3 +128,6 @@ Most icons used in memthol come from the [bootstrap library][bootstrap].
 [memtrace git]: https://github.com/janestreet/memtrace
 (Memtrace on github.com)
 [memtrace example]: ./rsc/memtrace_example
+[memthol repo]: https://github.com/OCamlPro/memthol (Memthol github repository)
+[memthol issues]: https://github.com/OCamlPro/memthol/issues
+(Issues on the Memthol github repository)
