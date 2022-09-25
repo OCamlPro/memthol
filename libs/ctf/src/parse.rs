@@ -767,21 +767,24 @@ decl_impl_trait! {
         fn alloc(
             &mut self, timestamp: u64, cxt: &mut Cxt<'data>, short: Option<usize>
         ) -> Res<ast::event::Alloc> {
+            use ast::event::AllocSource;
+            
             pinfo!(self, "parsing alloc");
             let alloc_id = cxt.next_alloc_id();
-            let (is_short, len, nsamples, is_major) = if let Some(len) = short {
-                (true, len, 1, false)
+            let (is_short, len, nsamples, source) = if let Some(len) = short {
+                (true, len, 1, AllocSource::Minor)
             } else {
                 let len = self.v_usize()?;
                 let nsample = self.v_usize()?;
-                let is_major = match self.u8()? {
-                    0 => false,
-                    1 => true,
+                let source = match self.u8()? {
+                    0 => AllocSource::Minor,
+                    1 => AllocSource::Major,
+                    2 => AllocSource::External,
                     n => bail!(parse_error!(
                         expected format!("boolean as a 0- or 1-valued u8, found {}", n)
                     )),
                 };
-                (false, len, nsample, is_major)
+                (false, len, nsample, source)
             };
             let common_pref_len = self.v_usize()?;
             let nencoded = if is_short {
@@ -808,7 +811,7 @@ decl_impl_trait! {
                 alloc_time,
                 len,
                 nsamples,
-                is_major,
+                source,
                 common_pref_len,
                 backtrace,
             })
