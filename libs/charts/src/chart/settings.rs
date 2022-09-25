@@ -315,7 +315,7 @@ impl Charts {
                 }
                 error.get_or_insert_with(|| String::new())
             }};
-        };
+        }
 
         // Exhaustive deconstruction to create errors when new fields are added to `Self`.
         //

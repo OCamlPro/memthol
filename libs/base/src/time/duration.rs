@@ -73,7 +73,7 @@ pub trait DurationExt: From<Duration> {
             (bail $($stuff:tt)*) => {
                 return Err(err!(chain crate::err::Error::from(
                     format!($($stuff)*)
-                )));
+                )))
             };
             (try $e:expr) => {
                 err!(chain $e)?
