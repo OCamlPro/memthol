@@ -21,7 +21,7 @@
 //!
 //! A sub filter is what [`Filter`]s are made of.
 //!
-//! [`Filter`]: ../struct.Filter.html (The Filter struct).
+// [`Filter`]: ../struct.Filter.html (The Filter struct).
 
 prelude! {}
 use filter::*;

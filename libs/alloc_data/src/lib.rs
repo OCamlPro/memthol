@@ -22,7 +22,7 @@
 //! These types are used by memthol's client when loading up memthol diffs.
 //!
 //! Generally speaking, all the types in this crate are parsed, not created from scratch. There is
-//! no `Uid` factory for instance, since we will not have to generate fresh `Uid`s. We will only
+//! no [`Uid`] factory for instance, since we will not have to generate fresh `Uid`s. We will only
 //! parse them, the fact that they're unique must be guaranteed by whoever generated them.
 //!
 //! The entry point in terms of parsing is [`Diff`], since (currently) the only way the client can
@@ -35,12 +35,12 @@
 //! the program we're profiling started. After that, all the allocation data relies on `SinceStart`
 //! to refer to point in times relative to the start date.
 //!
-//! [`Diff`]: struct.diff.html (The Diff struct)
-//! [`Date`]: struct.date.html (The Date struct)
-//! [`SinceStart`]: struct.sincestart.html (The SinceStart struct)
+//! [`Diff`]: Diff (The Diff struct)
+//! [`Uid`]: base::uid::Alloc (The Alloc struct)
+//! [`Date`]: base::time::Date (The Date struct)
+//! [`SinceStart`]: base::time::SinceStart (The SinceStart struct)
 
 #![deny(missing_docs)]
-
 pub use error_chain::bail;
 pub use num_bigint::BigUint;
 
@@ -208,7 +208,7 @@ impl Builder {
         labels: Labels,
         toc: time::SinceStart,
         tod: Option<time::SinceStart>,
-    ) -> Self {
+    ) -> Self { 
         Self {
             uid_hint,
             kind,

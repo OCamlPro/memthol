@@ -43,12 +43,12 @@
 //! [`get`]: fn.get.html (get function)
 //! [`set`]: fn.set.html (set function)
 //! [`set_from_cla`]: fn.set_from_cla.html (set_from_cla function)
-//! [`inactive`]: ./inactive (inactive module)
-//! [`alloc_site`]: ./alloc_site (alloc_site module)
+//! [`inactive`]: ./inactive/index.html (inactive module)
+//! [`alloc_site`]: ./alloc_site/index.html (alloc_site module)
 //! [`AllocSite`]: ./alloc_site/struct.AllocSite.html (AllocSite struct)
 //! [ext]: trait.FilterGenExt.html (FilterGenExt trait)
 //! [`Params`]: trait.FilterGenExt.html#associatedtype.Params (FilterGenExt trait)
-//! [`chart_gen` module]: ./chart_gen (chart_gen module)
+//! [`chart_gen` module]: ./chart_gen/index.html (chart_gen module)
 
 prelude! {}
 

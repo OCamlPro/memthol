@@ -25,8 +25,6 @@ prelude! { time::* }
 ///
 /// This type represents a point in time **relative to** the start time of the run of the program
 /// being profiled, which is a [`Date`] (an absolute point in time).
-///
-/// [`Date`]: struct.date.html (The Date struct)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct SinceStart {
     /// Actual duration.
