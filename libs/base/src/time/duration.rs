@@ -23,7 +23,7 @@ prelude! { time::* }
 
 /// Adds functionalities to the [`Duration`] type.
 ///
-/// [`Duration`]: https://doc.rust-lang.org/std/time/struct.Duration.html
+/// [`Duration`]: std::time::Duration
 /// (Duration on Rust std)
 pub trait DurationExt: From<Duration> {
     /// Retrieves the duration from `Self`.

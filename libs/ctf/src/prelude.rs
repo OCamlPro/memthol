@@ -27,7 +27,7 @@ pub use crate::{parse::CanParse, *};
 pub type Clock = u64;
 /// A difference between two [`Clock`] values.
 ///
-/// [`Clock`]: type.Clock.html (Clock type)
+/// [`Clock`]: Clock (Clock type)
 pub type DeltaClock = u64;
 
 /// Type of allocation UIDs.

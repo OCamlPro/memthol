@@ -37,11 +37,11 @@
 //! This gives either a `Parser<LowEndian>` or a `Parser<BigEndian` (or an error). Once parsing
 //! starts with either of these types, a change in endian convention is considered an error.
 //!
-//! [`RawParser`]: struct.RawParser.html (RawParser struct)
-//! [`Parser`]: struct.Parser.html (Parser struct)
-//! [`LowEndian`]: struct.LowEndian.html (LowEndian struct)
-//! [`BigEndian`]: struct.BigEndian.html (BigEndian struct)
-//! [`try_magic`]: struct.RawParser.html#method.try_magic (try_magic method on RawParser)
+//! [`RawParser`]: RawParser (RawParser struct)
+//! [`Parser`]: Parser (Parser struct)
+//! [`LowEndian`]: LowEndian (LowEndian struct)
+//! [`BigEndian`]: BigEndian (BigEndian struct)
+//! [`try_magic`]: RawParser::try_magic (try_magic method on RawParser)
 
 prelude! {}
 
@@ -112,9 +112,7 @@ impl<'data> Cxt<'data> {
         std::mem::swap(&mut self.alloc_count, &mut next);
         next
     }
-    /// Same as [`next_alloc_id`] but does not increment the internal counter.
-    ///
-    /// [`next_alloc_id`]: #method.next_alloc_id
+    /// Same as [`next_alloc_id`][Cxt::next_alloc_id] but does not increment the internal counter.
     pub fn peek_next_alloc_id(&self) -> u64 {
         self.alloc_count
     }
@@ -125,8 +123,8 @@ impl<'data> Cxt<'data> {
 /// - provides basic and intermediate parsing functions used by [`Parser`] and [`PacketParser`];
 /// - works at byte-level.
 ///
-/// [`Parser`]: struct.Parser.html (Parser struct)
-/// [`PacketParser`]: struct.PacketParser.html (PacketParser struct)
+/// [`Parser`]: Parser (Parser struct)
+/// [`PacketParser`]: PacketParser (PacketParser struct)
 pub struct RawParser<'data> {
     /// Data to parse.
     data: &'data [u8],
@@ -143,7 +141,7 @@ pub struct RawParser<'data> {
     /// Used by [`PacketParser`], which works on a slice of the original input, for consistent
     /// error-reporting.
     ///
-    /// [`PacketParser`]: struct.PacketParser.html (PacketParser struct)
+    /// [`PacketParser`]: PacketParser (PacketParser struct)
     offset: usize,
 }
 
@@ -162,7 +160,7 @@ impl<'data> RawParser<'data> {
     /// - `offset` offset from the start of the original input. Used by [`PacketParser`], which
     ///   works on a slice of the original input, for consistent error-reporting.
     ///
-    /// [`PacketParser`]: struct.PacketParser.html (PacketParser struct)
+    /// [`PacketParser`]: PacketParser (PacketParser struct)
     pub fn new(data: &'data [u8], offset: usize) -> Self {
         Self {
             data: data.into(),
@@ -932,8 +930,8 @@ decl_impl_trait! {
         /// Returns internal errors as they are, should only be called by [`ctf_header`] and
         /// [`packet_header`] which enrich these errors.
         ///
-        /// [`ctf_header`]: #method.ctf_header
-        /// [`packet_header`]: #method.packet_header
+        /// [`ctf_header`]: CanParse::ctf_header
+        /// [`packet_header`]: CanParse::packet_header
         fn raw_package_header(&mut self, parse_magic: bool) -> Res<(header::Header, CacheCheck)> {
             let start = self.pos();
 
@@ -1077,7 +1075,7 @@ impl<'data> CtfParser<'data, ()> {
     /// sequence of bytes. This function is not meant to be used directly, use the [`parse` macro]
     /// instead, which hides the details of handling the `Either` part.
     ///
-    /// [`parse` macro]: ../macro.parse.html (parse macro)
+    /// [`parse` macro]: parse! (parse macro)
     pub fn new(bytes: &'data [u8]) -> Res<Either<BeCtfParser<'data>, LeCtfParser<'data>>> {
         let parser = RawParser::new(bytes, 0);
         let parser_disj = parser.try_magic()?;
@@ -1138,7 +1136,7 @@ where
 {
     /// Yields a [`PacketParser`] for the next packet, if any.
     ///
-    /// [`PacketParser`]: struct.PacketParser.html (PacketParser struct)
+    /// [`PacketParser`]: PacketParser (PacketParser struct)
     pub fn next_packet<'me>(&'me mut self) -> Res<Option<PacketParser<'me, 'data, Endian>>> {
         let parser = &mut self.parser;
         let cxt = &mut self.cxt;
@@ -1183,7 +1181,7 @@ where
 /// packet header. Note that the bytes for the header are not included in the parser's data. It has
 /// already been parsed.
 ///
-/// [`RawParser`]: struct.RawParser.html (RawParser struct)
+/// [`RawParser`]: RawParser (RawParser struct)
 pub struct PacketParser<'cxt, 'data, Endian> {
     /// Internal parser over the bytes of the events of the packet.
     ///
@@ -1226,7 +1224,7 @@ where
     /// - `header`: packet header, must be parsed beforehand,
     /// - `cxt`: parsing context, borrowed from the [`CtfParser`].
     ///
-    /// [`CtfParser`]: struct.CtfParser.html (CtfParser struct)
+    /// [`CtfParser`]: CtfParser (CtfParser struct)
     fn new(
         input: &'data [u8],
         offset: usize,

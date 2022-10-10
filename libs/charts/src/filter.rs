@@ -165,8 +165,8 @@ impl FilterKind {
 /// introduced or some filters may have changed. Hence the filter assigned for this allocation a
 /// while ago may not be the one we would assign now.
 ///
-/// [`FilterSpec`]: struct.FilterSpec.html (The FilterSpec struct)
-/// [`Filter`]: struct.Filter.html (The Filter struct)
+/// [`FilterSpec`]: FilterSpec (The FilterSpec struct)
+/// [`Filter`]: Filter (The Filter struct)
 #[derive(Debug, Clone)]
 pub struct Filters {
     /// The specification of the "catch-all" filter.
@@ -407,7 +407,7 @@ impl Filters {
 
 /// A filter that combines `SubFilter`s.
 ///
-/// Also contains a [`FilterSpec`](struct.FilterSpec.html).
+/// Also contains a [`FilterSpec`](FilterSpec).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Filter {
     /// Actual list of filters.

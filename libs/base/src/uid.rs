@@ -29,10 +29,10 @@
 //! - the "everything filter", which is the filter that catches **all** allocations, independently
 //!   of the user-defined filters.
 //!
-//! [`Chart`]: struct.Chart.html (The Chart struct)
-//! [`Filter`]: struct.Filter.html (The Filter struct)
-//! [`Line`]: enum.Line.html (The Line enum)
-//! [`SubFilter`]: struct.SubFilter.html (The SubFilter struct)
+//! [`Chart`]: Chart (The Chart struct)
+//! [`Filter`]: Filter (The Filter struct)
+//! [`Line`]: Line (The Line enum)
+//! [`SubFilter`]: SubFilter (The SubFilter struct)
 
 use std::fmt;
 

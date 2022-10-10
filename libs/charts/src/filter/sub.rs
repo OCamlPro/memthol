@@ -21,7 +21,7 @@
 //!
 //! A sub filter is what [`Filter`]s are made of.
 //!
-// [`Filter`]: ../struct.Filter.html (The Filter struct).
+// [`Filter`]: Filter (The Filter struct).
 
 prelude! {}
 use filter::*;
@@ -113,7 +113,7 @@ static CREATOR_FLAG: bool = false;
 
 /// A sub-filter: a [`RawSubFilter`] with a UID.
 ///
-/// [`RawSubFilter`]: enum.RawSubFilter.html (RawSubFilter enum)
+/// [`RawSubFilter`]: RawSubFilter (RawSubFilter enum)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SubFilter {
     /// The UID.

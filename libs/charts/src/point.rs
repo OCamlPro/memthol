@@ -195,7 +195,7 @@ base::implement! {
 /// by the graph. Hence, this trait has a [`Coord`] associated type specifying the type of the
 /// actual values as expected by a graph.
 ///
-/// [`Coord`]: #associatedtype.Coord (Coord associated type)
+/// [`Coord`]: CoordExt::Coord (Coord associated type)
 pub trait CoordExt
 where
     Self: Clone,

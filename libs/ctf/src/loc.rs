@@ -25,7 +25,7 @@ prelude! {}
 pub type Data<'data, T> = (&'data str, T);
 /// An optional [`Data`] value.
 ///
-/// [`Data`]: type.Data.html (Data type alias)
+/// [`Data`]: Data (Data type alias)
 pub type Entry<'data, T> = Option<Data<'data, T>>;
 
 /// Last legal index in the MTF table.

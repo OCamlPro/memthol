@@ -101,8 +101,8 @@ pub mod header {
 
     /// Plain header, factors common data between [`Ctf`] and [`Packet`].
     ///
-    /// [`Ctf`]: struct.Ctf.html (Ctf struct)
-    /// [`Packet`]: struct.Packet.html (Packet struct)
+    /// [`Ctf`]: Ctf (Ctf struct)
+    /// [`Packet`]: Packet (Packet struct)
     #[derive(Debug, Clone)]
     pub struct Header {
         /// Size of the content of the packet/stream, **without the header**.
