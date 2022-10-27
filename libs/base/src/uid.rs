@@ -58,7 +58,7 @@ macro_rules! new_uids {
     ) => {
         pub use $mod_name::{
             $uid_type_name,
-            $($map_name, $iter_name,)?
+            $($map_name)?
         };
         mod $mod_name {
             safe_index::new! {
@@ -66,7 +66,7 @@ macro_rules! new_uids {
                 $uid_type_name,
                 $(
                     $(#[$map_meta])*
-                    map: $map_name with iter: $iter_name,
+                    map: $map_name
                 )?
             }
 

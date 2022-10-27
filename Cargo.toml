@@ -4,7 +4,6 @@ members = [
     "libs/alloc_data",
     "libs/ctf",
     "libs/charts",
-    "libs/client",
 
     "memthol",
 
@@ -25,6 +24,10 @@ default-members = [
     "memthol",
 
     "rsc/manage",
+]
+
+exclude = [
+    "libs/client"
 ]
 
 [profile.release]

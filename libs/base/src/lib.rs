@@ -83,10 +83,10 @@ pub mod client {
     #[macro_export]
     macro_rules! client_wasm_build_dir_for {
         (release) => {
-            "target/client.wasm/release/"
+            "libs/client/target/client.wasm/release/"
         };
         (debug) => {
-            "target/client.wasm/debug/"
+            "libs/client/target/client.wasm/debug/"
         };
         ($profile:tt bins) => {
             vec![
