@@ -34,7 +34,7 @@ dependencies = [
 
 [[package]]
 name = "alloc_data"
-version = "0.3.0"
+version = "1.0.0"
 dependencies = [
  "base",
  "num-bigint",
@@ -108,7 +108,7 @@ dependencies = [
 
 [[package]]
 name = "base"
-version = "0.3.0"
+version = "1.0.0"
 dependencies = [
  "bincode",
  "chrono",
@@ -197,7 +197,7 @@ checksum = "8100e46ff92eb85bf6dc2930c73f2a4f7176393c84a9446b3d501e1b354e7b34"
 
 [[package]]
 name = "charts"
-version = "0.3.0"
+version = "1.0.0"
 dependencies = [
  "alloc_data",
  "anyhow",
@@ -233,7 +233,7 @@ dependencies = [
 
 [[package]]
 name = "client"
-version = "0.3.0"
+version = "1.0.0"
 dependencies = [
  "base",
  "charts",

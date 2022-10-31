@@ -1,6 +1,6 @@
 [package]
 name = "charts"
-version = "0.3.0"
+version = "1.0.0"
 authors = ["Adrien Champion <adrien.champion@email.com>"]
 edition = "2018"
 
