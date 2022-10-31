@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Cxt","Location parsing context."],["Idx","An index in the MTF table."],["Location","A location."],["MtfMap","MTF (Move-To-Front) map."]],"type":[["Data","A string slice and some value."],["Entry","An optional `Data` value."],["Locs","A list of locations."]]};

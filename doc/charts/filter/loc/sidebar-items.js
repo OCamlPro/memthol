@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["LineSpec","A line specification."],["LocSpec","Loc specification."]],"type":[["LocFilter","A location filter."],["LocPred","A location list predicate."],["LocUpdate","An update for a location filter."]]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["filter_gen","Handles filter-generation-related CLAs."]]};

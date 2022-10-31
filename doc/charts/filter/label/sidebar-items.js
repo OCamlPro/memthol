@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["LabelSpec","Label specification."]],"type":[["LabelFilter","A label filter."],["LabelPred","A label list predicate."],["LabelUpdate","An update for a label filter."]]};

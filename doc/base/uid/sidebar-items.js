@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["Line","A UID for a line in the chart."]],"struct":[["Alloc","Allocation UID."],["AllocMap","Map from allocation UIDs to something."],["Chart","Chart UID."],["Filter","Filter UID."],["SubFilter","Sub-filter UID."]]};

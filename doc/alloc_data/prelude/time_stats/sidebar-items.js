@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":[["new_time_stats","Creates a stopwatch aggregation."]],"struct":[["FakeStopwatch","Stopwatch."],["RealStopwatch","Stopwatch."]]};

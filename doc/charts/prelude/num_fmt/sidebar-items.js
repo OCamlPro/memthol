@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["bin_str_do","Applies an action to a pretty string representation of a number."],["str_do","Applies an action to a pretty string representation of a number."]]};

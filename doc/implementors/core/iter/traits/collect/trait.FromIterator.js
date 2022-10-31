@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["base"] = [{"text":"impl&lt;T&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.64.0/core/iter/traits/collect/trait.FromIterator.html\" title=\"trait core::iter::traits::collect::FromIterator\">FromIterator</a>&lt;T&gt; for <a class=\"struct\" href=\"base/uid/struct.AllocMap.html\" title=\"struct base::uid::AllocMap\">AllocMap</a>&lt;T&gt;","synthetic":false,"types":["base::uid::alloc_uid::AllocMap"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

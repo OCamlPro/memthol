@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["DisplayMode","A chart’s display mode."]],"struct":[["Chart","Settings for a chart."],["Charts","Settings for all the charts."],["Resolution","Resolution."]]};

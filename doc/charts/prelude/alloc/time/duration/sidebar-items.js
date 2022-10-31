@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["DurationDisplay","Thin wrapper around a reference to a duration."],["Micros","Microsecond precision."],["Millis","Millisecond precision"],["Nanos","Nanosecond precision."]],"trait":[["DurationExt","Adds functionalities to the `Duration` type."],["TimePrecision","Trait implemented by unit-structs representing time precision."]]};

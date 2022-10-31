@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["Cmp","Comparison predicates."],["OrdFilter","A filter for ordered quantities."],["Pred","Comparison predicate."],["Update","An update for an ordered filter."]],"type":[["LifetimeUpdate","An update for a lifetime filter."],["SizeUpdate","An update for a size filter."]]};

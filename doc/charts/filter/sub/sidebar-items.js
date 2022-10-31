@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["RawSubFilter","An allocation filter."],["Update","Sub-filter update."]],"struct":[["SubFilter","A sub-filter: a `RawSubFilter` with a UID."]]};

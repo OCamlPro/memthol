@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["Pred","A comparison predicate over lists."],["Update","An update for a string-like filter."]],"struct":[["StringLikeFilter","A filter for a lists of string-like elements."]],"trait":[["SpecExt","Trait that string-like specifications must implement."]]};

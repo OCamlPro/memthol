@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["ChartSpec","A chart specification, for the client."]]};

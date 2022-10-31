@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["new","Creates the router."]],"mod":[["handlers","Functions that load assets."]]};

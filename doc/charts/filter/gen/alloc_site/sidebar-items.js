@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["AllocSite","Unit-struct handling CLAP and creating/running the actual generator."],["AllocSiteParams","Parameters for the alloc-site generator."],["AllocSiteWork","Actual alloc-site generator worker."]]};

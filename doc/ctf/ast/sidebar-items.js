@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["event","Event-related types."],["header","Header-related AST types."]],"struct":[["CacheCheck","Cache-check data."],["Locs","A collection of locations."]]};
