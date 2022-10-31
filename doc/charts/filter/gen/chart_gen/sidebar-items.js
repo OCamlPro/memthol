@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["alloc_file_prefix","Generates one chart per common allocation-site-file prefix."],["default","Default chart generation."],["single","Generates a single graph containing everything."]],"struct":[["ChartDesc","Description of a chart."]]};

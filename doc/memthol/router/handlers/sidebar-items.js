@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["client_js","Loads the JS part of the client."],["client_wasm","Loads the wasm client, i.e. the actual client code."],["favicon","Loads the index page’s favicon."],["index_handler","Loads the index page."]]};

@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["charts"] = [{"text":"impl IntoEnumIterator for <a class=\"enum\" href=\"charts/chart/axis/enum.XAxis.html\" title=\"enum charts::chart::axis::XAxis\">XAxis</a>","synthetic":false,"types":["charts::chart::axis::XAxis"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"static":[["CLIENT_JS","JS client (bytes)."],["CLIENT_WASM","Wasm client (bytes)."],["FAVICON","Landing page favicon (bytes)."],["INDEX","Landing page (`index.html`, bytes)."]]};

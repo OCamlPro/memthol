@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["XAxis","X-axis spec."],["YAxis","Y-axis spec."]],"struct":[["XAxisIter","An iterator over the variants of [Self]"]]};

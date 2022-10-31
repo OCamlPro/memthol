@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["add","Registers a list of labels and returns its UID."],["get","Retrieves a list of labels from its UID."]],"struct":[["AsRead","Read-lock over the factory."],["AsWrite","Write-lock over the factory."],["Labels","Stores a UID, cannot be constructed outside of the module it’s declared in."]]};

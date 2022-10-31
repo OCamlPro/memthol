@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["spawn_server","Spawns the server that listens for connection requests."]],"struct":[["Com","Maintains a socket to a client and some information such as the client’s IP."],["Handler","Handles communications with a client, maintains the client’s state."]]};

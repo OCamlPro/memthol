@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["AllocSource","Types of allocation"],["Event","An event, decoded version."],["Kind","Event kind."]],"struct":[["Alloc","Allocation event."],["Collection","Collection event."],["Info","Information event."],["Promotion","Promotion event."]]};

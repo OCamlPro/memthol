@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["ChartSettingsMsg","Chart settings message."]],"mod":[["to_client","Messages from the server to the client."],["to_server","Messages from the client to the server."]]};

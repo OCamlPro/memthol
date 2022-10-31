@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["TimeChart","A time chart."]],"mod":[["size","Total size over time chart."]]};

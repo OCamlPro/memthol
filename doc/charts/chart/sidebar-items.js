@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["RawChart","A chart with no UID."]],"mod":[["axis","Axis-related stuff."],["settings","Chart settings."],["spec","Chart specification."],["time","Types and helpers for time charts."]],"struct":[["Chart","A chart a specification and some settings."]]};

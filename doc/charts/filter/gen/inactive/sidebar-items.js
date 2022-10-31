@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Inactive","Unit-struct handling the inactive generator."]]};

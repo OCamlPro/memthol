@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Color","RGBA color."],["SmallRng","A small-state, fast non-crypto PRNG"]],"trait":[["Rng","An automatically-implemented extension trait on [`RngCore`] providing high-level generic methods for sampling values and other convenience methods."],["SeedableRng","A random number generator that can be explicitly seeded."]]};

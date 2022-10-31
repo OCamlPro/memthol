@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["ChartMsg","A message for a specific chart."],["ChartsMsg","Operations over charts."],["FiltersMsg","Operations over filters."],["Msg","Messages from the client to the server."]],"type":[["Msgs","A list of messages from the client to the server."]]};
