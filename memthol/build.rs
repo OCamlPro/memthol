@@ -1,4 +1,5 @@
 use std::env;
+use std::fs;
 use std::process::{self, Command};
 
 struct BuildConfig {
@@ -36,12 +37,16 @@ fn main() {
             "--out-dir",
             config.client_wasm_path,
             "../libs/client",
-        ]).current_dir(memthol_dir)
+        ])
+        .current_dir(&memthol_dir)
         .status()
         .unwrap();
     if !status.success() {
-        process::exit(1); 
+        process::exit(1);
     }
+    fs::rename("../libs/client/target/client.wasm", "../target/client.wasm")
+        .expect("Error while moving client target directory");
+    fs::remove_dir_all("../libs/client/target")
+        .expect("Error while removing client target directory");
     println!("cargo:rerun-if-changed=src/*");
 }
- 
