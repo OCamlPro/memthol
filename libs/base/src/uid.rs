@@ -28,11 +28,6 @@
 //!   catch;
 //! - the "everything filter", which is the filter that catches **all** allocations, independently
 //!   of the user-defined filters.
-//!
-//! [`Chart`]: Chart (The Chart struct)
-//! [`Filter`]: Filter (The Filter struct)
-//! [`Line`]: Line (The Line enum)
-//! [`SubFilter`]: SubFilter (The SubFilter struct)
 
 use std::fmt;
 

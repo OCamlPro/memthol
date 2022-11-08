@@ -100,9 +100,6 @@ pub mod header {
     prelude! {}
 
     /// Plain header, factors common data between [`Ctf`] and [`Packet`].
-    ///
-    /// [`Ctf`]: Ctf (Ctf struct)
-    /// [`Packet`]: Packet (Packet struct)
     #[derive(Debug, Clone)]
     pub struct Header {
         /// Size of the content of the packet/stream, **without the header**.
@@ -409,7 +406,7 @@ pub mod event {
         /// Major heap allocation
         Major,
         /// External allocation
-        External
+        External,
     }
 
     /// Allocation event.

@@ -43,7 +43,7 @@ use wasm::*;
 
 #[wasm_bindgen]
 extern "C" {
-    // Issues an alert.
+    /// Issues an alert.
     pub fn alert(s: &str);
 }
 

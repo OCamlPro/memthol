@@ -23,9 +23,8 @@ prelude! {}
 
 /// A string slice and some value.
 pub type Data<'data, T> = (&'data str, T);
+
 /// An optional [`Data`] value.
-///
-/// [`Data`]: Data (Data type alias)
 pub type Entry<'data, T> = Option<Data<'data, T>>;
 
 /// Last legal index in the MTF table.

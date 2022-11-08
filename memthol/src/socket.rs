@@ -595,9 +595,7 @@ impl Handler {
                     String::from_utf8_lossy(&label)
                 ),
 
-                _ => bail!(
-                    "unexpected  message"
-                )
+                _ => bail!("unexpected  message"),
             }
         }
 

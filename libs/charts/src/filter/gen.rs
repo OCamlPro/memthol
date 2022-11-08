@@ -39,14 +39,9 @@
 //!
 //! Filter generation also handles *chart generation*, which is is the [`chart_gen` module].
 //!
-//! [`FilterGen`]: FilterGen (FilterGen enum)
-//! [`get`]: get (get function)
-//! [`set`]: set (set function)
-//! [`set_from_cla`]: set_from_cla (set_from_cla function)
 //! [`AllocSite`]: alloc_site::AllocSite (AllocSite struct)
 //! [ext]: FilterGenExt (FilterGenExt trait)
 //! [`Params`]: FilterGenExt::Params (FilterGenExt trait)
-//! [`chart_gen` module]: chart_gen (chart_gen module)
 
 prelude! {}
 
@@ -80,9 +75,7 @@ pub fn set(gen: impl Into<FilterGen>) {
 
 /// Sets the active filter generator from a command-line argument.
 ///
-/// See [`Filtergen::from_cla`][from_cla] for details.
-///
-/// [from_cla]: FilterGen::from_cla (from_cla method on FilterGen)
+/// See [`FilterGen::from_cla`] for details.
 pub fn set_from_cla(args: &str) -> Res<()> {
     let gen = FilterGen::from_cla(args)
         .chain_err(|| format!("while parsing filter-gen argument `{}`", args))?;
@@ -269,7 +262,6 @@ The different generators are
 /// - [`KEY`], [`FMT`]: generate relevant error messages during CLAP, and
 /// - [`work`] actually run the generator.
 ///
-/// [`FilterGen`]: FilterGen (FilterGen enum)
 /// [`parse_args`]: FilterGenExt::parse_args (parse_args abstract method)
 /// [`KEY`]: FilterGenExt::KEY (KEY abstract constant)
 /// [`add_help`]: FilterGenExt::add_help (add_help abstract method)

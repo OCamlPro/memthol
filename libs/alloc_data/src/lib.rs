@@ -35,7 +35,6 @@
 //! the program we're profiling started. After that, all the allocation data relies on `SinceStart`
 //! to refer to point in times relative to the start date.
 //!
-//! [`Diff`]: Diff (The Diff struct)
 //! [`Uid`]: base::uid::Alloc (The Alloc struct)
 //! [`Date`]: base::time::Date (The Date struct)
 //! [`SinceStart`]: base::time::SinceStart (The SinceStart struct)
@@ -208,7 +207,7 @@ impl Builder {
         labels: Labels,
         toc: time::SinceStart,
         tod: Option<time::SinceStart>,
-    ) -> Self { 
+    ) -> Self {
         Self {
             uid_hint,
             kind,

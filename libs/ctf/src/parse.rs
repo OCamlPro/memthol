@@ -37,10 +37,6 @@
 //! This gives either a `Parser<LowEndian>` or a `Parser<BigEndian` (or an error). Once parsing
 //! starts with either of these types, a change in endian convention is considered an error.
 //!
-//! [`RawParser`]: RawParser (RawParser struct)
-//! [`Parser`]: Parser (Parser struct)
-//! [`LowEndian`]: LowEndian (LowEndian struct)
-//! [`BigEndian`]: BigEndian (BigEndian struct)
 //! [`try_magic`]: RawParser::try_magic (try_magic method on RawParser)
 
 prelude! {}
@@ -122,9 +118,6 @@ impl<'data> Cxt<'data> {
 ///
 /// - provides basic and intermediate parsing functions used by [`Parser`] and [`PacketParser`];
 /// - works at byte-level.
-///
-/// [`Parser`]: Parser (Parser struct)
-/// [`PacketParser`]: PacketParser (PacketParser struct)
 pub struct RawParser<'data> {
     /// Data to parse.
     data: &'data [u8],
@@ -140,8 +133,6 @@ pub struct RawParser<'data> {
     ///
     /// Used by [`PacketParser`], which works on a slice of the original input, for consistent
     /// error-reporting.
-    ///
-    /// [`PacketParser`]: PacketParser (PacketParser struct)
     offset: usize,
 }
 
@@ -159,8 +150,6 @@ impl<'data> RawParser<'data> {
     /// - `data`: input bytes to parse;
     /// - `offset` offset from the start of the original input. Used by [`PacketParser`], which
     ///   works on a slice of the original input, for consistent error-reporting.
-    ///
-    /// [`PacketParser`]: PacketParser (PacketParser struct)
     pub fn new(data: &'data [u8], offset: usize) -> Self {
         Self {
             data: data.into(),
@@ -766,7 +755,7 @@ decl_impl_trait! {
             &mut self, timestamp: u64, cxt: &mut Cxt<'data>, short: Option<usize>
         ) -> Res<ast::event::Alloc> {
             use ast::event::AllocSource;
-            
+
             pinfo!(self, "parsing alloc");
             let alloc_id = cxt.next_alloc_id();
             let (is_short, len, nsamples, source) = if let Some(len) = short {
@@ -1135,8 +1124,6 @@ where
     Parser<'data, Endian>: CanParse<'data>,
 {
     /// Yields a [`PacketParser`] for the next packet, if any.
-    ///
-    /// [`PacketParser`]: PacketParser (PacketParser struct)
     pub fn next_packet<'me>(&'me mut self) -> Res<Option<PacketParser<'me, 'data, Endian>>> {
         let parser = &mut self.parser;
         let cxt = &mut self.cxt;
@@ -1180,8 +1167,6 @@ where
 /// Thin wrapper around a [`RawParser`] over the bytes of the events of the packet. Also stores the
 /// packet header. Note that the bytes for the header are not included in the parser's data. It has
 /// already been parsed.
-///
-/// [`RawParser`]: RawParser (RawParser struct)
 pub struct PacketParser<'cxt, 'data, Endian> {
     /// Internal parser over the bytes of the events of the packet.
     ///
@@ -1223,8 +1208,6 @@ where
     /// - `offset`: offset from the start of the original input, for error-reporting;
     /// - `header`: packet header, must be parsed beforehand,
     /// - `cxt`: parsing context, borrowed from the [`CtfParser`].
-    ///
-    /// [`CtfParser`]: CtfParser (CtfParser struct)
     fn new(
         input: &'data [u8],
         offset: usize,
