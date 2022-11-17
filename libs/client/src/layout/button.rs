@@ -206,7 +206,6 @@ impl fmt::Display for BoxProps<'_> {
         };
 
         // Discarding potential errors here... Sorry about that.
-        #[allow(unused_results)]
         css!(fmt: fmt,
             height(100%),
             width(auto),

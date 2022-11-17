@@ -28,9 +28,9 @@
 //! All allocation-related data is stored in a global state in the [`data`] module. It features a
 //! [`Watcher`] type which, after [`start`]ing it, will monitor a directory for init and diff files.
 //!
-//! [`Json`]: ./base/trait.Json.html (The Json trait)
-//! [`Watcher`]: ./data/struct.Watcher.html (The Watcher struct in module data)
-//! [`start`]: ./data/fn.start.html (The start function in module data)
+//! [`Json`]: yew::format::Json (The Json trait)
+//! [`Watcher`]: data::Watcher (The Watcher struct in module data)
+//! [`start`]: data::start (The start function in module data)
 
 #![deny(missing_docs)]
 

@@ -3,6 +3,8 @@ Memthol is a visualizer for memory profiling data generated from [OCaml] program
 
 # Resources
 
+- [Official page][memthol] 
+- [API documentation][doc]
 - [Memthol's small tutorial][tuto]
 
 
@@ -118,6 +120,8 @@ memthol rsc/dumps/ctf/flambda.ctf
 
 Most icons used in memthol come from the [bootstrap library][bootstrap].
 
+[memthol]: https://ocamlpro.github.io/memthol/ (Memthol site)
+[doc]: https://ocamlpro.github.io/memthol/doc/memthol (Documentation site)
 [OCaml]: https://ocaml.org/ (OCaml official page)
 [web assembly]: https://webassembly.org/ (Web Assembly official page)
 [Rust]: https://www.rust-lang.org/ (Rust official page)

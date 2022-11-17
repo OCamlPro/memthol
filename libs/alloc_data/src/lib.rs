@@ -35,12 +35,11 @@
 //! the program we're profiling started. After that, all the allocation data relies on `SinceStart`
 //! to refer to point in times relative to the start date.
 //!
-//! [`Diff`]: struct.diff.html (The Diff struct)
-//! [`Date`]: struct.date.html (The Date struct)
-//! [`SinceStart`]: struct.sincestart.html (The SinceStart struct)
+//! [`Uid`]: base::uid::Alloc (The Alloc struct)
+//! [`Date`]: base::time::Date (The Date struct)
+//! [`SinceStart`]: base::time::SinceStart (The SinceStart struct)
 
 #![deny(missing_docs)]
-
 pub use error_chain::bail;
 pub use num_bigint::BigUint;
 

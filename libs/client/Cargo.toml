@@ -1,6 +1,6 @@
 [package]
 name = "client"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["AdrienChampion <adrien.champion@email.com>"]
 edition = "2018"
 description = "client part of the memthol profiling visualizer"

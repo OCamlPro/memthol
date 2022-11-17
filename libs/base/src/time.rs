@@ -50,7 +50,6 @@ pub type DateTime = chrono::DateTime<self::chrono::offset::Local>;
 /// In practice, this type is just a wrapper around a [`chrono`] date.
 ///
 /// [`chrono`]: https://crates.io/crates/chrono (The chrono crate on crates.io)
-/// [`SinceStart`]: struct.SinceStart.html (The SinceStart struct)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Date {
     /// Actual date.

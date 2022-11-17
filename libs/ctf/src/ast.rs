@@ -100,9 +100,6 @@ pub mod header {
     prelude! {}
 
     /// Plain header, factors common data between [`Ctf`] and [`Packet`].
-    ///
-    /// [`Ctf`]: struct.Ctf.html (Ctf struct)
-    /// [`Packet`]: struct.Packet.html (Packet struct)
     #[derive(Debug, Clone)]
     pub struct Header {
         /// Size of the content of the packet/stream, **without the header**.
@@ -401,6 +398,17 @@ pub mod event {
         }
     }
 
+    /// Types of allocation
+    #[derive(Debug, Clone, Copy)]
+    pub enum AllocSource {
+        /// Minor heap allocation
+        Minor,
+        /// Major heap allocation
+        Major,
+        /// External allocation
+        External,
+    }
+
     /// Allocation event.
     #[derive(Debug, Clone)]
     pub struct Alloc {
@@ -412,8 +420,8 @@ pub mod event {
         pub alloc_time: time::Duration,
         /// Sample count.
         pub nsamples: usize,
-        /// True if major.
-        pub is_major: bool,
+        /// Initial allocation place
+        pub source: AllocSource,
         /// Backtrace of the allocation.
         pub backtrace: Vec<usize>,
         /// Backtrace common prefix *w.r.t.* the previous backtrace.

@@ -305,7 +305,7 @@ impl Data {
     pub fn last_events(&self) -> Option<(uid::Alloc, time::SinceStart)> {
         self.uid_map.last().map(|alloc| {
             (
-                alloc.uid,
+                alloc.0,
                 self.tod_map
                     .keys()
                     .cloned()

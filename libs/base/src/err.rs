@@ -52,7 +52,7 @@ impl Error {
     ///
     /// See the [module-level documentation] for more.
     ///
-    /// [module-level documentation]: index.html (module-level documentation)
+    /// [module-level documentation]: crate::err (module-level documentation)
     pub fn to_pretty(&self) -> String {
         let mut s = String::with_capacity(400);
 
@@ -152,7 +152,7 @@ impl Error {
 /// assert_eq!(cnt, 5);
 /// ```
 ///
-/// [reg]: fn.register.html (The register function)
+/// [reg]: crate::err::register (The register function)
 #[derive(Debug, Clone)]
 pub struct ErrorCxt {
     /// Index of the latest error in `ERRORS` we saw.
@@ -229,25 +229,19 @@ mod list {
 
         /// Registers a non-fatal error in the global list of errors.
         ///
-        /// See the [type-level documentation][ty doc] for examples.
-        ///
-        /// [ty doc]: struct.ErrorCxt.html (Type-level documentation)
+        /// See the [type-level documentation][ErrorCxt] for examples.
         pub fn register_non_fatal(&self, e: impl Into<err::Error>) {
             register_non_fatal(e)
         }
         /// Registers a fatal error in the global list of errors.
         ///
-        /// See the [type-level documentation][ty doc] for examples.
-        ///
-        /// [ty doc]: struct.ErrorCxt.html (Type-level documentation)
+        /// See the [type-level documentation][ErrorCxt] for examples.
         pub fn register_fatal(&self, e: impl Into<err::Error>) {
             register_fatal(e)
         }
         /// Registers an error in the global list of errors.
         ///
-        /// See the [type-level documentation][ty doc] for examples.
-        ///
-        /// [ty doc]: struct.ErrorCxt.html (Type-level documentation)
+        /// See the [type-level documentation][ErrorCxt] for examples.
         pub fn register(&self, e: impl Into<err::Error>, fatal: bool) {
             register(e, fatal)
         }
@@ -259,9 +253,7 @@ mod list {
         /// **NB**: errors only appear once *across calls*. So when `action(e_i)` runs, future calls
         /// to this function will never run `action(e_i)` again.
         ///
-        /// See the [type-level documentation][ty doc] for examples.
-        ///
-        /// [ty doc]: struct.ErrorCxt.html (Type-level documentation)
+        /// See the [type-level documentation][ErrorCxt] for examples.
         pub fn new_errors_do(&mut self, mut action: impl FnMut(&str, bool)) -> (usize, bool) {
             match self.new_errors_try(|err, is_fatal| {
                 action(err, is_fatal);
@@ -279,9 +271,7 @@ mod list {
         /// **NB**: errors only appear once *across calls*. So when `action(e_i)` runs, future calls
         /// to this function will never run `action(e_i)` again.
         ///
-        /// See the [type-level documentation][ty doc] for examples.
-        ///
-        /// [ty doc]: struct.ErrorCxt.html (Type-level documentation)
+        /// See the [type-level documentation][ErrorCxt] for examples.
         pub fn new_errors_try<E>(
             &mut self,
             mut action: impl FnMut(&str, bool) -> Result<(), E>,

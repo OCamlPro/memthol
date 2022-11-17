@@ -39,16 +39,9 @@
 //!
 //! Filter generation also handles *chart generation*, which is is the [`chart_gen` module].
 //!
-//! [`FilterGen`]: enum.FilterGen.html (FilterGen enum)
-//! [`get`]: fn.get.html (get function)
-//! [`set`]: fn.set.html (set function)
-//! [`set_from_cla`]: fn.set_from_cla.html (set_from_cla function)
-//! [`inactive`]: ./inactive (inactive module)
-//! [`alloc_site`]: ./alloc_site (alloc_site module)
-//! [`AllocSite`]: ./alloc_site/struct.AllocSite.html (AllocSite struct)
-//! [ext]: trait.FilterGenExt.html (FilterGenExt trait)
-//! [`Params`]: trait.FilterGenExt.html#associatedtype.Params (FilterGenExt trait)
-//! [`chart_gen` module]: ./chart_gen (chart_gen module)
+//! [`AllocSite`]: alloc_site::AllocSite (AllocSite struct)
+//! [ext]: FilterGenExt (FilterGenExt trait)
+//! [`Params`]: FilterGenExt::Params (FilterGenExt trait)
 
 prelude! {}
 
@@ -82,9 +75,7 @@ pub fn set(gen: impl Into<FilterGen>) {
 
 /// Sets the active filter generator from a command-line argument.
 ///
-/// See [`Filtergen::from_cla`][from_cla] for details.
-///
-/// [from_cla]: enum.FilterGen.html#method.from_cla (from_cla method on FilterGen)
+/// See [`FilterGen::from_cla`] for details.
 pub fn set_from_cla(args: &str) -> Res<()> {
     let gen = FilterGen::from_cla(args)
         .chain_err(|| format!("while parsing filter-gen argument `{}`", args))?;
@@ -104,7 +95,7 @@ lazy_static! {
 ///
 /// Stores parameters for a given filter generator so that it can run it with [`run`].
 ///
-/// [`run`]: #method.run (run method)
+/// [`run`]: FilterGen::run (run method)
 #[derive(Debug, Clone)]
 pub enum FilterGen {
     /// Generate one allocation filter per allocation site.
@@ -207,9 +198,9 @@ The different generators are
     ///   specification generally looks like a comma-separated sequence of bindings of the form
     ///   `<id>: <value>` described by the generator's [`FMT`] format.
     ///
-    /// [`KEY`]: trait.FilterGenExt.html#associatedconstant.KEY
+    /// [`KEY`]: FilterGenExt::KEY
     /// (KEY constant on the FilterGenExt trait)
-    /// [`FMT`]: trait.FilterGenExt.html#associatedconstant.FMT
+    /// [`FMT`]: FilterGenExt::FMT
     /// (FMT constant on the FilterGenExt trait)
     pub fn from_cla(args: &str) -> Res<Self> {
         let mut parser = Parser::new(args.trim());
@@ -271,12 +262,11 @@ The different generators are
 /// - [`KEY`], [`FMT`]: generate relevant error messages during CLAP, and
 /// - [`work`] actually run the generator.
 ///
-/// [`FilterGen`]: enum.FilterGen.html (FilterGen enum)
-/// [`parse_args`]: #tymethod.parse_args (parse_args abstract method)
-/// [`KEY`]: #associatedconstant.KEY (KEY abstract constant)
-/// [`add_help`]: #tymethod.add_help (add_help abstract method)
-/// [`FMT`]: #associatedconstant.FMT (FMT abstract constant)
-/// [`work`]: #tymethod.work (work abstract method)
+/// [`parse_args`]: FilterGenExt::parse_args (parse_args abstract method)
+/// [`KEY`]: FilterGenExt::KEY (KEY abstract constant)
+/// [`add_help`]: FilterGenExt::add_help (add_help abstract method)
+/// [`FMT`]: FilterGenExt::FMT (FMT abstract constant)
+/// [`work`]: FilterGenExt::work (work abstract method)
 pub trait FilterGenExt {
     /// Type of the parameters of the filter generator.
     type Params: Default;
@@ -296,7 +286,7 @@ pub trait FilterGenExt {
     ///
     /// See [`AllocSite`]'s implementation of this function to get an idea of the format.
     ///
-    /// [`AllocSite`]: ./alloc_site/struct.AllocSite.html (AllocSite struct)
+    /// [`AllocSite`]: alloc_site::AllocSite (AllocSite struct)
     fn add_help(s: &mut String);
 
     /// Runs the generator on some data given some parameters.

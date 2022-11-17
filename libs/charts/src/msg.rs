@@ -226,7 +226,7 @@ pub mod to_server {
         /// [`FiltersMsg::Add`]). The server will **not** register the filter in any way, this will
         /// happen when/if the user saves the modifications.
         ///
-        /// [`FiltersMsg::Add`]: ../to_client/enum.FiltersMsg.html#variant.Add
+        /// [`FiltersMsg::Add`]: to_client::FiltersMsg::Add
         /// (The Add message)
         RequestNew,
 
@@ -236,7 +236,7 @@ pub mod to_server {
         /// [`FiltersMsg::AddSub`]). The server will **not** register the filter in any way, this
         /// will happen when/if the user saves the modifications.
         ///
-        /// [`FiltersMsg::AddSub`]: ../to_client/enum.FiltersMsg.html#variant.AddSub
+        /// [`FiltersMsg::AddSub`]: to_client::FiltersMsg::AddSub
         /// (The Add message)
         RequestNewSub(uid::Filter),
 
@@ -533,7 +533,7 @@ pub mod to_client {
         /// This message always comes in response to a [`FiltersMsg::RequestNew`] message for the
         /// server.
         ///
-        /// [`FiltersMsg::RequestNew`]: ../to_server/enum.FiltersMsg.html#variant.RequestNew
+        /// [`FiltersMsg::RequestNew`]: to_server::FiltersMsg::RequestNew
         /// (The RequestNew message)
         Add(filter::Filter),
         /// Adds a subfilter.
@@ -541,7 +541,7 @@ pub mod to_client {
         /// This message always comes in response to a [`FiltersMsg::RequestNewSub`] message for the
         /// server.
         ///
-        /// [`FiltersMsg::RequestNewSub`]: ../to_server/enum.FiltersMsg.html#variant.RequestNewSub
+        /// [`FiltersMsg::RequestNewSub`]: to_server::FiltersMsg::RequestNewSub
         /// (The RequestNew message)
         AddSub(uid::Filter, filter::SubFilter),
 

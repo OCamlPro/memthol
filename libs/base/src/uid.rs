@@ -28,11 +28,6 @@
 //!   catch;
 //! - the "everything filter", which is the filter that catches **all** allocations, independently
 //!   of the user-defined filters.
-//!
-//! [`Chart`]: struct.Chart.html (The Chart struct)
-//! [`Filter`]: struct.Filter.html (The Filter struct)
-//! [`Line`]: enum.Line.html (The Line enum)
-//! [`SubFilter`]: struct.SubFilter.html (The SubFilter struct)
 
 use std::fmt;
 
@@ -58,7 +53,7 @@ macro_rules! new_uids {
     ) => {
         pub use $mod_name::{
             $uid_type_name,
-            $($map_name, $iter_name,)?
+            $($map_name)?
         };
         mod $mod_name {
             safe_index::new! {
@@ -66,7 +61,7 @@ macro_rules! new_uids {
                 $uid_type_name,
                 $(
                     $(#[$map_meta])*
-                    map: $map_name with iter: $iter_name,
+                    map: $map_name
                 )?
             }
 

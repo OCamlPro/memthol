@@ -284,7 +284,7 @@ pub struct Handler {
 impl Handler {
     /// Constructor from a request and a dump directory.
     pub fn new(log: bool, stream: std::net::TcpStream) -> Res<Self> {
-        let socket = tungstenite::server::accept(stream).map_err(|e| e.to_string())?;
+        let socket = tungstenite::accept(stream).map_err(|e| e.to_string())?;
 
         let instance_prof = HandlerProf::new();
         let total_prof = HandlerProf::new();
@@ -594,6 +594,8 @@ impl Handler {
                     "unexpected `Ping({})` message",
                     String::from_utf8_lossy(&label)
                 ),
+
+                _ => bail!("unexpected  message"),
             }
         }
 
